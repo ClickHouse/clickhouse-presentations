@@ -1,0 +1,172 @@
+Загрузи репозиторий отсюда, чтобы было, что посмотреть в самолёте:
+https://github.com/yandex/clickhouse-presentations
+Прочитай по крайней мере tbd, evolution, meetup3, meetup4 - можно выдрать куски.
+
+Вот дополнительные материалы - прочитай обязательно, есть хорошие примеры!
+
+
+Вклад сообщества.
+
+Уже 53 контрибъютора в основном репозитории.
+
+Кроме Яндекса, есть коммиты от сотрудников из 
+CloudFlare, Booking.com, Crobox, Rambler, QRator, СКБ Контур, Roistat, SMI2,
+а также от неизвестных анонимов.
+
+Код хорошо документирован. Есть описание архитектуры для разработчиков.
+Мы стараемся писать код так, чтобы любой человек "с улицы" мог его понять.
+
+В GitHub есть 102 репозитория проектов, относящихся ClickHouse
+- драйверы и клиенты, графические интерфейсы, интеграции с аналитическими системами, интеграции с системами мониторинга, скрипты сборки и т. п, плагины для импорта данных.
+
+
+Интеграция.
+
+Есть официальный JDBC драйвер (production-ready) и ODBC драйвер (beta stage).
+
+Драйверы от сообщества для: 
+Python (в том числе, для SQL Alchemy), 
+PHP (в том числе, для Doctrine, Yii2), 
+Perl, Go, Node.js, Ruby, C++, .NET, Scala, R, Julia, Spark.
+
+
+От сообщества мы получили веб-интерфейс Tabix, разработанный специально для ClickHouse.
+Кроме того, ClickHouse работает совместно с
+Grafana, Redash, Apache Zeppelin, Superset, Power BI
+(картинки из презентации Игоря)
+
+
+ClickHouse может использоваться в качестве бэкенда для Graphite.
+Есть две реализации: 
+graphite-clickhouse (на Go, от Mail.ru)
+Graphouse (на Java, от Yandex)
+
+(упоминать не обязательно) Yandex.Tank - open-source load testing tool.
+
+
+
+Notable usages outside Yandex:
+
+CloudFlare, How do we analyze over O(100B) DNS requests daily:
+
+"ClickHouse enables us and our customers to explore the the dataset in real time to get operational insights. Due to many of the optimizations built into ClickHouse we are able to store the data for a long time allowing us to look events is perspective and at historical trends."
+
+Wikimedia.org:
+
+"clickhouse is a columnar datastore that we are using as an aid to run complex SQL queries on the edit data "lake" that we have as a result of the edit reconstruction project. It is similar to Druid but faster for complex queries."
+
+Mail.ru group: Started to use ClickHouse for adv. platform, messaging app statistics, monitoring backend, backend for QlikView.
+
+SMI2 (news aggregator): Throwed off InfiniDB, Cassandra and Druid just after public release of ClickHouse.
+
+Rakam.io Analytics Platform:
+
+"When we evaluated ClickHouse the results were great compared to Prestodb. Even though the columnar storage optimizations for ORC and Clickhouse is quite similar, Clickhouse uses CPU and Memory resources more efficiently."
+
+
+Typical applications:
+
+Advertisement networks, Web and App analytics, RTB, E-commerce,
+Sensor data, Monitoring, Telecom logs, Online games, Messengers...
+
+
+Unusual applications:
+
+Blockchain search and analytics engine:
+https://blockchair.com/
+
+Evolutionary genetics and genomics (analyzing BLAST database).
+https://github.com/msestak/FindOrigin
+https://www.linkedin.com/in/martin-sebastijan-sestak/
+
+Nuclear research: CERN's LHCb experiment
+https://www.yandex.com/company/press_center/press_releases/2012/2012-04-10/
+
+
+
+Благодаря сообществу, для ClickHouse есть открытые, независимые бенчмарки.
+
+http://tech.marksblogg.com/billion-nyc-taxi-clickhouse.html
+https://www.percona.com/blog/2017/02/13/clickhouse-new-opensource-columnar-database/
+https://www.percona.com/blog/2017/03/17/column-store-database-benchmarks-mariadb-columnstore-vs-clickhouse-vs-apache-spark/
+
+"Yandex ClickHouse is an absolute winner in this benchmark: it shows both better performance (>10x) and better compression"
+"I've long desired for something like ClickHouse to become available as F/OSS"
+
+"It's a shame this software isn't more widely popular as it makes excellent use of commodity hardware."
+
+
+
+According to Felipe Hoffa
+https://medium.com/@hoffa/the-top-github-projects-per-country-92c275e19409
+ClickHouse is top most rated GitHub repository in Russia.
+
+
+
+Планируем на ближайшее время
+
+ODBC драйвер (есть рабочий прототип, Windows, Linux, Mac)
+Поддержка NULL (beta: код в master, но не production-ready)
+Распределённые DDL - удобство эксплуатации больших кластеров.
+Доработка совместимости SQL (правильный синтаксис JOIN)
+
+
+Что нового в ClickHouse.
+
+Performance optimizations:
+
+Performance optimizations of background compactions.
+Performance optimizations for block size according to CPU caches.
+Performance optimizations of hierarchical and cache external dictionaries.
+Performance optimizations of DISTINCT.
+Performance optimizations of FixedString functions (for IPv6).
+Optimizations of cache usage.
+Instrumentation: metrics and profile counters
+... we really keen on performance.
+
+(Дальше будет скучно)
+
+Portability:
+
+Mac OS X build. FreeBSD build.
+Build options for static/dynamic linking, and to enable/disable specific libraries.
+Debian packages compatibility with official repositories standards.
+
+Ease of operations:
+
+Cluster configuration update without downtime.
+Allow to load configuration from ZooKeeper.
+Traceability of distributed queries.
+
+Dictionary sources:
+
+HTTP, HTTPS server.
+Executable script.
+HTTPS support.
+
+Allow to skip errors while data import.
+
+Failover for stale replicas.
+
+clickhouse-local
+KILL QUERY
+LIMIT BY
+SELECT INTO OUTFILE
+Proper timezones support
+ALTER Enums in PK
+Support for multiple shards per single server (crossover replication)
+Multiple new functions and aggregate functions
+
+
+С кем ещё встретиться
+
+Из бывших сотрудников:
+
+Михаил Колупаев (написал в Telegram, что готов встретиться)
+Олег Губа
+
+Из незнакомых людей:
+
+Марек Вавруса (в профиле написано, что San Francisco)
+
+Просто написать в чат в дни после конференции.
