@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en" style="background-color: #FFF;">
+<head>
+    <title>GROUP BY и Memory limit exceeded</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/ribbon/styles/screen-4x3.css">
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>GROUP BY и Memory limit exceeded</h1>
+    </header>
+
+    <section class="slide" id="cover">
+        <h1 style="margin-top: 200px">GROUP BY и Memory limit exceeded</h1>
+    </section>
+    
+    <section class="slide">
+        <img style="height: 60%" src="pictures/plain.png"/>
+    </section>
+
+    <section class="slide">
+        <video style="height: 90%"><source src="video/plain.ogv" type="video/ogg"></video>
+    </section>
+    
+    <section class="slide">
+        <video style="height: 90%"><source src="video/stats.ogv" type="video/ogg"></video>
+    </section>
+    
+    <section class="slide">
+        <h1>Способ 1</h1>
+        <p>Просто увеличить max_memory_usage</p>
+    </section>
+    
+    <section class="slide">
+        <video style="height: 90%"><source src="video/raise_mem.ogv" type="video/ogg"></video>
+    </section>
+    
+    <section class="slide">
+        <h1>Способ 2</h1>
+        <p>Включить агрегацию во внешней памяти:</p>
+        <p>max_bytes_before_external_group_by</p>
+        <p>distributed_aggregation_memory_efficient</p>
+    </section>
+    
+    <section class="slide">
+        <video style="height: 90%"><source src="video/external.ogv" type="video/ogg"></video>
+    </section>
+    
+    <section class="slide">
+        <h1>Способ 3</h1>
+        <p>Двухпроходная агрегация:</p>
+        <p>&ndash; в подзапросе вычисляем множество ключей,<br />&nbsp;которые войдут в результат;</p>
+        <p>&ndash; только для них считаем все агрегатные функции.</p>
+    </section>
+    
+    <section class="slide">
+        <img style="height: 80%" src="pictures/twopass1.png"/>
+    </section>
+    
+    <section class="slide">
+        <video style="height: 90%"><source src="video/twopass1.ogv" type="video/ogg"></video>
+    </section>
+    
+    <section class="slide">
+        <h1>Способ 3, лучше</h1>
+        <p>Двухпроходная агрегация:</p>
+        <p>&ndash; в подзапросе вычисляем множество ключей,<br />&nbsp;которые войдут в результат;</p>
+        <p>&ndash; только для них считаем все агрегатные функции.</p>
+        <p>Чтобы сэкономить память, будем вычислять<br />множество хэшей вместо множества строк.</p>
+    </section>
+    
+    <section class="slide">
+        <img style="height: 80%" src="pictures/twopass2.png"/>
+    </section>
+    
+    <section class="slide">
+        <video style="height: 90%"><source src="video/twopass2.ogv" type="video/ogg"></video>
+    </section>
+    
+    <section class="slide">
+        <h1>Способ 4</h1>
+        <p>Магические опции:</p>
+        <p>max_rows_to_group_by,<br/>group_by_overflow_mode = 'any'</p>
+    </section>
+    
+    <section class="slide">
+        <video style="height: 90%"><source src="video/overflow.ogv" type="video/ogg"></video>
+    </section>
+    
+    <section class="slide">
+        <h1>Способ 5</h1>
+        <p>Сэмплирование</p>
+    </section>
+    
+    <section class="slide">
+        <img style="height: 60%" src="pictures/sample.png"/>
+    </section>
+    
+    <section class="slide">
+        <video style="height: 90%"><source src="video/sample.ogv" type="video/ogg"></video>
+    </section>
+    
+    <section class="slide">
+        <h1>Способ 6</h1>
+        <p>Выгрузить данные по части ключей.</p>
+        <p>Сделать несколько проходов.</p>
+    </section>
+    
+    <section class="slide">
+        <img style="height: 50%" src="pictures/multipass.png"/>
+    </section>
+    
+    <section class="slide">
+        <video style="height: 90%"><source src="video/multipass.ogv" type="video/ogg"></video>
+    </section>
+    
+    <section class="slide">
+        <h1>Способ 7</h1>
+        <p>Посчитать данные для ключей,<br />которые встречаются часто.</p>
+    </section>
+    
+    <section class="slide">
+        <img style="height: 80%" src="pictures/random_rows.png"/>
+    </section>
+    
+    <section class="slide">
+        <video style="height: 90%"><source src="video/random_rows.ogv" type="video/ogg"></video>
+    </section>
+    
+    <section class="slide">
+        <h1>Способ 7, лучше</h1>
+        <p>Посчитать данные для ключей,<br />которые встречаются часто.</p>
+    </section>
+    
+    <section class="slide">
+        <img style="height: 80%" src="pictures/sampled_rows.png"/>
+    </section>
+    
+    <section class="slide">
+        <video style="height: 90%"><source src="video/sampled_rows.ogv" type="video/ogg"></video>
+    </section>
+    
+    <section class="slide">
+        <h1>Вывод</h1>
+        <p>Если запрос не укладывается в ограничения,<br />вы всё-равно можете его выполнить.</p>
+    </section>
+    
+    <section class="slide">
+        <h1>?</h1>
+    </section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
