@@ -1,0 +1,2056 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VisioDocument xmlns="http://schemas.microsoft.com/visio/2003/core">
+  <DocumentSettings>
+    <GlueSettings>12</GlueSettings>
+    <SnapSettings>52</SnapSettings>
+  </DocumentSettings>
+  <PrintSetup>
+    <PaperWidth>8</PaperWidth>
+    <PaperHeight>10.1944</PaperHeight>
+    <PrintLandscape>0</PrintLandscape>
+    <PageLeftMargin>0.25</PageLeftMargin>
+    <PageRightMargin>0.25</PageRightMargin>
+    <PageTopMargin>0.25</PageTopMargin>
+    <PageBottomMargin>0.555556</PageBottomMargin>
+    <PrintCenteredH>1</PrintCenteredH>
+    <PrintCenteredV>1</PrintCenteredV>
+  </PrintSetup>
+  <Fonts>
+    <FontEntry ID="0" Name="Yandex Sans Text"/>
+    <FontEntry ID="1" Name="Monaco"/>
+  </Fonts>
+  <FaceNames>
+    <FaceName ID="0" Name="Yandex Sans Text"/>
+    <FaceName ID="1" Name="Monaco"/>
+  </FaceNames>
+  <Pages>
+    <Page ID="0" NameU="phase1">
+      <PageSheet>
+        <RulerGrid>
+          <XGridSpacing>0.0555556</XGridSpacing>
+          <YGridSpacing>0.0555556</YGridSpacing>
+        </RulerGrid>
+        <PageProps>
+          <PageScale>1</PageScale>
+          <DrawingScale>1</DrawingScale>
+          <PageWidth>10.5556</PageWidth>
+          <PageHeight>5.55556</PageHeight>
+          <DrawingSizeType>3</DrawingSizeType>
+          <ShdwOffsetX>0</ShdwOffsetX>
+          <ShdwOffsetY>0</ShdwOffsetY>
+        </PageProps>
+        <Layer IX="0">
+          <Name>Layer 1</Name>
+          <Visible>1</Visible>
+          <Print>1</Print>
+          <Lock>0</Lock>
+        </Layer>
+      </PageSheet>
+      <Shapes>
+        <Shape ID="1" Type="Shape" Name="Custom Fill:Shale Fill:Shale.1">
+          <XForm>
+            <Angle>-0</Angle>
+            <PinX>1.639992649871595</PinX>
+            <PinY>4.166666614583331</PinY>
+            <Width>0.502207521965413</Width>
+            <Height>1.263888993055559</Height>
+            <LocPinX>0.2511037609827065</LocPinX>
+            <LocPinY>0.6319444965277796</LocPinY>
+          </XForm>
+          <TextXForm>
+            <TxtWidth F="Width*1.000000">0.502207521965413</TxtWidth>
+            <TxtHeight F="Height*0.890110">1.12500010416667</TxtHeight>
+            <TxtAngle>-0</TxtAngle>
+          </TextXForm>
+          <Misc>
+            <ObjType>1</ObjType>
+          </Misc>
+          <Line>
+            <LinePattern>0</LinePattern>
+            <LineWeight>0.0138889</LineWeight>
+            <LineColor>0</LineColor>
+            <LineColorTrans>0</LineColorTrans>
+            <Rounding>0</Rounding>
+            <LineCap>0</LineCap>
+          </Line>
+          <Fill>
+            <FillPattern>1</FillPattern>
+            <FillForegnd>#666a6b</FillForegnd>
+            <FillForegndTrans>0</FillForegndTrans>
+            <ShdwPattern>0</ShdwPattern>
+            <ShdwForegnd>0</ShdwForegnd>
+            <ShdwForegndTrans>0.5</ShdwForegndTrans>
+            <ShapeShdwType>1</ShapeShdwType>
+            <ShapeShdwOffsetX>0</ShapeShdwOffsetX>
+            <ShapeShdwOffsetY>-0.0277778</ShapeShdwOffsetY>
+          </Fill>
+          <Geom IX="0">
+            <NoFill>0</NoFill>
+            <NoLine>0</NoLine>
+            <MoveTo IX="1">
+              <X F="Width*0.676776">0.339882248989423</X>
+              <Y F="Height*0.970905">1.227115537794983</Y>
+            </MoveTo>
+            <NURBSTo IX="2">
+              <X F="Width*0.323223">0.1623252729759873</X>
+              <Y F="Height*0.970905">1.227115537794983</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.579145,1.009698,0,1, 0.420854,1.009698,0,1)">NURBS(1, 3, 0, 0, 0.579145,1.009698,0,1, 0.420854,1.009698,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="3">
+              <X F="Width*0.323223">0.1623252729759873</X>
+              <Y F="Height*0.830420">1.049558561781544</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.225592,0.932111,0,1, 0.225592,0.869214,0,1)">NURBS(1, 3, 0, 0, 0.225592,0.932111,0,1, 0.225592,0.869214,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="4">
+              <X F="Width*0.676776">0.339882248989423</X>
+              <Y F="Height*0.830420">1.049558561781544</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.420854,0.791626,0,1, 0.579145,0.791626,0,1)">NURBS(1, 3, 0, 0, 0.420854,0.791626,0,1, 0.579145,0.791626,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="5">
+              <X F="Width*0.676776">0.339882248989423</X>
+              <Y F="Height*0.970905">1.227115537794983</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.774408,0.869214,0,1, 0.774408,0.932111,0,1)">NURBS(1, 3, 0, 0, 0.774408,0.869214,0,1, 0.774408,0.932111,0,1)</E>
+            </NURBSTo>
+            <MoveTo IX="6">
+              <X F="Width*0.750013">0.3766621305235894</X>
+              <Y F="Height*0.662252">0.8370125350851745</Y>
+            </MoveTo>
+            <NURBSTo IX="7">
+              <X F="Width*0.762204">0.3827845402214969</X>
+              <Y F="Height*0.674373">0.8523320841121856</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.749739,0.666626,0,1, 0.753803,0.671034,0,1)">NURBS(1, 3, 0, 0, 0.749739,0.666626,0,1, 0.753803,0.671034,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="8">
+              <X F="Width*0.821129">0.4123773695570697</X>
+              <Y F="Height*0.674373">0.8523320841121856</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.778476,0.680838,0,1, 0.804858,0.680838,0,1)">NURBS(1, 3, 0, 0, 0.778476,0.680838,0,1, 0.804858,0.680838,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="9">
+              <X F="Width*0.833320">0.418499779329944</X>
+              <Y F="Height*0.662252">0.8370125381016812</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.829530,0.671034,0,1, 0.833594,0.666626,0,1)">NURBS(1, 3, 0, 0, 0.829530,0.671034,0,1, 0.833594,0.666626,0,1)</E>
+            </NURBSTo>
+            <LineTo IX="10">
+              <X F="Width*0.833676">0.4186784931062814</X>
+              <Y F="Height*0.662252">0.8370125366090144</Y>
+            </LineTo>
+            <LineTo IX="11">
+              <X F="Width*0.833676">0.4186784931062795</X>
+              <Y F="Height*0.471854">0.5963714323339142</Y>
+            </LineTo>
+            <NURBSTo IX="12">
+              <X F="Width*0.916667">0.4603568951349616</X>
+              <Y F="Height*0.397351">0.5022075219654096</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.833676,0.434603,0,1, 0.823302,0.397351,0,1)">NURBS(1, 3, 0, 0, 0.833676,0.434603,0,1, 0.823302,0.397351,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="13">
+              <X F="Width*0.999657">0.502035297163641</X>
+              <Y F="Height*0.471854">0.5963714323339142</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 1.010031,0.397351,0,1, 0.999657,0.434603,0,1)">NURBS(1, 3, 0, 0, 1.010031,0.397351,0,1, 0.999657,0.434603,0,1)</E>
+            </NURBSTo>
+            <LineTo IX="14">
+              <X F="Width*0.999657">0.5020352971636398</X>
+              <Y F="Height*0.695364">0.8788631634394685</Y>
+            </LineTo>
+            <LineTo IX="15">
+              <X F="Width*1.000000">0.5022075219654106</X>
+              <Y F="Height*0.695364">0.8788631634394685</Y>
+            </LineTo>
+            <NURBSTo IX="16">
+              <X F="Width*0.700000">0.3515452653757869</X>
+              <Y F="Height*0.794702">1.004415043930821</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 1.000000,0.750227,0,1, 0.865685,0.794702,0,1)">NURBS(1, 3, 0, 0, 1.000000,0.750227,0,1, 0.865685,0.794702,0,1)</E>
+            </NURBSTo>
+            <LineTo IX="17">
+              <X F="Width*0.500000">0.2511037609827055</X>
+              <Y F="Height*0.794702">1.004415043930821</Y>
+            </LineTo>
+            <LineTo IX="18">
+              <X F="Width*0.300000">0.1506622565896233</X>
+              <Y F="Height*0.794702">1.004415043930821</Y>
+            </LineTo>
+            <NURBSTo IX="19">
+              <X F="Width*0.000000">3.947459643111667e-16</X>
+              <Y F="Height*0.695364">0.8788631634394685</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.134315,0.794702,0,1, 0.000000,0.750227,0,1)">NURBS(1, 3, 0, 0, 0.134315,0.794702,0,1, 0.000000,0.750227,0,1)</E>
+            </NURBSTo>
+            <LineTo IX="20">
+              <X F="Width*0.000343">0.000172224801772616</X>
+              <Y F="Height*0.695364">0.8788631634394685</Y>
+            </LineTo>
+            <LineTo IX="21">
+              <X F="Width*0.000343">0.0001722248017704449</X>
+              <Y F="Height*0.471854">0.5963714323339142</Y>
+            </LineTo>
+            <NURBSTo IX="22">
+              <X F="Width*0.083333">0.0418506268304522</X>
+              <Y F="Height*0.397351">0.5022075219654096</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.000343,0.434603,0,1, -0.010031,0.397351,0,1)">NURBS(1, 3, 0, 0, 0.000343,0.434603,0,1, -0.010031,0.397351,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="23">
+              <X F="Width*0.166324">0.08352902885913061</X>
+              <Y F="Height*0.471854">0.5963714323339142</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.176698,0.397351,0,1, 0.166324,0.434603,0,1)">NURBS(1, 3, 0, 0, 0.176698,0.397351,0,1, 0.166324,0.434603,0,1)</E>
+            </NURBSTo>
+            <LineTo IX="24">
+              <X F="Width*0.166324">0.08352902885913061</X>
+              <Y F="Height*0.662252">0.8370125366090144</Y>
+            </LineTo>
+            <LineTo IX="25">
+              <X F="Width*0.166680">0.08370774263546624</X>
+              <Y F="Height*0.662252">0.8370125366090144</Y>
+            </LineTo>
+            <NURBSTo IX="26">
+              <X F="Width*0.178871">0.08983015240834094</X>
+              <Y F="Height*0.673545">0.851285818441423</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.166936,0.666350,0,1, 0.171000,0.670417,0,1)">NURBS(1, 3, 0, 0, 0.166936,0.666350,0,1, 0.171000,0.670417,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="27">
+              <X F="Width*0.237796">0.1194229817439138</X>
+              <Y F="Height*0.673545">0.851285818441423</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.195142,0.680010,0,1, 0.221524,0.680010,0,1)">NURBS(1, 3, 0, 0, 0.195142,0.680010,0,1, 0.221524,0.680010,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="28">
+              <X F="Width*0.249987">0.1255453914418199</X>
+              <Y F="Height*0.662252">0.837012538132859</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.245667,0.670417,0,1, 0.249731,0.666350,0,1)">NURBS(1, 3, 0, 0, 0.245667,0.670417,0,1, 0.249731,0.666350,0,1)</E>
+            </NURBSTo>
+            <LineTo IX="29">
+              <X F="Width*0.250000">0.1255518804913529</X>
+              <Y F="Height*0.662252">0.8370125366090144</Y>
+            </LineTo>
+            <LineTo IX="30">
+              <X F="Width*0.250000">0.1255518804913529</X>
+              <Y F="Height*0.661854">0.8365103946312183</Y>
+            </LineTo>
+            <NURBSTo IX="31">
+              <X F="Width*0.250000">0.1255518804913537</X>
+              <Y F="Height*0.661821">0.8364684129160526</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.250000,0.661843,0,1, 0.250000,0.661832,0,1)">NURBS(1, 3, 0, 0, 0.250000,0.661843,0,1, 0.250000,0.661832,0,1)</E>
+            </NURBSTo>
+            <LineTo IX="32">
+              <X F="Width*0.250000">0.1255518804913542</X>
+              <Y F="Height*0.364238">0.46035689513496</Y>
+            </LineTo>
+            <LineTo IX="33">
+              <X F="Width*0.250446">0.1257757727336531</X>
+              <Y F="Height*0.364238">0.46035689513496</Y>
+            </LineTo>
+            <LineTo IX="34">
+              <X F="Width*0.250446">0.1257757727336551</X>
+              <Y F="Height*0.099338">0.125551880491353</Y>
+            </LineTo>
+            <NURBSTo IX="35">
+              <X F="Width*0.358333">0.1799576953709388</X>
+              <Y F="Height*0.000000">0</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.250446,0.049669,0,1, 0.236960,0.000000,0,1)">NURBS(1, 3, 0, 0, 0.250446,0.049669,0,1, 0.236960,0.000000,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="36">
+              <X F="Width*0.466221">0.2341396180082212</X>
+              <Y F="Height*0.099338">0.125551880491353</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.479707,0.000000,0,1, 0.466221,0.049669,0,1)">NURBS(1, 3, 0, 0, 0.479707,0.000000,0,1, 0.466221,0.049669,0,1)</E>
+            </NURBSTo>
+            <LineTo IX="37">
+              <X F="Width*0.466221">0.2341396180082204</X>
+              <Y F="Height*0.364238">0.46035689513496</Y>
+            </LineTo>
+            <LineTo IX="38">
+              <X F="Width*0.466683">0.234371627027375</X>
+              <Y F="Height*0.364238">0.460356893912956</Y>
+            </LineTo>
+            <NURBSTo IX="39">
+              <X F="Width*0.476430">0.2392666292484756</X>
+              <Y F="Height*0.374018">0.4727171597045693</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.466407,0.367765,0,1, 0.469656,0.371326,0,1)">NURBS(1, 3, 0, 0, 0.466407,0.367765,0,1, 0.469656,0.371326,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="40">
+              <X F="Width*0.523570">0.2629408927169352</X>
+              <Y F="Height*0.374018">0.4727171597045693</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.489447,0.379190,0,1, 0.510553,0.379190,0,1)">NURBS(1, 3, 0, 0, 0.489447,0.379190,0,1, 0.510553,0.379190,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="41">
+              <X F="Width*0.533317">0.2678358950130075</X>
+              <Y F="Height*0.364238">0.4603568963257931</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.530344,0.371326,0,1, 0.533593,0.367765,0,1)">NURBS(1, 3, 0, 0, 0.530344,0.371326,0,1, 0.533593,0.367765,0,1)</E>
+            </NURBSTo>
+            <LineTo IX="42">
+              <X F="Width*0.533779">0.2680679039571855</X>
+              <Y F="Height*0.364238">0.46035689513496</Y>
+            </LineTo>
+            <LineTo IX="43">
+              <X F="Width*0.533779">0.2680679039571873</X>
+              <Y F="Height*0.099338">0.125551880491353</Y>
+            </LineTo>
+            <NURBSTo IX="44">
+              <X F="Width*0.641667">0.322249826594472</X>
+              <Y F="Height*0.000000">0</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.533779,0.049669,0,1, 0.520293,0.000000,0,1)">NURBS(1, 3, 0, 0, 0.533779,0.049669,0,1, 0.520293,0.000000,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="45">
+              <X F="Width*0.749554">0.3764317492317549</X>
+              <Y F="Height*0.099338">0.125551880491353</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.763040,0.000000,0,1, 0.749554,0.049669,0,1)">NURBS(1, 3, 0, 0, 0.763040,0.000000,0,1, 0.749554,0.049669,0,1)</E>
+            </NURBSTo>
+            <LineTo IX="46">
+              <X F="Width*0.749554">0.3764317492317539</X>
+              <Y F="Height*0.364238">0.46035689513496</Y>
+            </LineTo>
+            <LineTo IX="47">
+              <X F="Width*0.750000">0.376655641474058</X>
+              <Y F="Height*0.364238">0.46035689513496</Y>
+            </LineTo>
+            <LineTo IX="48">
+              <X F="Width*0.750000">0.3766556414740566</X>
+              <Y F="Height*0.662252">0.8370125366090144</Y>
+            </LineTo>
+            <LineTo IX="49">
+              <X F="Width*0.750013">0.3766621305235894</X>
+              <Y F="Height*0.662252">0.8370125350851745</Y>
+            </LineTo>
+          </Geom>
+          <LayerMem>
+            <LayerMember>0</LayerMember>
+          </LayerMem>
+        </Shape>
+        <Shape ID="2" Type="Shape" Name="Cylinder Fill:Chalk.2">
+          <XForm>
+            <Angle>-0</Angle>
+            <PinX>3.368055555555555</PinX>
+            <PinY>1.878472222222222</PinY>
+            <Width>1.347222222222222</Width>
+            <Height>1.4375</Height>
+            <LocPinX>0.6736111111111112</LocPinX>
+            <LocPinY>0.71875</LocPinY>
+          </XForm>
+          <TextXForm>
+            <TxtWidth F="Width*1.000000">1.347222222222222</TxtWidth>
+            <TxtHeight F="Height*0.603382">0.8673611111111109</TxtHeight>
+            <TxtAngle>-0</TxtAngle>
+          </TextXForm>
+          <Misc>
+            <ObjType>1</ObjType>
+          </Misc>
+          <Line>
+            <LinePattern>1</LinePattern>
+            <LineWeight>0.0138889</LineWeight>
+            <LineColor>0</LineColor>
+            <LineColorTrans>0</LineColorTrans>
+            <Rounding>0</Rounding>
+            <LineCap>0</LineCap>
+          </Line>
+          <Fill>
+            <FillPattern>1</FillPattern>
+            <FillForegnd>#ffffff</FillForegnd>
+            <FillForegndTrans>0</FillForegndTrans>
+            <ShdwPattern>0</ShdwPattern>
+            <ShdwForegnd>0</ShdwForegnd>
+            <ShdwForegndTrans>0.5</ShdwForegndTrans>
+            <ShapeShdwType>1</ShapeShdwType>
+            <ShapeShdwOffsetX>0</ShapeShdwOffsetX>
+            <ShapeShdwOffsetY>-0.0277778</ShapeShdwOffsetY>
+          </Fill>
+          <Geom IX="0">
+            <NoFill>1</NoFill>
+            <NoLine>0</NoLine>
+            <MoveTo IX="1">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+            </MoveTo>
+            <LineTo IX="2">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.900000">1.29375</Y>
+            </LineTo>
+            <NURBSTo IX="3">
+              <X F="Width*0.500000">0.6736111111111112</X>
+              <Y F="Height*1.000000">1.4375</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.000000,0.955200,0,1, 0.224000,1.000000,0,1)">NURBS(1, 3, 0, 0, 0.000000,0.955200,0,1, 0.224000,1.000000,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="4">
+              <X F="Width*1.000000">1.347222222222222</X>
+              <Y F="Height*0.900000">1.29375</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.776000,1.000000,0,1, 1.000000,0.955200,0,1)">NURBS(1, 3, 0, 0, 0.776000,1.000000,0,1, 1.000000,0.955200,0,1)</E>
+            </NURBSTo>
+            <LineTo IX="5">
+              <X F="Width*1.000000">1.347222222222222</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+            </LineTo>
+            <NURBSTo IX="6">
+              <X F="Width*0.500000">0.6736111111111112</X>
+              <Y F="Height*0.000000">0</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 1.000000,0.044800,0,1, 0.776000,0.000000,0,1)">NURBS(1, 3, 0, 0, 1.000000,0.044800,0,1, 0.776000,0.000000,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="7">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.224000,0.000000,0,1, 0.000000,0.044800,0,1)">NURBS(1, 3, 0, 0, 0.224000,0.000000,0,1, 0.000000,0.044800,0,1)</E>
+            </NURBSTo>
+            <MoveTo IX="8">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.900000">1.29375</Y>
+            </MoveTo>
+            <NURBSTo IX="9">
+              <X F="Width*0.500000">0.6736111111111112</X>
+              <Y F="Height*0.800000">1.15</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.000000,0.844800,0,1, 0.224000,0.800000,0,1)">NURBS(1, 3, 0, 0, 0.000000,0.844800,0,1, 0.224000,0.800000,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="10">
+              <X F="Width*1.000000">1.347222222222222</X>
+              <Y F="Height*0.900000">1.29375</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.776000,0.800000,0,1, 1.000000,0.844800,0,1)">NURBS(1, 3, 0, 0, 0.776000,0.800000,0,1, 1.000000,0.844800,0,1)</E>
+            </NURBSTo>
+          </Geom>
+          <Geom IX="1">
+            <NoFill>0</NoFill>
+            <NoLine>1</NoLine>
+            <MoveTo IX="1">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+            </MoveTo>
+            <LineTo IX="2">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.900000">1.29375</Y>
+            </LineTo>
+            <NURBSTo IX="3">
+              <X F="Width*0.500000">0.6736111111111112</X>
+              <Y F="Height*1.000000">1.4375</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.000000,0.955200,0,1, 0.224000,1.000000,0,1)">NURBS(1, 3, 0, 0, 0.000000,0.955200,0,1, 0.224000,1.000000,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="4">
+              <X F="Width*1.000000">1.347222222222222</X>
+              <Y F="Height*0.900000">1.29375</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.776000,1.000000,0,1, 1.000000,0.955200,0,1)">NURBS(1, 3, 0, 0, 0.776000,1.000000,0,1, 1.000000,0.955200,0,1)</E>
+            </NURBSTo>
+            <LineTo IX="5">
+              <X F="Width*1.000000">1.347222222222222</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+            </LineTo>
+            <NURBSTo IX="6">
+              <X F="Width*0.500000">0.6736111111111112</X>
+              <Y F="Height*0.000000">0</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 1.000000,0.044800,0,1, 0.776000,0.000000,0,1)">NURBS(1, 3, 0, 0, 1.000000,0.044800,0,1, 0.776000,0.000000,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="7">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.224000,0.000000,0,1, 0.000000,0.044800,0,1)">NURBS(1, 3, 0, 0, 0.224000,0.000000,0,1, 0.000000,0.044800,0,1)</E>
+            </NURBSTo>
+          </Geom>
+          <LayerMem>
+            <LayerMember>0</LayerMember>
+          </LayerMem>
+          <TextBlock>
+            <LeftMargin>0.0694444</LeftMargin>
+            <RightMargin>0.0694444</RightMargin>
+            <VerticalAlign>1</VerticalAlign>
+            <DefaultTabStop>0</DefaultTabStop>
+          </TextBlock>
+          <Char IX="0">
+            <Font>0</Font>
+            <Color>0</Color>
+            <Style>0</Style>
+            <Size>0.305556</Size>
+            <ColorTrans>0</ColorTrans>
+          </Char>
+          <Para IX="0">
+            <IndFirst>0</IndFirst>
+            <IndLeft>0</IndLeft>
+            <IndRight>-0</IndRight>
+            <SpLine>-1.2</SpLine>
+            <SpBefore>0</SpBefore>
+            <HorzAlign>1</HorzAlign>
+          </Para>
+          <Text><cp IX="0"/><pp IX="0"/>Шард 1</Text>
+        </Shape>
+        <Shape ID="3" Type="Shape" Name="Cylinder Fill:Chalk.3">
+          <XForm>
+            <Angle>-0</Angle>
+            <PinX>5.916666666666667</PinX>
+            <PinY>1.878472222222222</PinY>
+            <Width>1.347222222222222</Width>
+            <Height>1.4375</Height>
+            <LocPinX>0.6736111111111112</LocPinX>
+            <LocPinY>0.71875</LocPinY>
+          </XForm>
+          <TextXForm>
+            <TxtWidth F="Width*1.000000">1.347222222222222</TxtWidth>
+            <TxtHeight F="Height*0.603382">0.8673611111111109</TxtHeight>
+            <TxtAngle>-0</TxtAngle>
+          </TextXForm>
+          <Misc>
+            <ObjType>1</ObjType>
+          </Misc>
+          <Line>
+            <LinePattern>1</LinePattern>
+            <LineWeight>0.0138889</LineWeight>
+            <LineColor>0</LineColor>
+            <LineColorTrans>0</LineColorTrans>
+            <Rounding>0</Rounding>
+            <LineCap>0</LineCap>
+          </Line>
+          <Fill>
+            <FillPattern>1</FillPattern>
+            <FillForegnd>#ffffff</FillForegnd>
+            <FillForegndTrans>0</FillForegndTrans>
+            <ShdwPattern>0</ShdwPattern>
+            <ShdwForegnd>0</ShdwForegnd>
+            <ShdwForegndTrans>0.5</ShdwForegndTrans>
+            <ShapeShdwType>1</ShapeShdwType>
+            <ShapeShdwOffsetX>0</ShapeShdwOffsetX>
+            <ShapeShdwOffsetY>-0.0277778</ShapeShdwOffsetY>
+          </Fill>
+          <Geom IX="0">
+            <NoFill>1</NoFill>
+            <NoLine>0</NoLine>
+            <MoveTo IX="1">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+            </MoveTo>
+            <LineTo IX="2">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.900000">1.29375</Y>
+            </LineTo>
+            <NURBSTo IX="3">
+              <X F="Width*0.500000">0.6736111111111112</X>
+              <Y F="Height*1.000000">1.4375</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.000000,0.955200,0,1, 0.224000,1.000000,0,1)">NURBS(1, 3, 0, 0, 0.000000,0.955200,0,1, 0.224000,1.000000,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="4">
+              <X F="Width*1.000000">1.347222222222222</X>
+              <Y F="Height*0.900000">1.29375</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.776000,1.000000,0,1, 1.000000,0.955200,0,1)">NURBS(1, 3, 0, 0, 0.776000,1.000000,0,1, 1.000000,0.955200,0,1)</E>
+            </NURBSTo>
+            <LineTo IX="5">
+              <X F="Width*1.000000">1.347222222222222</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+            </LineTo>
+            <NURBSTo IX="6">
+              <X F="Width*0.500000">0.6736111111111112</X>
+              <Y F="Height*0.000000">0</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 1.000000,0.044800,0,1, 0.776000,0.000000,0,1)">NURBS(1, 3, 0, 0, 1.000000,0.044800,0,1, 0.776000,0.000000,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="7">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.224000,0.000000,0,1, 0.000000,0.044800,0,1)">NURBS(1, 3, 0, 0, 0.224000,0.000000,0,1, 0.000000,0.044800,0,1)</E>
+            </NURBSTo>
+            <MoveTo IX="8">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.900000">1.29375</Y>
+            </MoveTo>
+            <NURBSTo IX="9">
+              <X F="Width*0.500000">0.6736111111111112</X>
+              <Y F="Height*0.800000">1.15</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.000000,0.844800,0,1, 0.224000,0.800000,0,1)">NURBS(1, 3, 0, 0, 0.000000,0.844800,0,1, 0.224000,0.800000,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="10">
+              <X F="Width*1.000000">1.347222222222222</X>
+              <Y F="Height*0.900000">1.29375</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.776000,0.800000,0,1, 1.000000,0.844800,0,1)">NURBS(1, 3, 0, 0, 0.776000,0.800000,0,1, 1.000000,0.844800,0,1)</E>
+            </NURBSTo>
+          </Geom>
+          <Geom IX="1">
+            <NoFill>0</NoFill>
+            <NoLine>1</NoLine>
+            <MoveTo IX="1">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+            </MoveTo>
+            <LineTo IX="2">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.900000">1.29375</Y>
+            </LineTo>
+            <NURBSTo IX="3">
+              <X F="Width*0.500000">0.6736111111111112</X>
+              <Y F="Height*1.000000">1.4375</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.000000,0.955200,0,1, 0.224000,1.000000,0,1)">NURBS(1, 3, 0, 0, 0.000000,0.955200,0,1, 0.224000,1.000000,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="4">
+              <X F="Width*1.000000">1.347222222222222</X>
+              <Y F="Height*0.900000">1.29375</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.776000,1.000000,0,1, 1.000000,0.955200,0,1)">NURBS(1, 3, 0, 0, 0.776000,1.000000,0,1, 1.000000,0.955200,0,1)</E>
+            </NURBSTo>
+            <LineTo IX="5">
+              <X F="Width*1.000000">1.347222222222222</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+            </LineTo>
+            <NURBSTo IX="6">
+              <X F="Width*0.500000">0.6736111111111112</X>
+              <Y F="Height*0.000000">0</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 1.000000,0.044800,0,1, 0.776000,0.000000,0,1)">NURBS(1, 3, 0, 0, 1.000000,0.044800,0,1, 0.776000,0.000000,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="7">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.224000,0.000000,0,1, 0.000000,0.044800,0,1)">NURBS(1, 3, 0, 0, 0.224000,0.000000,0,1, 0.000000,0.044800,0,1)</E>
+            </NURBSTo>
+          </Geom>
+          <LayerMem>
+            <LayerMember>0</LayerMember>
+          </LayerMem>
+          <TextBlock>
+            <LeftMargin>0.0694444</LeftMargin>
+            <RightMargin>0.0694444</RightMargin>
+            <VerticalAlign>1</VerticalAlign>
+            <DefaultTabStop>0</DefaultTabStop>
+          </TextBlock>
+          <Char IX="0">
+            <Font>0</Font>
+            <Color>0</Color>
+            <Style>0</Style>
+            <Size>0.305556</Size>
+            <ColorTrans>0</ColorTrans>
+          </Char>
+          <Para IX="0">
+            <IndFirst>0</IndFirst>
+            <IndLeft>0</IndLeft>
+            <IndRight>-0</IndRight>
+            <SpLine>-1.2</SpLine>
+            <SpBefore>0</SpBefore>
+            <HorzAlign>1</HorzAlign>
+          </Para>
+          <Text><cp IX="0"/><pp IX="0"/>Шард 2</Text>
+        </Shape>
+        <Shape ID="4" Type="Shape" Name="Cylinder Fill:Chalk.4">
+          <XForm>
+            <Angle>-0</Angle>
+            <PinX>8.472222222222221</PinX>
+            <PinY>1.878472222222222</PinY>
+            <Width>1.347222222222222</Width>
+            <Height>1.4375</Height>
+            <LocPinX>0.6736111111111112</LocPinX>
+            <LocPinY>0.71875</LocPinY>
+          </XForm>
+          <TextXForm>
+            <TxtWidth F="Width*1.000000">1.347222222222222</TxtWidth>
+            <TxtHeight F="Height*0.603382">0.8673611111111109</TxtHeight>
+            <TxtAngle>-0</TxtAngle>
+          </TextXForm>
+          <Misc>
+            <ObjType>1</ObjType>
+          </Misc>
+          <Line>
+            <LinePattern>1</LinePattern>
+            <LineWeight>0.0138889</LineWeight>
+            <LineColor>0</LineColor>
+            <LineColorTrans>0</LineColorTrans>
+            <Rounding>0</Rounding>
+            <LineCap>0</LineCap>
+          </Line>
+          <Fill>
+            <FillPattern>1</FillPattern>
+            <FillForegnd>#ffffff</FillForegnd>
+            <FillForegndTrans>0</FillForegndTrans>
+            <ShdwPattern>0</ShdwPattern>
+            <ShdwForegnd>0</ShdwForegnd>
+            <ShdwForegndTrans>0.5</ShdwForegndTrans>
+            <ShapeShdwType>1</ShapeShdwType>
+            <ShapeShdwOffsetX>0</ShapeShdwOffsetX>
+            <ShapeShdwOffsetY>-0.0277778</ShapeShdwOffsetY>
+          </Fill>
+          <Geom IX="0">
+            <NoFill>1</NoFill>
+            <NoLine>0</NoLine>
+            <MoveTo IX="1">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+            </MoveTo>
+            <LineTo IX="2">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.900000">1.29375</Y>
+            </LineTo>
+            <NURBSTo IX="3">
+              <X F="Width*0.500000">0.6736111111111112</X>
+              <Y F="Height*1.000000">1.4375</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.000000,0.955200,0,1, 0.224000,1.000000,0,1)">NURBS(1, 3, 0, 0, 0.000000,0.955200,0,1, 0.224000,1.000000,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="4">
+              <X F="Width*1.000000">1.347222222222222</X>
+              <Y F="Height*0.900000">1.29375</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.776000,1.000000,0,1, 1.000000,0.955200,0,1)">NURBS(1, 3, 0, 0, 0.776000,1.000000,0,1, 1.000000,0.955200,0,1)</E>
+            </NURBSTo>
+            <LineTo IX="5">
+              <X F="Width*1.000000">1.347222222222222</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+            </LineTo>
+            <NURBSTo IX="6">
+              <X F="Width*0.500000">0.6736111111111112</X>
+              <Y F="Height*0.000000">0</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 1.000000,0.044800,0,1, 0.776000,0.000000,0,1)">NURBS(1, 3, 0, 0, 1.000000,0.044800,0,1, 0.776000,0.000000,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="7">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.224000,0.000000,0,1, 0.000000,0.044800,0,1)">NURBS(1, 3, 0, 0, 0.224000,0.000000,0,1, 0.000000,0.044800,0,1)</E>
+            </NURBSTo>
+            <MoveTo IX="8">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.900000">1.29375</Y>
+            </MoveTo>
+            <NURBSTo IX="9">
+              <X F="Width*0.500000">0.6736111111111112</X>
+              <Y F="Height*0.800000">1.15</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.000000,0.844800,0,1, 0.224000,0.800000,0,1)">NURBS(1, 3, 0, 0, 0.000000,0.844800,0,1, 0.224000,0.800000,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="10">
+              <X F="Width*1.000000">1.347222222222222</X>
+              <Y F="Height*0.900000">1.29375</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.776000,0.800000,0,1, 1.000000,0.844800,0,1)">NURBS(1, 3, 0, 0, 0.776000,0.800000,0,1, 1.000000,0.844800,0,1)</E>
+            </NURBSTo>
+          </Geom>
+          <Geom IX="1">
+            <NoFill>0</NoFill>
+            <NoLine>1</NoLine>
+            <MoveTo IX="1">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+            </MoveTo>
+            <LineTo IX="2">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.900000">1.29375</Y>
+            </LineTo>
+            <NURBSTo IX="3">
+              <X F="Width*0.500000">0.6736111111111112</X>
+              <Y F="Height*1.000000">1.4375</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.000000,0.955200,0,1, 0.224000,1.000000,0,1)">NURBS(1, 3, 0, 0, 0.000000,0.955200,0,1, 0.224000,1.000000,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="4">
+              <X F="Width*1.000000">1.347222222222222</X>
+              <Y F="Height*0.900000">1.29375</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.776000,1.000000,0,1, 1.000000,0.955200,0,1)">NURBS(1, 3, 0, 0, 0.776000,1.000000,0,1, 1.000000,0.955200,0,1)</E>
+            </NURBSTo>
+            <LineTo IX="5">
+              <X F="Width*1.000000">1.347222222222222</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+            </LineTo>
+            <NURBSTo IX="6">
+              <X F="Width*0.500000">0.6736111111111112</X>
+              <Y F="Height*0.000000">0</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 1.000000,0.044800,0,1, 0.776000,0.000000,0,1)">NURBS(1, 3, 0, 0, 1.000000,0.044800,0,1, 0.776000,0.000000,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="7">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.224000,0.000000,0,1, 0.000000,0.044800,0,1)">NURBS(1, 3, 0, 0, 0.224000,0.000000,0,1, 0.000000,0.044800,0,1)</E>
+            </NURBSTo>
+          </Geom>
+          <LayerMem>
+            <LayerMember>0</LayerMember>
+          </LayerMem>
+          <TextBlock>
+            <LeftMargin>0.0694444</LeftMargin>
+            <RightMargin>0.0694444</RightMargin>
+            <VerticalAlign>1</VerticalAlign>
+            <DefaultTabStop>0</DefaultTabStop>
+          </TextBlock>
+          <Char IX="0">
+            <Font>0</Font>
+            <Color>0</Color>
+            <Style>0</Style>
+            <Size>0.305556</Size>
+            <ColorTrans>0</ColorTrans>
+          </Char>
+          <Para IX="0">
+            <IndFirst>0</IndFirst>
+            <IndLeft>0</IndLeft>
+            <IndRight>-0</IndRight>
+            <SpLine>-1.2</SpLine>
+            <SpBefore>0</SpBefore>
+            <HorzAlign>1</HorzAlign>
+          </Para>
+          <Text><cp IX="0"/><pp IX="0"/>Шард 3</Text>
+        </Shape>
+        <Shape ID="5" Type="Shape" Name="Graphic.5">
+          <XForm>
+            <Angle>-0</Angle>
+            <PinX>2.682545461362984</PinX>
+            <PinY>3.620719395359405</PinY>
+            <Width>1.170646478281522</Width>
+            <Height>2.036338987058968</Height>
+            <LocPinX>0.5853232391407612</LocPinX>
+            <LocPinY>1.018169493529484</LocPinY>
+          </XForm>
+          <XForm1D>
+            <BeginX>2.09722222222222</BeginX>
+            <BeginY>4.63888888888889</BeginY>
+            <EndX>3.26786870050374</EndX>
+            <EndY>2.60254990182992</EndY>
+          </XForm1D>
+          <Layout>
+            <ConLineJumpCode>4</ConLineJumpCode>
+            <ConLineJumpStyle>0</ConLineJumpStyle>
+            <ShapeRouteStyle>0</ShapeRouteStyle>
+            <ConFixedCode>0</ConFixedCode>
+            <ConLineRouteExt>2</ConLineRouteExt>
+          </Layout>
+          <TextXForm>
+            <TxtWidth F="Width*1.000000">1.170646478281522</TxtWidth>
+            <TxtHeight F="Height*1.000000">2.036338987058968</TxtHeight>
+            <TxtAngle>-0</TxtAngle>
+          </TextXForm>
+          <Misc>
+            <ObjType>2</ObjType>
+          </Misc>
+          <Line>
+            <LinePattern>1</LinePattern>
+            <LineWeight>0.0277778</LineWeight>
+            <LineColor>0</LineColor>
+            <LineColorTrans>0</LineColorTrans>
+            <Rounding>0</Rounding>
+            <LineCap>0</LineCap>
+            <EndArrow>4</EndArrow>
+            <EndArrowSize>2</EndArrowSize>
+          </Line>
+          <Fill>
+            <FillPattern>0</FillPattern>
+            <FillForegnd>#ffffff</FillForegnd>
+            <FillForegndTrans>0</FillForegndTrans>
+            <ShdwPattern>0</ShdwPattern>
+            <ShdwForegnd>0</ShdwForegnd>
+            <ShdwForegndTrans>0.5</ShdwForegndTrans>
+            <ShapeShdwType>1</ShapeShdwType>
+            <ShapeShdwOffsetX>0</ShapeShdwOffsetX>
+            <ShapeShdwOffsetY>-0.0277778</ShapeShdwOffsetY>
+          </Fill>
+          <Geom IX="0">
+            <NoFill>1</NoFill>
+            <NoLine>0</NoLine>
+            <MoveTo IX="1">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*1.000000">2.036338987058968</Y>
+            </MoveTo>
+            <NURBSTo IX="2">
+              <X F="Width*0.581350">0.6805555555555556</X>
+              <Y F="Height*0.856769">1.744672320392301</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.193764,0.952261,0,1, 0.433061,0.947132,0,1)">NURBS(1, 3, 0, 0, 0.193764,0.952261,0,1, 0.433061,0.947132,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="3">
+              <X F="Width*0.889822">1.041666666666667</X>
+              <Y F="Height*0.457769">0.9321722162256307</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.729639,0.766406,0,1, 0.820054,0.600549,0,1)">NURBS(1, 3, 0, 0, 0.729639,0.766406,0,1, 0.820054,0.600549,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="4">
+              <X F="Width*1.000000">1.170646478281522</X>
+              <Y F="Height*0.000000">0</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.959590,0.314988,0,1, 0.963278,0.152574,0,1)">NURBS(1, 3, 0, 0, 0.959590,0.314988,0,1, 0.963278,0.152574,0,1)</E>
+            </NURBSTo>
+          </Geom>
+          <LayerMem>
+            <LayerMember>0</LayerMember>
+          </LayerMem>
+        </Shape>
+        <Shape ID="6" Type="Shape" Name="Rectangle No Fill No Fill.6">
+          <XForm>
+            <Angle>-0</Angle>
+            <PinX>5.423611111111111</PinX>
+            <PinY>4.520833333333333</PinY>
+            <Width>5.458333333333333</Width>
+            <Height>0.5555555555555556</Height>
+            <LocPinX>2.729166666666667</LocPinX>
+            <LocPinY>0.2777777777777778</LocPinY>
+          </XForm>
+          <TextXForm>
+            <TxtWidth F="Width*1.000000">5.458333333333333</TxtWidth>
+            <TxtHeight F="Height*1.000000">0.5555555555555556</TxtHeight>
+            <TxtAngle>-0</TxtAngle>
+          </TextXForm>
+          <Misc>
+            <ObjType>1</ObjType>
+          </Misc>
+          <Line>
+            <LinePattern>0</LinePattern>
+            <LineWeight>0.0138889</LineWeight>
+            <LineColor>0</LineColor>
+            <LineColorTrans>0</LineColorTrans>
+            <Rounding>0</Rounding>
+            <LineCap>0</LineCap>
+          </Line>
+          <Fill>
+            <FillPattern>0</FillPattern>
+            <FillForegnd>#ffffff</FillForegnd>
+            <FillForegndTrans>0</FillForegndTrans>
+            <ShdwPattern>0</ShdwPattern>
+            <ShdwForegnd>0</ShdwForegnd>
+            <ShdwForegndTrans>0.5</ShdwForegndTrans>
+            <ShapeShdwType>1</ShapeShdwType>
+            <ShapeShdwOffsetX>0</ShapeShdwOffsetX>
+            <ShapeShdwOffsetY>-0.0277778</ShapeShdwOffsetY>
+          </Fill>
+          <Geom IX="0">
+            <NoFill>0</NoFill>
+            <NoLine>0</NoLine>
+            <MoveTo IX="1">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*1.000000">0.5555555555555556</Y>
+            </MoveTo>
+            <LineTo IX="2">
+              <X F="Width*1.000000">5.458333333333333</X>
+              <Y F="Height*1.000000">0.5555555555555556</Y>
+            </LineTo>
+            <LineTo IX="3">
+              <X F="Width*1.000000">5.458333333333333</X>
+              <Y F="Height*0.000000">0</Y>
+            </LineTo>
+            <LineTo IX="4">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.000000">0</Y>
+            </LineTo>
+            <LineTo IX="5">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*1.000000">0.5555555555555556</Y>
+            </LineTo>
+          </Geom>
+          <LayerMem>
+            <LayerMember>0</LayerMember>
+          </LayerMem>
+          <TextBlock>
+            <LeftMargin>0.0694444</LeftMargin>
+            <RightMargin>0.0694444</RightMargin>
+            <VerticalAlign>1</VerticalAlign>
+            <DefaultTabStop>0</DefaultTabStop>
+          </TextBlock>
+          <Char IX="0">
+            <Font>1</Font>
+            <Color>#009051</Color>
+            <Style>0</Style>
+            <Size>0.305556</Size>
+            <ColorTrans>0</ColorTrans>
+          </Char>
+          <Char IX="1">
+            <Font>1</Font>
+            <Color>0</Color>
+            <Style>0</Style>
+            <Size>0.305556</Size>
+            <ColorTrans>0</ColorTrans>
+          </Char>
+          <Para IX="0">
+            <IndFirst>0</IndFirst>
+            <IndLeft>0</IndLeft>
+            <IndRight>-0</IndRight>
+            <SpLine>-1.2</SpLine>
+            <SpBefore>0</SpBefore>
+            <HorzAlign>1</HorzAlign>
+          </Para>
+          <Text><cp IX="0"/><pp IX="0"/>INSERT INTO <cp IX="1"/>distributed_table</Text>
+        </Shape>
+      </Shapes>
+      <Connects>
+        <Connect ToCell="PinX" FromSheet="5" FromPart="12" ToSheet="2" ToPart="3"/>
+      </Connects>
+    </Page>
+    <Page ID="1" NameU="phase2">
+      <PageSheet>
+        <RulerGrid>
+          <XGridSpacing>0.0555556</XGridSpacing>
+          <YGridSpacing>0.0555556</YGridSpacing>
+        </RulerGrid>
+        <PageProps>
+          <PageScale>1</PageScale>
+          <DrawingScale>1</DrawingScale>
+          <PageWidth>10.5556</PageWidth>
+          <PageHeight>5.55556</PageHeight>
+          <DrawingSizeType>3</DrawingSizeType>
+          <ShdwOffsetX>0</ShdwOffsetX>
+          <ShdwOffsetY>0</ShdwOffsetY>
+        </PageProps>
+        <Layer IX="0">
+          <Name>Layer 1</Name>
+          <Visible>1</Visible>
+          <Print>1</Print>
+          <Lock>0</Lock>
+        </Layer>
+      </PageSheet>
+      <Shapes>
+        <Shape ID="7" Type="Shape" Name="Cylinder Fill:Chalk.7">
+          <XForm>
+            <Angle>-0</Angle>
+            <PinX>3.368055555555555</PinX>
+            <PinY>1.878472222222222</PinY>
+            <Width>1.347222222222222</Width>
+            <Height>1.4375</Height>
+            <LocPinX>0.6736111111111112</LocPinX>
+            <LocPinY>0.71875</LocPinY>
+          </XForm>
+          <TextXForm>
+            <TxtWidth F="Width*1.000000">1.347222222222222</TxtWidth>
+            <TxtHeight F="Height*0.603382">0.8673611111111109</TxtHeight>
+            <TxtAngle>-0</TxtAngle>
+          </TextXForm>
+          <Misc>
+            <ObjType>1</ObjType>
+          </Misc>
+          <Line>
+            <LinePattern>1</LinePattern>
+            <LineWeight>0.0138889</LineWeight>
+            <LineColor>0</LineColor>
+            <LineColorTrans>0</LineColorTrans>
+            <Rounding>0</Rounding>
+            <LineCap>0</LineCap>
+          </Line>
+          <Fill>
+            <FillPattern>1</FillPattern>
+            <FillForegnd>#ffffff</FillForegnd>
+            <FillForegndTrans>0</FillForegndTrans>
+            <ShdwPattern>0</ShdwPattern>
+            <ShdwForegnd>0</ShdwForegnd>
+            <ShdwForegndTrans>0.5</ShdwForegndTrans>
+            <ShapeShdwType>1</ShapeShdwType>
+            <ShapeShdwOffsetX>0</ShapeShdwOffsetX>
+            <ShapeShdwOffsetY>-0.0277778</ShapeShdwOffsetY>
+          </Fill>
+          <Geom IX="0">
+            <NoFill>1</NoFill>
+            <NoLine>0</NoLine>
+            <MoveTo IX="1">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+            </MoveTo>
+            <LineTo IX="2">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.900000">1.29375</Y>
+            </LineTo>
+            <NURBSTo IX="3">
+              <X F="Width*0.500000">0.6736111111111112</X>
+              <Y F="Height*1.000000">1.4375</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.000000,0.955200,0,1, 0.224000,1.000000,0,1)">NURBS(1, 3, 0, 0, 0.000000,0.955200,0,1, 0.224000,1.000000,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="4">
+              <X F="Width*1.000000">1.347222222222222</X>
+              <Y F="Height*0.900000">1.29375</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.776000,1.000000,0,1, 1.000000,0.955200,0,1)">NURBS(1, 3, 0, 0, 0.776000,1.000000,0,1, 1.000000,0.955200,0,1)</E>
+            </NURBSTo>
+            <LineTo IX="5">
+              <X F="Width*1.000000">1.347222222222222</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+            </LineTo>
+            <NURBSTo IX="6">
+              <X F="Width*0.500000">0.6736111111111112</X>
+              <Y F="Height*0.000000">0</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 1.000000,0.044800,0,1, 0.776000,0.000000,0,1)">NURBS(1, 3, 0, 0, 1.000000,0.044800,0,1, 0.776000,0.000000,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="7">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.224000,0.000000,0,1, 0.000000,0.044800,0,1)">NURBS(1, 3, 0, 0, 0.224000,0.000000,0,1, 0.000000,0.044800,0,1)</E>
+            </NURBSTo>
+            <MoveTo IX="8">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.900000">1.29375</Y>
+            </MoveTo>
+            <NURBSTo IX="9">
+              <X F="Width*0.500000">0.6736111111111112</X>
+              <Y F="Height*0.800000">1.15</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.000000,0.844800,0,1, 0.224000,0.800000,0,1)">NURBS(1, 3, 0, 0, 0.000000,0.844800,0,1, 0.224000,0.800000,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="10">
+              <X F="Width*1.000000">1.347222222222222</X>
+              <Y F="Height*0.900000">1.29375</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.776000,0.800000,0,1, 1.000000,0.844800,0,1)">NURBS(1, 3, 0, 0, 0.776000,0.800000,0,1, 1.000000,0.844800,0,1)</E>
+            </NURBSTo>
+          </Geom>
+          <Geom IX="1">
+            <NoFill>0</NoFill>
+            <NoLine>1</NoLine>
+            <MoveTo IX="1">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+            </MoveTo>
+            <LineTo IX="2">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.900000">1.29375</Y>
+            </LineTo>
+            <NURBSTo IX="3">
+              <X F="Width*0.500000">0.6736111111111112</X>
+              <Y F="Height*1.000000">1.4375</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.000000,0.955200,0,1, 0.224000,1.000000,0,1)">NURBS(1, 3, 0, 0, 0.000000,0.955200,0,1, 0.224000,1.000000,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="4">
+              <X F="Width*1.000000">1.347222222222222</X>
+              <Y F="Height*0.900000">1.29375</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.776000,1.000000,0,1, 1.000000,0.955200,0,1)">NURBS(1, 3, 0, 0, 0.776000,1.000000,0,1, 1.000000,0.955200,0,1)</E>
+            </NURBSTo>
+            <LineTo IX="5">
+              <X F="Width*1.000000">1.347222222222222</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+            </LineTo>
+            <NURBSTo IX="6">
+              <X F="Width*0.500000">0.6736111111111112</X>
+              <Y F="Height*0.000000">0</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 1.000000,0.044800,0,1, 0.776000,0.000000,0,1)">NURBS(1, 3, 0, 0, 1.000000,0.044800,0,1, 0.776000,0.000000,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="7">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.224000,0.000000,0,1, 0.000000,0.044800,0,1)">NURBS(1, 3, 0, 0, 0.224000,0.000000,0,1, 0.000000,0.044800,0,1)</E>
+            </NURBSTo>
+          </Geom>
+          <LayerMem>
+            <LayerMember>0</LayerMember>
+          </LayerMem>
+          <TextBlock>
+            <LeftMargin>0.0694444</LeftMargin>
+            <RightMargin>0.0694444</RightMargin>
+            <VerticalAlign>1</VerticalAlign>
+            <DefaultTabStop>0</DefaultTabStop>
+          </TextBlock>
+          <Char IX="0">
+            <Font>0</Font>
+            <Color>0</Color>
+            <Style>0</Style>
+            <Size>0.305556</Size>
+            <ColorTrans>0</ColorTrans>
+          </Char>
+          <Para IX="0">
+            <IndFirst>0</IndFirst>
+            <IndLeft>0</IndLeft>
+            <IndRight>-0</IndRight>
+            <SpLine>-1.2</SpLine>
+            <SpBefore>0</SpBefore>
+            <HorzAlign>1</HorzAlign>
+          </Para>
+          <Text><cp IX="0"/><pp IX="0"/>Шард 1</Text>
+        </Shape>
+        <Shape ID="8" Type="Shape" Name="Cylinder Fill:Chalk.8">
+          <XForm>
+            <Angle>-0</Angle>
+            <PinX>5.916666666666667</PinX>
+            <PinY>1.878472222222222</PinY>
+            <Width>1.347222222222222</Width>
+            <Height>1.4375</Height>
+            <LocPinX>0.6736111111111112</LocPinX>
+            <LocPinY>0.71875</LocPinY>
+          </XForm>
+          <TextXForm>
+            <TxtWidth F="Width*1.000000">1.347222222222222</TxtWidth>
+            <TxtHeight F="Height*0.603382">0.8673611111111109</TxtHeight>
+            <TxtAngle>-0</TxtAngle>
+          </TextXForm>
+          <Misc>
+            <ObjType>1</ObjType>
+          </Misc>
+          <Line>
+            <LinePattern>1</LinePattern>
+            <LineWeight>0.0138889</LineWeight>
+            <LineColor>0</LineColor>
+            <LineColorTrans>0</LineColorTrans>
+            <Rounding>0</Rounding>
+            <LineCap>0</LineCap>
+          </Line>
+          <Fill>
+            <FillPattern>1</FillPattern>
+            <FillForegnd>#ffffff</FillForegnd>
+            <FillForegndTrans>0</FillForegndTrans>
+            <ShdwPattern>0</ShdwPattern>
+            <ShdwForegnd>0</ShdwForegnd>
+            <ShdwForegndTrans>0.5</ShdwForegndTrans>
+            <ShapeShdwType>1</ShapeShdwType>
+            <ShapeShdwOffsetX>0</ShapeShdwOffsetX>
+            <ShapeShdwOffsetY>-0.0277778</ShapeShdwOffsetY>
+          </Fill>
+          <Geom IX="0">
+            <NoFill>1</NoFill>
+            <NoLine>0</NoLine>
+            <MoveTo IX="1">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+            </MoveTo>
+            <LineTo IX="2">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.900000">1.29375</Y>
+            </LineTo>
+            <NURBSTo IX="3">
+              <X F="Width*0.500000">0.6736111111111112</X>
+              <Y F="Height*1.000000">1.4375</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.000000,0.955200,0,1, 0.224000,1.000000,0,1)">NURBS(1, 3, 0, 0, 0.000000,0.955200,0,1, 0.224000,1.000000,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="4">
+              <X F="Width*1.000000">1.347222222222222</X>
+              <Y F="Height*0.900000">1.29375</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.776000,1.000000,0,1, 1.000000,0.955200,0,1)">NURBS(1, 3, 0, 0, 0.776000,1.000000,0,1, 1.000000,0.955200,0,1)</E>
+            </NURBSTo>
+            <LineTo IX="5">
+              <X F="Width*1.000000">1.347222222222222</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+            </LineTo>
+            <NURBSTo IX="6">
+              <X F="Width*0.500000">0.6736111111111112</X>
+              <Y F="Height*0.000000">0</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 1.000000,0.044800,0,1, 0.776000,0.000000,0,1)">NURBS(1, 3, 0, 0, 1.000000,0.044800,0,1, 0.776000,0.000000,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="7">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.224000,0.000000,0,1, 0.000000,0.044800,0,1)">NURBS(1, 3, 0, 0, 0.224000,0.000000,0,1, 0.000000,0.044800,0,1)</E>
+            </NURBSTo>
+            <MoveTo IX="8">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.900000">1.29375</Y>
+            </MoveTo>
+            <NURBSTo IX="9">
+              <X F="Width*0.500000">0.6736111111111112</X>
+              <Y F="Height*0.800000">1.15</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.000000,0.844800,0,1, 0.224000,0.800000,0,1)">NURBS(1, 3, 0, 0, 0.000000,0.844800,0,1, 0.224000,0.800000,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="10">
+              <X F="Width*1.000000">1.347222222222222</X>
+              <Y F="Height*0.900000">1.29375</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.776000,0.800000,0,1, 1.000000,0.844800,0,1)">NURBS(1, 3, 0, 0, 0.776000,0.800000,0,1, 1.000000,0.844800,0,1)</E>
+            </NURBSTo>
+          </Geom>
+          <Geom IX="1">
+            <NoFill>0</NoFill>
+            <NoLine>1</NoLine>
+            <MoveTo IX="1">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+            </MoveTo>
+            <LineTo IX="2">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.900000">1.29375</Y>
+            </LineTo>
+            <NURBSTo IX="3">
+              <X F="Width*0.500000">0.6736111111111112</X>
+              <Y F="Height*1.000000">1.4375</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.000000,0.955200,0,1, 0.224000,1.000000,0,1)">NURBS(1, 3, 0, 0, 0.000000,0.955200,0,1, 0.224000,1.000000,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="4">
+              <X F="Width*1.000000">1.347222222222222</X>
+              <Y F="Height*0.900000">1.29375</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.776000,1.000000,0,1, 1.000000,0.955200,0,1)">NURBS(1, 3, 0, 0, 0.776000,1.000000,0,1, 1.000000,0.955200,0,1)</E>
+            </NURBSTo>
+            <LineTo IX="5">
+              <X F="Width*1.000000">1.347222222222222</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+            </LineTo>
+            <NURBSTo IX="6">
+              <X F="Width*0.500000">0.6736111111111112</X>
+              <Y F="Height*0.000000">0</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 1.000000,0.044800,0,1, 0.776000,0.000000,0,1)">NURBS(1, 3, 0, 0, 1.000000,0.044800,0,1, 0.776000,0.000000,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="7">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.224000,0.000000,0,1, 0.000000,0.044800,0,1)">NURBS(1, 3, 0, 0, 0.224000,0.000000,0,1, 0.000000,0.044800,0,1)</E>
+            </NURBSTo>
+          </Geom>
+          <LayerMem>
+            <LayerMember>0</LayerMember>
+          </LayerMem>
+          <TextBlock>
+            <LeftMargin>0.0694444</LeftMargin>
+            <RightMargin>0.0694444</RightMargin>
+            <VerticalAlign>1</VerticalAlign>
+            <DefaultTabStop>0</DefaultTabStop>
+          </TextBlock>
+          <Char IX="0">
+            <Font>0</Font>
+            <Color>0</Color>
+            <Style>0</Style>
+            <Size>0.305556</Size>
+            <ColorTrans>0</ColorTrans>
+          </Char>
+          <Para IX="0">
+            <IndFirst>0</IndFirst>
+            <IndLeft>0</IndLeft>
+            <IndRight>-0</IndRight>
+            <SpLine>-1.2</SpLine>
+            <SpBefore>0</SpBefore>
+            <HorzAlign>1</HorzAlign>
+          </Para>
+          <Text><cp IX="0"/><pp IX="0"/>Шард 2</Text>
+        </Shape>
+        <Shape ID="9" Type="Shape" Name="Cylinder Fill:Chalk.9">
+          <XForm>
+            <Angle>-0</Angle>
+            <PinX>8.472222222222221</PinX>
+            <PinY>1.878472222222222</PinY>
+            <Width>1.347222222222222</Width>
+            <Height>1.4375</Height>
+            <LocPinX>0.6736111111111112</LocPinX>
+            <LocPinY>0.71875</LocPinY>
+          </XForm>
+          <TextXForm>
+            <TxtWidth F="Width*1.000000">1.347222222222222</TxtWidth>
+            <TxtHeight F="Height*0.603382">0.8673611111111109</TxtHeight>
+            <TxtAngle>-0</TxtAngle>
+          </TextXForm>
+          <Misc>
+            <ObjType>1</ObjType>
+          </Misc>
+          <Line>
+            <LinePattern>1</LinePattern>
+            <LineWeight>0.0138889</LineWeight>
+            <LineColor>0</LineColor>
+            <LineColorTrans>0</LineColorTrans>
+            <Rounding>0</Rounding>
+            <LineCap>0</LineCap>
+          </Line>
+          <Fill>
+            <FillPattern>1</FillPattern>
+            <FillForegnd>#ffffff</FillForegnd>
+            <FillForegndTrans>0</FillForegndTrans>
+            <ShdwPattern>0</ShdwPattern>
+            <ShdwForegnd>0</ShdwForegnd>
+            <ShdwForegndTrans>0.5</ShdwForegndTrans>
+            <ShapeShdwType>1</ShapeShdwType>
+            <ShapeShdwOffsetX>0</ShapeShdwOffsetX>
+            <ShapeShdwOffsetY>-0.0277778</ShapeShdwOffsetY>
+          </Fill>
+          <Geom IX="0">
+            <NoFill>1</NoFill>
+            <NoLine>0</NoLine>
+            <MoveTo IX="1">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+            </MoveTo>
+            <LineTo IX="2">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.900000">1.29375</Y>
+            </LineTo>
+            <NURBSTo IX="3">
+              <X F="Width*0.500000">0.6736111111111112</X>
+              <Y F="Height*1.000000">1.4375</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.000000,0.955200,0,1, 0.224000,1.000000,0,1)">NURBS(1, 3, 0, 0, 0.000000,0.955200,0,1, 0.224000,1.000000,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="4">
+              <X F="Width*1.000000">1.347222222222222</X>
+              <Y F="Height*0.900000">1.29375</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.776000,1.000000,0,1, 1.000000,0.955200,0,1)">NURBS(1, 3, 0, 0, 0.776000,1.000000,0,1, 1.000000,0.955200,0,1)</E>
+            </NURBSTo>
+            <LineTo IX="5">
+              <X F="Width*1.000000">1.347222222222222</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+            </LineTo>
+            <NURBSTo IX="6">
+              <X F="Width*0.500000">0.6736111111111112</X>
+              <Y F="Height*0.000000">0</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 1.000000,0.044800,0,1, 0.776000,0.000000,0,1)">NURBS(1, 3, 0, 0, 1.000000,0.044800,0,1, 0.776000,0.000000,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="7">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.224000,0.000000,0,1, 0.000000,0.044800,0,1)">NURBS(1, 3, 0, 0, 0.224000,0.000000,0,1, 0.000000,0.044800,0,1)</E>
+            </NURBSTo>
+            <MoveTo IX="8">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.900000">1.29375</Y>
+            </MoveTo>
+            <NURBSTo IX="9">
+              <X F="Width*0.500000">0.6736111111111112</X>
+              <Y F="Height*0.800000">1.15</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.000000,0.844800,0,1, 0.224000,0.800000,0,1)">NURBS(1, 3, 0, 0, 0.000000,0.844800,0,1, 0.224000,0.800000,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="10">
+              <X F="Width*1.000000">1.347222222222222</X>
+              <Y F="Height*0.900000">1.29375</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.776000,0.800000,0,1, 1.000000,0.844800,0,1)">NURBS(1, 3, 0, 0, 0.776000,0.800000,0,1, 1.000000,0.844800,0,1)</E>
+            </NURBSTo>
+          </Geom>
+          <Geom IX="1">
+            <NoFill>0</NoFill>
+            <NoLine>1</NoLine>
+            <MoveTo IX="1">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+            </MoveTo>
+            <LineTo IX="2">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.900000">1.29375</Y>
+            </LineTo>
+            <NURBSTo IX="3">
+              <X F="Width*0.500000">0.6736111111111112</X>
+              <Y F="Height*1.000000">1.4375</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.000000,0.955200,0,1, 0.224000,1.000000,0,1)">NURBS(1, 3, 0, 0, 0.000000,0.955200,0,1, 0.224000,1.000000,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="4">
+              <X F="Width*1.000000">1.347222222222222</X>
+              <Y F="Height*0.900000">1.29375</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.776000,1.000000,0,1, 1.000000,0.955200,0,1)">NURBS(1, 3, 0, 0, 0.776000,1.000000,0,1, 1.000000,0.955200,0,1)</E>
+            </NURBSTo>
+            <LineTo IX="5">
+              <X F="Width*1.000000">1.347222222222222</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+            </LineTo>
+            <NURBSTo IX="6">
+              <X F="Width*0.500000">0.6736111111111112</X>
+              <Y F="Height*0.000000">0</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 1.000000,0.044800,0,1, 0.776000,0.000000,0,1)">NURBS(1, 3, 0, 0, 1.000000,0.044800,0,1, 0.776000,0.000000,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="7">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.100000">0.1437500000000003</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.224000,0.000000,0,1, 0.000000,0.044800,0,1)">NURBS(1, 3, 0, 0, 0.224000,0.000000,0,1, 0.000000,0.044800,0,1)</E>
+            </NURBSTo>
+          </Geom>
+          <LayerMem>
+            <LayerMember>0</LayerMember>
+          </LayerMem>
+          <TextBlock>
+            <LeftMargin>0.0694444</LeftMargin>
+            <RightMargin>0.0694444</RightMargin>
+            <VerticalAlign>1</VerticalAlign>
+            <DefaultTabStop>0</DefaultTabStop>
+          </TextBlock>
+          <Char IX="0">
+            <Font>0</Font>
+            <Color>0</Color>
+            <Style>0</Style>
+            <Size>0.305556</Size>
+            <ColorTrans>0</ColorTrans>
+          </Char>
+          <Para IX="0">
+            <IndFirst>0</IndFirst>
+            <IndLeft>0</IndLeft>
+            <IndRight>-0</IndRight>
+            <SpLine>-1.2</SpLine>
+            <SpBefore>0</SpBefore>
+            <HorzAlign>1</HorzAlign>
+          </Para>
+          <Text><cp IX="0"/><pp IX="0"/>Шард 3</Text>
+        </Shape>
+        <Shape ID="10" Type="Shape" Name="Rectangle No Fill No Fill.10">
+          <XForm>
+            <Angle>-0</Angle>
+            <PinX>5.916666666666667</PinX>
+            <PinY>4.319444444444445</PinY>
+            <Width>3.958333333333333</Width>
+            <Height>0.9444444444444444</Height>
+            <LocPinX>1.979166666666667</LocPinX>
+            <LocPinY>0.4722222222222222</LocPinY>
+          </XForm>
+          <TextXForm>
+            <TxtWidth F="Width*1.000000">3.958333333333333</TxtWidth>
+            <TxtHeight F="Height*1.000000">0.9444444444444444</TxtHeight>
+            <TxtAngle>-0</TxtAngle>
+          </TextXForm>
+          <Misc>
+            <ObjType>1</ObjType>
+          </Misc>
+          <Line>
+            <LinePattern>0</LinePattern>
+            <LineWeight>0.0138889</LineWeight>
+            <LineColor>0</LineColor>
+            <LineColorTrans>0</LineColorTrans>
+            <Rounding>0</Rounding>
+            <LineCap>0</LineCap>
+          </Line>
+          <Fill>
+            <FillPattern>0</FillPattern>
+            <FillForegnd>#ffffff</FillForegnd>
+            <FillForegndTrans>0</FillForegndTrans>
+            <ShdwPattern>0</ShdwPattern>
+            <ShdwForegnd>0</ShdwForegnd>
+            <ShdwForegndTrans>0.5</ShdwForegndTrans>
+            <ShapeShdwType>1</ShapeShdwType>
+            <ShapeShdwOffsetX>0</ShapeShdwOffsetX>
+            <ShapeShdwOffsetY>-0.0277778</ShapeShdwOffsetY>
+          </Fill>
+          <Geom IX="0">
+            <NoFill>0</NoFill>
+            <NoLine>0</NoLine>
+            <MoveTo IX="1">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*1.000000">0.9444444444444444</Y>
+            </MoveTo>
+            <LineTo IX="2">
+              <X F="Width*1.000000">3.958333333333333</X>
+              <Y F="Height*1.000000">0.9444444444444444</Y>
+            </LineTo>
+            <LineTo IX="3">
+              <X F="Width*1.000000">3.958333333333333</X>
+              <Y F="Height*0.000000">0</Y>
+            </LineTo>
+            <LineTo IX="4">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.000000">0</Y>
+            </LineTo>
+            <LineTo IX="5">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*1.000000">0.9444444444444444</Y>
+            </LineTo>
+          </Geom>
+          <LayerMem>
+            <LayerMember>0</LayerMember>
+          </LayerMem>
+          <TextBlock>
+            <LeftMargin>0.0694444</LeftMargin>
+            <RightMargin>0.0694444</RightMargin>
+            <VerticalAlign>1</VerticalAlign>
+            <DefaultTabStop>0</DefaultTabStop>
+          </TextBlock>
+          <Char IX="0">
+            <Font>0</Font>
+            <Color>0</Color>
+            <Style>0</Style>
+            <Size>0.305556</Size>
+            <ColorTrans>0</ColorTrans>
+          </Char>
+          <Char IX="1">
+            <Font>1</Font>
+            <Color>0</Color>
+            <Style>0</Style>
+            <Size>0.305556</Size>
+            <ColorTrans>0</ColorTrans>
+          </Char>
+          <Para IX="0">
+            <IndFirst>0</IndFirst>
+            <IndLeft>0</IndLeft>
+            <IndRight>-0</IndRight>
+            <SpLine>-1.2</SpLine>
+            <SpBefore>0</SpBefore>
+            <HorzAlign>1</HorzAlign>
+          </Para>
+          <Text><cp IX="0"/><pp IX="0"/>Асинхронно в шард номер
+<cp IX="1"/>sharding_key % 3</Text>
+        </Shape>
+        <Shape ID="11" Type="Shape" Name="Graphic.11">
+          <XForm>
+            <Angle>-0</Angle>
+            <PinX>4.680481336515095</PinX>
+            <PinY>2.682296927656182</PinY>
+            <Width>1.335309477117936</Width>
+            <Height>0.3578279924591759</Height>
+            <LocPinX>0.6676547385589681</LocPinX>
+            <LocPinY>0.178913996229588</LocPinY>
+          </XForm>
+          <XForm1D>
+            <BeginX>4.01282659795613</BeginX>
+            <BeginY>2.50338293142659</BeginY>
+            <EndX>5.34813607507406</EndX>
+            <EndY>2.53732717841805</EndY>
+          </XForm1D>
+          <Layout>
+            <ConLineJumpCode>4</ConLineJumpCode>
+            <ConLineJumpStyle>0</ConLineJumpStyle>
+            <ShapeRouteStyle>0</ShapeRouteStyle>
+            <ConFixedCode>0</ConFixedCode>
+            <ConLineRouteExt>2</ConLineRouteExt>
+          </Layout>
+          <TextXForm>
+            <TxtWidth F="Width*1.000000">1.335309477117936</TxtWidth>
+            <TxtHeight F="Height*1.000000">0.3578279924591759</TxtHeight>
+            <TxtAngle>-0</TxtAngle>
+          </TextXForm>
+          <Misc>
+            <ObjType>2</ObjType>
+          </Misc>
+          <Line>
+            <LinePattern>1</LinePattern>
+            <LineWeight>0.0277778</LineWeight>
+            <LineColor>0</LineColor>
+            <LineColorTrans>0</LineColorTrans>
+            <Rounding>0</Rounding>
+            <LineCap>0</LineCap>
+            <EndArrow>4</EndArrow>
+            <EndArrowSize>2</EndArrowSize>
+          </Line>
+          <Fill>
+            <FillPattern>0</FillPattern>
+            <FillForegnd>#ffffff</FillForegnd>
+            <FillForegndTrans>0</FillForegndTrans>
+            <ShdwPattern>0</ShdwPattern>
+            <ShdwForegnd>0</ShdwForegnd>
+            <ShdwForegndTrans>0.5</ShdwForegndTrans>
+            <ShapeShdwType>1</ShapeShdwType>
+            <ShapeShdwOffsetX>0</ShapeShdwOffsetX>
+            <ShapeShdwOffsetY>-0.0277778</ShapeShdwOffsetY>
+          </Fill>
+          <Geom IX="0">
+            <NoFill>1</NoFill>
+            <NoLine>0</NoLine>
+            <MoveTo IX="1">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.000000">0</Y>
+            </MoveTo>
+            <NURBSTo IX="2">
+              <X F="Width*0.235206">0.3140734023470652</X>
+              <Y F="Height*0.850686">0.3043992668656494</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.078394,0.283534,0,1, 0.100674,0.695982,0,1)">NURBS(1, 3, 0, 0, 0.078394,0.283534,0,1, 0.100674,0.695982,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="3">
+              <X F="Width*0.807275">1.077962291235954</X>
+              <Y F="Height*0.928315">0.3321770446434272</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.369739,1.005390,0,1, 0.679822,1.054273,0,1)">NURBS(1, 3, 0, 0, 0.369739,1.005390,0,1, 0.679822,1.054273,0,1)</E>
+            </NURBSTo>
+            <NURBSTo IX="4">
+              <X F="Width*1.000000">1.335309477117936</X>
+              <Y F="Height*0.094862">0.0339442469914558</Y>
+              <A>0</A>
+              <B>1</B>
+              <C>0</C>
+              <D>1</D>
+              <E Unit="NURBS" F="NURBS(1, 3, 0, 0, 0.934728,0.802357,0,1, 0.935765,0.372652,0,1)">NURBS(1, 3, 0, 0, 0.934728,0.802357,0,1, 0.935765,0.372652,0,1)</E>
+            </NURBSTo>
+          </Geom>
+          <LayerMem>
+            <LayerMember>0</LayerMember>
+          </LayerMem>
+        </Shape>
+        <Shape ID="12" Type="Shape" Name="Rectangle No Fill No Fill.12">
+          <XForm>
+            <Angle>-0</Angle>
+            <PinX>4.875</PinX>
+            <PinY>3.097222222222222</PinY>
+            <Width>4.361111111111111</Width>
+            <Height>0.5555555555555556</Height>
+            <LocPinX>2.180555555555555</LocPinX>
+            <LocPinY>0.2777777777777778</LocPinY>
+          </XForm>
+          <TextXForm>
+            <TxtWidth F="Width*1.000000">4.361111111111111</TxtWidth>
+            <TxtHeight F="Height*1.000000">0.5555555555555556</TxtHeight>
+            <TxtAngle>-0</TxtAngle>
+          </TextXForm>
+          <Misc>
+            <ObjType>1</ObjType>
+          </Misc>
+          <Line>
+            <LinePattern>0</LinePattern>
+            <LineWeight>0.0138889</LineWeight>
+            <LineColor>0</LineColor>
+            <LineColorTrans>0</LineColorTrans>
+            <Rounding>0</Rounding>
+            <LineCap>0</LineCap>
+          </Line>
+          <Fill>
+            <FillPattern>0</FillPattern>
+            <FillForegnd>#ffffff</FillForegnd>
+            <FillForegndTrans>0</FillForegndTrans>
+            <ShdwPattern>0</ShdwPattern>
+            <ShdwForegnd>0</ShdwForegnd>
+            <ShdwForegndTrans>0.5</ShdwForegndTrans>
+            <ShapeShdwType>1</ShapeShdwType>
+            <ShapeShdwOffsetX>0</ShapeShdwOffsetX>
+            <ShapeShdwOffsetY>-0.0277778</ShapeShdwOffsetY>
+          </Fill>
+          <Geom IX="0">
+            <NoFill>0</NoFill>
+            <NoLine>0</NoLine>
+            <MoveTo IX="1">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*1.000000">0.5555555555555556</Y>
+            </MoveTo>
+            <LineTo IX="2">
+              <X F="Width*1.000000">4.361111111111111</X>
+              <Y F="Height*1.000000">0.5555555555555556</Y>
+            </LineTo>
+            <LineTo IX="3">
+              <X F="Width*1.000000">4.361111111111111</X>
+              <Y F="Height*0.000000">0</Y>
+            </LineTo>
+            <LineTo IX="4">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*0.000000">0</Y>
+            </LineTo>
+            <LineTo IX="5">
+              <X F="Width*0.000000">0</X>
+              <Y F="Height*1.000000">0.5555555555555556</Y>
+            </LineTo>
+          </Geom>
+          <LayerMem>
+            <LayerMember>0</LayerMember>
+          </LayerMem>
+          <TextBlock>
+            <LeftMargin>0.0694444</LeftMargin>
+            <RightMargin>0.0694444</RightMargin>
+            <VerticalAlign>1</VerticalAlign>
+            <DefaultTabStop>0</DefaultTabStop>
+          </TextBlock>
+          <Char IX="0">
+            <Font>1</Font>
+            <Color>#009051</Color>
+            <Style>0</Style>
+            <Size>0.305556</Size>
+            <ColorTrans>0</ColorTrans>
+          </Char>
+          <Char IX="1">
+            <Font>1</Font>
+            <Color>0</Color>
+            <Style>0</Style>
+            <Size>0.305556</Size>
+            <ColorTrans>0</ColorTrans>
+          </Char>
+          <Para IX="0">
+            <IndFirst>0</IndFirst>
+            <IndLeft>0</IndLeft>
+            <IndRight>-0</IndRight>
+            <SpLine>-1.2</SpLine>
+            <SpBefore>0</SpBefore>
+            <HorzAlign>1</HorzAlign>
+          </Para>
+          <Text><cp IX="0"/><pp IX="0"/>INSERT INTO <cp IX="1"/>local_table</Text>
+        </Shape>
+      </Shapes>
+      <Connects>
+        <Connect ToCell="PinX" FromSheet="11" FromPart="9" ToSheet="7" ToPart="3"/>
+        <Connect ToCell="PinX" FromSheet="11" FromPart="12" ToSheet="8" ToPart="3"/>
+      </Connects>
+    </Page>
+  </Pages>
+  <Windows>
+    <Window ID="0" WindowType="Drawing" ViewScale="1" WindowState="134217744" ContainerType="Page" Page="0" ViewCenterX="0" ViewCenterY="0">
+      <ShowRulers>1</ShowRulers>
+      <ShowGrid>0</ShowGrid>
+      <ShowPageBreaks>0</ShowPageBreaks>
+      <ShowConnectionPoints>0</ShowConnectionPoints>
+      <GlueSettings>12</GlueSettings>
+      <SnapSettings>52</SnapSettings>
+      <TabSplitterPos>0.5</TabSplitterPos>
+    </Window>
+  </Windows>
+</VisioDocument>
