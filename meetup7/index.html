@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en" style="background-color: #FFF;">
+<head>
+    <title>ClickHouse meetup в Минске</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/ribbon/styles/screen-16x10.css">
+    
+    <style type="text/css">
+         span { padding: 1px 10px; background: rgba(255, 255, 255, 0.75); }
+         code { display: block; background-color: #EEE; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse meetup в Минске</h1>
+    </header>
+
+    <section class="slide" id="cover" style="background: url('pictures/IMG_2640.JPG') no-repeat center center; background-size: 100%">
+        <h1 style="font-size: 36pt"><span>ClickHouse meetup в Минске</span></h1>
+    </section>
+
+    <section class="slide">
+        <h2><span>ClickHouse: настоящее и будущее</span></h2>
+    </section>
+
+    <section class="slide">
+        <h2>Что такое ClickHouse?</h2>
+        <p>ClickHouse - distributed analytical column-oriented DBMS</p>
+    </section>
+
+    <section class="slide">
+        <h2>Почему column-oriented?</h2>
+        <p>Так работают row-oriented системы:</p>
+        <p><img src="pictures/row_oriented.gif"/></p>
+    </section>
+    <section class="slide">
+        <h2>Почему column-oriented?</h2>
+        <p>Так работают column-oriented системы:</p>
+        <p><img src="pictures/column_oriented.gif"/></p>
+    </section>
+    <section class="slide">
+        <h2>Почему ClickHouse?</h2>
+        <p>Ничего готового не подошло.</p>
+        <p>Тогда мы сделали ClickHouse.</p>
+        <p>&laquo;Эволюция структур данных в Яндекс.Метрике&raquo;</p>
+        <p><a href="https://habrahabr.ru/company/yandex/blog/273305/">https://habrahabr.ru/company/yandex/blog/273305/</a></p>
+    </section>
+    <section class="slide">
+        <h2>Метрика 2.0</h2>
+        <img src="pictures/metrika2.png" style="height:70%"/>
+    </section>
+    <section class="slide">
+        <h2>Коротко</h2>
+        <ul>
+            <li>column-oriented</li>
+            <li>линейная масштабируемость</li>
+            <li>отказоустойчивость</li>
+            <li>загрузка данных в реальном времени</li>
+            <li>онлайн (sub-second) запросы</li>
+            <li>поддержка диалекта SQL + расширения<br/>(массивы, вложенные структуры данных, domain-specific функции, сэмплирование)</li>
+        </ul>
+    </section>
+    <section class="slide">
+        <h2>Основной кластер Метрики</h2>
+        <ul style="font-size:30px;">
+            <li>>23 триллиона строк</li>
+            <li>500 серверов</li>
+            <li>скорость обработки данных до двух терабайт в секунду</li>
+        </ul>
+        <p style="font-size:60%; margin-top:2em">* Если вы хотите попробовать ClickHouse, достаточно и одного сервера.</p>
+    </section>
+    <section class="slide">
+        <h2>ClickHouse в Яндексе</h2>
+        <p>Нам удалось сделать систему сравнительно удобной.</p>
+        <p>С самого начала мы имели подробную документацию.</p>
+        <p>В течение пары лет ClickHouse распространился по другим отделам Яндекса.</p>
+        <p>Почта, Маркет, Директ, Вебмастер, AdFox, Инфраструктура, Бизнес аналитика...</p>
+        <p>Есть случаи, когда аналитики самостоятельно устанавливали ClickHouse на виртуальные машины и успешно использовали без каких-либо вопросов.</p>
+    </section>
+    <section class="slide">
+        <h2>Open-source</h2>
+        <p>Потом мы решили — ClickHouse слишком хорошая система, чтобы нам одним на нём сидеть.</p>
+        <p>Чтобы было веселее, надо подсадить на ClickHouse людей снаружи, пусть радуются. Решили сделать open-source.</p>
+    </section>
+    <section class="slide">
+        <h2>Open-source</h2>
+        <p>Лицензия Apache 2.0 — минимум ограничений.</p>
+        <p>Цель — максимальное распространение продукта.</p>
+        <p>Мы хотим, чтобы продуктом Яндекса пользовались по всему миру.</p>
+        <p>См. “Яндекс открывает ClickHouse”</p>
+        <p><a href="https://habrahabr.ru/company/yandex/blog/303282/">https://habrahabr.ru/company/yandex/blog/303282/</a></p>
+    </section>
+    <section class="slide">
+        <h2 style="font-size: 40px;">Когда надо использовать ClickHouse</h2>
+        <p>Хорошо структурированные, очищенные, неизменяемые события.</p>
+        <p>&nbsp;</p>
+        <p>Click stream. Веб-аналитика. Рекламные&nbsp;сети. RTB. E-commerce.</p>
+        <p>Аналитика онлайн игр. Данные сенсоров и мониторингов. Телеком&nbsp;данные.</p>
+        <p>Финансовые транзакции. Биржевая аналитика.</p>
+    </section>
+    <section class="slide">
+        <h2 style="font-size: 40px;"><span>Когда <span style="color:red;">не надо</span> использовать ClickHouse</span></h2>
+        <p><span style="font-size: 30px;color: #888;">OLTP</span><br/><span>В ClickHouse нет UPDATE и полноценных транзакций.</span></p>
+        <p><span style="font-size: 30px;color: #888;">Key-Value</span><br/><span>Если нужны частые запросы на обновление по ключу, используйте другое решение.</p>
+        <p><span style="font-size: 30px;color: #888;">Blob-store, document oriented</span><br/><span>ClickHouse предназначен для большого количества мелко-гранулированных данных.</span></p>
+        <p><span style="font-size: 30px;color: #888;">Излишне нормализованные данные</span><br/><span>Лучше сделать широкую таблицу фактов.</span></p>
+    </section>
+    <section class="slide">
+        <h2 style="font-size: 40px;">Почему ClickHouse такой быстрый?</h2>
+        <p>&nbsp;</p>
+        <p style="font-size: 40px;">&mdash; от безысходности.</p>
+        <p style="font-size: 40px;">Яндекс.Метрика должна работать.</p>
+    </section>
+    <section class="slide">
+        <h2 style="font-size: 40px;">Почему ClickHouse такой быстрый?</h2>
+        <p><b>Алгоритмическая оптимизация.</b></p>
+        <p>MergeTree, локальность расположения данных на диске<br/>— быстрые диапазонные запросы.</p>
+        <p>Пример: функция uniqCombined состоит из комбинации трёх различных структур данных, подходящих под разные диапазоны кардинальностей.</p>
+        <p><b>Низкоуровневая оптимизация.</b></p>
+        <p>Пример: vectorized query execution.</p>
+        <p><b>Специализация и внимание к деталям.</b></p>
+        <p>Пример: у нас есть 17 разных алгоритмов выполнения GROUP BY. Для вашего запроса выбирается лучший.</p>
+    </section>
+
+<section class="slide">
+<h2>Распространение ClickHouse</h2>
+
+<p>Сотни компаний в России и рядом<br/>Яндекс, Mail.ru, Rambler, СКБ Контур&hellip;</p>
+<p>Десятки компаний в Европе, США, Китае<br/>Cloudflare, Wikimedia, Lifestreet, Vertamedia, Carto&hellip;</p>
+
+</section>
+
+    <section class="slide">
+        <h2>CloudFlare</h2>
+        <p>How do we analyze over O(100B) DNS requests daily.</p>
+        <p>"ClickHouse enables us and our customers to explore the the dataset in real time to get operational insights. Due to many of the optimizations built into ClickHouse we are able to store the data for a long time allowing us to look events is perspective and at historical trends."</p>
+    </section>
+
+    <section class="slide">
+        <h2>Wikimedia.org</h2>
+        <p>"clickhouse is a columnar datastore that we are using as an aid to run complex SQL queries on the edit data "lake" that we have as a result of the edit reconstruction project. It is similar to Druid but faster for complex queries."</p>
+    </section>
+    
+<section class="slide">
+<h2 style="font-size: 40px;">Необычные примеры применения ClickHouse</h2>
+
+<p>Поисковый движок и аналитика по Bitcoin транзакциям:
+<br/><a href="https://blockchair.com/">https://blockchair.com/</a></p>
+
+<p>"Крутятся довольно большие таблицы, используется только один сервер и всё работает ну очень быстро — при любых фильтрах и сортировке там всё почти мгновенно."</p>
+
+<p>Биоинформатика - эволюционная генетика:
+<br/><a href="https://github.com/msestak/FindOrigin">https://github.com/msestak/FindOrigin</a></p>
+
+<p>"We are exploring evolution of novel genes in genomes because if seems that genomes are far from being static as previously believed and what actually happens is that new genes are constantly being added and old genes are lost."</p>
+
+<p>Эксперимент LHCb в БАК:
+<br/><a href="https://www.yandex.com/company/press_center/press_releases/2012/2012-04-10/">https://www.yandex.com/company/press_center/press_releases/2012/2012-04-10/</a></p>
+
+</section>
+
+<section class="slide">
+    <h2>Независимые бенчмарки</h2>
+    <p>ClickHouse vs. Spark &amp; MariaDB Column Store</p>
+    <p style="font-size: 12pt;">https://www.percona.com/blog/2017/02/13/clickhouse-new-opensource-columnar-database/</p>
+    <img src="pictures/spark.png" style="height:60%"/>
+</section>
+
+<section class="slide">
+    <h2>Независимые бенчмарки</h2>
+    <p>ClickHouse vs. Redshift</p>
+    <p>https://www.altinity.com/blog/2017/6/20/clickhouse-vs-redshift</p>
+    <img src="pictures/redshift.png" style="height:60%"/>
+</section>
+
+<section class="slide">
+    <h2>Интерфейсы</h2>
+    <p style="font-size: 30px;">HTTP REST</p>
+    <p style="font-size: 30px;">clickhouse-client</p>
+    <p style="font-size: 30px;">JDBC (production), ODBC (beta)</p>
+    <p>&nbsp;</p>
+    <p style="font-size: 30px;">Python, PHP, Perl, Go,<br/>Node.js, Ruby, C++, .NET, Scala, R, Julia, Rust</p>
+</section>
+
+<section class="slide">
+    <h2 style="font-size: 32px;">Интеграции с системами визуализации данных</h2>
+    <p style="font-size: 30px;">Tabix (tabix.io) &mdash; разработан специально для ClickHouse.</p>
+    <p style="font-size: 30px;"><img style="float: left; padding-right: 20px;" src="pictures/tabix.gif" width="300" />И ещё:<br/><br/>Grafana, Redash, Apache Zeppelin,<br/>Superset, Power&nbsp;BI&hellip;</p>
+</section>
+
+
+
+    <section class="slide">
+        <h2><span>Что нового в ClickHouse</span></h2>
+    </section>
+
+<section class="slide">
+<h2 style="font-size: 40px;">Удобство работы и совместимость с SQL</h2>
+
+<p>Поддежка сессий в HTTP интерфейсе:
+<br/><br/><code style="font-size: 14pt;">curl 'http://host:port/?session_id=123&amp;session_timeout=60' \<br /> -d 'CREATE TEMPORARY TABLE t'</code></p>
+
+<p>Алиасы таблиц<br />Квалифицированные имена столбцов в запросах:
+<br/><br/><code>SELECT t.column FROM table AS t</code></p>
+
+<p>Квотированные идентификаторы в соответствии с ANSI SQL:
+<br/><br/><code>SELECT "column" FROM "db"."table"</code></p>
+</section>
+    
+<section class="slide">
+<h2>Удобство работы</h2>
+
+<p>Приведение типов для таблиц типа Merge</p>
+<p>Настройки input_format_allow_errors_*</p>
+<p>Подключение части конфигурации из ZK</p>
+<p>OPTIMIZE TABLE ... PARTITION ... DEDUPLICATE</p>
+<p>ALTER первичного ключа: Enum, Date &lt;-> UInt16, DateTime &lt;-> UInt32</p>
+</section>
+
+<section class="slide">
+<h2>Распределённые запросы</h2>
+
+<p>Распределённые DDL запросы:
+<br/><br/><code>CREATE TABLE table ON CLUSTER cluster ...</code></p>
+<p>Отключение отстающих реплик</p>
+<p>Отключение реплик, на которых нет таблицы</p>
+<p>Оригинальный источник запроса в system.processes, system.query_log</p>
+</section>
+
+<section class="slide">
+<h2>Словари</h2>
+
+<p>Движок таблиц Dictionary, движок баз данных Dictionary:
+<br/><br/><code>CREATE DATABASE dictionaries ENGINE = Dictionary</code></p>
+<p>Перезагрузка словарей с помощью заданного пользователем запроса за состоянием</p>
+<p>IP Trie словари</p>
+</section>
+
+<section class="slide">
+<h2>Удобство INSERT SELECT</h2>
+
+<p>Приведение типов при INSERT SELECT</p>
+<p>INSERT SELECT: по позициям вместо имён</p>
+</section>
+
+<section class="slide" style="background: url('pictures/Minsk.png') no-repeat center center; background-size: 100%">
+<h2><span>GIS функции</span></h2>
+
+<p><span>pointInEllipses</span></p>
+<p><span>greatCircleDistance</span></p>
+</section>
+
+<section class="slide">
+<h2>Агрегатные функции</h2>
+
+<p>Комбинатор -ForEach</p>
+<p>groupArrayInsertAt</p>
+<p>topK (beta)</p>
+</section>
+
+<section class="slide">
+<h2>Интерфейсы</h2>
+
+<p>ODBC драйвер &mdash; сборка и работоспособность под Windows</p>
+<p>HTTPS сервер</p>
+</section>
+
+<section class="slide">
+<h2>NULLs (<s>beta</s> gamma)</h2>
+
+<p>NULL для JOIN: настройка join_use_nulls</p>
+<p>NULLS FIRST, LAST для ORDER BY</p>
+<p>Пoддержка NULL в IN</p>
+<p>Пoддержка NULL в функциях высшего порядка</p>
+<p>if, multiIf, ifNull, nullIf, coalesce</p>
+<p>toNullable, assumeNotNull</p>
+<p>Поддержка Nullable типов в агрегатных функциях</p>
+<p>NULL в качестве результата подзапроса, возвращающего пустоту</p>
+</section>
+
+<section class="slide">
+<h2>И ещё</h2>
+
+<p>ALTER ... CLEAR COLUMN ... IN PARTITION</p>
+<p>Настройка preferred_block_size_bytes</p>
+</section>
+
+<section class="slide" style="font-size: 70%;">
+<h2>Но это не всё</h2>
+
+<p style="margin-top: -30px;">KILL QUERY
+<br/>LIMIT BY
+<br/>SELECT INTO OUTFILE
+<br/>clickhouse-local
+<br/>перекрёстная репликация
+<br/>Функции кодирования UUID и MAC
+<br/>Правильные HTTP коды ответа
+<br/>Правильная логика для операций сравнения
+<br/>Прогресс в HTTP заголовках
+<br/>Исправление cache stampede
+<br/>system.build_options, system.graphite
+<br/>Трассировка распределённых запросов в system.processes, system.query_log
+<br/>Возможность пропуска ошибок в текстовых форматах
+<br/>Настройка fsync_metadata
+<br/>timezone config parameter, функция timezone()
+<br/>decodeURLComponent
+<br/>Ускорение gzip в HTTP интерфейсе
+<br/>max_table_size_to_drop
+<br/>правильная сборка и пакеты
+<br/>ускорение DISTINCT
+<br/>Оптимизация Buffer таблиц
+<br/>Оптимизация FixedString
+<br/>Доработка RIGHT/FULL JOIN
+<br/>clickhouse --extract-from-config
+<br/>system.parts - точное число строк
+<br/>system.columns - разжатый размер
+<br/>system.part_log</p>
+</section>
+
+<section class="slide" style="background: url('pictures/IMG_2441.JPG') no-repeat center center; background-size: 100%">
+<h2><span>Roadmap</span></h2>
+</section>
+
+<section class="slide">
+<h2>Июль 2017</h2>
+
+<p>SYSTEM запросы</p>
+<p>Ограничение на количество одновременных скачиваний с реплик</p>
+<p>NULLs: исправить почти все оставшиеся недоработки</p>
+</section>
+
+<section class="slide">
+<h2>Q3-Q4 2017</h2>
+
+<p>Произвольный ключ партиционирования для MergeTree</p>
+<p>Возможность писать JOIN как в обычном SQL</p>
+<p>Пулы ресурсов (CPU, disk IO, network bandwidth) для запросов</p>
+</section>
+
+<section class="slide">
+<h2><span>Q4-Q5 2017</span></h2>
+
+<p><span>Начальная поддержка UPDATE/DELETE</span></p>
+</section>
+
+    
+<section class="slide">
+    <h2>Сообщество</h2>
+    <p>Сайт: <a href="https://clickhouse.yandex/">https://clickhouse.yandex/</a></p>
+    <p>Google groups: <a href="https://groups.google.com/forum/#!forum/clickhouse">https://groups.google.com/forum/#!forum/clickhouse</a></p>
+    <p>Рассылка: clickhouse-feedback@yandex-team.com</p>
+    <p>Telegram чат: <a href="https://telegram.me/clickhouse_en">https://telegram.me/clickhouse_en</a> и <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_ru</a> (уже 778 участников)</p>
+    <p>GitHub: <a href="https://github.com/yandex/ClickHouse/">https://github.com/yandex/ClickHouse/</a></p>
+    <p>&nbsp;</p>
+    <p>+ встречи. Москва, Санкт-Петербург, Новосибирск, Сан-Франциско<br/> Екатеринбург, Минск... Далее: Нижний Новгород, Казань, Берлин</p>
+</section>
+
+    <section class="slide" style="background: url('pictures/IMG_2584.JPG') no-repeat center center; background-size: 100%">
+        <h2><span>Спасибо!</span></h2>
+    </section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+</body>
+</html>
