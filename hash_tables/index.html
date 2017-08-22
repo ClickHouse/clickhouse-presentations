@@ -281,8 +281,7 @@ Avalanche, Bit Independence</p>
 
 <section class="slide">
 <h2>1. Murmur finalizer</h2>
-<code>
-inline UInt64 intHash64(UInt64 x)
+<code style="margin-top: -40px;">inline UInt64 intHash64(UInt64 x)
 {
     x ^= x >> 33;
     x *= 0xff51afd7ed558ccdULL;
@@ -294,34 +293,36 @@ inline UInt64 intHash64(UInt64 x)
 }
 </code>
 
+<p>
 2.5 "раунда", состоящих из xor-shift и умножения.
-(city, farm, metro hash используют примерно то же самое)
+(city, farm, metro hash используют примерно то же самое)</p>
 
-latency умножения — 3 такта, xor и shift — 1 такт,
+<p>latency умножения — 3 такта, xor и shift — 1 такт,
 в одной хэш-функции нет instruction level parallelism,
-поэтому всего latency примерно 12 тактов.
+поэтому всего latency примерно 12 тактов.</p>
 </section>
 
 <section class="slide">
 <h2>1. Murmur finalizer</h2>
 
-Достоинства:
+<p>Достоинства:
 — хорошее качество;
 — независимое вычисление нескольких хэшей векторизуется
   (gcc, clang даже сами это делают);
 — instruction-parallel независимое вычисление нескольких хэшей;
-— понятный смысл.
+— понятный смысл.</p>
 
-Недостатки:
+<p>Недостатки:
 — когда хэш-таблица помещается в L1..L2 кэш, оверхед всё-таки большой.
-  (можно уменьшить до 1..1.5 раунда, если качество устраивает)
+  (можно уменьшить до 1..1.5 раунда, если качество устраивает)</p>
 </section>
 
 <section class="slide">
 <h2>NumericHash из Arcadia</h2>
 
-Чуть больше latency и хуже качество, чем у Murmur finalizer.
-Лучше векторизуется при выполнении в цикле из-за отсутствия 64-битных умножений.
+<p>Чуть больше latency и хуже качество, чем у Murmur finalizer.</p>
+<p>Лучше векторизуется при выполнении в цикле
+из-за отсутствия 64-битных умножений.</p>
 </section>
 
 <section class="slide">
@@ -344,43 +345,52 @@ inline UInt64 intHashCRC32(UInt64 x)
 <section class="slide">
 <h2>2. CRC-32C</h2>
 
-одна инструкция
+<p>
+одна инструкция (на самом деле две)
+
 latency 3 такта
+
 instruction level parallelism — 3 операции одновременно
+
 throughput до 1 такта на операцию
 
-https://software.intel.com/sites/landingpage/IntrinsicsGuide/
+
+<a href="https://software.intel.com/sites/landingpage/IntrinsicsGuide/">https://software.intel.com/sites/landingpage/IntrinsicsGuide/</a>
+</p>
 </section>
 
 <section class="slide">
 <h2>2. CRC-32C</h2>
 
-Недостатки:
+<p>Недостатки:
 — всего лишь 32 бита
-— нулевое качество по Avalanche и Bit Independence Criteria
+— <b>нулевое</b> качество по Avalanche и Bit Independence Criteria
   потому что crc коммутирует с xor: 
-<code>  
-  crc(x ^ y) = crc(x) ^ crc(y)
-</code>  
+</p>
+<code>crc(x ^ y) = crc(x) ^ crc(y)</code>  
+<p>
   значит при изменении n-го бита x,
-  m-й бит crc(x) меняется или не меняется в зависимости от n, но независимо от x.
+  m-й бит crc(x) меняется или не меняется 
+   в зависимости от n, но независимо от x.
   
   каждый бит crc — это xor некоторых бит x.
-
+</p>
+<p>
 Достоинства:
-— хорошо работает на практике в хэш-таблицах
+— хорошо работает на практике в хэш-таблицах</p>
 </section>
 
 <section class="slide">
-Кстати, обе функции обратимы.
-Но это никого не волнует.
+<p style="padding-top: 50px; font-size: 50px;">Кстати, обе функции обратимы.</p>
+<p>Но это никого не волнует.</p>
 </section>
 
 <section class="slide">
+<p style="padding-top: 50px;">
 Throughput, Latency, Avalanche
 хэш-функций для int-ов:
 
-https://github.com/yandex/ClickHouse/blob/master/dbms/src/Common/tests/int_hashes_perf.cpp
+<a style="font-size: 20px;" href="https://software.intel.com/sites/landingpage/IntrinsicsGuide/">https://github.com/yandex/ClickHouse/blob/master/dbms/src/Common/tests/int_hashes_perf.cpp</a></p>
 <code>./int_hashes_perf 1000000000</code>
 </section>
 
@@ -392,87 +402,115 @@ https://github.com/yandex/ClickHouse/blob/master/dbms/src/Common/tests/int_hashe
 
 <section class="slide">
 <h2>1. Chaining</h2>
-(цепочечные; с внешними явными списками разрешения коллизий)
-Примеры: std::unordered_set, boost::intrusive::hash_table, Arcadia yhash.
+<p>(цепочечные; с внешними явными списками разрешения коллизий)<br>
+Примеры: std::unordered_set, boost::intrusive::hash_table, Arcadia yhash.</p>
 
-Достоинства:
+<p>Достоинства:
+
 — подходит для толстых объектов;
 — подходит для неперемещаемых объектов;
 — подходит для intrusive контейнеров;
-— node-based container, не инвалидируются указатели на ноды (внимание, итераторы инвалидируются);
-— нет взаимного влияния цепочек разрешения коллизий — положительной обратной связи на разрастание цепочек;
-— более терпимо к плохой хэш-функции и к большому load factor.
+
+— node-based container, не инвалидируются 
+      указатели на ноды (внимание, итераторы инвалидируются);
+
+— нет взаимного влияния цепочек разрешения коллизий 
+      — положительной обратной связи на разрастание цепочек;
+
+— более терпимо к плохой хэш-функции и к большому load factor.</p>
 </section>
 
 <section class="slide">
 <h2>1. Chaining</h2>
 
-Недостатки:
+<p>Недостатки:
+
 — низкая кэш-локальность;
+
 — нагрузка на аллокатор;
-— большой оверхед по памяти для маленьких значений;
+
+— большой оверхед по памяти для маленьких значений;</p>
 </section>
 
 <section class="slide">
 <h2>2. Open-Addressing</h2>
-(closed hashing; с внутренними списками разрешения коллизий)
-Примеры: ClickHouse DB::HashMap, sparse_hash_map, dense_hash_map, HashMap в Rust.
 
-Недостатки:
+<p>(closed hashing; с внутренними списками разрешения коллизий)
+
+Примеры: 
+ClickHouse HashMap, sparse_hash_map,
+dense_hash_map, HashMap в Rust.</p>
+
+<p>Недостатки:
 — очень чувствительны к выбору хэш-функции;
 — например, абсолютно плохо работают с тривиальной хэш-функцией;
-— многообразие вариантов memory layout и collision resolution, нужно выбирать под конкретную задачу;
-— сильная деградация производительности, если хранить inplace крупные объекты;
+— многообразие вариантов memory layout и collision resolution, 
+      нужно выбирать под конкретную задачу;
+— сильная деградация производительности, 
+      если хранить inplace крупные объекты;</p>
 
-Достоинства:
-— при правильном использовании работают быстро :)
+<p>Достоинства:
+— при правильном использовании работают быстро :)</p>
 </section>
 
 <section class="slide">
 <h2>Другие варианты</h2>
 
-Не обязательно списки.
+<p>Не обязательно списки.</p>
 
-Другие внешние явные структуры данных для разрешения коллизий:
+<p>Другие внешние явные структуры данных для разрешения коллизий:
 — непрерывные массивы;
-— сбалансированные деревья (пример: HashMap в Java).
+— сбалансированные деревья (пример: HashMap в Java).</p>
 
-Chaining с первой ячейкой inplace;
+<p>Chaining с первой ячейкой inplace;
 — сочетают в себе недостатки chaining и open-addressing;
-— можно использовать комбинированный вариант для multiset/multimap.
+— можно использовать комбинированный вариант для multiset/multimap.</p>
 </section>
 
 <section class="slide">
-<h2>Варианты memory layout для open-addressing hash table</h2>
+<h2>Варианты memory layout<br>для open-addressing hash table</h2>
 
-Как обозначить, что ячейка занята?
+<p>Как обозначить, что ячейка занята?
 
 1. Явно — бит занятости в каждой ячейке.
 
 2. Неявно — отсутствие значение обозначено нулевым ключом,
-а элемент с нулевым ключом хранится отдельно.
+а элемент с нулевым ключом хранится отдельно.</p>
 </section>
 
 <section class="slide">
-<h2>Варианты memory layout для open-addressing hash table</h2>
-
+<h2>Варианты memory layout<br>для open-addressing hash table</h2>
+<p>
 — простой массив ячеек;
+
 — необычный массив ячеек — sparse array (пример: sparse_hash_map);
+
 — двухуровневый массив;
+
 — массив с address translation (косвенной адресацией);
+
 — два массива ячеек — один для key, другой для mapped;
+
 — два и больше массива ячеек для cuckoo hash table;
-— массив ячеек + битовые маски;
+
+— массив ячеек + битовые маски;</p>
 </section>
 
 <section class="slide">
-<h2>Какую дополнительную информацию можно хранить в ячейках</h2>
+<h2 style="font-size: 40px;">Какую дополнительную информацию<br>можно хранить в ячейках</h2>
+<p>
+— значение хэша — для shortcut сравнения тяжёлых ключей;
+      для отсутствия повторных вычислений при ресайзах;
 
-— значение хэша — для shortcut сравнения тяжёлых ключей; для отсутствия повторных вычислений при ресайзах;
 — номер версии для мгновенной очистки хэш-таблицы;
-— информация, как далеко находится элемент с соответствующим значением остатка от деления хэша;
-— указатели, формирующие цепочку разрешения коллизий как в chaining hash table;
-— атомики для блокировок.
+
+— информация, как далеко находится элемент
+      с соответствующим значением остатка от деления хэша;
+
+— указатели, формирующие цепочку разрешения коллизий
+      как в chaining hash table;
+
+— атомики для блокировок.</p>
 </section>
 
 <section class="slide">
@@ -480,16 +518,26 @@ Chaining с первой ячейкой inplace;
 </section>
 
 <section class="slide">
-<h2>Во что упирается insert и lookup в хэш-таблицах?</h2>
+<h2>Во что упирается insert и lookup<br>в хэш-таблицах?</h2>
 
-1. В случае, когда всё влезает в L1..L2 кэш (иногда применимо для L3 кэша):
+<p>
+1. В случае, когда всё влезает в L1..L2 кэш (иногда L3 кэша):
 — вычисление хэш-функции;
-— обход цепочек разрешения коллизий (бранчи, арифметика, иногда просто много инструкций);
+— обход цепочек разрешения коллизий
+      (бранчи, арифметика, иногда просто много инструкций);
 — сравнение элементов на равенство.
 
-2. В случае, когда всё не помещается в LL кэш (иногда применимо, когда влезает только в L3 кэш):
-— случайные чтения из памяти.
+2. В случае, когда всё не помещается в LL кэш (иногда только в L3 кэш):
+— случайные чтения из памяти.</p>
 </section>
+
+<section class="slide">
+<h2 style="font-size: 50px;">Во что упирается insert и lookup?</h2>
+
+<img style="margin-top: -30px;" src="pictures/random_set_query.png"/>
+<img src="pictures/perf.png"/>
+</section>
+
 
 <section class="slide">
 <h2>Linear probing</h2>
