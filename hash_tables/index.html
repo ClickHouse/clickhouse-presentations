@@ -98,156 +98,181 @@ value_type — 16 байт, оперативки примерно 260 MB<br>— 
 
 <section class="slide">
 <p>
-Что такое yandexuid: concat(rand, timestamp).<br>
-Младшие биты — unix timestamp с точностью до секунд.</p>
+Что такое yandexuid: concat(rand, timestamp).<br>Младшие биты — <b>unix timestamp</b> с точностью до секунд.</p>
 
-<img src="pictures/traffic.png" style="height:70%"/>
+<img src="pictures/traffic.png" style="height:50%"/>
 
-<code>
-SELECT toHour(EventTime) * 60 + toMinute(EventTime) AS k, count() AS c FROM hits_all WHERE EventDate >= today() - 365 GROUP BY k ORDER BY k INTO OUTFILE 'minutes.tsv' FORMAT TabSeparated
+<code style="font-size: 20px;">SELECT toHour(EventTime) * 60 + toMinute(EventTime) AS k,
+    count() AS c FROM hits_all
+WHERE EventDate >= today() - 365 GROUP BY k ORDER BY k
+INTO OUTFILE 'minutes.tsv' FORMAT TabSeparated</code>
+
+<p>
+Elapsed: 800.580 sec. Processed 4.33 trillion rows</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 40px;">Насколько тривиальная хэш-функция хуже</h2>
+
+<p>std::unordered_set<br/>
+— разницы в производительности <b>нет</b> (10.319 vs 10.279 сек)</p>
+
+<p>google::dense_hash_map<br/>
+— разница в производительности: 3.156 vs 81.86 сек — в <b>26 раз</b></p>
+
+<p>ClickHouse HashMap<br/>
+— разница в производительности: 2.527 vs 10.264 сек — в <b>4 раза</b></p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 40px;">2. Ошибки при комбинировании<br>хэш-функций</h2>
+
+<p>hash(x, y) = hash(x) ^ hash(y)
+— ужасно, так делать нельзя</p>
+
+<p>hash(x, y) = hash(hash(x) ^ y)
+— можно так, но зачастую можно лучше</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 40px;">3. Использование<br/>для типов фиксированной длины<br/>хэш-функции, предназначенной для строк.</h2>
+
+<p>Пример:</p>
+<code style="font-size: 19px;">hash(int x) = CityHash64(reinterpret_cast&lt;const char *&gt;(&amp;x), sizeof(x))
 </code>
+<p>
+— очень плохо.</p>
 
-1440 rows in set. Elapsed: 800.580 sec. Processed 4.33 trillion rows, 26.00 TB (5.41 billion rows/s., 32.48 GB/s.)
-</section>
-
-<section class="slide">
-<h2>Насколько тривиальная хэш-функция хуже</h2>
-
-std::unordered_set
-— разницы в производительности нет (10.319 vs 10.279 сек)
-
-google::dense_hash_map
-— разница в производительности: 3.156 vs 81.86 сек — в 26 раз
-
-ClickHouse HashMap
-— разница в производительности: 2.527 vs 10.264 сек — в 4 раза
-</section>
-
-<section class="slide">
-<h2>2. Ошибки при комбинировании хэш-функций</h2>
-
-hash(x, y) = hash(x) ^ hash(y)
-— ужасно, так делать нельзя
-
-hash(x, y) = hash(hash(x) ^ y)
-— можно так, но зачастую можно лучше
-</section>
-
-<section class="slide">
-<h2>3. Использование для типов фиксированной длины хэш-функции для строк.</h2>
-
-Пример:
-<code>
-hash(int x) = CityHash64(reinterpret_cast&lt;const char *&gt;(&amp;x), sizeof(x))
-</code>
-— очень плохо.
-
+<p>
 — хэш-функции для строк как правило не инлайнятся;
-— они содержат много бранчей — представляют собой вариации на тему duff device для fast path цикла и обработки хвостиков,
+
+— они содержат много бранчей — представляют собой вариации 
+  на тему duff device для fast path цикла и обработки хвостиков,
   всё это не нужно, если хэшируем типы фиксированной длины.
+</p>
 </section>
 
 <section class="slide">
 <h2>Почему плохо</h2>
 
-HashMap в ClickHouse:
+<p>HashMap в ClickHouse:
 — хорошая хэш-функция: 2.439 сек.
 — ошибочно используем CityHash64 для UInt64: 3.347 сек.
 — используем murmur finalizer: 2.722 сек.
-— тривиальная хэш-функция: 9.721 сек.
+— тривиальная хэш-функция: 9.721 сек.</p>
 
-std::unordered_map:
+<p>std::unordered_map:
 — хорошая хэш-функция: 10.097 сек.
-— ошибочно используем CityHash64 для UInt64: 11.040 сек.
+— ошибочно используем CityHash64 для UInt64: 11.040 сек.</p>
 
-(производительность скрадывается зависимыми кэш-промахами)
+<p>(производительность скрадывается зависимыми кэш-промахами)</p>
 
-https://github.com/yandex/ClickHouse/blob/master/dbms/src/Common/tests/integer_hash_tables_and_hashes.cpp
+<p><a style="font-size: 15px;" href="https://github.com/yandex/ClickHouse/blob/master/dbms/src/Common/tests/integer_hash_tables_and_hashes.cpp">https://github.com/yandex/ClickHouse/blob/master/dbms/src/Common/tests/integer_hash_tables_and_hashes.cpp</a></p>
 </section>
 
 <section class="slide">
 <h2>4. Интерференция хэш-функций</h2>
 
-Для прямо или косвенно связанных друг с другом структур данных используйте разные хэш-функции.
-Пример: для шардирования данных и для хэш-таблиц при обработке этих данных.
+<p>Для прямо или косвенно связанных друг с другом 
+структур данных используйте разные хэш-функции.</p>
 
-Приводит к замедлению в разы или к полному залипанию!
+<p>Пример: для шардирования данных 
+и для хэш-таблиц при обработке этих данных.</p>
 
-Иногда выбор нескольких хэш-функций из одного семейства — недостаточно хорошее решение.
-Пример: <code>hash(x, seed) = hash(x ^ seed)</code> — зачастую недостаточно хорошо из-за того, что часть операций hash коммутирует с xor.
+<p><span style="padding: 0; font-size: 30px;">☠</span> Приводит к замедлению в разы или к полному залипанию!</p>
+
+<p>Иногда выбор нескольких хэш-функций из одного семейства
+— недостаточно хорошее решение.</p>
+<p>Пример: <code>hash(x, seed) = hash(x ^ seed)</code>— зачастую недостаточно хорошо,
+если часть операций hash коммутирует с xor.</p>
 </section>
 
 <section class="slide">
-<h2>5. Использование устаревших медленных хэш-функций низкого качества</h2>
+<h2 style="font-size: 40px;">5. Использование устаревших медленных<br>хэш-функций низкого качества</h2>
 
-Пример: в libstdc++ из gcc 7 используется FNV1a для строк.
-Эта хэш-функция содержит цикл по байтам, может работать не медленно только для коротких строк,
-но для коротких строк слишком низкое качество.
+<p>Пример: в libstdc++ из gcc 7 используется FNV1a для строк.
+
+Эта хэш-функция содержит цикл по байтам, 
+может работать не медленно только для коротких строк,
+но для коротких строк слишком низкое качество.</p>
 </section>
 
 <section class="slide">
-<h2>5. Использование устаревших медленных хэш-функций низкого качества</h2>
+<h2 style="font-size: 40px;">5. Использование устаревших медленных<br>хэш-функций низкого качества</h2>
 
-Пример: 
+<p>Пример:
+Делаем 5 млн. вставок.</p>
 
-PageCharset — короткие повторяющиеся строки (windows-1251, utf-8)
-Делаем 5 млн. вставок.
+<p>PageCharset — короткие повторяющиеся строки (windows-1251, utf-8)
+
 — FNV1a: 76 409 407 inserts/sec.
 — CityHash64: 94 725 900 inserts/sec.
-— хэш-функция из ClickHouse: 112 791 109 insets/sec.
+— хэш-функция из ClickHouse: 112 791 109 inserts/sec.</p>
 
-URL — много разных строк ~60 байт
+<p>URL — много разных строк ~60 байт
+
 — FNV1a: 10 108 171 inserts/sec.
 — CityHash64: 11 337 682 inserts/sec.
-— хэш-функция из ClickHouse: 13 637 320 insets/sec.
+— хэш-функция из ClickHouse: 13 637 320 inserts/sec.</p>
 
-https://github.com/yandex/ClickHouse/blob/master/dbms/src/Interpreters/tests/hash_map_string_3.cpp
+<p><a style="font-size: 15px;" href="https://github.com/yandex/ClickHouse/blob/master/dbms/src/Interpreters/tests/hash_map_string_3.cpp">https://github.com/yandex/ClickHouse/blob/master/dbms/src/Interpreters/tests/hash_map_string_3.cpp</a></p>
 </section>
 
 <section class="slide">
-<h2>6. Использование криптографических хэш-функций без необходимости</h2>
+<h2 style="font-size: 40px;">6. Использование криптографических<br>хэш-функций без необходимости</h2>
 
-Иногда не ошибка, если надо избежать algorithmic complexity attack.
-В этом случае используйте SipHash. Не используйте MD5, SHA1,2,3.
+<p>Иногда не ошибка, если надо избежать algorithmic complexity attack.</p>
+<p>В этом случае используйте SipHash.
+Не используйте MD5, SHA1,2,3 для хэш-таблиц.</p>
 
-Но добиться этого иногда можно и другими способами (выбор случайной хэш-функции из семейства),
-правда это работает не всегда.
+<p>Но добиться этого иногда можно и другими способами
+(выбор случайной хэш-функции из семейства)</p>
+<p>* правда это обычно не помогает.</p>
 </section>
 
 <section class="slide">
-<h2>6. Использование криптографических хэш-функций без необходимости</h2>
+<h2 style="font-size: 40px;">6. Использование криптографических<br>хэш-функций без необходимости</h2>
 
-Пример:
+<p>Пример:</p>
 
-URL:
+<p>URL:
+
 CityHash64: 3755.84 MB/sec.
 SipHash: 1237.51 MB/sec.
-MD5: 361.86 MB/sec.
+MD5: 361.86 MB/sec.</p>
 
-SearchPhrase:
+<p>SearchPhrase:
+
 CityHash64: 822.56 MB/sec.
 SipHash: 183.35 MB/sec.
-MD5: 30.87 MB/sec.
+MD5: 30.87 MB/sec.</p>
 
-https://github.com/yandex/ClickHouse/blob/master/dbms/src/Common/tests/hashes_test.cpp
+<a style="font-size: 15px;" href="https://github.com/yandex/ClickHouse/blob/master/dbms/src/Common/tests/hashes_test.cpp">https://github.com/yandex/ClickHouse/blob/master/dbms/src/Common/tests/hashes_test.cpp</a>
 </section>
 
 <section class="slide">
-<h2>Оценка качества некриптографической хэш-функции</h2>
+<h2 style="font-size: 40px;">Оценка качества<br>некриптографической хэш-функции</h2>
 
-Пример: SMHasher,
+<img style="float: right;" src="pictures/avalanche.svg" />
+<p>Пример: SMHasher.
 
-Avalanche, Bit Independence Criteria
+<a href="https://github.com/aappleby/smhasher">https://github.com/aappleby/smhasher</a></p>
 
-Картинка
+<p>
+Avalanche, Bit Independence</p>
+
+<a style="font-size: 25px;" href="http://ticki.github.io/blog/designing-a-good-non-cryptographic-hash-function/">http://ticki.github.io/blog/designing-a-good-non-cryptographic-hash-function/</a>
 </section>
 
 <section class="slide">
-<h2>Недостаток критерия Avalanche</h2>
+<h2 style="font-size: 40px;">Ограниченность критерия Avalanche</h2>
 
-Для разных алгоритмов имеют смысл разные критерии качества хэш-функций.
-Хэш-функция может быть качественной для linear probing open addressing hash table,
-но не качественной для HyperLogLog.
+<p>Для разных алгоритмов имеют смысл 
+разные критерии качества хэш-функций.</p>
+
+<p>Хэш-функция может быть качественной
+для linear probing open addressing hash table,
+но не качественной для HyperLogLog.</p>
 </section>
 
 <section class="slide">
