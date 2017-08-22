@@ -11,6 +11,7 @@
          span { padding: 10px 10px; background: rgba(255, 255, 255, 0.75); }
          code { display: block; background-color: #EEE; white-space: pre; }
          h2 { line-height: 1.5 !important; padding-bottom: 30px; }
+         td { line-height: 1.5; }
     </style>
 </head>
 <body class="shower list">
@@ -26,6 +27,7 @@
         <h2>Обо мне</h2>
         <p>Алексей, разработчик ClickHouse.</p>
         <p>С 2008 занимался движком обработки данных в Яндекс.Метрике.</p>
+        <p>Пишу на C++.</p>
     </section>
 
 <section class="slide">
@@ -114,7 +116,7 @@ Elapsed: 800.580 sec. Processed 4.33 trillion rows</p>
 <section class="slide">
 <h2 style="font-size: 40px;">Насколько тривиальная хэш-функция хуже</h2>
 
-<p>std::unordered_set<br/>
+<p>std::unordered_map<br/>
 — разницы в производительности <b>нет</b> (10.319 vs 10.279 сек)</p>
 
 <p>google::dense_hash_map<br/>
@@ -155,15 +157,17 @@ Elapsed: 800.580 sec. Processed 4.33 trillion rows</p>
 <section class="slide">
 <h2>Почему плохо</h2>
 
-<p>HashMap в ClickHouse:
-— хорошая хэш-функция: 2.439 сек.
-— ошибочно используем CityHash64 для UInt64: 3.347 сек.
-— используем murmur finalizer: 2.722 сек.
-— тривиальная хэш-функция: 9.721 сек.</p>
+<p style="margin-top: -30px;">HashMap в ClickHouse:
+<table style="margin-top: -15px;">
+<tr><td>— хорошая хэш-функция:</td><td>2.439 сек.</td></tr>
+<tr><td>— ошибочно используем CityHash64 для UInt64: </td><td>3.347 сек.</td></tr>
+<tr><td>— используем murmur finalizer: </td><td>2.722 сек.</td></tr>
+<tr><td>— тривиальная хэш-функция: </td><td>9.721 сек.</td></tr></table></p>
 
 <p>std::unordered_map:
-— хорошая хэш-функция: 10.097 сек.
-— ошибочно используем CityHash64 для UInt64: 11.040 сек.</p>
+<table style="margin-top: -15px;">
+<tr><td>— хорошая хэш-функция: </td><td>10.097 сек.</td></tr>
+<tr><td>— ошибочно используем CityHash64 для UInt64: </td><td>11.040 сек.</td></tr></table></p>
 
 <p>(производительность скрадывается зависимыми кэш-промахами)</p>
 
@@ -200,29 +204,27 @@ Elapsed: 800.580 sec. Processed 4.33 trillion rows</p>
 <section class="slide">
 <h2 style="font-size: 40px;">5. Использование устаревших медленных<br>хэш-функций низкого качества</h2>
 
-<p>Пример:
-Делаем 5 млн. вставок.</p>
+<p style="margin-top: -25px;">Пример: Делаем 5 млн. вставок.
 
-<p>PageCharset — короткие повторяющиеся строки (windows-1251, utf-8)
+PageCharset — короткие повторяющиеся строки (windows-1251, utf-8)
+<table style="margin-top: -15px;">
+<tr><td>— FNV1a:</td><td>76 409 407 inserts/sec.
+<tr><td>— CityHash64:</td><td>94 725 900 inserts/sec.
+<tr><td>— хэш-функция из ClickHouse:</td><td>112 791 109 inserts/sec.</td></tr></table>
 
-— FNV1a: 76 409 407 inserts/sec.
-— CityHash64: 94 725 900 inserts/sec.
-— хэш-функция из ClickHouse: 112 791 109 inserts/sec.</p>
+URL — много разных строк ~60 байт
+<table style="margin-top: -15px;"><tr><td>— FNV1a:</td><td>10 108 171 inserts/sec.</td></tr>
+<tr><td>— CityHash64:</td><td>11 337 682 inserts/sec.</td></tr>
+<tr><td>— хэш-функция из ClickHouse:</td><td>13 637 320 inserts/sec.</td></tr></table></p>
 
-<p>URL — много разных строк ~60 байт
-
-— FNV1a: 10 108 171 inserts/sec.
-— CityHash64: 11 337 682 inserts/sec.
-— хэш-функция из ClickHouse: 13 637 320 inserts/sec.</p>
-
-<p><a style="font-size: 15px;" href="https://github.com/yandex/ClickHouse/blob/master/dbms/src/Interpreters/tests/hash_map_string_3.cpp">https://github.com/yandex/ClickHouse/blob/master/dbms/src/Interpreters/tests/hash_map_string_3.cpp</a></p>
+<a style="font-size: 15px;" href="https://github.com/yandex/ClickHouse/blob/master/dbms/src/Interpreters/tests/hash_map_string_3.cpp">https://github.com/yandex/ClickHouse/blob/master/dbms/src/Interpreters/tests/hash_map_string_3.cpp</a></p>
 </section>
 
 <section class="slide">
 <h2 style="font-size: 40px;">6. Использование криптографических<br>хэш-функций без необходимости</h2>
 
 <p>Иногда не ошибка, если надо избежать algorithmic complexity attack.</p>
-<p>В этом случае используйте SipHash.
+<p>В этом случае используйте <b>SipHash</b>.
 Не используйте MD5, SHA1,2,3 для хэш-таблиц.</p>
 
 <p>Но добиться этого иногда можно и другими способами
@@ -233,21 +235,22 @@ Elapsed: 800.580 sec. Processed 4.33 trillion rows</p>
 <section class="slide">
 <h2 style="font-size: 40px;">6. Использование криптографических<br>хэш-функций без необходимости</h2>
 
-<p>Пример:</p>
+<p style="margin-top: -25px;">Пример:
 
-<p>URL:
+URL:
+<table style="margin-top: -15px;">
+<tr><td>CityHash64: </td><td>3755.84 MB/sec.</td></tr>
+<tr><td>SipHash: </td><td>1237.51 MB/sec.</td></tr>
+<tr><td>MD5: </td><td>361.86 MB/sec.</td></tr></table>
 
-CityHash64: 3755.84 MB/sec.
-SipHash: 1237.51 MB/sec.
-MD5: 361.86 MB/sec.</p>
+SearchPhrase:
 
-<p>SearchPhrase:
+<table style="margin-top: -5px;">
+<tr><td>CityHash64: </td><td>822.56 MB/sec.</td></tr>
+<tr><td>SipHash: </td><td>183.35 MB/sec.</td></tr>
+<tr><td>MD5: </td><td>30.87 MB/sec.</td></tr></table>
 
-CityHash64: 822.56 MB/sec.
-SipHash: 183.35 MB/sec.
-MD5: 30.87 MB/sec.</p>
-
-<a style="font-size: 15px;" href="https://github.com/yandex/ClickHouse/blob/master/dbms/src/Common/tests/hashes_test.cpp">https://github.com/yandex/ClickHouse/blob/master/dbms/src/Common/tests/hashes_test.cpp</a>
+<a style="font-size: 15px;" href="https://github.com/yandex/ClickHouse/blob/master/dbms/src/Common/tests/hashes_test.cpp">https://github.com/yandex/ClickHouse/blob/master/dbms/src/Common/tests/hashes_test.cpp</a></p>
 </section>
 
 <section class="slide">
@@ -403,7 +406,7 @@ Throughput, Latency, Avalanche
 <section class="slide">
 <h2>1. Chaining</h2>
 <p>(цепочечные; с внешними явными списками разрешения коллизий)<br>
-Примеры: std::unordered_set, boost::intrusive::hash_table, Arcadia yhash.</p>
+Примеры: std::unordered_map, boost::intrusive::hash_table, Arcadia yhash.</p>
 
 <p>Достоинства:
 
@@ -510,7 +513,7 @@ OpenAddressingMap Парахина, HashMap в Rust.</p>
 — указатели, формирующие цепочку разрешения коллизий
       как в chaining hash table;
 
-— атомики для блокировок.</p>
+— атомики и даже мъютексы для блокировок.</p>
 </section>
 
 <section class="slide">
@@ -521,7 +524,7 @@ OpenAddressingMap Парахина, HashMap в Rust.</p>
 <h2>Во что упирается insert и lookup<br>в хэш-таблицах?</h2>
 
 <p>
-1. В случае, когда всё влезает в L1..L2 кэш (иногда L3 кэша):
+1. В случае, когда всё влезает в L1..L2 кэш (иногда L3 кэш):
 — вычисление хэш-функции;
 — обход цепочек разрешения коллизий
       (бранчи, арифметика, иногда просто много инструкций);
@@ -753,7 +756,7 @@ hash(x, k) = hash1(x) + k * hash2(x)</p>
 
 Возможно, использование простого числа для размера — нелепость.
 
-std::unordered_set, Arcadia yhash используют именно эту нелепость.
+std::unordered_map, Arcadia yhash используют именно эту нелепость.
 </section>
 
 <section class="slide">
