@@ -321,6 +321,14 @@ Avalanche, Bit Independence</p>
 </section>
 
 <section class="slide">
+<h2>NumericHash из Arcadia</h2>
+
+<p>Чуть больше latency и хуже качество, чем у Murmur finalizer.</p>
+<p>Лучше векторизуется при выполнении в цикле
+из-за отсутствия 64-битных умножений.</p>
+</section>
+
+<section class="slide">
 <h2>2. CRC-32C</h2>
 
 <code>
@@ -398,7 +406,7 @@ Throughput, Latency, Avalanche
 <section class="slide">
 <h2>1. Chaining</h2>
 <p>(цепочечные; с внешними явными списками разрешения коллизий)<br>
-Примеры: std::unordered_map, boost::intrusive::hash_table.</p>
+Примеры: std::unordered_map, boost::intrusive::hash_table, Arcadia yhash.</p>
 
 <p>Достоинства:
 
@@ -433,8 +441,8 @@ Throughput, Latency, Avalanche
 <p>(closed hashing; с внутренними цепочками разрешения коллизий)
 
 Примеры: 
-ClickHouse HashMap, sparse_hash_map,
-dense_hash_map, HashMap в Rust.</p>
+ClickHouse HashMap, sparse_hash_map, dense_hash_map,
+OpenAddressingMap Парахина, HashMap в Rust.</p>
 
 <p>Недостатки:
 — очень чувствительны к выбору хэш-функции;
@@ -748,7 +756,7 @@ hash(x, k) = hash1(x) + k * hash2(x)</p>
 
 Возможно, использование простого числа для размера — нелепость.
 
-std::unordered_map использует именно эту нелепость.
+std::unordered_map, Arcadia yhash используют именно эту нелепость.
 </section>
 
 <section class="slide">
@@ -1123,7 +1131,7 @@ SIMD probing</p>
 — складываем подряд строки в Arena,
 в хэш-таблице храним StringRef
 
-(std::string_view, std::pair&lt;const char *, size_t&gt;).
+(std::string_view, Arcadia TStringBuf, std::pair&lt;const char *, size_t&gt;).
 
 Для кортежей:
 
