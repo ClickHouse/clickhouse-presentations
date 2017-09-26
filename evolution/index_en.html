@@ -202,8 +202,8 @@
     <section class="slide">
         <h2>The main cluster of Yandex.Metrica</h2>
         <ul style="font-size:30px;">
-            <li>20.6 trillions of rows (as of Feb 2017)</li>
-            <li>450 servers</li>
+            <li>25 trillions of rows (as of Sep 2017)</li>
+            <li>500 servers</li>
             <li>total throughput of query processing is up to two terabytes per second</li>
         </ul>
         <p style="font-size:60%; margin-top:2em">* If you want to try ClickHouse, one server or VM is enough.</p>
@@ -232,7 +232,7 @@
     <section class="slide">
         <h2>Open-source</h2>
         <p>More than 100 companies are already using ClickHouse.</p>
-        <p>Examples: Mail.ru, Cloudflare, Kaspersky...</p>
+        <p>Examples: Mail.ru, Cloudflare, Vertamedia, Lifestreet, Kaspersky...</p>
     </section>
 
     <section class="slide">
@@ -270,6 +270,17 @@
         <p><a href="http://verynull.com/2016/08/22/infinidb与clickhouse对比/">http://verynull.com/2016/08/22/infinidb与clickhouse对比/</a></p>
         <p><img src="pictures/infinidb_cn.png" style="width:100%"/></p>
     </section>
+    
+    <section class="slide">
+        <h2>&nbsp;</h2>
+        <p>Our CEO first saw ClickHouse in action:</p>
+
+        <p>geoff [1:54 PM]</p>
+        <p style="font-size: 150%">I have a boner looking at the new stats<br />
+        it's so fucking fast</p>
+
+        <p>Source: <a href="https://t.me/clickhouse_ru">https://t.me/clickhouse_ru</a></p>
+    </section>
 
     <section class="slide">
         <h2>Why ClickHouse is so fast?</h2>
@@ -289,43 +300,37 @@
         <p>Example: we have 17 different algorithms for GROUP BY. Best one is selected for your query.</p>
     </section>
 
-    <section class="slide">
-        <h2>How to connect to ClickHouse</h2>
-        <p style="font-size: 30px;">HTTP REST</p>
-        <p style="font-size: 30px;">clickhouse-client</p>
-        <p style="font-size: 30px;">JDBC</p>
-        <p>&nbsp;</p>
-        <p>Python, PHP, Go, Perl, Ruby, Node.JS, R, .NET</p>
-        <p>&nbsp;</p>
-        <p>Web UI: <a href="https://github.com/smi2/clickhouse-frontend">https://github.com/smi2/clickhouse-frontend</a></p>
-        <p>Redash, Zeppelin, Superset, Grafana, PowerBI - somewhat works</p>
-    </section>
+<!-- Interfaces -->
+
+<section class="slide">
+    <h2>Interfaces</h2>
+    <p style="font-size: 30px;">HTTP REST</p>
+    <p style="font-size: 30px;">clickhouse-client</p>
+    <p style="font-size: 30px;">JDBC (production), ODBC (beta)</p>
+    <p>&nbsp;</p>
+    <p style="font-size: 30px;">Python, PHP, Perl, Go,<br/>Node.js, Ruby, C++, .NET, Scala, R, Julia, Rust</p>
+</section>
+
+<section class="slide">
+    <h2 style="font-size: 32px;">Integration with data visualization tools</h2>
+    <p style="font-size: 30px;">Tabix (tabix.io) &mdash; developed specially for ClickHouse.</p>
+    <p style="font-size: 30px;"><img style="float: left; padding-right: 20px;" src="pictures/tabix.gif" width="300" />And:<br/><br/>Grafana, Redash, Apache Zeppelin,<br/>Superset&hellip;</p>
+</section>
 
     <section class="slide">
         <h2>Community</h2>
         <p>Web site: <a href="https://clickhouse.yandex/">https://clickhouse.yandex/</a></p>
         <p>Google groups: <a href="https://groups.google.com/forum/#!forum/clickhouse">https://groups.google.com/forum/#!forum/clickhouse</a></p>
         <p>Maillist: clickhouse-feedback@yandex-team.com</p>
-        <p>Telegram chat: <a href="https://telegram.me/clickhouse_en">https://telegram.me/clickhouse_en</a> and <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_ru</a> (now with 403 members)</p>
+        <p>Telegram chat: <a href="https://telegram.me/clickhouse_en">https://telegram.me/clickhouse_en</a> and <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_ru</a> (now with 966 members)</p>
         <p>GitHub: <a href="https://github.com/yandex/ClickHouse/">https://github.com/yandex/ClickHouse/</a></p>
         <p>&nbsp;</p>
-        <p>+ meetups. Moscow, Saint-Petersburg... International meetups will be announced this year.</p>
+        <p>+ meetups. Moscow, Saint-Petersburg, Novosibirsk, Ekaterinburg, Minsk...<br/>Upcoming: <b>Berlin</b> (5th october 2017).</p>
     </section>
 
     <section class="slide">
         <h2>&nbsp;</h2>
         <p style="font-size: 40px;">Thank you. Questions.</p>
-    </section>
-
-    <section class="slide">
-        <h2>Bonus</h2>
-        <img src="pictures/example_french.png" style="height:70%"/>
-    </section>
-
-    <section class="slide">
-        <h2 style="font-size: 40px;">ClickHouse vs. typical row-oriented DBMS</h2>
-        <p>Itai Shirav:<br /><br />&laquo;I haven't made a rigorous comparison, but I did convert a time-series table with 9 million rows from Postgres to ClickHouse.</p>
-        <p>Under ClickHouse queries run about 100 times faster, and the table takes 20 times less disk space. Which is pretty amazing if you ask me&raquo;.</p>
     </section>
 
     <section class="slide">
