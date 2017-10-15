@@ -1,0 +1,277 @@
+Topics:
+
+Evolution of data structures in Yandex.Metrica or: how we came up to development of ClickHouse. 
+Quick tour in ClickHouse internals.
+ClickHouse in data processing landscape.
+ClickHouse use cases.
+Typical mistakes when using ClickHouse.
+How to choose sharding schema.
+Best practices in ClickHouse operations.
+
+Review of your use cases; your clusters, queries, etc.
+
+
+
+ClickHouse use cases
+
+1. Structured logs/events storage for RCA investigation, monitoring, security and analytics.
+
+2. Metrics storage. Performance metrics/histograms for apps.
+
+3. Events storage for clickstream, adv. networks, web analytics reporting systems.
+
+4. ClickHouse for BI systems.
+
+5. Multi-criterial brute-force search.
+
+
+Examples:
+
+Yandex.Market (shopping comparison) using ClickHouse for:
+
+Services logs for performance analytics and investigations.
+Each few seconds, quantiles and other metrics are calculated from the logs and sent into Graphite.
+Graphite is using ClickHouse as a backend storage (see: Graphouse).
+
+Yandex.Mail is using ClickHouse to record user activity logs in a web interface for investigations and analytics.
+
+Yandex.Browser is using ClickHouse for performance histograms. Browsers send many mini-histograms from clients.
+They are all stored into ClickHouse for the purpose of Browser version comparisons, analytics and investigations.
+
+Yandex.Metrika is using ClickHouse to implement web analytics service. The reports are generated on the fly from non-aggregated pageviews/sessions/events.
+Yandex.Direct is using ClickHouse to implement reporting for advertisers and website owners.
+Both are using ClickHouse also for logs and monitoring.
+
+Business analysts in Yandex are using ClickHouse to load prepared datasets to analyze it with custom SQL queries with clickhouse-client, Jupyter notebooks, Tableau... 
+
+
+
+Typical mistakes when using ClickHouse.
+
+1. Too frequent small INSERTS.
+
+2. Microsharding.
+
+3. Large number of small tables.
+
+4. Overuse of primitive table engines.
+
+5. Overuse of preaggregation.
+
+6. String-typing.
+
+7. Very long strings/arrays.
+
+8. Manual replication.
+
+9. O(N) queries in a loop.
+
+10. Lack of quota for requests through API.
+
+11. Relying on OPTIMIZE queries to implement UPDATE functionality (for moderate and high data volumes).
+
+12. Using ClickHouse just to SELECT * all data back to application.
+
+13. Overuse of distributed JOINs.
+
+14. Over-normalized data: using separate tables for high-cardinality dictionaries.
+
+
+Best practices in ClickHouse operations.
+
+Enable query_log.
+
+ClickHouse version upgrade.
+
+Forward and backward compatibility.
+Supported versions.
+When to upgrade to the newest release?
+How to do rolling update?
+
+Managing ClickHouse configuration.
+
+Avoid modifications of main configuration files.
+Substitutions from ZooKeeper.
+
+Replica repair.
+
+Automatic transparent repair, max_replica_delay setting.
+Semi-automaic repair with "force_restore_data" flag.
+Repair by installing new replica. Avoid obsolete replica nodes in ZooKeeper.
+
+Backups and restore.
+
+Backup with full filesystem snapshot.
+Backup with FREEZE PARTITION queries.
+Backup of metadata.
+Table dumps.
+
+Limiting user access rights, priorities.
+
+allow_databases
+readonly setting
+limits for query complexity
+initial source in query_log
+
+
+Cluster configuration: uniform / uniform with separate front node / cross-replicated.
+
+
+Sharding schemas.
+
+When your data fit in single node with some reserve, just use single shard. One good server is always better that a bunch of small VMs.
+
+When your data fit in single node but with no much reserve, it is reasonable to install two shards in advance, just to be familiar with sharding.
+ 
+Preferred sharding key/rule is dependend on distribution of your queries. There are different types of load:
+a. Heavy analytical queries. Not very frequent. Usually "global" queries from internal users, or queries from big clients.
+b. High load of short queries by different clients (example: adv. network reporting interface).
+
+And there are following possible sharding schemas:
+
+1. Uniform random sharding or sharding by high-granular key like user_id, IP address, etc.
+Each query will use resources of all nodes. Good scaling and high performance of heavy queries. 
+The cluster will not scale for large number of small queries - the peak QPS for small queries is slightly less than for single node.
+Ok for small number of servers (10..50).
+Prefer to use typical JOIN key (like user identifier) as sharding key, to simplify distributed JOINs.
+
+2. Sharding by some client identifier.
+Preferred way: a map client_id -> shard_no in a separate system. Other ways: simple modulo of division, simple hashing, consistent hashing.
+Each query by single client will touch only single shard. Cluster will scale linearly for large number of small queries.
+Note: for optimal perofmance, you should send queries for corresponding shards.
+Global queries will use all nodes and scale well. But queries for single heavy clients will not scale.
+In presense of big clients, shards will be likely non-uniform in size.
+
+3. Two-level sharding.
+Shard by some client identifier. Then each shard is a subcluster, that will be additionally sharded by user identifier as data grows.
+On each node, both whole cluster and subcluster are defined in configuration and Distributed tables are created for both clusters.
+Rather good scalability and performance. Allows to scale different "sub-clusters" non-uniformly.
+Too complicated for small cluster. Better to use only when number of servers is bigger than 100.
+
+Cluster scaling and resharding.
+
+The most easy is to add new shards without moving old data. The new shard will be initially empty and you can load data into it with more weight.
+The load will be distributed non-uniformly: the new shard will be more loaded both with INSERTs and SELECTs and this will limit total scalability of the cluster. It means that better to install new nodes in advance, when cluster is filled by less than 100%.
+
+When you use sharding with some specific key like user_id, then without data movement you will lose the property that each key is located on single shard and you should consider your sharding as random.
+
+There is also possibility to move old partitions from old shards to new servers. You can use FETCH and ATTACH PARTITION for this purpose.
+
+How to load data on cluster.
+
+The most scalable and efficient way is to distribute data by shards on client side. So, the client will do INSERTs parts of data directly to corresponding shards. This also allows custom domain-specific sharding schemas.
+
+The most simple way is to INSERT into Distributed table, and it will distribute your data according to specified sharding key. This allows only simple sharding schemas.
+
+
+
+Typical mistakes in ClickHouse operations.
+
+1. ClickHouse listening to the Internet.
+
+2. Direct access to SQL from untrusted users.
+
+3. ZooKeeper on the same nodes with ClickHouse.
+
+4. ClickHouse on the same nodes with computationally-expensive or low-latency applications.
+
+5. Less than three replicas.
+
+6. Lack of graphs and monitoring.
+
+7. ClickHouse on tiny VMs.
+
+
+
+ClickHouse landscape.
+
+1. Big data processing systems: Hadoop (Hive, Impala, Presto), Spark (Spark SQL).
+
+Pros:
+Allow to run custom code.
+Useful for long-running batch processing.
+Rich capabilities.
+
+Cons:
+No quick range queries in presense of continuous data ingestion.
+Single datacenter.
+Submoptimal performance.
+
+
+2. Cloud services: Redshift (Amazon), BigQuery (Google).
+
+Pros:
+No need to maintain your own infrastructure.
+Quick start.
+
+Cons:
+Unpredictable performance (BigQuery), limited scalability (RedShift).
+Suboptimal cost/efficiency for large installations.
+Difficulties in continuous data ingestion (BigQuery).
+You trust third-party to manage your data.
+
+
+3. Commercial MPP RDBMS: (no names to avoid advertising)
+
+Pros:
+Usually good SQL standard compatibility.
+Some systems could be considered mature.
+Commercial support.
+
+Cons:
+Vendor lock-in.
+High license cost.
+Low flexibility than with open-source solutions.
+
+
+4. Specialized time series databases: InfluxDB; OpenTSDB; Beringei, Graphite with KairosDB, Cyanite;
+
+Pros:
+Sometimes better space efficiency.
+
+Cons:
+Not suitable for custom queries: low performance or just don't work.
+Data model is usually forced. Index by time is forced. Little flexibility.
+
+
+5. Specialized systems for data aggregation, lambda architecture: Druid, Kudu.
+
+Pros:
+
+Cons:
+Over complicated. Forces to use lambda architecture. No or poor SQL support.
+
+
+6. Text/semistructured indexing and search systems: ELK stack (ElasticSearch + LogStash + Kibana, GrayLog).
+
+Pros:
+Good for indexing of small or moderate data volumes.
+Good for semistructured and unstructured data.
+
+Cons:
+Bad space efficiency.
+Indices eat too much memory.
+The system works very slow with moderate data volume when indices doesn't fit in memory.
+
+
+7. Wide-column key-value DBMS: HBase, Cassandra, ScyllaDB, HyperTable, Cloud BigTable.
+
+Pros:
+Suitable for large amount of key-value queries.
+Suitable for semistructured data.
+
+Cons:
+Slow analytical (heavy scan, filter, aggregation) queries.
+Bad support for SQL.
+Cross-DC replication is very difficult.
+
+
+8. Open-source MPP RDBMS: Greenplum, EventQL... ClickHouse.
+
+Pros:
+Flexibility, no vendor lock in.
+Greenplum: good SQL support, good planning of distributed JOINs.
+
+Cons:
+Some not mature enough.
+EventQL: AGPL license.
