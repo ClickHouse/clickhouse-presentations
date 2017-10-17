@@ -102,9 +102,25 @@ Repair by installing new replica. Avoid obsolete replica nodes in ZooKeeper.
 Backups and restore.
 
 Backup with full filesystem snapshot.
+
 Backup with FREEZE PARTITION queries.
 Backup of metadata.
+
 Table dumps.
+
+
+force_restore_data flag, look at docs.
+
+
+How to get rid of wrong data.
+
+filter out wrong data with SELECT query
+and INSERT into a table with MergeTree ENGINE
+
+DETACH PARTITION with broken data from original table
+move data for partition from new table to original/detached directory
+ATTACH PARTITION on original table
+
 
 Limiting user access rights, priorities.
 
