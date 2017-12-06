@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Секреты эффективной работы ClickHouse</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x10.css">
+    
+<!--    <style type="text/css">
+         span { padding: 1px 10px; background: rgba(255, 255, 255, 0.75); }
+    </style>-->
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>Секреты эффективной работы ClickHouse</h1>
+    </header>
+    <section class="slide" id="cover">
+        <h1 style="margin-top: 200px;"><span>Секреты эффективной работы<br/>ClickHouse</span></h1>
+    </section>
+    <section class="slide">
+        <h2>Обо мне</h2>
+        <p>Алексей, разработчик ClickHouse.</p>
+    </section>
+    <section class="slide">
+        <h2>Что такое ClickHouse?</h2>
+        <p>ClickHouse &mdash; распределённая аналитическая column-oriented СУБД.</p>
+        <p><br/>Я расскажу про несколько деталей работы ClickHouse,<br/>которые считаю важными.</p>
+    </section>
+    
+    <section class="slide">
+        <h2>Как хранятся данные в таблицах</h2>
+    </section>
+    
+    <section class="slide">
+        <h2>Как хранятся данные в таблицах</h2>
+        <p>ClickHouse &mdash; модульная система.</p>
+        <p>Поддерживает работу различных storage engines.</p>
+        <p>Storage engine отвечает за:</p><p>
+            &mdash; хранение, чтение и запись данных;<br/>
+            &mdash; синхронизацию доступа к данным;<br/>
+            &mdash; репликацию данных.
+        </p>
+    </section>
+    
+    <section class="slide">
+        <h2>Как хранятся данные в таблицах</h2>
+        <p>Примеры простых Storage Engines:</p>
+        <p>Memory, File, TinyLog.</p>
+        <p>Если вы хотите добавить в ClickHouse свой движок таблиц,<br/>начните смотреть самые простые.</p>
+    </section>
+    
+    <section class="slide">
+        <h2>Как хранятся данные в таблицах</h2>
+        <p>Примеры специализированных Storage Engines:</p>
+        <p>Distributed, Merge, View, Null.</p>
+    </section>
+    
+    <section class="slide">
+        <h2>Как хранятся данные в таблицах</h2>
+        <p>Для серьёзных применений, используйте таблицы семейства MergeTree</p>
+    </section>
+    
+    <section class="slide">
+        <h2>Как хранятся данные в MergeTree</h2>
+        <p>Похоже на LSM-Tree (HBase, Cassandra, RocksDB&hellip;), но хуже.</p>
+        <p>Таблица состоит из набора &laquo;кусков&raquo; данных.</p>
+        <p>Каждый кусок лексикографически упорядочен<br />по значению первичного ключа.</p>
+        <p>Разные куски полностью независимы<br />и могут пересекаться по значениям ключа.</p>
+    </section>
+    
+    <section class="slide">
+        <h2>Как хранятся данные в MergeTree</h2>
+        <pre style="line-height: 1.5em; color: #AAA; background-color: #000; padding: 5px;">/opt/clickhouse/data/default/hits_single_partition# 
+du -h --max-depth=1 | sort -k2 -V
+102G    .
+40G     ./all_1_1026_4
+47G     ./all_1027_2210_4
+15G     ./all_2211_2612_4
+1.1G    ./all_2613_2640_2
+2.2M    ./all_2641_2641_0</pre>
+    </section>
+    
+    <section class="slide">
+        <h2>Как хранятся данные в MergeTree</h2>
+        <p>В одном куске, каждый столбец хранится в отдельном файле.</p>
+        <p>Данные столбца &mdash; сериализованные значения, уложенные подряд,</p>
+        <p>затем сжатые по блокам. Размер блока до сжатия &mdash; 64 KB .. 1 MB.</p>
+    </section>
+    
+<section class="slide">
+        <h2>Как хранятся данные в MergeTree</h2>
+        <pre style="line-height: 1.5em; color: #AAA; background-color: #000; padding: 5px;">all_1_1026_4# ls -1
+AdvEngineID.bin
+AdvEngineID.mrk
+Age.bin
+Age.mrk
+BrowserCountry.bin
+BrowserCountry.mrk
+BrowserLanguage.bin
+BrowserLanguage.mrk
+checksums.txt
+...
+primary.idx</pre>
+    </section>
+
+    <section class="slide">
+        <h2>Как хранятся данные в MergeTree</h2>
+        <p>Весь кусок отсортирован по первичному ключу.</p>
+        <p>Данные каждого столбца имеют соответствующий друг другу порядок.</p>
+        <p>(N-й строке соответствуют N-ые значения в каждом файле столбцов)</p>
+    </section>
+    
+    <section class="slide">
+        <h2>Как хранятся данные в MergeTree</h2>
+        <p>При SELECT, в худшем случае, выполняется чтение из всех кусков.</p>
+        <p>На всякий случай, для каждого куска есть minmax индекс ключа партиционирования.</p>
+
+        <p>При INSERT, пачка вставляемых данных сортируется и формируется новый кусок в файловой системе.</p>
+
+        <p>В фоне, несколько кусков сливаются вместе в один более крупный кусок.</p>
+    </section>
+    
+    <section class="slide" style="padding:0; margin: 0">
+        <video style="width: 100%; margin-top: 0px;"><source src="video/insertion.ogv" type="video/ogg"></video>
+    </section>
+    
+    <section class="slide">
+        <h2>Как устроен индекс</h2>
+    </section>
+    
+    <section class="slide">
+        <h2>Как устроен индекс</h2>
+        <p>Один индекс, называемый &laquo;первичным ключом&raquo;.</p>
+        <p>Первичный ключ не обязан быть уникальным
+        <br/>- это всего лишь ключ для упорядочивания данных.
+        <br/>(clustered index)</p>
+        <p>Индекс разреженный.</p>
+    </section>
+    
+    <section class="slide">
+        <h2 style="font-size: 48px;">Недостатки разреженного индекса</h2>
+        <p>Плохо работает для точечных lookup запросов.</p>
+        
+        <p>Разреженный индекс адресует не каждую запись в таблице,<br/>
+        а диапазон из нескольких тысяч записей.</p>
+        
+        <p>Вместо чтения одной строки придётся читать по крайней мере пачку.</p>
+        
+        <p>&hellip; а ещё придётся разжимать сжатые блоки.</p>
+    </section>
+    
+    <section class="slide">
+        <h2 style="font-size: 48px;">Недостатки разреженного индекса</h2>
+        <p>Требует упорядоченности данных.</p>
+        
+        <p>На одну таблицу &mdash; только один разреженный индекс.</p>
+        
+        <p>Вместо чтения одной строки придётся читать по крайней мере пачку.</p>
+        
+        <p>&hellip; а ещё придётся разжимать сжатые блоки.</p>
+    </section>
+    
+    <section class="slide">
+        <h2 style="font-size: 48px;">Достоинства разреженного индекса</h2>
+        
+        <p>Очень компактный, помещается в оперативку.</p>
+    </section>
+    
+    <section class="slide">
+        <h2 style="font-size: 48px;">Достоинства разреженного индекса</h2>
+        
+        <p>Поддержка сложных логических выражений.</p>
+        <p>&mdash; бинарный поиск с троичной логикой и интервальной арифметикой.</p>
+        
+        <p>Пример. Есть сложное условие<br/>
+        WHERE a AND (b OR NOT c)...</p>
+        
+        <p>Последовательно разбиваем множество всех данных<br/>на диапазоны-гранулы, где условие:</p><p>
+        &mdash; всегда ложно;<br/>
+        &mdash; всегда истинно;<br/>
+        &mdash; может быть и ложно и истинно.
+        </p>
+    </section>
+    
+    <section class="slide" style="padding:0; margin: 0">
+        <img style="height: 100%;" src="pictures/tribool_search.jpg"/>
+    </section>
+    
+    <section class="slide">
+        <h2 style="font-size: 48px;">Достоинства разреженного индекса</h2>
+        
+        <p>Индекс работает даже при условии на не префикс первичного ключа.</p>
+        <p>Пример. PK: (CounterID, Date).</p>
+        <p>WHERE Date BETWEEN '2017-11-20' AND '2017-11-29'</p>
+        <p>&mdash; сможет отсекать диапазоны, если<br/>для фиксированного CounterID есть достаточно длинный диапазон.</p>
+    </section>
+    
+    <section class="slide" style="padding:0; margin: 0">
+        <img style="height: 100%;" src="pictures/non_prefix.jpg"/>
+    </section>
+    
+    <section class="slide">
+        <h2 style="font-size: 48px;">Достоинства разреженного индекса</h2>
+        
+        <p>Индекс работает всегда не хуже чем full scan.</p>
+        <p>Даже если по индексу выбирается 95% данных,<br/>это лучше, чем читать 100%.</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 48px;">Достоинства разреженного индекса</h2>
+        
+        <p>Поддержка условий с частично монотонными функциями от столбцов.</p>
+        <p>Пример. PK: Date</p>
+        <p>WHERE toDayOfMonth(Date) = 29</p>
+    </section>
+    
+    <section class="slide" style="padding:0; margin: 0">
+        <img style="height: 100%;" src="pictures/monotonic.jpg"/>
+    </section>
+    
+    <section class="slide">
+        <h2 style="font-size: 48px;">Достоинства разреженного индекса</h2>
+        
+        <p>Пример: параллелограммный анализ индекса.</p>
+    </section>
+    
+    <section class="slide" style="padding:0; margin: 0">
+        <img style="height: 100%;" src="pictures/parallelogram.jpg"/>
+    </section>
+    
+    
+    <section class="slide">
+        <h2>Векторная обработка запроса</h2>
+        <p>(vectorized query execution)</p>
+    </section>
+    
+    <section class="slide">
+        <h2 style="line-height: 1.1em;">Как обрабатывать запросы<br/> в аналитической СУБД</h2>
+        
+        <p>Два способа:</p>
+        
+        <p>1. Компиляция запросов.</p>
+        <p>Примеры: MemSQL, Impala.</p>
+        
+        <p>2. Векторная обработка.</p>
+        <p>Примеры: kdb, VectorWise (Actian Vector).</p>
+        
+        <p>Лучше &mdash; и то, и другое вместе.</p>
+    </section>
+    
+    <section class="slide">
+        <h2>Векторная обработка запроса</h2>
+        
+        <p>ClickHouse &mdash; vectorized query execution</p>
+        <p>&hellip; с незначительными возможностями по компиляции запросов.</p>
+        
+        <p>Данные обрабатываются &laquo;блоками&raquo;<br/>&mdash; небольшими кусочками столбцов.</p>
+        <p>Каждый столбец в оперативке &mdash; плоский массив (один или несколько).</p>
+        <p>(Structure of Arrays, см. также Apache Arrow).</p>
+        <p>Размер блока выбирается небольшим для кэш-локальности.</p>
+    </section>
+    
+    <section class="slide">
+        <h2>Векторная обработка запроса</h2>
+        
+        <p>Достоинства:</p>
+        <p>&mdash; нет издержек на диспетчеризацию операций;</p>
+        <p>&mdash; возможности по применению SIMD инструкций;</p>
+        <p>&mdash; возможности по применению операций сразу ко всему массиву<br/>
+        (пример &mdash; поиск подстроки в строке);</p>
+        <p>&mdash; хорошая изоляция кода;</p>
+        
+    </section>
+    
+     <section class="slide">
+        <h2>Векторная обработка запроса</h2>
+        
+        <p>Недостатки:</p>
+        <p>&mdash; разрастание объёма скомпилированного кода из-за поддержки специализаций для разных типов данных;</p>
+        <p>&mdash; издержки на чтение и запись временных данных в кэш;</p>
+        <p>&mdash; возможно меньшее instructions per clock<br/>из-за одной операции в каждом цикле;</p>
+        <p>&mdash; сложность с реализацией short-curcuit операций;</p>
+        <p>&mdash; сложный интерфейс для UDF (пользовательских функций);</p>
+    </section>
+    
+    <section class="slide">
+        <h2>Выполнение GROUP BY</h2>
+    </section>
+    
+    <section class="slide">
+        <h2>Выполнение GROUP BY</h2>
+        
+        <p>Параллельная агрегация.</p>
+        <p>Распределённая агрегация.</p>
+        <p>Агрегация во внешней памяти.</p>
+        <p>Инкрементальная агрегация.</p>
+    </section>
+
+
+    <section class="slide">
+        <h2><span>Сообщество</span></h2>
+        <p><span>Сайт: <a href="https://clickhouse.yandex/">https://clickhouse.yandex/</a></span></p>
+        <p><span>Google groups: <a href="https://groups.google.com/forum/#!forum/clickhouse">https://groups.google.com/forum/#!forum/clickhouse</a></span></p>
+        <p><span>Рассылка: clickhouse-feedback@yandex-team.com</span></p>
+        <p><span>Telegram чат: <a href="https://telegram.me/clickhouse_en">https://telegram.me/clickhouse_en</a> и <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_ru</a> (уже 1100 участников)</span></p>
+        <p><span>GitHub: <a href="https://github.com/yandex/ClickHouse/">https://github.com/yandex/ClickHouse/</a></span></p>
+        <p><span>Twitter: <a href="https://twitter.com/ClickHouseDB">https://twitter.com/ClickHouseDB</a></span></p>
+        <p><span>+ встречи. Москва, Санкт-Петербург, Новосибирск,<br/>Екатеринбург, Минск, Берлин, Пало-Альто, Нижний Новгород&hellip;<br/>далее снова Москва.</span></p>
+    </section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+    
+        <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
