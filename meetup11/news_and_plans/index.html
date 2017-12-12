@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse Meetup в Москве</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x10.css">
+    
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse Meetup в Москве</h1>
+    </header>
+    <section class="slide" id="cover">
+        <h1 style="margin-top: 200px;"><span>Новые возможности ClickHouse<br/>и планы на будущее</span></h1>
+    </section>
+    
+    <section class="slide">
+        <h2>Сделали и довольны</h2>
+    </section>
+    
+    <section class="slide">
+        <h2>Сделали и довольны</h2>
+        <p>Произвольный ключ партиционирования</p>
+        <code>CREATE TABLE ... ENGINE = MergeTree
+  ORDER BY CounterID, Date
+  PARTITION BY toStartOfWeek(Date)
+  SETTINGS index_granularity = 8192</code>
+    </section>
+    
+    <section class="slide">
+        <h2>Сделали и довольны</h2>
+        <p>Распределённые DDL запросы</p>
+        <code>CREATE TABLE ... ON CLUSTER cluster</code>
+        <p style="color: #888;"><br/>
+        * не работает в случае перекрёстной репликации;<br/>
+        * для ALTER Replicated таблиц требуется включение опцией;</p>
+    </section>
+    
+    <section class="slide">
+        <h2>Сделали и довольны</h2>
+        <p>Geospatial функции:</p>
+        <p>&mdash; pointInPolygon;</p>
+        <p>&mdash; pointInEllipses;</p>
+        <p>&mdash; greatCircleDistance;</p>
+        <code>SELECT pointInPolygon((lat, lon),
+    [(6, 0), (8, 4), (5, 8), (0, 2), ...])</code>
+    </section>
+    
+    <section class="slide">
+        <h2>Сделали и довольны</h2>
+        <p>Подключение моделей CatBoost</p>
+        <code>SELECT modelEvaluate('purchase', f1, ... fn)</code>
+    </section>
+    
+    <section class="slide">
+        <h2>Сделали и довольны</h2>
+        <p>Работа с интервалами дат и времени:</p>
+        <code>SELECT date + INTERVAL 1 MONTH</code>
+        <p><br/>&mdash; поддержка часовых поясов с нецелым смещением от UTC;</p>
+        <p>&mdash; расширение допустимого диапазона до 2105 года.</p>
+    </section>
+    
+    <section class="slide">
+        <h2>Сделали и довольны</h2>
+        <p>Функции для работы с массивами:</p>
+        <p>&mdash; arrayConcat, arraySlice;</p>
+        <p>&mdash; arrayPushFront, arrayPushBack, arrayPopFront, arrayPopBack;</p>
+        <p>&mdash; arrayReduce, arraySort, arrayReverseSort, arrayStringConcat;</p>
+    </section>
+    
+    <section class="slide">
+        <h2>Сделали и довольны</h2>
+        <p>Доработки словарей</p>
+        <p>&mdash; интроспекция словарей:</p>
+        <code>CREATE DATABASE dictionaries ENGINE = Dictionary</code>
+        <p><br/>&mdash; invalidate_query для обновления словарей;</p>
+        <p>&mdash; SYSTEM RELOAD DICTIONARY;</p>
+    </section>
+    
+    <section class="slide">
+        <h2>Сделали и довольны</h2>
+        <p>Сессии в HTTP интерфейсе:</p>
+        <code style="font-size: 16pt;">curl 'http://host:port/?session_id=123&amp;session_timeout=60' \
+    -d 'CREATE TEMPORARY TABLE t'</code>
+        <p><br/>Нативная поддержка SSL для HTTP и TCP сервера.</p>
+        <p>Отправка прогресса в HTTP заголовках.</p>
+    </section>
+    
+    
+    <section class="slide">
+        <h2>Сделали, но не совсем</h2>
+    </section>
+    
+    <section class="slide">
+        <h2>Сделали, но не совсем</h2>
+        <p>Доработки для совместимости с SQL:</p>
+        <p>&mdash; ограниченная поддержка алиасов таблиц и составных имён;</p>
+        <p>&mdash; квотирование имён в стиле ANSI;</p>
+        <p>&mdash; алиасы для типов данных;</p>
+        <p>&mdash; INSERT SELECT по позициям, а не по именам;</p>
+        <p>&mdash; приведение типов при INSERT SELECT;</p>
+        <p>&mdash; NULLS FIRST/LAST для ORDER BY.</p>
+    </section>
+    
+    <section class="slide">
+        <h2>Сделали, но не совсем</h2>
+        <p>ODBC драйвер:</p>
+        <p>+ начали работать BI tools;</p>
+        <p>&minus; ещё много дыр в реализации;</p>
+    </section>
+    
+    <section class="slide">
+        <h2>Сделали, но не совсем</h2>
+        <p>Поддержка NULL.</p>
+    </section>
+    
+    
+    <section class="slide">
+        <h2>Сделаем прямо сейчас</h2>
+    </section>
+    
+    <section class="slide">
+        <h2>Сделаем прямо сейчас</h2>
+        <p>Понятная работа с таймзонами.</p>
+        <p>Что вернёт запрос?</p>
+        <code>SELECT toStartOfHour(
+    toDateTime('2017-12-12 01:02:03'), 
+    'Europe/London') AS t</code>
+    </section>
+    
+    <section class="slide">
+        <h2>Сделаем прямо сейчас</h2>
+        <p>Полноценная поддержка многомерных массивов.</p>
+        <code>CREATE TABLE t
+(
+    x Array(Array(String)), 
+    z Nested(
+        x Array(String), 
+        y Nested(...))
+)
+ENGINE = MergeTree ORDER BY x</code>
+    </section>
+    
+    <section class="slide">
+        <h2>Сделаем прямо сейчас</h2>
+        <p>Копирование данных между кластерами.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Сделаем прямо сейчас</h2>
+        <p>Подключение внешних таблиц из MySQL, ODBC.</p>
+        <p>Табличные функции mysql, odbc.</p>
+        
+        <code>SELECT ...
+FROM mysql(
+    'host:port',
+    'db', 'table',
+    'user', 'password')</code>
+    </section>
+    
+    <section class="slide">
+        <h2>Сделаем прямо сейчас</h2>
+        <p>O_DIRECT при мерже больших кусков.</p>
+    </section>
+
+    
+    <section class="slide">
+        <h2>Чуть позже, чем прямо сейчас</h2>
+    </section>
+    
+    <section class="slide">
+        <h2>Чуть позже, чем прямо сейчас</h2>
+        <p>Поддержка вычисляемых DEFAULT выражений для полуструктурированных форматов JSONEachRow, TSKV.</p>
+        <p>Поддержка форматов Protobuf и Parquet для ввода-вывода.
+    </section>
+ 
+    <section class="slide">
+        <h2>Чуть позже, чем прямо сейчас</h2>
+        <p>Использование индекса для запросов с IN (subquery).</p>
+        <p>Перенос условий из WHERE внутрь подзапросов.</p>
+        <p>Приведение типов для UNION ALL.</p>
+        <p>Поддержка подзапросов в VIEW.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Чуть позже, чем прямо сейчас</h2>
+        <p>Поддержка short-circuit вычисления выражений.</p>
+        <code>SELECT number != 0
+    ? intDiv(10, number) 
+    : 0 
+FROM system.numbers LIMIT 10</code>
+        <p><br/>Модификаторы WITH ROLLUP и WITH CUBE для GROUP BY.</p>
+        <p>Использование первичного ключа при ORDER BY, GROUP BY.</p>
+    </section>
+        
+    
+    <section class="slide">
+        <h2>Чуть позже, чем прямо сейчас</h2>
+        <p>Возможность использования custom алгоритмов<br/>сжатия для отдельных столбцов.</p>
+        <p>Индексные структуры для пропуска блоков данных в таблице.</p>
+        <p>Возможность хранения данных на разных разделах в пределах сервера.</p>
+    </section>
+        
+    <section class="slide">
+        <h2>Чуть позже, чем прямо сейчас</h2>
+        <p>Возможность создания словарей посредством DDL запросов.</p>
+        <p>Не возвращать пустоту при агрегации по пустому множеству.</p>
+        <p>Интеграция с LDAP.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Чуть позже, чем прямо сейчас</h2>
+        <p>Поддержка UPDATE/DELETE.</p>
+        <p>Пулы ресурсов для выполнения запросов.</p>
+        <p>Правильный синтаксис для JOIN.</p>
+        <p>Облачные таблицы.</p>
+    </section>
+    
+    <section class="slide">
+        <h2>.</h2>
+    </section>
+    
+    <section class="slide">
+        <h2>.</h2>
+        <p><span>Сайт: <a href="https://clickhouse.yandex/">https://clickhouse.yandex/</a></span></p>
+        <p><span>Google groups: <a href="https://groups.google.com/forum/#!forum/clickhouse">https://groups.google.com/forum/#!forum/clickhouse</a></span></p>
+        <p><span>Рассылка: clickhouse-feedback@yandex-team.com</span></p>
+        <p><span>Telegram чат: <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_ru</a> (уже 1238 участников)<br/>и <a href="https://telegram.me/clickhouse_en">https://telegram.me/clickhouse_en</a></span></p>
+        <p><span>GitHub: <a href="https://github.com/yandex/ClickHouse/">https://github.com/yandex/ClickHouse/</a></span></p>
+        <p><span>Twitter: <a href="https://twitter.com/ClickHouseDB">https://twitter.com/ClickHouseDB</a></span></p>
+    </section>
+    
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+</body>
+</html>
