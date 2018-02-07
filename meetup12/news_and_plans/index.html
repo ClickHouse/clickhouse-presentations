@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse Meetup in Beijing</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x10.css">
+    
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse Meetup in Beijing</h1>
+    </header>
+    <section class="slide" id="cover">
+        <h1 style="margin-top: 200px;"><span>New features of ClickHouse<br/>and development roadmap</span></h1>
+    </section>
+    
+    <section class="slide">
+        <h2>What we have done<br/>(and we are happy about it)</h2>
+    </section>
+    
+    <section class="slide">
+        <h2>Done and happy about it</h2>
+        <p>Custom partition key</p>
+        <code>CREATE TABLE ... ENGINE = MergeTree
+  ORDER BY CounterID, Date
+  PARTITION BY toStartOfWeek(Date)
+  SETTINGS index_granularity = 8192</code>
+    </section>
+    
+    <section class="slide">             <!-- TODO: map -->
+        <h2>Done and happy about it</h2>
+        <p>Geospatial functions:</p>
+        <p>&mdash; pointInPolygon;</p>
+        <p>&mdash; pointInEllipses;</p>
+        <p>&mdash; greatCircleDistance;</p>
+        <code>SELECT pointInPolygon((lat, lon),
+    [(6, 0), (8, 4), (5, 8), (0, 2), ...])</code>
+    </section>
+    
+    <section class="slide">
+        <h2>Done and happy about it</h2>
+        <p>Integration with CatBoost machine learning models</p>
+        <code>SELECT modelEvaluate('purchase', f1, ... fn)</code>
+    </section>
+    
+    <section class="slide">             <!-- TODO check time zones -->
+        <h2>Done and happy about it</h2>
+        <p>Working with date and time intervals:</p>
+        <code>SELECT date + INTERVAL 1 MONTH</code>
+        <p><br/>&mdash; support for time zones with fractional offset from UTC;</p>
+        <p>&mdash; extended supported time range up to year 2105.</p>
+        <p>&mdash; timeDiff, add/subtract<i>Interval</i> functions.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Done and happy about it</h2>
+        <p>Proper support for timezones
+        <br/>+ toTimeZone function</p>
+        <p>Q: What is the result of this query?</p>
+        <code>SELECT toStartOfHour(
+    toDateTime('2017-12-12 01:02:03'), 
+    'Asia/Shanghai') AS t</code>
+    </section>
+    
+    <section class="slide">
+        <h2>Done and happy about it</h2>
+        <p>Distributed DDL queries</p>
+        <code>CREATE TABLE ... ON CLUSTER cluster</code>
+        <p style="color: #888;"><br/>
+        * doesn't work with cross-over replication;<br/>
+        * doesn't work properly with NAT;<br/>
+        * should be enabled manually for ALTERs of Replicated tables;</p>
+    </section>
+        
+    <section class="slide">
+        <h2>Done and happy about it</h2>
+        <p>Support for storing multidimensional arrays in tables.</p>
+        <code>CREATE TABLE t
+(
+    x Array(Array(String)), 
+    z Nested(x Array(String), ...)
+)
+ENGINE = MergeTree ORDER BY x</code>
+    </section>
+    
+    <section class="slide">
+        <h2>Done and happy about it</h2>
+        <p>Extended array functions:</p>
+        <p>&mdash; arrayConcat, arraySlice;</p>
+        <p>&mdash; arrayPushFront, arrayPushBack, arrayPopFront, arrayPopBack;</p>
+        <p>&mdash; arrayReduce, arraySort, arrayReverseSort, arrayStringConcat;</p>
+    </section>
+    
+    <section class="slide">
+        <h2>Done and happy about it</h2>
+        <p>Improvements in dictionaries</p>
+        <p>&mdash; introspection of dictionaries:</p>
+        <code>CREATE DATABASE dictionaries ENGINE = Dictionary</code>
+        <p><br/>&mdash; invalidate_query for updating dictionaries;</p>
+        <p>&mdash; SYSTEM RELOAD DICTIONARY;</p>
+    </section>
+    
+    <section class="slide">
+        <h2>Done and happy about it</h2>
+        <p>Sessions in HTTP interface:</p>
+        <code style="font-size: 16pt;">curl 'http://host:port/?session_id=123&amp;session_timeout=60' \
+    -d 'CREATE TEMPORARY TABLE t'</code>
+        <p><br/>Native support for SSL in HTTP and TCP servers.</p>
+        <p>Sending progress info in HTTP headers.</p>
+    </section>
+    
+    
+    <section class="slide">
+        <h2>What we have done<br/>(but even more is still to do)</h2>
+    </section>
+    
+    <section class="slide">
+        <h2>Done but not quite</h2>
+        <p>Querying foreign databases: MySQL, ODBC.</p>
+        <p>Through table functions mysql, odbc:</p>
+        
+        <code>SELECT ...
+FROM mysql(
+    'host:port',
+    'db', 'table',
+    'user', 'password')</code>
+    
+        <p><br/>Or through CREATE TABLE ... ENGINE = MySQL(...)</p>
+    </section>
+    
+    <section class="slide">
+        <h2>Done but not quite</h2>
+        <p>Improvements in SQL compatibility:</p>
+        <p>&mdash; limited support for table aliases and qualified names;</p>
+        <p>&mdash; name quoting in ANSI style;</p>
+        <p>&mdash; type aliases for compatibility;</p>
+        <p>&mdash; INSERT SELECT match columns by positions;</p>
+        <p>&mdash; type conversions in INSERT SELECT;</p>
+        <p>&mdash; NULLS FIRST/LAST for ORDER BY.</p>
+    </section>
+    
+    <section class="slide">
+        <h2>Done but not quite</h2>
+        <p>ODBC driver:</p>
+        <p>+ Tableau basically works;</p>
+        <p>&minus; but we still have many obstacles;</p>
+    </section>
+    
+    <section class="slide">
+        <h2>Done but not quite</h2>
+        <p>Support for NULLs.</p>
+    </section>
+
+  
+    <section class="slide">
+        <h2>Almost done</h2>
+    </section>
+        
+    <section class="slide">
+        <h2>Almost done</h2>
+        <p>Distributed cluster copier</p>
+        <p>&mdash; for copying between different clusters
+        <br/>or resharding within single cluster.</p>
+    </section>
+    
+    <section class="slide">
+        <h2>Almost done</h2>
+        <p>Using index for IN (subquery).</p>
+        
+        <code>SELECT ...
+WHERE key IN
+(
+    SELECT ...
+)</code>
+    </section>
+
+    <section class="slide">
+        <h2>Almost done</h2>
+        <p>O_DIRECT for large background merges.</p>
+    </section>
+
+    
+    <section class="slide">
+        <h2>A bit later than right now</h2>
+    </section>
+    
+    <section class="slide">
+        <h2>A bit later than right now</h2>
+        <p>Support for complex DEFAULT expressions for semistructured formats JSONEachRow, TSKV.</p>
+        <p>Support for Protobuf and Parquet formats for I/O.
+    </section>
+ 
+    <section class="slide">
+        <h2>A bit later than right now</h2>
+        <p>Predicate push down from WHERE into subqueries.</p>
+        <p>Type conversions in UNION ALL.</p>
+        <p>Support for subqueries in VIEWs.</p>
+    </section>
+
+    <section class="slide">
+        <h2>A bit later than right now</h2>
+        <p>Support for short-circuit evaluation of expressions.</p>
+        <code>SELECT number != 0
+    ? intDiv(10, number) 
+    : 0 
+FROM system.numbers LIMIT 10</code>
+        <p><br/>WITH ROLLUP and WITH CUBE modifiers for GROUP BY.</p>
+        <p>Taking advantage of primary key for ORDER BY and GROUP BY.</p>
+    </section>
+    
+    <section class="slide">
+        <h2>A bit later than right now</h2>
+        <p>Allow to use custom compression algorithms<br/>for each column.</p>
+        <p>Secondary index data structures for data skipping.</p>
+        <p>Allow to store data in different block devices on single server.</p>
+    </section>
+        
+    <section class="slide">
+        <h2>A bit later than right now</h2>
+        <p>Allow to create external dictionaries through DDL query.</p>
+        <p>Don't return empty resultset in case of aggregating by empty data.</p>
+        <p>LDAP integration for managing user access rights.</p>
+    </section>
+
+    <section class="slide">
+        <h2>A bit later than right now</h2>
+        <p>Support for UPDATE/DELETE.</p>
+        <p>Resource pools; resource sharing while executing multiple concurrent queries.</p>
+        <p>Proper (SQL compatible) JOIN syntax.</p>
+        <p>"Cloud" tables.</p>
+    </section>
+    
+    <section class="slide">
+        <h2>.</h2>
+    </section>
+    
+    <section class="slide">
+        <h2>.</h2>
+        <p>Web site: <a href="https://clickhouse.yandex/">https://clickhouse.yandex/</a></p>
+        <p>Google groups: <a href="https://groups.google.com/forum/#!forum/clickhouse">https://groups.google.com/forum/#!forum/clickhouse</a></p>
+        <p>Maillist: clickhouse-feedback@yandex-team.com</p>
+        <p>Telegram chat (hope it isn't banned in China): <a href="https://telegram.me/clickhouse_en">https://telegram.me/clickhouse_en</a> and <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_ru</a> (now with over 1300 members)</p>
+        <p>GitHub: <a href="https://github.com/yandex/ClickHouse/">https://github.com/yandex/ClickHouse/</a></p>
+        <p>Twitter: <a href="https://twitter.com/ClickHouseDB">https://twitter.com/ClickHouseDB</a></p>
+        <p>China User Group: <a href="https://clickhouse.com.cn/">http://clickhouse.com.cn/</a></p>
+        
+        <p>+ meetups. Moscow, Saint-Petersburg, Novosibirsk, Ekaterinburg, Minsk, Nizhny Novgorod, Berlin, Palo Alto... Beijing.</p>
+    </section>
+    
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+</body>
+</html>
