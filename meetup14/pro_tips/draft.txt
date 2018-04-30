@@ -1,0 +1,122 @@
+ClickHouse features for advanced users
+
+TODO: bold -> green
+
+
+SAMPLE key and SAMPLE OFFSET
+
+Let suppose you have a clickstream data and you store it in non-aggregated form.
+You need to generate reports for your customers on the fly.
+BTW, this is typical ClickHouse use case.
+
+Most customers are small, but some are rather big.
+You want to get instant reports even for largest customers.
+
+Solution: define a sample key in your MergeTree table.
+
+Must be:
+- included in the primary key;
+- uniformly distributed in the domain of its data type;
+Bad: Timestamp. Good: intHash32(UserID)
+- cheap to calculate;
+Bad: cityHash64(URL). Good: intHash32(UserID)
+- not after high granular fields in primary key;
+Bad: ORDER BY (Timestamp, sample_key). Good: ORDER BY (ClientID, Date, sample_key).
+
+Bonus:
+- max_parallel_replicas setting;
+
+
+
+Aggregate function combiners.
+
+-If -Array -ForEach -Merge -State
+
+
+Managing aggregate functions states.
+
+-State -Merge
+finalizeAggregation
+runningAccumulate
+arrayReduce
+
+How we can make it better:
+
+- versioning of state serialization format;
+- identify cases when different aggregate functions have the same state (sumState, sumIfState must be compatible);
+- allow to create aggregation state with a function (now it's possible to use arrayReduce for that purpose);
+- allow to insert AggregateFunction values into a table as a tuple of arguments;
+
+
+Nested data structures and arrays, higher order functions.
+
+How we can make it better:
+
+- nest.*;
+- arrayMap(n -> n.x + n.y, nest);
+- allow multiple ARRAY JOIN in a query;
+- allow to assign a name to lambda function;
+
+
+Machine learned models inside ClickHouse.
+
+modelEvaluate
+
+How we can make it better:
+
+- add simple regression models;
+- train models in ClickHouse directly;
+- online training of models;
+- parametrized models (model dictionaries);
+
+
+clickhouse-local tool.
+
+Bonus: SELECT from offline server.
+
+How we can make it better:
+
+- add basic schema inference;
+- add more supported formats for Date and DateTime values in text form;
+- add formats like Avro, Parquet;
+- customizable CSV format;
+- "template" and "regexp" formats for more freeform data;
+
+
+Hierarchical and Range dictionaries.
+
+
+distributed_group_by_no_merge.
+
+What we should do:
+
+- add an option to use sharding key for query optimization;
+
+
+
+external aggregation and distributed_aggregation_memory_efficient.
+
+group_by_overflow_mode = 'any'
+
+Quotas and quota_key
+
+Set and Join table engines.
+
+
+PREWHERE
+
+How we can make it better:
+
+
+
+
+Local and GLOBAL IN/JOIN, data co-location.
+uniqUpTo for data privacy
+INTERVAL
+transform function
+Querying foreign databases: MySQL and ODBC. 
+insert_quorum (consistent inserts and selects)
+
+
+
+Нет интеграционных тестов на межсерверное шифрование!
