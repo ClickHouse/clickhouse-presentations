@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Возможности ClickHouse для продвинутых разработчиков</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>Возможности ClickHouse для продвинутых разработчиков</h1>
+    </header>
+    <section class="slide" id="cover" style="background: #FFF url('pictures/title.png') no-repeat; background-size: 100%;">
+        <h1 style="margin-top: 50px; margin-left: -40px; line-height: 150%">Возможности ClickHouse<br/>для продвинутых разработчиков</h1>
+    </section>
+
+    <section class="slide">
+        <h2>Ключ сэмплирования</h2>
+        <p>У вас есть clickstream<br/>и вы храните его в неагрегированном виде.</p>
+        <p>Вам нужно генерировать отчёты для клиентов налету.</p>
+        <p>Это типичный пример использования ClickHouse.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Ключ сэмплирования</h2>
+        <p>Большинство клиентов небольшие,<br/>но при этом есть некоторые действительно крупные.</p>
+<p>Нужно получать отчёты &laquo;мгновенно&raquo; даже для самых крупных клиентов.</p>
+<p>Решение: объявите SAMPLE ключ в таблице семейства MergeTree.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Ключ сэмплирования</h2>
+        <code style="line-height: 150%;">CREATE TABLE ... ENGINE = MergeTree
+ORDER BY (CounterID, Date, <b>intHash32(UserID)</b>)
+PARTITION BY toYYYYMM(Date)
+SAMPLE BY <b>intHash32(UserID)</b></code>
+    </section>
+
+    <section class="slide">
+        <h2>Ключ сэмплирования</h2>
+        <code>SELECT uniq(UserID) FROM hits_all
+WHERE CounterID = 76543
+  AND EventDate BETWEEN '2018-03-25' AND '2018-04-25'
+
+┌─uniq(UserID)─┐
+│     47362335 │
+└──────────────┘
+
+1 rows in set. Elapsed: <b>4.571 sec</b>.
+Processed 1.17 billion rows, <b>16.37 GB</b>
+(255.88 million rows/s., 3.58 GB/s.)</code>
+    </section>
+
+    <section class="slide">
+        <h2>Ключ сэмплирования</h2>
+        <code>SELECT uniq(UserID) FROM hits_all
+<b>SAMPLE 1/10</b>
+WHERE CounterID = 76543
+  AND EventDate BETWEEN '2018-03-25' AND '2018-04-25'
+
+┌─uniq(UserID)─┐
+│      4742578 │
+└──────────────┘
+
+1 rows in set. Elapsed: <b>0.638 sec</b>.
+Processed 117.73 million rows, <b>1.65 GB</b>
+(184.50 million rows/s., 2.58 GB/s.)</code>
+    </section>
+
+    <section class="slide">
+        <h2>Ключ сэмплирования</h2>
+        <p style="margin-top: -20px;">Должен:<br/>
+   &mdash; входить в первичный ключ;</p>
+<p>&mdash; быть равномерно распределённым в своём типе данных:<br/>
+<span style="color: red;">Плохо:</span> Timestamp;<br/>
+<span style="color: green;">Хорошо:</span> intHash32(UserID);</p>
+<p>&mdash; быть лёгким для чтения и вычисления:<br/>
+<span style="color: red;">Плохо:</span> cityHash64(URL);<br/>
+<span style="color: green;">Хорошо:</span> intHash32(UserID);</p>
+<p>&mdash; не находиться после мелко-гранулированной части PK:<br/>
+<span style="color: red;">Плохо:</span> ORDER BY (Timestamp, sample_key);<br/>
+<span style="color: green;">Хорошо:</span> ORDER BY (CounterID, Date, sample_key).</p>
+    </section>
+
+    <section class="slide">
+        <h2>Ключ сэмплирования</h2>
+        <p>Свойства сэмплирования:</p>
+        <p>&mdash; сэмплирование детерминировано;</p>
+        <p>&mdash; работает консистентно для разных таблиц;</p>
+        <p>&mdash; позволяет читать меньше данных с диска;</p>
+    </section>
+
+    <section class="slide">
+        <h2>Ключ сэмплирования, бонус</h2>
+        <code style="margin-top: -35px;">SAMPLE 1/10</code>
+        <p>&mdash; выбрать подмножество из 1/10 всевозможных sample key;</p>
+        <code>SAMPLE 1000000</code>
+        <p>&mdash; выбрать подмножество из (не менее чем) 1 000 000 строк, в рамках каждого шарда;<br/>
+        &mdash; можно использовать виртуальный столбец <b>_sample_factor</b> для определения относительного коэффициента сэмплирования;</p>
+        <code>SAMPLE 1/10 OFFSET 1/10</code>
+        <p>&mdash; выбрать подмножество из второй 1/10 всевозможных sample key;</p>
+        <code>SET max_parallel_replicas = 3</code>
+        <p>&mdash; распараллелить запрос по нескольким репликам каждого шарда;</p>
+    </section>
+
+    <section class="slide">
+        <h2>Комбинаторы агрегатных функций</h2>
+        <p>-If<br/>-Array<br/>-ForEach<br/>-Merge<br/>-State</p>
+        <p>Пример: sumIf(x, cond)</p>
+    </section>
+
+<section class="slide">
+        <h2 style="font-size: 32pt;">Комбинаторы агрегатных функций: -If</h2>
+
+<code>SELECT
+  uniq<b>If</b>(UserID, RefererDomain = 'yandex.ru')
+    AS users_yandex,
+  uniq<b>If</b>(UserID, RefererDomain = 'google.ru')
+    AS users_google
+FROM test.hits
+
+┌─users_yandex─┬─users_google─┐
+│        19731 │         8149 │
+└──────────────┴──────────────┘</code>
+</section>
+
+<section class="slide">
+        <h2 style="font-size: 32pt;">Комбинаторы агрегатных функций: -Array</h2>
+
+<code>SELECT
+    uniq(arr),
+    uniq<b>Array</b>(arr),
+    groupArray(arr),
+    groupUniqArray(arr),
+    groupArray<b>Array</b>(arr),
+    groupUniqArray<b>Array</b>(arr)
+FROM
+(
+    SELECT ['hello', 'world'] AS arr
+    UNION ALL
+    SELECT ['goodbye', 'world']
+)
+FORMAT Vertical
+</code>
+</section>
+
+<section class="slide">
+        <h2 style="font-size: 32pt;">Комбинаторы агрегатных функций: -Array</h2>
+<code style="font-size: 80%;">Row 1:
+──────
+uniq(arr):                2
+uniq<b>Array</b>(arr):           3
+groupArray(arr):          [['hello','world'],['goodbye','world']]
+groupUniqArray(arr):      [['hello','world'],['goodbye','world']]
+groupArray<b>Array</b>(arr):     ['hello','world','goodbye','world']
+groupUniqArray<b>Array</b>(arr): ['goodbye','world','hello']</code>
+</section>
+
+    <section class="slide">
+        <h2>Комбинаторы агрегатных функций</h2>
+        <p>... могут комбинироваться друг с другом</p>
+        <p>Пример: sumArrayIf, sumIfArray.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Комбинаторы агрегатных функций</h2>
+        <p>... могут комбинироваться друг с другом</p>
+        <p>Пример: sumForEachStateForEachIfArrayIfState.</p>
+    </section>
+
+
+    <section class="slide">
+        <h2 style="line-height: 1.25;">Состояния вычислений агрегатных функций &mdash; first class объекты</h2>
+        <p>Комбинатор <b>-State</b> &mdash; получить состояние вычисления<br/>агрегатной функции;</p>
+        <p>Пример: uniqState(user_id) AS state;</p>
+        <p>&mdash; вернёт значение типа <b>AggregateFunction(...)</b>;</p>
+        <p>&mdash; такие значения можно сохранять в таблицах;</p>
+        <p>&mdash; объединять вместе и получать результат с помощью <b>-Merge</b>;</p>
+        <p>Пример: uniqMerge(state) AS result;</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 30pt;">Состояния вычислений агрегатных функций</h2>
+        <code>SELECT
+    avg(x),
+    uniq(x)
+FROM
+(
+    SELECT 123 AS x
+    UNION ALL
+    SELECT 456
+)
+
+┌─avg(x)─┬─uniq(x)─┐
+│  289.5 │       2 │
+└────────┴─────────┘</code>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 30pt;">Состояния вычислений агрегатных функций</h2>
+        <code>SELECT
+    avg<b>State</b>(x),
+    uniq<b>State</b>(x)
+FROM
+(
+    SELECT 123 AS x
+    UNION ALL
+    SELECT 456
+)
+
+┌─avgState(x)─────┬─uniqState(x)─┐
+│ C\0\0\0\0\0\0   │ \0▒�P���a�   │
+└─────────────────┴──────────────┘</code>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 30pt;">Состояния вычислений агрегатных функций</h2>
+        <code style="font-size: 90%;">SELECT
+    toTypeName(avgState(x)),
+    toTypeName(uniqState(x))
+FROM
+(
+    SELECT 123 AS x
+    UNION ALL
+    SELECT 456
+)
+FORMAT Vertical
+
+Row 1:
+──────
+toTypeName(avgState(x)):  AggregateFunction(avg, UInt16)
+toTypeName(uniqState(x)): AggregateFunction(uniq, UInt16)</code>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 30pt;">Состояния вычислений агрегатных функций</h2>
+        <code>CREATE TABLE t
+(
+    users_state AggregateFunction(uniq, UInt64),
+    ...
+) ENGINE = AggregatingMergeTree ORDER BY ...</code>
+        <br />
+        <code>SELECT uniqMerge(uniq_state)
+FROM t GROUP BY ...</code>
+
+    </section>
+
+
+    <section class="slide">
+        <h2 style="font-size: 30pt;">Состояния вычислений агрегатных функций</h2>
+        <p>Основной сценарий использования:</p>
+        <p>Инкрементальная агрегация данных<br/>
+        с помощью движка таблиц <b>AggregatingMergeTree</b><br>
+        в качестве MATERIALIZED VIEW.</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 30pt;">Как мы могли бы улучшить эту возможность?</h2>
+        <p>&mdash; версионирование состояний агрегатных функций;</p>
+        <p>&mdash; определять, когда разные агрегатные функции имеют одно и то же состояние (sumState и sumIfState должны быть совместимы);</p>
+        <p>&mdash; добавить возможность создавать состояние агрегатной функции с помощью обычной функции (сейчас для этого можно использовать функцию <b>arrayReduce</b>);</p>
+        <p>&mdash; добавить возможность вставлять значения типа AggregateFunction в таблицы, передавая кортеж аргументов агрегатной функции;</p>
+        <p>&mdash; адаптивный index_granularity в зависимости от толщины строк;</p>
+    </section>
+
+
+    <section class="slide">
+        <h2>Настраиваемая консистентность</h2>
+        <p style="margin-top: -30px;">По-умолчанию, ClickHouse реализует:</p>
+        <p><b>asynchronous</b>, <b>conflict-free</b>, <b>multi-master</b> репликацию.</p>
+        <p>Asynchronous:</p>
+        <p>Клиент получает подтверждение INSERT после того, как данные записаны на одну реплику; сама репликация происходит асинхронно.</p>
+        <p>Реплики могут отставать и не содержать часть данных;</p>
+        <p>В один момент времени, все реплики могут не содержать некоторые разные части данных.</p>
+        <p>По-умолчанию, вы получаете только eventual consistency.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Настраиваемая консистентность</h2>
+        <p style="margin-top: -30px;">Вы можете включить строгую консистентность (linearizability).</p>
+        <code>SET insert_quorum = 2;</code>
+        <p><br/>&mdash; каждый INSERT подтверждается после записи данных на кворум реплик;</p>
+        <p>&mdash; все реплики в кворуме консистентны: содержат данные всех ранее произошедших INSERT-ов (последовательность INSERT линеаризуется);</p>
+        <code>SET select_sequential_consistency = 1;</code>
+        <p><br/>&mdash; разрешает использовать для SELECT только подтверждённые данные из консистентных реплик <br/>(которые содержат все подтверждённые INSERT-ы).</p>
+    </section>
+
+
+    <section class="slide">
+        <h2>GROUP BY во внешней памяти</h2>
+        <img style="height: 60%" src="pictures/plain.png"/>
+    </section>
+
+    <section class="slide">
+        <video style="height: 90%"><source src="video/plain.ogv" type="video/ogg"></video>
+    </section>
+
+    <section class="slide">
+        <video style="height: 90%"><source src="video/stats.ogv" type="video/ogg"></video>
+    </section>
+
+    <section class="slide">
+        <h2>GROUP BY во внешней памяти</h2>
+        <p>Для начала можно просто увеличить <b>max_memory_usage</b></p>
+    </section>
+
+    <section class="slide">
+        <video style="height: 90%"><source src="video/raise_mem.ogv" type="video/ogg"></video>
+    </section>
+
+    <section class="slide">
+        <h1>GROUP BY во внешней памяти</h1>
+        <p>Если этого недостаточно &mdash; включаем внешнюю агрегацию:</p>
+        <p><b>max_bytes_before_external_group_by</b></p>
+        <p><b>distributed_aggregation_memory_efficient</b></p>
+    </section>
+
+    <section class="slide">
+        <video style="height: 90%"><source src="video/external.ogv" type="video/ogg"></video>
+    </section>
+
+
+    <section class="slide">
+        <h2>Работа с географическими данными</h2>
+        <p>&mdash; pointInPolygon;</p>
+        <p>&mdash; pointInEllipses;</p>
+        <p>&mdash; greatCircleDistance;</p>
+        <code>SELECT pointInPolygon((lat, lon),
+    [(6, 0), (8, 4), (5, 8), (0, 2), ...])</code>
+    </section>
+
+    <section class="slide">
+        <h2>Машинно обученные модели</h2>
+        <code>SELECT modelEvaluate('name', f1, ... fn)
+    AS ctr_prediction</code>
+        <p><br/><a href='https://events.yandex.ru/lib/talks/5330/'>https://events.yandex.ru/lib/talks/5330/</a></p>
+    </section>
+
+    <section class="slide">
+        <h2>Машинно обученные модели</h2>
+        <p>Как мы могли бы улучшить эту возможность?</p>
+        <p>&mdash; добавить более простые модели регрессии;</p>
+        <p>&mdash; обучение моделей непосредственно в ClickHouse;</p>
+        <p>&mdash; онлайн обучение моделей;</p>
+        <p>&mdash; параметризованные модели (словари из многих моделей);</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="line-height: 1">Обработка данных без сервера</h2>
+        <p>Утилита <b>clickhouse-local</b></p>
+        <code>$ clickhouse-local \
+  --input-format=CSV --output-format=PrettyCompact \
+  --structure="SearchPhrase String, UserID UInt64" \
+  --query="SELECT SearchPhrase, count(), uniq(UserID)
+    FROM table \
+    WHERE SearchPhrase != '' GROUP BY SearchPhrase \
+    ORDER BY count() DESC LIMIT 20" &lt; hits.csv
+
+┌─SearchPhrase────────────┬─count()─┬─uniq(UserID)─┐
+│ интерьер ванной комнаты │    2166 │            1 │
+│ яндекс                  │    1655 │          478 │
+│ весна 2014 мода         │    1549 │            1 │
+│ фриформ фото            │    1480 │            1 │
+│ анджелина джоли         │    1245 │            1 │
+</code>
+    </section>
+
+    <section class="slide">
+        <h2>Обработка данных без сервера</h2>
+        <p>Бонус: возможность обработать данные выключенного clickhouse-server.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Обработка данных без сервера</h2>
+        <p>Как мы могли бы сделать эту возможность лучше?</p>
+        <p>&mdash; добавить больше поддерживаемых форматов для Date и DateTime в текстовом виде;</p>
+        <p>&mdash; добавить форматы Avro, Parquet;</p>
+        <p>&mdash; гибкие настройки для формата CSV;</p>
+        <p>&mdash; форматы &laquo;template&raquo; и &laquo;regexp&raquo; для треш-данных;</p>
+    </section>
+
+    <section class="slide">
+        <h2>Межкластерное копирование</h2>
+        <p><b>clickhouse-copier</b></p>
+        <p>&mdash; запускается на произвольных серверах в любом количестве экземпляров;</p>
+        <p>&mdash; задачи координируются через ZooKeeper;</p>
+        <p>&mdash; единица работы &mdash; одна партиция на одном шарде результирующей таблицы;</p>
+        <p>&mdash; копирование выполняется надёжно и отказоустойчиво;</p>
+        <p>&mdash; настраивается ограничение на использование сетевой полосы и количество одновременных задач;</p>
+    </section>
+
+    <section class="slide">
+        <h2>Межкластерное копирование</h2>
+        <p>Пример в Яндекс.Метрике</p>
+        <p>&mdash; 538 -> 240 серверов;</p>
+        <p>&mdash; шардирование по CounterID -> шардирование по UserID;</p>
+        <p>&mdash; lz4 -> zstd;</p>
+    </section>
+
+    <section class="slide">
+        <h2>.</h2>
+    </section>
+
+    <section class="slide">
+        <p style="margin-top: 50px;">Web site: <a href="https://clickhouse.yandex/">https://clickhouse.yandex/</a></p>
+        <p>Google groups: <a href="https://groups.google.com/forum/#!forum/clickhouse">https://groups.google.com/forum/#!forum/clickhouse</a></p>
+        <p>Maillist: clickhouse-feedback@yandex-team.com</p>
+        <p>Telegram chat: <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_ru</a> (более 1500 участников) и <a href="https://telegram.me/clickhouse_en">https://telegram.me/clickhouse_en</a></p>
+        <p>GitHub: <a href="https://github.com/yandex/ClickHouse/">https://github.com/yandex/ClickHouse/</a></p>
+        <p>Twitter: <a href="https://twitter.com/ClickHouseDB">https://twitter.com/ClickHouseDB</a></p>
+
+        <p>+ митапы. Москва, Санкт-Петербург, Новосибирск, Екатеринбург, Минск, Нижний Новгород, Берлин, Palo Alto, Пекин, Sunnyvale, San Francisco...</p>
+    </section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
