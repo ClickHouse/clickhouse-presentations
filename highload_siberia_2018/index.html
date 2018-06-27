@@ -39,7 +39,7 @@ ORDER BY EventTime LIMIT 10</pre>
 <p>&mdash; не специализирована под конкретные типы данных;</p>
 <p>&mdash; существует с 2011 года;</p>
 <p>&mdash; используется в ClickHouse с 2011 года;</p>
-<p>&mdash; автор &mdash; Yan Collet;</p>
+<p>&mdash; автор &mdash; Yann Collet;</p>
 <p>&mdash; аналоги: Snappy, QuickLZ, LZO, FastLZ, BriefLZ, LZF;</p>
 </section>
 
@@ -394,7 +394,7 @@ match -= dec64;</code>
 <code style="line-height: 1.5em; margin-bottom: 20px;">xmm0: abc.............
 xmm1: 0120120120120120
 
-pshufb %xmm0 %xmm1
+pshufb %xmm1, %xmm0
 
 xmm0: abcabcabcabcabca
 </code>
