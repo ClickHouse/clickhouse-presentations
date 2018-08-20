@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse Meetup в Санкт-Петербурге</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x10.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse Meetup в Санкт-Петербурге</h1>
+    </header>
+
+    <section class="slide" id="cover">
+        <h1 style="margin-top: 200px;"><span style="background: rgba(255, 255, 255, 0.75)">Новые возможности ClickHouse</span></h1>
+    </section>
+
+<section class="slide">
+<h2>Доработки JOIN</h2>
+</section>
+
+<section class="slide">
+<h2>Доработки JOIN</h2>
+
+<p>Поддержка ON.</p>
+<p>&mdash; цепочек AND из равенств выражений.</p>
+<p>Поддержка квалифициованных имён и алиасов<br/>как для левой, так и для правой таблицы.</p>
+
+<p style="color: green;">Начиная с версии 18.6.0.</p>
+</section>
+
+<section class="slide">
+<h2>Доработки JOIN</h2>
+
+<p>Правильное поведение &laquo;звёздочки&raquo;.</p>
+<p>Можно оставить старое поведение с помощью настройки asterisk_left_columns_only.</p>
+
+<p style="color: gray;">Уже в master.</p>
+</section>
+
+
+<section class="slide">
+<h2>DECIMAL</h2>
+
+<code>SELECT 1 - 0.9 - 0.1 AS x
+
+┌───────────────────────x─┐
+│ -2.7755575615628914e-17 │
+└─────────────────────────┘
+</code>
+</section>
+
+<section class="slide">
+<h2>DECIMAL</h2>
+
+<p>Десятичные числа с фиксированной запятой.</p>
+<p>Пример: DECIMAL(16, 6).</p>
+
+<p style="color: gray;"><br/>Уже в master, но разработка в процессе.</p>
+</section>
+
+<section class="slide">
+<h2>DECIMAL</h2>
+
+<p>Количество десятичных цифр &mdash; до 38.</p>
+<p>Хранится как целое число Int32, Int64 или Int128, содержащее все значащие цифры.</p>
+<p>Скорость работы для большинства операций такая же, как при использовании целых чисел.</p>
+
+<p>Есть проверки переполнения &mdash; возможно, будут выключены.</p>
+</section>
+
+
+
+<section class="slide">
+<h2>Интроспекция производительности</h2>
+</section>
+
+<section class="slide">
+<h2>Интроспекция производительности</h2>
+<p>Было</p>
+
+<p>Информация по отдельным запросам:
+<br/>&mdash; system.processes, SHOW PROCESSLIST;
+<br/>&mdash; system.query_log;
+<br/>&mdash; текстовый лог сервера.
+</p>
+
+<p>Глобальные метрики производительности:
+<br/>&mdash; system.events;
+<br/>&mdash; system.metrics;
+<br/>&mdash; system.asynchronous_metrics;
+<br/>&mdash; также отправляются в Graphite;
+</p>
+</section>
+
+<section class="slide">
+<h2>Интроспекция производительности</h2>
+<p>Добавляем информацию о реальном потреблении CPU и IO:</p>
+<p>
+RealTime, UserTime, SystemTime,<br/>
+SoftPageFaults, HardPageFaults,<br/>
+VoluntaryContextSwitches,<br/>
+InvoluntaryContextSwitches
+</p>
+<p>
+IOWait, CPUWait,<br/>
+CPUVirtualTime,<br/>
+ReadBytes, WriteBytes,<br/>
+ReadChars, WriteChars
+</p>
+</section>
+
+<section class="slide">
+<h2>Интроспекция производительности</h2>
+<p>Добавляем информацию о реальном потреблении CPU и IO:</p>
+<p>Половина метрик &mdash; getrusage,
+<br/>другая половина &mdash; из ядра Linux, получаемая через AF_NETLINK сокет.</p>
+<p>Потребуется Linux и capability CAP_NET_ADMIN<br/>&mdash; выставляется при установке ClickHouse.</p>
+</section>
+
+<section class="slide">
+<h2>Интроспекция производительности</h2>
+<p>Метрики становятся иерархическими:</p>
+<p>&mdash; глобальные<br/>&emsp; &mdash; в таблице system.events;</p>
+<p>&mdash; на каждый запрос<br/>&emsp; &mdash; в таблицах system.processes, system.query_log;</p>
+<p>&mdash; на каждый поток выполнения запроса<br/>&emsp; &mdash; в таблице system.query_thread_log;</p>
+</section>
+
+<section class="slide">
+<h2>Интроспекция производительности</h2>
+<p>Метрики становятся иерархическими:</p>
+<p>&mdash; в таблицах system.processes и system.query_log<br/>
+добавляется вложенная структура данных ProfileEvents<br/>со всеми метриками;</p>
+<p>&mdash; добавляется вложенная структура данных<br/>Settings со всеми изменёнными настройками;</p>
+<p>&mdash; добавляется столбец thread_numbers<br/>с номерами всех потоков, выполнявших запрос;</p>
+<p>&mdash; добавляется таблица system.query_thread_log;</p>
+<p>&mdash; настройки log_profile_events, log_query_settings, log_query_threads;</p>
+</section>
+
+<section class="slide">
+<h2>Интроспекция производительности</h2>
+<p>Информация о запросах в обычном текстовом логе:</p>
+<p>&mdash; в каждой строчке лога выводится идентификатор запроса.</p>
+<p style="margin-top: 2em;">Получение лога выполнения запроса в клиенте командной строки:</p>
+<p>SET send_logs_level = 'trace';</p>
+<p>Работает независимо от уровня логгирования сервера.</p>
+</section>
+
+<section class="slide">
+<pre style="font-size: 10pt; line-height: 1.35;">example.yandex.ru :) SET send_logs_level = 'debug'
+example.yandex.ru :) SELECT SearchPhrase, count() c FROM test.hits GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10
+
+[example.yandex.ru] 2018.08.16 02:06:17.302711 {e70872c6-30e5-4774-a965-ab9fcabedf02} [ 45 ]
+&lt;Debug&gt; executeQuery: (from [::1]:56440) SELECT SearchPhrase, count() c FROM test.hits GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10
+[example.yandex.ru] 2018.08.16 02:06:17.303662 {e70872c6-30e5-4774-a965-ab9fcabedf02} [ 45 ]
+&lt;Debug&gt; test.hits (SelectExecutor): Key condition: unknown
+[example.yandex.ru] 2018.08.16 02:06:17.303697 {e70872c6-30e5-4774-a965-ab9fcabedf02} [ 45 ]
+&lt;Debug&gt; test.hits (SelectExecutor): MinMax index condition: unknown
+[example.yandex.ru] 2018.08.16 02:06:17.303716 {e70872c6-30e5-4774-a965-ab9fcabedf02} [ 45 ]
+&lt;Debug&gt; test.hits (SelectExecutor): Selected 1 parts by date, 1 parts by key, 1084 marks to read from 1 ranges
+[example.yandex.ru] 2018.08.16 02:06:17.304632 {e70872c6-30e5-4774-a965-ab9fcabedf02} [ 45 ]
+&lt;Debug&gt; executeQuery: Query pipeline:
+Limit
+ Expression
+  MergeSorting
+   PartialSorting
+    Expression
+     ParallelAggregating
+      ConvertColumnWithDictionaryToFull × 16
+       Expression
+        MergeTreeThread
+
+┌─SearchPhrase────────────┬───────c─┐
+│ яндекс                  │    1655 │
+│ весна 2014 мода         │    1549 │
+│ анджелина джоли         │    1245 │
+  ...
+[example.yandex.ru] 2018.08.16 02:06:17.395362 {e70872c6-30e5-4774-a965-ab9fcabedf02} [ 45 ] &lt;Debug&gt;
+MemoryTracker: Peak memory usage (total): 86.74 MiB.
+
+10 rows in set. Elapsed: 0.093 sec. Processed 8.87 million rows, 108.44 MB (94.92 million rows/s., 1.16 GB/s.)</pre>
+</section>
+
+<section class="slide">
+<h2>Интроспекция производительности</h2>
+<p style="color: green;">Ещё не в master. Всё это сейчас мержится.</p>
+</section>
+
+<section class="slide">
+<h2>Интроспекция производительности</h2>
+<p>Хотим сделать:</p>
+<p>&mdash; пулы ресурсов;</p>
+<p>&mdash; throttle потребления ресурсов при превышении доли;</p>
+</section>
+
+<section class="slide">
+<h2>Интроспекция производительности</h2>
+<p>Хотим сделать:</p>
+<p>&mdash; записывать обычный текстовый лог в системную таблицу;</p>
+<p>&mdash; записывать в системную таблицу глобальные системные метрики;</p>
+<p>&mdash; вычислять метрики типа гистограмм;</p>
+<p>&mdash; добавить метрики для всех кодов ошибок;</p>
+<p>&mdash; передавать на клиент все метрики выполнения запроса;</p>
+</section>
+
+
+<section class="slide">
+<h2>Табличные функции</h2>
+<p>&mdash; url;</p>
+<p>&mdash; file;</p>
+<p>&mdash; cluster;</p>
+<p>&mdash; mysql;</p>
+<p>&mdash; odbc.</p>
+</section>
+
+
+<section class="slide">
+<h2>Безопасность</h2>
+<p>Шифрование для репликации</p>
+<p>Аутентификация при передаче данных между репликами</p>
+<p>Шифрование для Distributed таблиц</p>
+<p>Безопасное подключение ODBC драйверов</p>
+</section>
+
+
+<section class="slide">
+<h2>Как &laquo;испортить&raquo; данные</h2>
+<p></p>
+</section>
+
+
+<section class="slide">
+<h2>Как &laquo;испортить&raquo; данные</h2>
+<pre style="font-size: 14pt;">SELECT substringUTF8(Title, 1, 50) AS k, count() AS c
+FROM hits_1000m_transformed
+WHERE k != '' GROUP BY k ORDER BY c DESC LIMIT 100
+
+┌─k──────────────────────────────────────────────────┬────────c─┐
+│ Фото и вещи в интернет-магазин                     │ 12780666 │
+│ монту карта                                        │ 12064769 │
+│ Историа Базар автомобилетом вырезом, л/б, попады Т │ 10990408 │
+│ Блоки                                              │ 10359444 │
+│ Строе банк в россоннира и Кот ЕвроКаргород геевичь │  6763901 │
+│ AUTO.ria.ua Базар авто - Яндекс.Погода, розница. П │  4346693 │
+│ монт — Яндекс.Пог                                  │  4297599 │
+│ Недорого, 21 каталог                               │  3985733 │
+│ 5211 — Афиша: что холмская в переводны             │  3574826 │
+│ @дневники, Чайкон Автопоиск                        │  3501227 │
+│ Вакансии в Москве - Пульс це                       │  3119487 │
+│ Историа Базар автомобиля на Love.QIP.ru доступной  │  3065342 │
+│ Плать или купить в                                 │  2839515 │
+│ Испании - МИР КВАРТИРА, КОРЕТТЕОНОВА - предактиров │  2629122 │
+│ Новые дешевые : Подбор служиванeчкa для работа     │  2379676 │
+│ ЛАДА, ООО "АХ, ЭВАКУАТОРЫ, Греции, Украине Автомоб │  2139439 │
+│ Алекса | Купить велосипед Smart (Пежо) PajeroII -  │  1639138 │
+│ Моды и туристем                                    │  1523733 │
+│ Работа, handex.RU - модные форумы AQUASTOK         │  1226220 │
+│ Игры для секрестить набиринтернет-магазин          │  1068327 │
+</pre>
+</section>
+
+
+<section class="slide">
+<h2>JIT компиляция выражений</h2>
+<code>SELECT count() FROM hits
+WHERE
+       ((EventDate >= '2018-08-01')
+    AND (EventDate &lt;= '2018-08-03')
+    AND (CounterID >= 34))
+ OR    ((EventDate >= '2018-08-04')
+    AND (EventDate &lt;= '2018-08-05')
+    AND (CounterID &lt;= 101500))
+</code>
+
+<p style="margin-top: 2em;">&mdash; 649 533 033 строк в секунду.</p>
+</section>
+
+<section class="slide">
+<h2>JIT компиляция выражений</h2>
+<code style="margin-top: -1em;">SET compile_expressions = 1;
+
+SELECT count() FROM hits
+WHERE
+       ((EventDate >= '2018-08-01')
+    AND (EventDate &lt;= '2018-08-03')
+    AND (CounterID >= 34))
+ OR    ((EventDate >= '2018-08-04')
+    AND (EventDate &lt;= '2018-08-05')
+    AND (CounterID &lt;= 101500))
+</code>
+
+<p style="margin-top: 2em;">&mdash; 865 491 052 строк в секунду.<br/>
+&mdash; <span style="color: green;"><b>+33% производительности!</b></span></p>
+</section>
+
+
+    <section class="slide">
+        <h2>.</h2>
+    </section>
+
+    <section class="slide">
+        <h2>.</h2>
+        <p>Web site: <a href="https://clickhouse.yandex/">https://clickhouse.yandex/</a></p>
+        <p>Google groups: <a href="https://groups.google.com/forum/#!forum/clickhouse">https://groups.google.com/forum/#!forum/clickhouse</a></p>
+        <p>Maillist: clickhouse-feedback@yandex-team.com</p>
+        <p>Telegram chat: <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_ru</a> (более 1800 участников) и <a href="https://telegram.me/clickhouse_en">https://telegram.me/clickhouse_en</a></p>
+        <p>GitHub: <a href="https://github.com/yandex/ClickHouse/">https://github.com/yandex/ClickHouse/</a></p>
+        <p>Twitter: <a href="https://twitter.com/ClickHouseDB">https://twitter.com/ClickHouseDB</a></p>
+
+        <p>Далее: митап в Париже 2 октября.</p>
+    </section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+</body>
+</html>
