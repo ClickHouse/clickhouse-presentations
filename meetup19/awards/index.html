@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse Meetup in Beijing: Awards Ceremony</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x10.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse Meetup in Beijing: Awards Ceremony</h1>
+    </header>
+
+    <section class="slide" id="cover" style="background: url('pictures/title.jpg') no-repeat center center; background-size: 100%;">
+        <h1 style="margin-top: 200px;"><span style="background: rgba(255, 255, 255, 0.75)">ClickHouse Contributors Award 2018</span></h1>
+    </section>
+
+<section class="slide">
+<h2>Gold Award</h2>
+<img style="float: right;" src="pictures/zhang2014.png"/>
+<p><b>Winter Zhang (zhang2014)</b></p>
+<p>Who has developed <b>22</b> new features, improvements and fixes in <b>57</b> pull requests.</p>
+<p>Especially for the improvements in the<br/>query analyzer!</p>
+<p>(Number of features, improvements and fixes is calculated from the changelog.)</p>
+</section>
+
+<section class="slide">
+<h2>Silver Award</h2>
+<img style="float: right;" src="pictures/amosbird.png"/>
+<p><b>Amos Bird</b></p>
+<p>Who has developed <b>16</b> new features, improvements and fixes in <b>42</b> pull requests.</p>
+<p>Especially for the advances in low level optimization!</p>
+</section>
+
+<section class="slide">
+<h2>Bronze Award</h2>
+<img style="float: right;" src="pictures/sundy-li.png"/>
+<p><b>Sundy Li</b></p>
+<p>Who has developed <b>6</b> new features, improvements and fixes in <b>11</b> pull requests.</p>
+<p>Especially for the development of advanced aggregate functions and Chinese docs!</p>
+</section>
+
+<section class="slide">
+<h2>Special Award</h2>
+<p><b>Guo Wei, William</b></p>
+<p>For organizing the ClickHouse Community in China<br/>and ClickHouse Meetups!</p>
+</section>
+
+<section class="slide">
+<p style="margin-top: 50px;">We estimate that ClickHouse is the most<br/> contributors friendly open-source database product.</p>
+<p>94% of pull requests (1887 out of 2012) has been merged to master.</p>
+<p>We help you to make every pull request to be production ready.</p>
+</section>
+
+<section class="slide">
+<h2>Now 250 contributors</h2>
+<img style="width: 100%" src="pictures/commits.png"/>
+<p>What about you?</p>
+</section>
+
+<section class="slide">
+<h2>system.contributors</h2>
+<p>You can find all contributors in <b>system.contributors</b> table.</p>
+<p>... on every ClickHouse server (starting from the 18.15)</p>
+<code>SELECT * FROM system.contributors</code>
+</section>
+
+<section class="slide">
+<h2>We've made our CI more friendly</h2>
+<p>To help our contributors, we have opened continuous integration<br/> logs and builds to be available for every pull request.</p>
+<p>You make a pull request. We tag it as <b>"ready for testing"</b>.</p>
+<p>CI system will build your code and make all packages<br/> (release, debug, asan...) available for download by direct link.</p>
+</section>
+
+<section class="slide">
+<img style="width: 70%" src="pictures/checks.png"/>
+<br/>
+<img style="width: 100%" src="pictures/builds.png"/>
+</section>
+
+<section class="slide" style="background: url('pictures/study.jpg') no-repeat center center; background-size: 100%;">
+    <h1>&nbsp;</h1>
+</section>
+
+    <section class="slide">
+        <h2>.</h2>
+        <p>GitHub: <a href="https://github.com/yandex/ClickHouse/">https://github.com/yandex/ClickHouse/</a></p>
+        <p>中文文档：  <a href="https://clickhouse.yandex/docs/zh/">https://clickhouse.yandex/docs/zh/</a><br/>We need your help in translation!</p>
+        <p>Telegram chat (in english): <a href="https://telegram.me/clickhouse_en">https://telegram.me/clickhouse_en</a></p>
+        <p>WeChat for developers: (ask William to join)</p>
+        <p>WeChat community chat: (ask William to join)</p>
+    </section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse Meetup in Beijing</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x10.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse Meetup in Beijing</h1>
+    </header>
+
+    <section class="slide" id="cover" style="background: url('pictures/title.jpg') no-repeat center center; background-size: 100%;">
+        <h1 style="margin-top: 220px;"><span style="background: rgba(255, 255, 255, 0.75)">New Features of ClickHouse</span></h1>
+    </section>
+
+<section class="slide">
+<h2>JOIN enhancements</h2>
+</section>
+
+<section class="slide">
+<h2>JOIN enhancements</h2>
+
+<p>Support for ON.</p>
+<p>&mdash; AND chains of equality comparisons.</p>
+<p>Support for qualified names and aliases<br/>for both left and right tables.</p>
+
+<p style="color: green;">Available since version 18.6.</p>
+</section>
+
+<section class="slide">
+<h2>JOIN enhancements</h2>
+<p>Before:</p>
+<pre style="line-height: 1.25;">
+SELECT C_REGION, sum(LO_EXTENDEDPRICE * LO_DISCOUNT)
+FROM lineorder
+ANY INNER JOIN
+(
+    SELECT C_REGION, C_CUSTKEY AS LO_CUSTKEY
+    FROM customer
+) USING (LO_CUSTKEY)
+WHERE (toYear(LO_ORDERDATE) = 1993) AND ((LO_DISCOUNT >= 1)
+    AND (LO_DISCOUNT &lt;= 3)) AND (LO_QUANTITY &lt; 25)
+GROUP BY C_REGION;
+</pre>
+</section>
+
+<section class="slide">
+<h2>JOIN enhancements</h2>
+<p>After:</p>
+<pre style="line-height: 1.25;">
+SELECT C_REGION, sum(LO_EXTENDEDPRICE * LO_DISCOUNT)
+FROM lineorder ANY INNER JOIN customer
+    ON LO_CUSTKEY=C_CUSTKEY
+WHERE (toYear(LO_ORDERDATE) = 1993) AND ((LO_DISCOUNT >= 1)
+    AND (LO_DISCOUNT &lt;= 3)) AND (LO_QUANTITY &lt; 25)
+GROUP BY C_REGION;
+</pre>
+</section>
+
+<section class="slide">
+<h2>JOIN enhancements</h2>
+<p>SET join_default_strictness = 'any';</p>
+<pre style="line-height: 1.25;">
+SELECT C_REGION, sum(LO_EXTENDEDPRICE * LO_DISCOUNT)
+FROM lineorder INNER JOIN customer
+    ON LO_CUSTKEY=C_CUSTKEY
+WHERE (toYear(LO_ORDERDATE) = 1993) AND ((LO_DISCOUNT >= 1)
+    AND (LO_DISCOUNT &lt;= 3)) AND (LO_QUANTITY &lt; 25)
+GROUP BY C_REGION;
+</pre>
+</section>
+
+<section class="slide">
+<h2>JOIN enhancements</h2>
+
+<p>Correct behaviour of <b>＊</b>.</p>
+<p>You can leave old behaviour with the 'asterisk_left_columns_only' setting.</p>
+<p>Correct behaviour of qualified asterisks is implemented by <b>zhang2014</b>.</p>
+
+<p style="color: green;">Available since 18.12.</p>
+<p style="color: green;">Improved in 18.14.</p>
+</section>
+
+
+<section class="slide">
+<h2>DECIMAL</h2>
+
+<code>SELECT 1 - 0.9 - 0.1 AS x
+
+┌───────────────────────x─┐
+│ -2.7755575615628914e-17 │
+└─────────────────────────┘
+</code>
+</section>
+
+<section class="slide">
+<h2>DECIMAL</h2>
+
+<p>Decimal numbers with fixed point.</p>
+<p>Example:<br/>
+&mdash; DECIMAL(16, 6);<br/>
+&mdash; Decimal128(6);</p>
+
+<p style="color: green;"><br/>Production ready. Available in 18.14.10.<br/> (beta in 18.12)</p>
+</section>
+
+<section class="slide">
+<h2>DECIMAL</h2>
+
+<p>Number of digits &mdash; up to 38.</p>
+<p>Stored as integer number Int32, Int64 or Int128 containing all the digits.</p>
+<p>For most of the operations, performance is about the same as for integers.</p>
+
+<p>There are overflow checks<br/>
+&mdash; can be turned off with 'decimal_check_overflow' setting.</p>
+</section>
+
+
+
+<section class="slide" style="background: url('pictures/performance.jpg') no-repeat center center; background-size: 100%;">
+<h2><span style="background: rgba(255, 255, 255, 0.75)">Performance introspection</span></h2>
+</section>
+
+<section class="slide">
+<h2>Performance introspection</h2>
+<p>What we already have had before:</p>
+
+<p>Information about single queries:
+<br/>&mdash; system.processes, SHOW PROCESSLIST;
+<br/>&mdash; system.query_log;
+<br/>&mdash; server text log.
+</p>
+
+<p>Global performance metrics:
+<br/>&mdash; system.events;
+<br/>&mdash; system.metrics;
+<br/>&mdash; system.asynchronous_metrics;
+<br/>&mdash; also sent to Graphite;
+</p>
+</section>
+
+<section class="slide">
+<h2>Performance introspection</h2>
+<p>We've added info about real CPU and IO usage:</p>
+<p>
+RealTime, UserTime, SystemTime,<br/>
+SoftPageFaults, HardPageFaults,<br/>
+VoluntaryContextSwitches,<br/>
+InvoluntaryContextSwitches
+</p>
+<p>
+IOWait, CPUWait,<br/>
+CPUVirtualTime,<br/>
+ReadBytes, WriteBytes,<br/>
+ReadChars, WriteChars
+</p>
+</section>
+
+<section class="slide">
+<h2>Performance introspection</h2>
+<p>We've added info about real CPU and IO usage:</p>
+<p>Half of them &mdash; from <b>getrusage</b>,
+<br/>another half &mdash; from Linux kernel, obtained through <b>AF_NETLINK</b> socket.</p>
+<p>Requires Linux and CAP_NET_ADMIN capability <br/>&mdash; set at the package install time.</p>
+</section>
+
+<section class="slide">
+<h2>Performance introspection</h2>
+<p>All performance counters became hierarchical:</p>
+<p>&mdash; global counters<br/>&emsp; &mdash; in system.events table;</p>
+<p>&mdash; counters per each query<br/>&emsp; &mdash; in system.processes and system.query_log;</p>
+<p>&mdash; counters per each query execution thread<br/>&emsp; &mdash; in system.query_thread_log table;</p>
+</section>
+
+<section class="slide">
+<h2>Performance introspection</h2>
+<p>All performance counters became hierarchical:</p>
+<p>&mdash; in system.processes and system.query_log<br/>
+we've added ProfileEvents nested data structure<br/>with all the counters;</p>
+<p>&mdash; added Settings nested structure<br/>with all changed settings;</p>
+<p>&mdash; added thread_numbers column<br/>with numbers of all query executing threads;</p>
+<p>&mdash; added system.query_thread_log table;</p>
+<p>&mdash; settings: log_profile_events, log_query_settings, log_query_threads;</p>
+</section>
+
+<section class="slide">
+<h2>Performance introspection</h2>
+<p>Information about queries in server text log:</p>
+<p>&mdash; every line in log related to query contains query_id.</p>
+<p style="margin-top: 2em;">Receive query execution log directly in clickhouse-client:</p>
+<p>SET send_logs_level = 'trace';</p>
+<p>It works independent of server global log level.</p>
+<p>For distributed queries it will accumulate logs from all participating servers.</p>
+</section>
+
+<section class="slide">
+<pre style="font-size: 10pt; line-height: 1.35;">example.yandex.ru :) SET send_logs_level = 'debug'
+example.yandex.ru :) SELECT SearchPhrase, count() c FROM test.hits GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10
+
+[example.yandex.ru] 2018.08.16 02:06:17.302711 {e70872c6-30e5-4774-a965-ab9fcabedf02} [ 45 ]
+&lt;Debug&gt; executeQuery: (from [::1]:56440) SELECT SearchPhrase, count() c FROM test.hits GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10
+[example.yandex.ru] 2018.08.16 02:06:17.303662 {e70872c6-30e5-4774-a965-ab9fcabedf02} [ 45 ]
+&lt;Debug&gt; test.hits (SelectExecutor): Key condition: unknown
+[example.yandex.ru] 2018.08.16 02:06:17.303697 {e70872c6-30e5-4774-a965-ab9fcabedf02} [ 45 ]
+&lt;Debug&gt; test.hits (SelectExecutor): MinMax index condition: unknown
+[example.yandex.ru] 2018.08.16 02:06:17.303716 {e70872c6-30e5-4774-a965-ab9fcabedf02} [ 45 ]
+&lt;Debug&gt; test.hits (SelectExecutor): Selected 1 parts by date, 1 parts by key, 1084 marks to read from 1 ranges
+[example.yandex.ru] 2018.08.16 02:06:17.304632 {e70872c6-30e5-4774-a965-ab9fcabedf02} [ 45 ]
+&lt;Debug&gt; executeQuery: Query pipeline:
+Limit
+ Expression
+  MergeSorting
+   PartialSorting
+    Expression
+     ParallelAggregating
+      Expression × 16
+       MergeTreeThread
+
+┌─SearchPhrase────────────┬───────c─┐
+│ яндекс                  │    1655 │
+│ весна 2014 мода         │    1549 │
+│ анджелина джоли         │    1245 │
+  ...
+[example.yandex.ru] 2018.08.16 02:06:17.395362 {e70872c6-30e5-4774-a965-ab9fcabedf02} [ 45 ] &lt;Debug&gt;
+MemoryTracker: Peak memory usage (total): 86.74 MiB.
+
+10 rows in set. Elapsed: 0.093 sec. Processed 8.87 million rows, 108.44 MB (94.92 million rows/s., 1.16 GB/s.)</pre>
+</section>
+
+<section class="slide">
+<h2>Performance introspection</h2>
+<p style="color: green;">Available in 18.12.</p>
+</section>
+
+<section class="slide">
+<h2>Performance introspection</h2>
+<p>What we want to do:</p>
+<p>&mdash; resource pools (workload management);</p>
+<p>&mdash; throttling resource usage for proper share;</p>
+</section>
+
+<section class="slide">
+<h2>Performance introspection</h2>
+<p>What we want to do:</p>
+<p>&mdash; write ClickHouse text logs into system table in ClickHouse;</p>
+<p>&mdash; write global system metrics (like CPU, iowait, LA)<br/>&emsp; into system table in ClickHouse;</p>
+<p>&mdash; calculated histogram/quantile metrics for certain processes<br/>&emsp; (example: 90% query execution time);</p>
+<p>&mdash; add per-column and per-file statistics in query_log;</p>
+<p>&mdash; add counters for all error codes (system.errors table);</p>
+<p>&mdash; send all metrics to the client;</p>
+</section>
+
+
+<section class="slide">
+<h2>Table functions</h2>
+<p>&mdash; url;</p>
+<p>&mdash; file;</p>
+<p>&mdash; cluster;</p>
+<p>&mdash; mysql;</p>
+<p>&mdash; odbc.</p>
+</section>
+
+
+<section class="slide">
+<h2>Security</h2>
+<p>Encryption (https) for replication traffic</p>
+<p>Authentication between replicas</p>
+<p>Encryption for traffic of Distributed tables</p>
+<p>Safe usage of ODBC drivers for external sources</p>
+</section>
+
+
+<section class="slide">
+<h2>How to "ruin" your data</h2>
+<p></p>
+</section>
+
+
+<section class="slide">
+<h2>How to "ruin" your data</h2>
+<pre style="font-size: 14pt; margin-top: -30px;">SELECT substringUTF8(Title, 1, 50) AS k, count() AS c
+FROM hits_1000m_transformed
+WHERE match(k, '^[\x01-\x7F]+$') GROUP BY k ORDER BY c DESC LIMIT 100
+
+┌─k──────────────────────────────────────────────────┬───────c─┐
+│ Kunstkamera Club-Pickup Bai Porta.ru               │  211122 │
+│ Kanye Kedax^                                       │  187249 │
+│ OWAProfiles. Colletina Portal Digested Gabbas - IR │  186538 │
+│ Verver Board                                       │   87895 │
+│ OWAProfit-Parts, Bless Hotels Centre (Lassilev.24l │   74841 │
+│ Skins Resort &amp; France.Ru / Compilation             │   60256 │
+│ Demio - Livejour ownitsubishi - World of Tanks     │   56643 │
+│ Ford Megane Shot comparen Payne Money Bannette for │   54032 │
+│ OWAProfit-Partner: Kalus30,eos3D.com :: Nokia!     │   53593 │
+│ open shoe (Calence 2 64Gb Black (Sol               │   36314 │
+│ Osunshine Player.                                  │   33316 │
+│ OWAProfit-Parts Body Big Natural Dead: A Hauptmand │   28153 │
+│ PAOLO CONTRACK Atlant, Buckle | WWWW.PHOTODOM.ria. │   24317 │
+│ Opel (Count of Tanks - World of Tanks official for │   23525 │
+│ Kanuni (Palacticarefunds official forum - Page | W │   23340 │
+│ Ahmed the sidence (46E)                            │   22812 │
+│ Lexus - DimKrollsky feasantech tanks official foru │   18929 │
+│ Nokia Acrosoft                                     │   17973 │
+│ Iveco x Hundai ; Toyota RAV-4 Black Of Thalassia.r │   17908 │
+│ OWAProfitween Espace Wolf' Pacification Port and T │   16393 │
+</pre>
+</section>
+
+
+<section class="slide">
+<h2>JIT expression compiler</h2>
+<code>SELECT count() FROM hits
+WHERE
+       ((EventDate >= '2018-08-01')
+    AND (EventDate &lt;= '2018-08-03')
+    AND (CounterID >= 34))
+ OR    ((EventDate >= '2018-08-04')
+    AND (EventDate &lt;= '2018-08-05')
+    AND (CounterID &lt;= 101500))
+</code>
+
+<p style="margin-top: 2em;">&mdash; 649 533 033 rows/sec.</p>
+</section>
+
+<section class="slide">
+<h2>JIT expression compiler</h2>
+<code style="margin-top: -1em;">SET compile_expressions = 1;
+
+SELECT count() FROM hits
+WHERE
+       ((EventDate >= '2018-08-01')
+    AND (EventDate &lt;= '2018-08-03')
+    AND (CounterID >= 34))
+ OR    ((EventDate >= '2018-08-04')
+    AND (EventDate &lt;= '2018-08-05')
+    AND (CounterID &lt;= 101500))
+</code>
+
+<p style="margin-top: 2em;">&mdash; 865 491 052 rows/sec.<br/>
+&mdash; <span style="color: green;"><b>+33% speed up!</b></span></p>
+</section>
+
+
+    <section class="slide">
+        <h2>.</h2>
+    </section>
+
+    <section class="slide">
+        <h2>.</h2>
+        <p>Web site: <a href="https://clickhouse.yandex/">https://clickhouse.yandex/</a></p>
+        <p>Google groups: <a href="https://groups.google.com/forum/#!forum/clickhouse">https://groups.google.com/forum/#!forum/clickhouse</a></p>
+        <p>Maillist: clickhouse-feedback@yandex-team.com</p>
+        <p>WeChat: ask William to join</p>
+        <p>Telegram chat: <a href="https://telegram.me/clickhouse_en">https://telegram.me/clickhouse_en</a></p>
+        <p>GitHub: <a href="https://github.com/yandex/ClickHouse/">https://github.com/yandex/ClickHouse/</a></p>
+        <p>Twitter: <a href="https://twitter.com/ClickHouseDB">https://twitter.com/ClickHouseDB</a></p>
+
+        <p>Up next: ClickHouse Meetup in Amsterdam on November 15.</p>
+    </section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+</body>
+</html>

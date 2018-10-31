@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse Meetup: Introduction</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x10.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse Meetup: Introduction</h1>
+    </header>
+
+    <section class="slide" id="cover" style="background: url('pictures/title.jpg') no-repeat center center; background-size: 100%;">
+        <h1 style="margin-top: 200px; font-size: 36pt;"><span style="background: rgba(255, 255, 255, 0.75)">ClickHouse Meetup in Beijing<br/>Introduction</span></h1>
+    </section>
+
+<section class="slide">
+<h2>Why do we need ClickHouse?</h2>
+
+<p>&mdash; interactive analytic queries;<br/>
+&mdash; on constantly appended data.</p>
+
+<p>&laquo;Double realtime&raquo;</p>
+<p>The most valuable feature of ClickHouse &mdash; it's speed.</p>
+<div style="text-align: center;">
+<img style="width: 50%" src="pictures/tweet_fast1.png"/>
+<img style="width: 50%" src="pictures/tweet_fast3.png"/>
+</div>
+</section>
+
+<section class="slide">
+<h2>Our goals as ClickHouse developers</h2>
+
+<p>1. Development and support for use cases in our company (Yandex).</p>
+<p>2. Maximum widespread of ClickHouse as open-source product.</p>
+
+<img src="pictures/tweet_rising2.png" style="width: 50%; margin-top: 2em;"/>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Goal: widespread as open-source product</h2>
+<p>Rules of successful open-source:</p>
+<p>&mdash; the product must solve actual problem;<br/>
+&mdash; and do it better than others.</p>
+<p>Our goal:</p>
+<p>ClickHouse must be the default choice<br/>as an open-source analytical DBMS</p>
+<p>&mdash; the first and the only right solution<br/>for appropriate use cases;</p>
+<p>&mdash; and everyone should be aware of it :)</p>
+</section>
+
+<section class="slide">
+<h2>Two years in open-source</h2>
+<img style="float: right; margin-right: 83px;" src='pictures/stars.png'/>
+<p>No time to celebrate.</p>
+<img src='pictures/commits.png'/>
+</section>
+
+<section class="slide">
+<img style="height: 95%;" src='pictures/repos.png'/>
+</section>
+
+<section class="slide">
+<h2>Two years in open-source</h2>
+<div style="float: right;">YoY growth: 1.94 total<br/>but <b>5.05</b> in China!<br/><span style="font-size: 10pt;">&mdash; website traffic<span></div>
+<img style="height: 70%;" src='pictures/countries.png'/>
+</section>
+
+<section class="slide">
+<h2>Year over Year growth</h2>
+<div style="float: right;">YoY growth: 1.94 total<br/>but <b>5.05</b> in China!<br/><span style="font-size: 10pt;">&mdash; website traffic<span></div>
+<img style="width: 70%;" src='pictures/growth.png'/>
+</section>
+
+<section class="slide">
+<h2>Notable users</h2>
+<div style="float: right; width: 600px; color: #888; line-height: 1.5em; text-align: center; font-size: 80%">
+<span style="padding: 20px;">Web/App&nbsp;Analytics</span>
+<span style="padding: 20px;">Adv&nbsp;Networks</span>
+<br/><span style="padding: 20px;">E-Commerce</span>
+<span style="padding: 20px;">Telecom</span>
+<span style="padding: 20px;">Social</span>
+<span style="padding: 20px;">News</span>
+<br/><span style="padding: 20px;">Monitoring/Telemetry</span>
+<span style="padding: 20px;">Banking/Finance</span>
+<br/><span style="padding: 20px;">Government</span>
+<span style="padding: 20px;">Adult</span>
+<span style="padding: 20px;">Online&nbsp;Games</span>
+<br/><span style="padding: 20px;">Info&nbsp;Sec</span>
+<span style="padding: 20px;">Agriculture</span>
+<span style="padding: 20px;">Blockchain</span>
+</div>
+
+<p>&mdash; VK;<br/>
+&mdash; nVidia;<br/>
+&mdash; Spotify;<br/>
+&mdash; Yandex;<br/>
+&mdash; Amadeus;<br/>
+&mdash; Bloomberg;<br/>
+&mdash; CloudFlare;<br/>
+&mdash; ContentSquare;<br/>
+&mdash; Deutsche Bank;<br/>
+&mdash; A-word fruit company;<br/>
+&mdash; C-word telecom company;<br/>
+&mdash; e-word ecommerce company;<br/>
+&mdash; National payment system of (undisclosed) country.</p>
+</section>
+
+<section class="slide">
+<h2>Meetups &amp; Conferences</h2>
+<table>
+<tr><td>&nbsp;</td><td>2016</td><td>2017</td><td>2018</td></tr>
+<tr><td>Russia</td><td>6</td><td>18</td><td>7</td></tr>
+<tr><td>Europe</td><td>1</td><td>4</td><td>3</td></tr>
+<tr><td>USA</td>   <td>-</td><td>2</td><td>3</td></tr>
+<tr><td>Asia</td>  <td>-</td><td>-</td><td>3</td></tr>
+</table>
+</section>
+
+<section class="slide">
+<h2>Rough Roadmap for Q4-Q1</h2>
+<p>Improvement of SQL dialect, full support for JOIN:<br/>
+&mdash; multiple JOINs without subqueries;</p>
+<p>Workload management:<br/>
+&mdash; fair resource sharing between queries;</p>
+<p>Fine grained user access control:<br/>
+&mdash; ACL, RBAC, LDAP...</p>
+
+<img src="pictures/tweet_alternative.png" style="width: 50%;"/>
+</section>
+
+
+<section class="slide">
+<h2>Advantages of open-source</h2>
+<p>&mdash; better product quality;</p>
+<p>&mdash; better Yandex representation as tech company;</p>
+<p>&mdash; for hiring developers more easily;</p>
+<p>&mdash; motivation of developers;</p>
+
+<p><br/>Drawbacks:</p>
+<p>&mdash; it's hard work;</p>
+<p>&mdash; and we're working really a lot;</p>
+</section>
+
+    <section class="slide" style="background: url('pictures/epilog.jpg') no-repeat center center; background-size: 100%;">
+        <h2><span style="background: rgba(255, 255, 255, 0.75)">?</span></h2>
+    </section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+</body>
+</html>
