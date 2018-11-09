@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse Features For Advanced Users</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x10.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse Features For Advanced Users</h1>
+    </header>
+    <section class="slide" id="cover" style="background: url('pictures/frankfurt.jpg') no-repeat center center; background-size: 100%">
+        <h1 style="margin-top: 40px; line-height: 1.5;"><span style="background: rgba(255, 255, 255, 0.75)">ClickHouse Features<br/>For Advanced Users</span></h1>
+    </section>
+
+    <section class="slide">
+        <h2>SAMPLE key</h2>
+        <p>Let suppose you have a clickstream data<br/>and you store it in non-aggregated form.</p>
+        <p>You need to generate reports for your customers on the fly.</p>
+        <p>This is typical ClickHouse use case.</p>
+    </section>
+
+    <section class="slide">
+        <h2>SAMPLE key</h2>
+        <p>Most customers are small, but some are rather big.
+<br/>You want to get instant reports even for largest customers.</p>
+<p>Solution: define a <b>sample key</b> in your MergeTree table.</p>
+    </section>
+
+    <section class="slide">
+        <h2>SAMPLE key</h2>
+        <code>CREATE TABLE ... ENGINE = MergeTree
+ORDER BY (CounterID, Date, <b>intHash32(UserID)</b>)
+PARTITION BY toYYYYMM(Date)
+SAMPLE BY <b>intHash32(UserID)</b></code>
+    </section>
+
+    <section class="slide">
+        <h2>SAMPLE key</h2>
+        <code>SELECT uniq(UserID) FROM hits_all
+WHERE CounterID = 76543
+    AND EventDate BETWEEN '2018-03-25' AND '2018-04-25'
+
+┌─uniq(UserID)─┐
+│     47362335 │
+└──────────────┘
+
+1 rows in set. Elapsed: <b>4.571 sec</b>.
+Processed 1.17 billion rows, <b>16.37 GB</b>
+(255.88 million rows/s., 3.58 GB/s.)</code>
+    </section>
+
+    <section class="slide">
+        <h2>SAMPLE key</h2>
+        <code>SELECT uniq(UserID) FROM hits_all
+<b>SAMPLE 1/10</b>
+WHERE CounterID = 76543
+    AND EventDate BETWEEN '2018-03-25' AND '2018-04-25'
+
+┌─uniq(UserID)─┐
+│      4742578 │
+└──────────────┘
+
+1 rows in set. Elapsed: <b>0.638 sec</b>.
+Processed 117.73 million rows, <b>1.65 GB</b>
+(184.50 million rows/s., 2.58 GB/s.)</code>
+    </section>
+
+    <section class="slide">
+        <h2>SAMPLE key</h2>
+        <p>Must be:</p>
+<p>&mdash; included in the primary key;</p>
+<p>&mdash; uniformly distributed in the domain of its data type:<br/>
+<span style="color: red;">Bad:</span> Timestamp;<br/>
+<span style="color: green;">Good:</span> intHash32(UserID);</p>
+<p>&mdash; cheap to calculate:<br/>
+<span style="color: red;">Bad:</span> cityHash64(URL);<br/>
+<span style="color: green;">Good:</span> intHash32(UserID);</p>
+<p>&mdash; not after high granular fields in primary key:<br/>
+<span style="color: red;">Bad:</span> ORDER BY (Timestamp, sample_key);<br/>
+<span style="color: green;">Good:</span> ORDER BY (CounterID, Date, sample_key).</p>
+    </section>
+
+    <section class="slide">
+        <h2>SAMPLE key</h2>
+        <p>Sampling is:</p>
+        <p>&mdash; deterministic;</p>
+        <p>&mdash; works in a consistent way for different tables;</p>
+        <p>&mdash; allows to read less amount of data from disk;</p>
+    </section>
+
+    <section class="slide">
+        <h2>SAMPLE key, bonus</h2>
+        <code>SAMPLE 1/10</code>
+        <p>&mdash; select data for 1/10 of all possible sample keys;</p>
+        <code>SAMPLE 1000000</code>
+        <p>&mdash; select from about (not less than) 1 000 000 rows on each shard;<br/>
+        &mdash; you can use <b>_sample_factor</b> virtual column to determine the relative sample factor;</p>
+        <code>SAMPLE 1/10 OFFSET 1/10</code>
+        <p>&mdash; select second 1/10 of all possible sample keys;</p>
+        <code>SET max_parallel_replicas = 3</code>
+        <p>&mdash; select from multiple replicas of each shard in parallel;</p>
+    </section>
+
+    <section class="slide">
+        <h2>Aggregate function combiners</h2>
+        <p>-If<br/>-Array<br/>-ForEach<br/>-Merge<br/>-State</p>
+        <p>Example: sumIf(x, cond)</p>
+    </section>
+
+<section class="slide">
+        <h2>Aggregate function combiners: -If</h2>
+
+<code>SELECT
+  uniq<b>If</b>(UserID, RefererDomain = 'yandex.ru')
+    AS users_yandex,
+  uniq<b>If</b>(UserID, RefererDomain = 'google.ru')
+    AS users_google
+FROM test.hits
+
+┌─users_yandex─┬─users_google─┐
+│        19731 │         8149 │
+└──────────────┴──────────────┘</code>
+</section>
+
+<section class="slide">
+        <h2>Aggregate function combiners: -Array</h2>
+
+<code>SELECT
+    uniq(arr),
+    uniq<b>Array</b>(arr),
+    groupArray(arr),
+    groupUniqArray(arr),
+    groupArray<b>Array</b>(arr),
+    groupUniqArray<b>Array</b>(arr)
+FROM
+(
+    SELECT ['hello', 'world'] AS arr
+    UNION ALL
+    SELECT ['goodbye', 'world']
+)
+FORMAT Vertical
+</code>
+</section>
+
+<section class="slide">
+        <h2>Aggregate function combiners: -Array</h2>
+<code style="font-size: 80%;">Row 1:
+──────
+uniq(arr):                2
+uniq<b>Array</b>(arr):           3
+groupArray(arr):          [['hello','world'],['goodbye','world']]
+groupUniqArray(arr):      [['hello','world'],['goodbye','world']]
+groupArray<b>Array</b>(arr):     ['hello','world','goodbye','world']
+groupUniqArray<b>Array</b>(arr): ['goodbye','world','hello']</code>
+</section>
+
+    <section class="slide">
+        <h2>Aggregate function combiners</h2>
+        <p>... they may be combined</p>
+        <p>Example: sumArrayIf, sumIfArray.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Aggregate function combiners</h2>
+        <p>... they may be combined</p>
+        <p>Example: sumForEachStateForEachIfArrayIfState.</p>
+    </section>
+
+
+    <section class="slide">
+        <h2 style="line-height: 1.25;">Intermediate aggregation states are the first class citizens</h2>
+        <p>Obtain Intermediate state with -State combiner;</p>
+        <p>Example: uniqState(user_id) AS state;</p>
+        <p>&mdash; it will return a value of <b>AggregateFunction(...)</b> data type;</p>
+        <p>&mdash; you can store them in tables;</p>
+        <p>&mdash; merge them back with -Merge combiner;</p>
+        <p>Example: uniqMerge(state) AS result;</p>
+    </section>
+
+    <section class="slide">
+        <h2>Intermediate aggregation states</h2>
+        <code>SELECT
+    avg(x),
+    uniq(x)
+FROM
+(
+    SELECT 123 AS x
+    UNION ALL
+    SELECT 456
+)
+
+┌─avg(x)─┬─uniq(x)─┐
+│  289.5 │       2 │
+└────────┴─────────┘</code>
+    </section>
+
+    <section class="slide">
+        <h2>Intermediate aggregation states</h2>
+        <code>SELECT
+    avg<b>State</b>(x),
+    uniq<b>State</b>(x)
+FROM
+(
+    SELECT 123 AS x
+    UNION ALL
+    SELECT 456
+)
+
+┌─avgState(x)─────┬─uniqState(x)─┐
+│ C\0\0\0\0\0\0   │ \0▒�P���a�   │
+└─────────────────┴──────────────┘</code>
+    </section>
+
+    <section class="slide">
+        <h2>Intermediate aggregation states</h2>
+        <code style="font-size: 90%;">SELECT
+    toTypeName(avgState(x)),
+    toTypeName(uniqState(x))
+FROM
+(
+    SELECT 123 AS x
+    UNION ALL
+    SELECT 456
+)
+FORMAT Vertical
+
+Row 1:
+──────
+toTypeName(avgState(x)):  AggregateFunction(avg, UInt16)
+toTypeName(uniqState(x)): AggregateFunction(uniq, UInt16)</code>
+    </section>
+
+    <section class="slide">
+        <h2>Intermediate aggregation states</h2>
+        <code>CREATE TABLE t
+(
+    users_state AggregateFunction(uniq, UInt64),
+    ...
+) ENGINE = AggregatingMergeTree ORDER BY ...</code>
+        <br />
+        <code>SELECT uniqMerge(uniq_state)
+FROM t GROUP BY ...</code>
+
+    </section>
+
+
+    <section class="slide">
+        <h2>Intermediate aggregation states</h2>
+        <p>Main use case:</p>
+        <p>Incremental data aggregation<br/>
+        with <b>AggregatingMergeTree</b> table engine<br>
+        of MATERIALIZED VIEW.</p>
+    </section>
+
+    <section class="slide">
+        <h2>How we can make it better</h2>
+        <p>&mdash; versioning of state serialization format;</p>
+        <p>&mdash; identify the cases when different aggregate functions have the same state (sumState, sumIfState must be compatible);</p>
+        <p>&mdash; allow to create aggregation state with a function (now it's possible to use arrayReduce for that purpose);</p>
+        <p>&mdash; allow to insert AggregateFunction values into a table directly as a tuple of arguments;</p>
+        <p>&mdash; adaptive index_granularity;</p>
+    </section>
+
+
+    <section class="slide">
+        <h2>Consistency modes</h2>
+        <p>By default, ClickHouse implements:</p>
+        <p><b>asynchronous</b>, <b>conflict-free</b>, <b>multi-master</b> replication.</p>
+        <p>Asynchronous:</p>
+        <p>INSERT is acknowledged after being written on a single replica<br/> and the replication is done in background.</p>
+        <p>Some replicas may lag and miss some data;</p>
+        <p>All replicas may miss some different parts of data.</p>
+        <p>By default, you have only eventual consistency.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Consistency modes</h2>
+        <p>You can enable strong consistency.</p>
+        <code>SET insert_quorum = 2;</code>
+        <p><br/>&mdash; each INSERT is acknowledged by a quorum of replicas;</p>
+        <p>&mdash; all replicas in quorum are consistent: they contain data from all previous INSERTs (INSERTs are linearized);</p>
+        <code>SET select_sequential_consistency = 1;</code>
+        <p><br/>&mdash; allow to SELECT only acknowledged data from consistent replicas <br/>(that contain all acknowledged INSERTs).</p>
+    </section>
+
+
+    <section class="slide">
+        <h2>GROUP BY in external memory</h2>
+        <img style="height: 60%" src="pictures/plain.png"/>
+    </section>
+
+    <section class="slide">
+        <video style="height: 90%"><source src="video/plain.ogv" type="video/ogg"></video>
+    </section>
+
+    <section class="slide">
+        <video style="height: 90%"><source src="video/stats.ogv" type="video/ogg"></video>
+    </section>
+
+    <section class="slide">
+        <h2>GROUP BY in external memory</h2>
+        <p>You can simply increase max_memory_usage</p>
+    </section>
+
+    <section class="slide">
+        <video style="height: 90%"><source src="video/raise_mem.ogv" type="video/ogg"></video>
+    </section>
+
+    <section class="slide">
+        <h1>GROUP BY in external memory</h1>
+        <p>Also you can enable aggregation with external memory:</p>
+        <p>max_bytes_before_external_group_by</p>
+        <p>distributed_aggregation_memory_efficient</p>
+    </section>
+
+    <section class="slide">
+        <video style="height: 90%"><source src="video/external.ogv" type="video/ogg"></video>
+    </section>
+
+
+    <section class="slide">
+        <h2>Geospatial functions</h2>
+        <p>&mdash; pointInPolygon;</p>
+        <p>&mdash; pointInEllipses;</p>
+        <p>&mdash; greatCircleDistance;</p>
+        <code>SELECT pointInPolygon((lat, lon),
+    [(6, 0), (8, 4), (5, 8), (0, 2), ...])</code>
+    </section>
+
+    <section class="slide">
+        <h2>Machine learned models</h2>
+        <code>SELECT modelEvaluate('name', f1, ... fn)
+    AS ctr_prediction</code>
+        <p><br/><a href='https://www.altinity.com/blog/2018/1/18/clickhouse-for-machine-learning'>https://www.altinity.com/blog/2018/1/18/clickhouse-for-machine-learning</a></p>
+    </section>
+
+    <section class="slide">
+        <h2>Machine learned models</h2>
+        <p>How we can make it better:</p>
+        <p>&mdash; add simple regression models;</p>
+        <p>&mdash; train models in ClickHouse directly;</p>
+        <p>&mdash; online training of models;</p>
+        <p>&mdash; parametrized models (dictionaries of multiple models);</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="line-height: 1">Data processing without server</h2>
+        <p><b>clickhouse-local</b> tool</p>
+        <code>$ clickhouse-local \
+  --input-format=CSV --output-format=PrettyCompact \
+  --structure="SearchPhrase String, UserID UInt64" \
+  --query="SELECT SearchPhrase, count(), uniq(UserID)
+    FROM table \
+    WHERE SearchPhrase != '' GROUP BY SearchPhrase \
+    ORDER BY count() DESC LIMIT 20" &lt; hits.csv
+
+┌─SearchPhrase────────────┬─count()─┬─uniq(UserID)─┐
+│ интерьер ванной комнаты │    2166 │            1 │
+│ яндекс                  │    1655 │          478 │
+│ весна 2014 мода         │    1549 │            1 │
+│ фриформ фото            │    1480 │            1 │
+│ анджелина джоли         │    1245 │            1 │
+</code>
+    </section>
+
+    <section class="slide">
+        <h2>Data processing without server</h2>
+        <p>Bonus: SELECT and process data from an offline server.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Data processing without server</h2>
+        <p>How we can make it better?</p>
+        <p>&mdash; add more supported formats for Date and DateTime values in text form;</p>
+        <p>&mdash; add formats like Avro, Parquet;</p>
+        <p>&mdash; customizable CSV format;</p>
+        <p>&mdash; "template" and "regexp" formats for more freeform data;</p>
+    </section>
+
+
+    <section class="slide" style="background: url('pictures/amsterdam.jpg') no-repeat center center; background-size: 100%">>
+        <h2>.</h2>
+        <p style="font-size: 36pt;"><span style="background: rgba(0, 0, 0, 0.75); color: #FFF;">Join the <b>ClickHouse Meetup</b><br/>in Amsterdam on 15th of November!</span></p>
+        <p><span style="background: rgba(0, 0, 0, 0.75);"><a href="https://events.yandex.com/events/meetings/15-11-2018/">https://events.yandex.com/events/meetings/15-11-2018/</a></span></p>
+    </section>
+
+    <section class="slide">
+        <h2>.</h2>
+        <p>Web site: <a href="https://clickhouse.yandex/">https://clickhouse.yandex/</a></p>
+        <p>Google groups: <a href="https://groups.google.com/forum/#!forum/clickhouse">https://groups.google.com/forum/#!forum/clickhouse</a></p>
+        <p>Maillist: clickhouse-feedback@yandex-team.com</p>
+        <p>Telegram chat: <a href="https://telegram.me/clickhouse_en">https://telegram.me/clickhouse_en</a> and <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_ru</a> (now with over 1900 members)</p>
+        <p>GitHub: <a href="https://github.com/yandex/ClickHouse/">https://github.com/yandex/ClickHouse/</a> (now with 5370 stars)</p>
+        <p>Twitter: <a href="https://twitter.com/ClickHouseDB">https://twitter.com/ClickHouseDB</a></p>
+
+        <!-- TODO Draw map -->
+        <p>+ meetups. Moscow, Saint-Petersburg, Novosibirsk, Ekaterinburg, Minsk, Nizhny Novgorod, Berlin, Palo Alto, Beijing, Sunnyvale, San Francisco, Paris, Amsterdam...</p>
+    </section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
