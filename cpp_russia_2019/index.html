@@ -364,7 +364,8 @@ COW&lt;T>::MutablePtr y = std::move(*x).mutate();
 <p>1. В C++ нет rvalue qualified <span style="white-space: pre; font-family: Monospace, Courier New;">operator-></span>
 <br/><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3723.html">http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3723.html</a></p>
 <p>2. Хотим инвалидировать само значение, а не Ptr.<br/>
-(у Ptr мы ещё можем использовать оператор присваивания)</p>
+(у Ptr мы ещё можем использовать оператор присваивания)<br/>
+Update после доклада: на самом деле нет проблем с вызовом<br/>оператора присваивания после move.</p>
 </section>
 
 
