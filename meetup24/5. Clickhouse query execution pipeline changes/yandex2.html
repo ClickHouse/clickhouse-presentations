@@ -1,0 +1,278 @@
+<!DOCTYPE HTML>
+
+
+<html lang="en">
+<head>
+    <title>ClickHouse <br>Query Execution Pipeline</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link rel="stylesheet" href="themes/yandex2/styles/screen-16x9.css">
+    
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse <br>Query Execution Pipeline</h1>
+        <p>Nikolai Kochetov, Yandex</p>
+
+    </header>
+
+    
+
+<!-- slide #1 -->        
+<section style="display:none" id="presentation-title" class="slide cover"><div><h2>Presentation Title</h2>
+
+<!-- generated subtitle -->
+
+</div></section>
+
+<!-- slide #2 -->
+<section class="slide" id="header"><div><h2>Header</h2>
+
+<p>Typewriter etsy messenger bag <a href="#x">fingerstache</a>, aesthetic vinyl semiotics twee <strong>DIY</strong> forage chillwave. Thundercats ennui messenger bag, <em>squid</em> carles chillwave shoreditch pickled cliche <b>letterpress</b>. DIY beard locavore <i>occupy</i> salvia, whatever single-origin <code class="highlighter-rouge">coffee</code> fanny pack 3 wolf moon typewriter gastropub kale chips. Ennui keffiyeh thundercats jean shorts biodiesel. Terry richardson, swag blog locavore umami vegan helvetica. Fingerstache kale chips.</p>
+
+<footer>Typewriter etsy messenger bag fingerstache.</footer>
+
+</div></section>
+
+<!-- slide #3 -->
+<section class="slide" id="header-1"><div><h2>Header</h2>
+
+<p>Thundercats ennui messenger bag, squid carles chillwave shoreditch pickled cliche letterpress. DIY beard locavore occupy salvia, whatever single-origin coffee fanny pack 3 wolf moon typewriter gastropub kale chips. Ennui keffiyeh thundercats jean shorts biodiesel. Terry richardson, swag blog locavore umami vegan helvetica. Fingerstache kale chips.</p>
+
+<p class="note">Typewriter etsy messenger bag fingerstache.</p>
+
+<footer>DIY beard locavore occupy salvia, whatever single-origin coffee fanny pack 3 wolf moon typewriter gastropub kale chips. Ennui keffiyeh thundercats jean shorts biodiesel.</footer>
+
+</div></section>
+
+<!-- slide #4 -->
+<section class="slide" id="lists-in-english-typography"><div><h2>Lists in English typography</h2>
+
+<ul>
+  <li>Ennui keffiyeh thundercats</li>
+  <li>Jean shorts biodiesel</li>
+  <li>Terry richardson, swag blog
+    <ol>
+      <li>Locavore umami vegan helvetica</li>
+      <li>Fingerstache kale chips</li>
+      <li>Keytar sriracha gluten-free</li>
+    </ol>
+  </li>
+  <li>Before they sold out master</li>
+</ul>
+
+</div></section>
+
+<!-- slide #5 -->
+<section class="slide" lang="ru" id="lists-in-russian-typography"><div><h2>Lists in Russian typography</h2>
+
+<ul>
+  <li>Ennui keffiyeh thundercats</li>
+  <li>Jean shorts biodiesel</li>
+  <li>Terry richardson, swag blog
+    <ol>
+      <li>Locavore umami vegan helvetica</li>
+      <li>Fingerstache kale chips</li>
+      <li>Keytar sriracha gluten-free</li>
+    </ol>
+  </li>
+  <li>Before they sold out master</li>
+</ul>
+
+</div></section>
+
+<!-- slide #6 -->
+<section class="slide" id="lists-in-english-typography-1"><div><h2>Lists in English typography</h2>
+
+<ul>
+  <li>Locavore umami vegan helvetica</li>
+  <li>Fingerstache kale chips</li>
+  <li>Keytar sriracha gluten-free
+    <ol>
+      <li>Ennui keffiyeh thundercats</li>
+      <li>Jean shorts biodiesel</li>
+      <li>Terry richardson, swag blog</li>
+    </ol>
+  </li>
+</ul>
+
+</div></section>
+
+<!-- slide #7 -->
+<section class="slide" id="quote"><div><h2>Quote</h2>
+
+<figure>
+
+  <blockquote>
+    <p>Typewriter etsy messenger bag fingerstache, aesthetic vinyl semiotics twee DIY forage chillwave. Thundercats ennui messenger bag, squid carles chillwave shoreditch pickled cliche letterpress.</p>
+  </blockquote>
+
+  <figcaption>Author Name</figcaption>
+</figure>
+
+<p>DIY beard locavore occupy salvia, whatever single-origin coffee fanny pack 3 wolf moon typewriter gastropub kale chips.</p>
+
+</div></section>
+
+<!-- slide #8 -->
+<section class="slide" id="table"><div><h2>Table</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th scope="col">Locavore</th>
+      <th scope="col">Umami</th>
+      <th scope="col">Helvetica</th>
+      <th scope="col">Vegan</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">Fingerstache</th>
+      <td>Kale</td>
+      <td>Chips</td>
+      <td>Keytar</td>
+    </tr>
+    <tr>
+      <th scope="row">Sriracha    </th>
+      <td>Gluten-free</td>
+      <td>Ennui</td>
+      <td>Keffiyeh</td>
+    </tr>
+    <tr>
+      <th scope="row">Thundercats </th>
+      <td>Jean</td>
+      <td>Shorts</td>
+      <td>Biodiesel</td>
+    </tr>
+    <tr>
+      <th scope="row">Terry       </th>
+      <td>Richardson</td>
+      <td>Swag</td>
+      <td>Blog</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Typewriter etsy messenger bag fingerstache.</p>
+
+</div></section>
+
+<!-- slide #9 -->
+<section class="slide" id="numbered-code-listing"><div><h2>Numbered code listing</h2>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;html</span> <span class="na">lang=</span><span class="s">"en"</span><span class="nt">&gt;</span>
+<span class="nt"><mark>&lt;head&gt;</mark></span> <span class="nt">&lt;mark</span> <span class="na">class=</span><span class="s">"comment"</span><span class="nt">&gt;</span><span class="c">&lt;!--Comment--&gt;</span><span class="nt"></mark></span>
+    <span class="nt">&lt;title&gt;</span>Shower<span class="nt">&lt;/title&gt;</span>
+    <span class="nt">&lt;meta</span> <span class="na">charset=</span><span class="s">"&lt;mark class="</span><span class="na">important</span><span class="err">"</span><span class="nt">&gt;</span>UTF-8<span class="nt"></mark></span>"&gt;
+    <span class="nt">&lt;link</span> <span class="na">rel=</span><span class="s">"stylesheet"</span> <span class="na">href=</span><span class="s">"s/screen.css"</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;script </span><span class="na">src=</span><span class="s">"j/jquery.js"</span><span class="nt">&gt;&lt;/script&gt;</span>
+<span class="nt"><mark>&lt;/head&gt;</mark></span>
+</code></pre></div></div>
+
+</div></section>
+
+<!-- slide #10 -->
+<section class="slide" id="plain-code-listing"><div><h2>Plain code listing</h2>
+
+<div class="no-numbers highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;html</span> <span class="na">lang=</span><span class="s">"en"</span><span class="nt">&gt;</span>
+<span class="nt"><mark>&lt;head&gt;</mark></span> <span class="nt">&lt;mark</span> <span class="na">class=</span><span class="s">"comment"</span><span class="nt">&gt;</span><span class="c">&lt;!--Comment--&gt;</span><span class="nt"></mark></span>
+    <span class="nt">&lt;title&gt;</span>Shower<span class="nt">&lt;/title&gt;</span>
+    <span class="nt">&lt;meta</span> <span class="na">charset=</span><span class="s">"&lt;mark class="</span><span class="na">important</span><span class="err">"</span><span class="nt">&gt;</span>UTF-8<span class="nt"></mark></span>"&gt;
+    <span class="nt">&lt;link</span> <span class="na">rel=</span><span class="s">"stylesheet"</span> <span class="na">href=</span><span class="s">"s/screen.css"</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;script </span><span class="na">src=</span><span class="s">"j/jquery.js"</span><span class="nt">&gt;&lt;/script&gt;</span>
+<span class="nt"><mark>&lt;/head&gt;</mark></span>
+</code></pre></div></div>
+
+</div></section>
+
+<!-- slide #11 -->
+<section class="slide shout" id="you-canshout-this-way"><div><h2>You Can<br />Shout This Way</h2>
+
+<footer>Typewriter etsy messenger bag fingerstache.</footer>
+
+</div></section>
+
+<!-- slide #12 -->
+<section class="slide slide shout grow" id="growing-shout"><div><h2>Growing shout</h2>
+
+</div></section>
+
+<!-- slide #13 -->
+<section class="slide slide shout shrink" id="shrinking-shoud"><div><h2>Shrinking shoud</h2>
+
+</div></section>
+
+<!-- slide #14 -->
+<section class="slide slide cover"><div><h2><img src="themes/bright/pictures/exact.png" alt="" /></h2>
+
+</div></section>
+
+<!-- slide #15 -->
+<section class="slide slide cover w" id="-1"><div><h2><img src="themes/bright/pictures/wide.png" alt="" /></h2>
+
+</div></section>
+
+<!-- slide #16 -->
+<section class="slide slide cover h" id="-2"><div><h2><img src="themes/bright/pictures/tall.png" alt="" /></h2>
+
+<footer>Typewriter etsy messenger bag fingerstache.</footer>
+
+</div></section>
+
+<!-- slide #17 -->
+<section class="slide slide cover h" id="-3"><div><h2><img src="themes/bright/pictures/wide.png" alt="" /></h2>
+
+</div></section>
+
+<!-- slide #18 -->
+<section class="slide slide cover w" id="-4"><div><h2><img src="themes/bright/pictures/tall.png" alt="" /></h2>
+
+</div></section>
+
+<!-- slide #19 -->
+<section class="slide slide shout" id="-5"><div><h2> </h2>
+
+<p><img src="themes/bright/pictures/square.png" alt="" class="place t l" />
+<img src="themes/bright/pictures/square.png" alt="" class="place t" />
+<img src="themes/bright/pictures/square.png" alt="" class="place t r" />
+<img src="themes/bright/pictures/square.png" alt="" class="place l" />
+<img src="themes/bright/pictures/square.png" alt="" class="place" />
+<img src="themes/bright/pictures/square.png" alt="" class="place r" />
+<img src="themes/bright/pictures/square.png" alt="" class="place b l" />
+<img src="themes/bright/pictures/square.png" alt="" class="place b" />
+<img src="themes/bright/pictures/square.png" alt="" class="place b r" /></p>
+
+</div></section>
+
+<!-- slide #20 -->
+<section class="slide" data-timing="00:03" id="timer"><div><h2>Timer</h2>
+
+<p>Three seconds to go.</p>
+
+</div></section>
+
+<!-- slide #21 -->
+<section class="slide" id="list-navigation"><div><h2>List navigation</h2>
+
+<ol>
+  <li>Ennui keffiyeh thundercats</li>
+  <li class="next">Jean shorts biodiesel</li>
+  <li class="next">Terry richardson, swag blog</li>
+  <li class="next">Locavore umami vegan helvetica</li>
+  <li class="next">Fingerstache kale chips</li>
+</ol>
+
+<p class="next">Before they sold out master</p>
+
+</div></section>
+
+    
+    <div class="progress"></div>
+    <footer class="badge"><a href="https://github.yandex-team.ru/presentation/jekyller">Fork me on Github</a></footer>
+
+    <script src="shower.min.js"></script>
+    <!-- Copyright © 2019 Nikolai Kochetov, Yandex -->
+</body>
+</html>

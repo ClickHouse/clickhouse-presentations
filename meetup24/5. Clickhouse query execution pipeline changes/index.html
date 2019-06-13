@@ -1,0 +1,595 @@
+<!DOCTYPE HTML>
+
+
+<html lang="en">
+<head>
+    <title>ClickHouse <br>Query Execution Pipeline</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link rel="stylesheet" href="themes/yandex2/styles/screen-16x9.css">
+    <style>
+/* собственные стили можно писать здесь!! */
+
+
+.noborder { border: none; }
+</style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse <br>Query Execution Pipeline</h1>
+        <p>Nikolai Kochetov, Yandex</p>
+
+    </header>
+
+    
+
+<!-- slide #1 -->        
+<section class="slide cover"><div><h2><img src="themes/yandex2/images/logo-en.svg" alt="" class="logo" /></h2>
+
+</div></section>
+
+<!-- slide #2 -->
+<section class="slide title" id="clickhouse-query-execution-pipeline"><div><h2>ClickHouse <br />Query Execution Pipeline</h2>
+
+<h3 id="-1"><img src="themes/yandex2/images/title-logo-en.svg" alt="" /></h3>
+
+<div class="authors">
+
+<p>Nikolai Kochetov</p>
+<p>ClickHouse developer</p>
+
+
+
+
+</div>
+
+</div></section>
+
+<!-- slide #3 -->
+<section class="slide section" id="execution-pipeline-in-dbms"><div><h2>Execution Pipeline in DBMS</h2>
+
+</div></section>
+
+<!-- slide #4 -->
+<section class="slide" id="query-example"><div><h2>Query Example</h2>
+
+<p class="image-right"><img src="pictures/pipeline_simple_1.svg" alt="" /></p>
+
+<figure class="highlight"><pre><code class="language-sql" data-lang="sql"><span class="k">SELECT</span> <span class="k">avg</span><span class="p">(</span><span class="k">length</span><span class="p">(</span><span class="n">URL</span><span class="p">))</span> <span class="k">FROM</span> <span class="n">hits</span> <span class="k">WHERE</span> <span class="n">URL</span> <span class="o">!=</span> <span class="s1">''</span></code></pre></figure>
+
+<p><strong>Independent execution steps</strong></p>
+<ul>
+  <li>Read column <code class="highlighter-rouge">URL</code></li>
+  <li>Calculate expression <code class="highlighter-rouge">URL != ''</code></li>
+  <li>Filter column <code class="highlighter-rouge">URL</code></li>
+  <li>Calculate function <code class="highlighter-rouge">length(URL)</code></li>
+  <li>Calculate aggregate function <code class="highlighter-rouge">avg</code></li>
+</ul>
+
+</div></section>
+
+<!-- slide #5 -->
+<section class="slide" id="pipeline"><div><h2>Pipeline</h2>
+
+<p class="image-right"><img src="pictures/pipeline_simple_1.svg" alt="" /></p>
+
+<figure class="highlight"><pre><code class="language-sql" data-lang="sql"><span class="k">SELECT</span> <span class="k">avg</span><span class="p">(</span><span class="k">length</span><span class="p">(</span><span class="n">URL</span><span class="p">))</span> <span class="k">FROM</span> <span class="n">hits</span> <span class="k">WHERE</span> <span class="n">URL</span> <span class="o">!=</span> <span class="s1">''</span></code></pre></figure>
+
+<p><strong>Chain (tree, graph) of steps with</strong></p>
+<ul>
+  <li>Simple operations</li>
+  <li>Clear interpretation</li>
+  <li>Parallel execution</li>
+</ul>
+
+</div></section>
+
+<!-- slide #6 -->
+<section class="slide" id="pipeline-execution-data-flow"><div><h2>Pipeline execution (Data flow)</h2>
+
+<p><strong>In-memory execution (LocustDB)</strong></p>
+<ul>
+  <li>Sort in topological order</li>
+  <li>Run each step for all query data</li>
+</ul>
+
+<p><strong>Properties</strong></p>
+<ul>
+  <li>Simple</li>
+  <li>Fast</li>
+  <li>For in-memory databases</li>
+</ul>
+
+</div></section>
+
+<!-- slide #7 -->
+<section class="slide" id="pipeline-execution-data-flow-1"><div><h2>Pipeline execution (Data flow)</h2>
+
+<p><strong>Row by row execution (MySQL, Postgres)</strong></p>
+
+<p><img src="img/row_execution.svg" alt="" /></p>
+
+</div></section>
+
+<!-- slide #8 -->
+<section class="slide" id="pipeline-execution-data-flow-2"><div><h2>Pipeline execution (Data flow)</h2>
+
+<p><strong>Batch execution (MonetDB, ClickHouse)</strong></p>
+
+<p><img src="img/batch_execution.svg" alt="" /></p>
+
+</div></section>
+
+<!-- slide #9 -->
+<section class="slide" id="pipeline-execution-data-flow-3"><div><h2>Pipeline execution (Data flow)</h2>
+
+<p><strong>Row by row execution</strong></p>
+<ul>
+  <li>Simple</li>
+  <li>High overhead</li>
+</ul>
+
+<p><strong>Batch execution</strong></p>
+<ul>
+  <li>Small overhead</li>
+  <li>Vectorized execution</li>
+  <li>Greater memory consumption</li>
+</ul>
+
+</div></section>
+
+<!-- slide #10 -->
+<section class="slide" id="pipeline-execution-logistics"><div><h2>Pipeline execution (Logistics)</h2>
+
+<p><strong>Push strategy</strong></p>
+
+<p><img src="img/push.svg" alt="" /></p>
+
+<p>ClickHouse: IBlockOutputStream</p>
+
+<p><br />
+<strong>Pull strategy</strong></p>
+
+<p><img src="img/pull.svg" alt="" /></p>
+
+<p>ClickHouse: IBlockInputStream</p>
+
+</div></section>
+
+<!-- slide #11 -->
+<section class="slide" id="pipeline-execution-logistics-1"><div><h2>Pipeline execution (Logistics)</h2>
+
+<p><strong>Push vs Pool</strong></p>
+
+<p>Insert query (into several partitions) - push</p>
+
+<p><img src="img/push_insert.svg" alt="" /></p>
+
+</div></section>
+
+<!-- slide #12 -->
+<section class="slide" id="pipeline-execution-logistics-2"><div><h2>Pipeline execution (Logistics)</h2>
+
+<p><strong>Push vs Pool</strong></p>
+
+<p>Select query (form several parts and order by) - pull</p>
+
+<p><img src="img/pull_select.svg" alt="" /></p>
+
+</div></section>
+
+<!-- slide #13 -->
+<section class="slide" id="pipeline-execution-logistics-3"><div><h2>Pipeline execution (Logistics)</h2>
+
+<p><strong>Push vs Pool</strong></p>
+
+<p>Merge parts - pull</p>
+
+<p><img src="img/merge_parts.svg" alt="" /></p>
+
+</div></section>
+
+<!-- slide #14 -->
+<section class="slide" id="pipeline-execution-logistics-4"><div><h2>Pipeline execution (Logistics)</h2>
+
+<p><strong>Push vs Pool</strong></p>
+
+<p>Insert select: difficult case</p>
+
+<p><img src="img/insert_select.svg" alt="" /></p>
+
+</div></section>
+
+<!-- slide #15 -->
+<section class="slide" id="pipeline-in-clickhouse-current"><div><h2>Pipeline in ClickHouse (current)</h2>
+
+<p><strong>Mixed strategy</strong></p>
+<ul>
+  <li>IBlockInputStream - for pulling (SELECT)</li>
+  <li>IBlockOutputStream - for pushing (INSERT)</li>
+  <li>BlockIO - connection point</li>
+</ul>
+
+<p><img src="img/insert_select-2.svg" alt="" /></p>
+
+</div></section>
+
+<!-- slide #16 -->
+<section class="slide" id="pipeline-in-clickhouse"><div><h2>Pipeline in ClickHouse</h2>
+
+<p><strong>Does current pipeline work well?</strong></p>
+<ul>
+  <li>Yes</li>
+</ul>
+
+<p><br /></p>
+
+<p><strong>Can it work better?</strong></p>
+<ul>
+  <li>Yes</li>
+</ul>
+
+<p><br /></p>
+
+<p>New pipeline (in development)</p>
+
+<p><code class="highlighter-rouge">SET experimental_use_processors = 1</code></p>
+
+</div></section>
+
+<!-- slide #17 -->
+<section class="slide" id="pipeline-in-clickhouse-1"><div><h2>Pipeline in ClickHouse</h2>
+
+<figure class="highlight"><pre><code class="language-sql" data-lang="sql"><span class="k">SELECT</span> <span class="n">hex</span><span class="p">(</span><span class="n">SHA256</span><span class="p">(</span><span class="o">*</span><span class="p">))</span> <span class="k">FROM</span>
+<span class="p">(</span>
+    <span class="k">SELECT</span> <span class="n">hex</span><span class="p">(</span><span class="n">SHA256</span><span class="p">(</span><span class="o">*</span><span class="p">))</span> <span class="k">FROM</span>
+    <span class="p">(</span>
+        <span class="k">SELECT</span> <span class="n">hex</span><span class="p">(</span><span class="n">SHA256</span><span class="p">(</span><span class="o">*</span><span class="p">))</span> <span class="k">FROM</span>
+        <span class="p">(</span>
+            <span class="k">SELECT</span> <span class="n">URL</span> <span class="k">FROM</span> <span class="n">hits</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">URL</span> <span class="k">ASC</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+
+<span class="mi">10000000</span> <span class="k">rows</span> <span class="k">in</span> <span class="k">set</span><span class="p">.</span> <span class="n">Elapsed</span><span class="p">:</span> <span class="mi">23</span><span class="p">.</span><span class="mi">227</span> <span class="n">sec</span><span class="p">.</span></code></pre></figure>
+
+<p><strong>Use processors pipeline</strong></p>
+
+<figure class="highlight"><pre><code class="language-sql" data-lang="sql"><span class="k">SET</span> <span class="n">experimental_use_processors</span> <span class="o">=</span> <span class="mi">1</span>
+
+<span class="mi">10000000</span> <span class="k">rows</span> <span class="k">in</span> <span class="k">set</span><span class="p">.</span> <span class="n">Elapsed</span><span class="p">:</span> <span class="mi">10</span><span class="p">.</span><span class="mi">599</span> <span class="n">sec</span><span class="p">.</span></code></pre></figure>
+
+</div></section>
+
+<!-- slide #18 -->
+<section class="slide section" id="better-pipeline-in-clickhouse"><div><h2>Better Pipeline in ClickHouse</h2>
+
+</div></section>
+
+<!-- slide #19 -->
+<section class="slide" id="processors"><div><h2>Processors</h2>
+<p><strong>Pipeline is a directional graph</strong></p>
+<ul>
+  <li>Node - IProcessor</li>
+  <li>Port (input or output) can store chunk of data</li>
+  <li>Edge - a pair of connected ports</li>
+</ul>
+
+<p><img src="pictures/processors_items.svg" alt="" /></p>
+
+</div></section>
+
+<!-- slide #20 -->
+<section class="slide" id="pipeline-execution"><div><h2>Pipeline execution</h2>
+
+<p><strong>How to execute</strong></p>
+<ul>
+  <li>Traverse graph all the time</li>
+  <li>Execute everything which can be executed</li>
+  <li>Check ports state to visit neighbors</li>
+</ul>
+
+<p><strong>Why it works</strong></p>
+<ul>
+  <li>Batch execution =&gt; low traverse overhead</li>
+  <li>Thread safe operations =&gt; parallelism</li>
+</ul>
+
+</div></section>
+
+<!-- slide #21 -->
+<section class="slide" id="pipeline-execution-1"><div><h2>Pipeline execution</h2>
+
+<table style="border:0">
+
+<tr>
+<td style="border:0">
+<p><strong>Processors</strong></p>
+<ul>
+  <li>White - need data</li>
+  <li>Yellow - executing</li>
+  <li>Red - waiting</li>
+  <li>Gray - finished</li>
+</ul>
+</td>  
+<td style="border:0">
+<p><strong>Ports</strong></p>
+<ul>
+  <li>White - free</li>
+  <li>Orange - has data</li>
+</ul>
+</td>
+</tr>
+
+</table>
+
+<p><img src="pictures/merge/png/merge.gif" alt="" /></p>
+
+</div></section>
+
+<!-- slide #22 -->
+<section class="slide" id="parallel-execution"><div><h2>Parallel execution</h2>
+
+<figure class="highlight"><pre><code class="language-sql" data-lang="sql"><span class="k">SELECT</span> <span class="n">hex</span><span class="p">(</span><span class="n">SHA256</span><span class="p">(</span><span class="o">*</span><span class="p">))</span> <span class="k">FROM</span>
+<span class="p">(</span>
+    <span class="k">SELECT</span> <span class="n">hex</span><span class="p">(</span><span class="n">SHA256</span><span class="p">(</span><span class="o">*</span><span class="p">))</span> <span class="k">FROM</span>
+    <span class="p">(</span>
+        <span class="k">SELECT</span> <span class="n">hex</span><span class="p">(</span><span class="n">SHA256</span><span class="p">(</span><span class="o">*</span><span class="p">))</span> <span class="k">FROM</span>
+        <span class="p">(</span>
+            <span class="k">SELECT</span> <span class="n">URL</span> <span class="k">FROM</span> <span class="n">hits</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">URL</span> <span class="k">ASC</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+
+<span class="mi">10000000</span> <span class="k">rows</span> <span class="k">in</span> <span class="k">set</span><span class="p">.</span> <span class="n">Elapsed</span><span class="p">:</span> <span class="mi">23</span><span class="p">.</span><span class="mi">227</span> <span class="n">sec</span><span class="p">.</span></code></pre></figure>
+
+<p><strong>Use processors pipeline</strong></p>
+
+<figure class="highlight"><pre><code class="language-sql" data-lang="sql"><span class="k">SET</span> <span class="n">experimental_use_processors</span> <span class="o">=</span> <span class="mi">1</span>
+
+<span class="mi">10000000</span> <span class="k">rows</span> <span class="k">in</span> <span class="k">set</span><span class="p">.</span> <span class="n">Elapsed</span><span class="p">:</span> <span class="mi">10</span><span class="p">.</span><span class="mi">599</span> <span class="n">sec</span><span class="p">.</span></code></pre></figure>
+
+</div></section>
+
+<!-- slide #23 -->
+<section class="slide" id="parallel-execution-1"><div><h2>Parallel execution</h2>
+<p>How ClickHouse executes queries in parallel?</p>
+
+<p><img src="img/parallel_current.svg" alt="" /></p>
+
+<p><strong>Copy pipeline for each thread</strong></p>
+
+</div></section>
+
+<!-- slide #24 -->
+<section class="slide" id="parallel-execution-2"><div><h2>Parallel execution</h2>
+
+<p><strong>Pull strategy (IBlockInputStream)</strong></p>
+
+<p>Query Pipeline</p>
+
+<p><img src="img/threading.svg" alt="" /></p>
+
+<p><strong>Part of pipeline is executed in single thread</strong></p>
+
+</div></section>
+
+<!-- slide #25 -->
+<section class="slide" id="parallel-execution-3"><div><h2>Parallel execution</h2>
+
+<p><strong>Graph traverse (Processors)</strong></p>
+
+<p>Query Pipeline</p>
+
+<p><img src="img/threading-2.svg" alt="" /></p>
+
+<p><strong>Right chain can be executed in 5 threads (best case)</strong></p>
+
+</div></section>
+
+<!-- slide #26 -->
+<section class="slide" id="dynamic-pipeline-modification"><div><h2>Dynamic pipeline modification</h2>
+
+<p><strong>Sometimes we need to change pipeline during execution</strong></p>
+
+<p>Use previous pipeline as example</p>
+
+<p><img src="img/dynamic_pipeline.svg" alt="" /></p>
+
+<p><strong><code class="highlighter-rouge">Sort</code> stores all query data in memory</strong></p>
+
+<p>Set <code class="highlighter-rouge">max_bytes_before_external_sort = &lt;some limit&gt;</code></p>
+
+</div></section>
+
+<!-- slide #27 -->
+<section class="slide" id="dynamic-pipeline-modification-1"><div><h2>Dynamic pipeline modification</h2>
+
+<p><strong>Sometimes we need to change pipeline during execution</strong></p>
+
+<p>Use previous pipeline as example</p>
+
+<p><img src="img/dynamic_pipeline-1.svg" alt="" /></p>
+
+<p><strong><code class="highlighter-rouge">Sort</code> stores all query data in memory</strong></p>
+
+<p>Set <code class="highlighter-rouge">max_bytes_before_external_sort = &lt;some limit&gt;</code></p>
+
+</div></section>
+
+<!-- slide #28 -->
+<section class="slide" id="dynamic-pipeline-modification-2"><div><h2>Dynamic pipeline modification</h2>
+
+<p><strong>Sometimes we need to change pipeline during execution</strong></p>
+
+<p>Use previous pipeline as example</p>
+
+<p><img src="img/dynamic_pipeline-2.svg" alt="" /></p>
+
+<p><strong><code class="highlighter-rouge">Sort</code> stores all query data in memory</strong></p>
+
+<p>Set <code class="highlighter-rouge">max_bytes_before_external_sort = &lt;some limit&gt;</code></p>
+
+</div></section>
+
+<!-- slide #29 -->
+<section class="slide" id="dynamic-pipeline-modification-3"><div><h2>Dynamic pipeline modification</h2>
+
+<p><strong>Sometimes we need to change pipeline during execution</strong></p>
+
+<p>Use previous pipeline as example</p>
+
+<p><img src="img/dynamic_pipeline-3.svg" alt="" /></p>
+
+<p><strong><code class="highlighter-rouge">Sort</code> stores all query data in memory</strong></p>
+
+<p>Set <code class="highlighter-rouge">max_bytes_before_external_sort = &lt;some limit&gt;</code></p>
+
+</div></section>
+
+<!-- slide #30 -->
+<section class="slide" id="dynamic-pipeline-modification-4"><div><h2>Dynamic pipeline modification</h2>
+
+<p><strong>Sometimes we need to change pipeline during execution</strong></p>
+
+<p>Use previous pipeline as example</p>
+
+<p><img src="img/dynamic_pipeline-end.svg" alt="" /></p>
+
+<p><strong><code class="highlighter-rouge">Sort</code> stores all query data in memory</strong></p>
+
+<p>Set <code class="highlighter-rouge">max_bytes_before_external_sort = &lt;some limit&gt;</code></p>
+
+</div></section>
+
+<!-- slide #31 -->
+<section class="slide section" id="planned-features"><div><h2>Planned features</h2>
+
+</div></section>
+
+<!-- slide #32 -->
+<section class="slide" id="explain-query"><div><h2>Explain Query</h2>
+
+<p>Will print pipeline in Graphviz format</p>
+
+<figure class="highlight"><pre><code class="language-sql" data-lang="sql"><span class="k">EXPLAIN</span> <span class="k">SELECT</span> <span class="k">avg</span><span class="p">(</span><span class="k">length</span><span class="p">(</span><span class="n">URL</span><span class="p">))</span> <span class="k">FROM</span> <span class="n">hits</span> <span class="k">WHERE</span> <span class="n">URL</span> <span class="o">!=</span> <span class="s1">''</span></code></pre></figure>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>digraph
+{
+  n140638219161104[label="SourceFromStorage"];
+  n140638217764624[label="ExpressionTransform"];
+  n140638219121680[label="FilterTransform"];
+  n140638217764048[label="ExpressionTransform"];
+  n140638217755024[label="AggregatingTransform"];
+  n140638217763856[label="ExpressionTransform"];
+  n140638219121360[label="LimitsCheckingTransform"];
+  n140638142287888[label="ConvertingAggregatedToBlocksTransform"];
+  ...
+}
+</code></pre></div></div>
+
+</div></section>
+
+<!-- slide #33 -->
+<section class="slide" id="push-predicate-to-subquery"><div><h2>Push predicate to subquery</h2>
+
+<figure class="highlight"><pre><code class="language-sql" data-lang="sql"><span class="k">select</span> <span class="n">z</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">y</span> <span class="k">from</span> <span class="p">(</span><span class="k">select</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span> <span class="k">as</span> <span class="n">z</span><span class="p">,</span> <span class="n">y</span> <span class="k">from</span> <span class="k">table</span><span class="p">)</span> <span class="k">where</span> <span class="n">y</span> <span class="o">&gt;</span> <span class="mi">1</span></code></pre></figure>
+
+<p><strong>AST rewriting approach</strong></p>
+
+<p><img src="img/AST_simple.svg" alt="" /></p>
+
+</div></section>
+
+<!-- slide #34 -->
+<section class="slide" id="push-predicate-to-subquery-1"><div><h2>Push predicate to subquery</h2>
+
+<figure class="highlight"><pre><code class="language-sql" data-lang="sql"><span class="k">select</span> <span class="n">z</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">y</span> <span class="k">from</span> <span class="p">(</span><span class="k">select</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span> <span class="k">as</span> <span class="n">z</span><span class="p">,</span> <span class="n">y</span> <span class="k">from</span> <span class="k">table</span>  <span class="k">where</span> <span class="n">y</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span></code></pre></figure>
+
+<p><strong>AST rewriting approach</strong></p>
+
+<p><img src="img/AST_simple-2.svg" alt="" /></p>
+
+</div></section>
+
+<!-- slide #35 -->
+<section class="slide" id="push-predicate-to-subquery-2"><div><h2>Push predicate to subquery</h2>
+
+<figure class="highlight"><pre><code class="language-sql" data-lang="sql"><span class="k">select</span> <span class="n">z</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">y</span> <span class="k">from</span> <span class="p">(</span><span class="k">select</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span> <span class="k">as</span> <span class="n">z</span><span class="p">,</span> <span class="n">y</span> <span class="k">from</span> <span class="k">table</span>  <span class="k">where</span> <span class="n">y</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span></code></pre></figure>
+
+<p><strong>Pipeline optimization approach</strong></p>
+
+<p><img src="img/push_down_pipeline-simple.svg" alt="" /></p>
+
+</div></section>
+
+<!-- slide #36 -->
+<section class="slide" id="resource-management"><div><h2>Resource management</h2>
+
+<p><strong>Manage quota for users</strong></p>
+<ul>
+  <li>Operations priority (high for API, low for analytics)</li>
+  <li>Limits on CPU, Memory, RPS, BPS</li>
+  <li>May enable only for high load</li>
+</ul>
+
+<p><strong>Common executor for multiple pipelines</strong></p>
+
+</div></section>
+
+<!-- slide #37 -->
+<section class="slide" id="common-pipeline-for-several-queries"><div><h2>Common pipeline for several queries</h2>
+
+<p>Example set of similar queries</p>
+
+<figure class="highlight"><pre><code class="language-sql" data-lang="sql"><span class="k">SELECT</span> <span class="k">sum</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="k">FROM</span> <span class="k">table</span> <span class="k">WHERE</span> <span class="n">foo</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+<span class="k">SELECT</span> <span class="k">sum</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="k">FROM</span> <span class="k">table</span> <span class="k">WHERE</span> <span class="n">foo</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">=</span> <span class="mi">5</span><span class="p">;</span>
+<span class="k">SELECT</span> <span class="k">sum</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="k">FROM</span> <span class="k">table</span> <span class="k">WHERE</span> <span class="n">foo</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">=</span> <span class="mi">7</span><span class="p">;</span></code></pre></figure>
+
+<p><strong>It’s possible to make common pipeline for several queries</strong></p>
+
+<p><img src="pictures/many_q.svg" alt="" /></p>
+
+</div></section>
+
+<!-- slide #38 -->
+<section class="slide" id="pipeline-definition-language-dsl"><div><h2>Pipeline definition language (DSL)</h2>
+<p><strong>Idea</strong></p>
+<ul>
+  <li>Define text language for pipelines</li>
+  <li>Support bidirectional conversions</li>
+</ul>
+
+<p><strong>Features</strong></p>
+<ul>
+  <li>Can send ready pipeline to replicas</li>
+  <li>Low level interface</li>
+  <li>Pipelines which are not representable is SQL</li>
+</ul>
+
+</div></section>
+
+<!-- slide #39 -->
+<section class="slide contacts" id="contacts"><div><h2>Contacts</h2>
+
+<ul>
+  <li class="site">Web site: <a href="https://clickhouse.yandex/">https://clickhouse.yandex</a></li>
+  <li class="site">Google groups: <a href="https://groups.google.com/forum/#!forum/clickhouse">https://groups.google.com/forum/#!forum/clickhouse</a></li>
+  <li class="telegram">Telegram (Ru): <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_ru</a></li>
+  <li class="telegram">Telegram (En): <a href="https://telegram.me/clickhouse_en">https://telegram.me/clickhouse_en</a></li>
+  <li class="github">Github: <a href="https://github.com/yandex/ClickHouse/">https://github.com/yandex/ClickHouse</a></li>
+  <li class="twitter">Twitter: <a href="https://twitter.com/ClickHouseDB">https://twitter.com/ClickHouseDB</a></li>
+  <li class="mail">Maillist: <a href="mailto:clickhouse-feedback@yandex-team.com">clickhouse-feedback@yandex-team.com</a></li>
+</ul>
+
+</div></section>
+
+    
+    <div class="progress"></div>
+    <footer class="badge"><a href="https://github.yandex-team.ru/presentation/jekyller">Fork me on Github</a></footer>
+
+    <script src="shower.min.js"></script>
+    <!-- Copyright © 2019 Nikolai Kochetov, Yandex -->
+</body>
+</html>
