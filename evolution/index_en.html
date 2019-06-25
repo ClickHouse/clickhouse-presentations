@@ -202,8 +202,8 @@
     <section class="slide">
         <h2>The main cluster of Yandex.Metrica</h2>
         <ul style="font-size:30px;">
-            <li>25 trillions of rows (as of Sep 2017)</li>
-            <li>500 servers</li>
+            <li>>30 trillions of rows (as of 2019)</li>
+            <li>>600 servers</li>
             <li>total throughput of query processing is up to two terabytes per second</li>
         </ul>
         <p style="font-size:60%; margin-top:2em">* If you want to try ClickHouse, one server or VM is enough.</p>
@@ -231,8 +231,8 @@
 
     <section class="slide">
         <h2>Open-source</h2>
-        <p>More than 100 companies are already using ClickHouse.</p>
-        <p>Examples: Mail.ru, Cloudflare, Vertamedia, Lifestreet, Kaspersky...</p>
+        <p>More than 1000 companies are already using ClickHouse.</p>
+        <p>Examples: ByteDance, Sina, Tencent, JD.com, QuaiShou, ...</p>
     </section>
 
     <section class="slide">
@@ -245,10 +245,9 @@
 
     <section class="slide">
         <h2 style="font-size: 40px;">When <span style="color:red;">not</span> to use ClickHouse</h2>
-        <p><span style="font-size: 30px;color: #888;">OLTP</span><br/>ClickHouse doesn't have UPDATE statement and full-featured transactions.</p>
+        <p><span style="font-size: 30px;color: #888;">OLTP</span><br/>ClickHouse doesn't have full featured UPDATE statement and transactions.</p>
         <p><span style="font-size: 30px;color: #888;">Key-Value</span><br/>If you want high load of small single-row queries, please use another system.</p>
         <p><span style="font-size: 30px;color: #888;">Blob-store, document oriented</span><br/>ClickHouse is intended for vast amount of fine-grained data.</p>
-        <p><span style="font-size: 30px;color: #888;">Over-normalized data</span><br/>Better to make up single wide fact table with pre-joined dimensions.</p>
     </section>
 
     <section class="slide">
@@ -263,14 +262,6 @@
         &laquo;When we evaluated ClickHouse the results were great compared to Prestodb. Even though the columnar storage optimizations for ORC and Clickhouse is quite similar, Clickhouse uses CPU and Memory resources more efficiently (Presto also uses vectorized execution but cannot take advantage of hardware level optimizations such as SIMD instruction sets because it's written in Java so that's fair) so we also wanted to add support for Clickhouse for our open-source analytics platform Rakam (https://github.com/rakam-io/rakam)&raquo;</p>
     </section>
 
-    <section class="slide">
-        <h2>ClickHouse vs. InfiniDB</h2>
-        <p>&laquo;结论：clickhouse速度更快！&raquo;</p>
-        <p>&laquo;In conclusion, ClickHouse is faster!&raquo;</p>
-        <p><a href="http://verynull.com/2016/08/22/infinidb与clickhouse对比/">http://verynull.com/2016/08/22/infinidb与clickhouse对比/</a></p>
-        <p><img src="pictures/infinidb_cn.png" style="width:100%"/></p>
-    </section>
-    
     <section class="slide">
         <h2>&nbsp;</h2>
         <p>Our CEO first saw ClickHouse in action:</p>
@@ -299,6 +290,21 @@
         <p><b>Specialization and attention to detail.</b></p>
         <p>Example: we have 17 different algorithms for GROUP BY. Best one is selected for your query.</p>
     </section>
+    
+    <section class="slide">
+        <h2 style="font-size: 30pt;">Unusual applications of ClickHouse</h2>
+
+        <p>Bioinformatics - evolutionary genetics:
+        <br/><a href="https://github.com/msestak/FindOrigin">https://github.com/msestak/FindOrigin</a></p>
+
+        <p>"We are exploring evolution of novel genes in genomes because if seems that genomes are far from being static as previously believed and what actually happens is that new genes are constantly being added and old genes are lost."</p>
+        
+        <p>Search engine and analytics for Bitcoin transactions:
+        <br/><a href="https://blockchair.com/">https://blockchair.com/</a></p>
+
+        <p>"We have quite large tables on just single server and everything works really fast &mdash with any filters and sorting everything is processed just instantly."</p>
+    </section>
+
 
 <!-- Interfaces -->
 
@@ -306,41 +312,26 @@
     <h2>Interfaces</h2>
     <p style="font-size: 30px;">HTTP REST</p>
     <p style="font-size: 30px;">clickhouse-client</p>
-    <p style="font-size: 30px;">JDBC (production), ODBC (beta)</p>
+    <p style="font-size: 30px;">JDBC, ODBC</p>
+    <p style="font-size: 30px;">(new) MySQL protocol compatibility</p>
     <p>&nbsp;</p>
     <p style="font-size: 30px;">Python, PHP, Perl, Go,<br/>Node.js, Ruby, C++, .NET, Scala, R, Julia, Rust</p>
-</section>
-
-<section class="slide">
-    <h2 style="font-size: 32px;">Integration with data visualization tools</h2>
-    <p style="font-size: 30px;">Tabix (tabix.io) &mdash; developed specially for ClickHouse.</p>
-    <p style="font-size: 30px;"><img style="float: left; padding-right: 20px;" src="pictures/tabix.gif" width="300" />And:<br/><br/>Grafana, Redash, Apache Zeppelin,<br/>Superset&hellip;</p>
 </section>
 
     <section class="slide">
         <h2>Community</h2>
         <p>Web site: <a href="https://clickhouse.yandex/">https://clickhouse.yandex/</a></p>
-        <p>Google groups: <a href="https://groups.google.com/forum/#!forum/clickhouse">https://groups.google.com/forum/#!forum/clickhouse</a></p>
-        <p>Maillist: clickhouse-feedback@yandex-team.com</p>
-        <p>Telegram chat: <a href="https://telegram.me/clickhouse_en">https://telegram.me/clickhouse_en</a> and <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_ru</a> (now with 966 members)</p>
         <p>GitHub: <a href="https://github.com/yandex/ClickHouse/">https://github.com/yandex/ClickHouse/</a></p>
+        <p>Maillist: clickhouse-feedback@yandex-team.com</p>
+        <p>Wechat: 3 groups, invite only (ask Amos Bird to invite)</p>
         <p>&nbsp;</p>
-        <p>+ meetups. Moscow, Saint-Petersburg, Novosibirsk, Ekaterinburg, Minsk...<br/>Upcoming: <b>Berlin</b> (5th october 2017).</p>
+        <p>+ meetups. Moscow, Saint-Petersburg, Novosibirsk, Ekaterinburg, Minsk... Beijing, Shanghai, Shenzhen.</p>
     </section>
 
     <section class="slide">
         <h2>&nbsp;</h2>
         <p style="font-size: 40px;">Thank you. Questions.</p>
-    </section>
-
-    <section class="slide">
-        <h2>ClickHouse for sensor data</h2>
-        <p><img src="pictures/kaspersky.png" style="width:100%"/></p>
-    </section>
-
-    <section class="slide">
-        <h2>ClickHouse vs. Greenplum</h2>
-        <p><img src="pictures/greenplum.png" style="width:50%"/></p>
+        <p style="font-size: 40px;">Next: deep dive.</p>
     </section>
 
     <div class="progress"></div>
