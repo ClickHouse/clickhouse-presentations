@@ -160,7 +160,7 @@
 <!-- slide #11 -->
 <section class="slide" id="pipeline-execution-logistics-1"><div><h2>Pipeline execution (Logistics)</h2>
 
-<p><strong>Push vs Pool</strong></p>
+<p><strong>Push vs Pull</strong></p>
 
 <p>Insert query (into several partitions) - push</p>
 
@@ -171,7 +171,7 @@
 <!-- slide #12 -->
 <section class="slide" id="pipeline-execution-logistics-2"><div><h2>Pipeline execution (Logistics)</h2>
 
-<p><strong>Push vs Pool</strong></p>
+<p><strong>Push vs Pull</strong></p>
 
 <p>Select query (form several parts and order by) - pull</p>
 
@@ -182,7 +182,7 @@
 <!-- slide #13 -->
 <section class="slide" id="pipeline-execution-logistics-3"><div><h2>Pipeline execution (Logistics)</h2>
 
-<p><strong>Push vs Pool</strong></p>
+<p><strong>Push vs Pull</strong></p>
 
 <p>Merge parts - pull</p>
 
@@ -193,7 +193,7 @@
 <!-- slide #14 -->
 <section class="slide" id="pipeline-execution-logistics-4"><div><h2>Pipeline execution (Logistics)</h2>
 
-<p><strong>Push vs Pool</strong></p>
+<p><strong>Push vs Pull</strong></p>
 
 <p>Insert select: difficult case</p>
 
@@ -281,6 +281,34 @@
 </div></section>
 
 <!-- slide #20 -->
+<section class="slide" id="processors-1"><div><h2>Processors</h2>
+
+<p class="image-right"><img src="img/real_pipeline.svg" alt="" style="position:relative; top:-240px;" /></p>
+
+<figure class="highlight"><pre><code class="language-sql" data-lang="sql"><span class="k">SELECT</span> <span class="k">avg</span><span class="p">(</span><span class="k">length</span><span class="p">(</span><span class="n">URL</span><span class="p">))</span> <span class="o">+</span> <span class="mi">1</span>
+<span class="k">FROM</span> <span class="n">hits</span>
+<span class="k">WHERE</span> <span class="n">URL</span> <span class="o">!=</span> <span class="s1">''</span>
+    <span class="k">WITH</span> <span class="n">TOTALS</span>
+<span class="n">SETTINGS</span> <span class="n">extremes</span> <span class="o">=</span> <span class="mi">1</span>
+
+<span class="err">┌─</span><span class="n">plus</span><span class="p">(</span><span class="k">avg</span><span class="p">(</span><span class="k">length</span><span class="p">(</span><span class="n">URL</span><span class="p">)),</span> <span class="mi">1</span><span class="p">)</span><span class="err">─┐</span>
+<span class="err">│</span>          <span class="mi">85</span><span class="p">.</span><span class="mi">3475007793562</span> <span class="err">│</span>
+<span class="err">└───────────────────────────┘</span>
+
+<span class="n">Totals</span><span class="p">:</span>
+<span class="err">┌─</span><span class="n">plus</span><span class="p">(</span><span class="k">avg</span><span class="p">(</span><span class="k">length</span><span class="p">(</span><span class="n">URL</span><span class="p">)),</span> <span class="mi">1</span><span class="p">)</span><span class="err">─┐</span>
+<span class="err">│</span>          <span class="mi">85</span><span class="p">.</span><span class="mi">3475007793562</span> <span class="err">│</span>
+<span class="err">└───────────────────────────┘</span>
+
+<span class="n">Extremes</span><span class="p">:</span>
+<span class="err">┌─</span><span class="n">plus</span><span class="p">(</span><span class="k">avg</span><span class="p">(</span><span class="k">length</span><span class="p">(</span><span class="n">URL</span><span class="p">)),</span> <span class="mi">1</span><span class="p">)</span><span class="err">─┐</span>
+<span class="err">│</span>          <span class="mi">85</span><span class="p">.</span><span class="mi">3475007793562</span> <span class="err">│</span>
+<span class="err">│</span>          <span class="mi">85</span><span class="p">.</span><span class="mi">3475007793562</span> <span class="err">│</span>
+<span class="err">└───────────────────────────┘</span></code></pre></figure>
+
+</div></section>
+
+<!-- slide #21 -->
 <section class="slide" id="pipeline-execution"><div><h2>Pipeline execution</h2>
 
 <p><strong>How to execute</strong></p>
@@ -298,7 +326,7 @@
 
 </div></section>
 
-<!-- slide #21 -->
+<!-- slide #22 -->
 <section class="slide" id="pipeline-execution-1"><div><h2>Pipeline execution</h2>
 
 <table style="border:0">
@@ -328,7 +356,7 @@
 
 </div></section>
 
-<!-- slide #22 -->
+<!-- slide #23 -->
 <section class="slide" id="parallel-execution"><div><h2>Parallel execution</h2>
 
 <figure class="highlight"><pre><code class="language-sql" data-lang="sql"><span class="k">SELECT</span> <span class="n">hex</span><span class="p">(</span><span class="n">SHA256</span><span class="p">(</span><span class="o">*</span><span class="p">))</span> <span class="k">FROM</span>
@@ -352,7 +380,7 @@
 
 </div></section>
 
-<!-- slide #23 -->
+<!-- slide #24 -->
 <section class="slide" id="parallel-execution-1"><div><h2>Parallel execution</h2>
 <p>How ClickHouse executes queries in parallel?</p>
 
@@ -362,7 +390,7 @@
 
 </div></section>
 
-<!-- slide #24 -->
+<!-- slide #25 -->
 <section class="slide" id="parallel-execution-2"><div><h2>Parallel execution</h2>
 
 <p><strong>Pull strategy (IBlockInputStream)</strong></p>
@@ -375,7 +403,7 @@
 
 </div></section>
 
-<!-- slide #25 -->
+<!-- slide #26 -->
 <section class="slide" id="parallel-execution-3"><div><h2>Parallel execution</h2>
 
 <p><strong>Graph traverse (Processors)</strong></p>
@@ -388,7 +416,7 @@
 
 </div></section>
 
-<!-- slide #26 -->
+<!-- slide #27 -->
 <section class="slide" id="dynamic-pipeline-modification"><div><h2>Dynamic pipeline modification</h2>
 
 <p><strong>Sometimes we need to change pipeline during execution</strong></p>
@@ -403,7 +431,7 @@
 
 </div></section>
 
-<!-- slide #27 -->
+<!-- slide #28 -->
 <section class="slide" id="dynamic-pipeline-modification-1"><div><h2>Dynamic pipeline modification</h2>
 
 <p><strong>Sometimes we need to change pipeline during execution</strong></p>
@@ -418,7 +446,7 @@
 
 </div></section>
 
-<!-- slide #28 -->
+<!-- slide #29 -->
 <section class="slide" id="dynamic-pipeline-modification-2"><div><h2>Dynamic pipeline modification</h2>
 
 <p><strong>Sometimes we need to change pipeline during execution</strong></p>
@@ -433,7 +461,7 @@
 
 </div></section>
 
-<!-- slide #29 -->
+<!-- slide #30 -->
 <section class="slide" id="dynamic-pipeline-modification-3"><div><h2>Dynamic pipeline modification</h2>
 
 <p><strong>Sometimes we need to change pipeline during execution</strong></p>
@@ -448,7 +476,7 @@
 
 </div></section>
 
-<!-- slide #30 -->
+<!-- slide #31 -->
 <section class="slide" id="dynamic-pipeline-modification-4"><div><h2>Dynamic pipeline modification</h2>
 
 <p><strong>Sometimes we need to change pipeline during execution</strong></p>
@@ -463,12 +491,12 @@
 
 </div></section>
 
-<!-- slide #31 -->
+<!-- slide #32 -->
 <section class="slide section" id="planned-features"><div><h2>Planned features</h2>
 
 </div></section>
 
-<!-- slide #32 -->
+<!-- slide #33 -->
 <section class="slide" id="explain-query"><div><h2>Explain Query</h2>
 
 <p>Will print pipeline in Graphviz format</p>
@@ -491,7 +519,7 @@
 
 </div></section>
 
-<!-- slide #33 -->
+<!-- slide #34 -->
 <section class="slide" id="push-predicate-to-subquery"><div><h2>Push predicate to subquery</h2>
 
 <figure class="highlight"><pre><code class="language-sql" data-lang="sql"><span class="k">select</span> <span class="n">z</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">y</span> <span class="k">from</span> <span class="p">(</span><span class="k">select</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span> <span class="k">as</span> <span class="n">z</span><span class="p">,</span> <span class="n">y</span> <span class="k">from</span> <span class="k">table</span><span class="p">)</span> <span class="k">where</span> <span class="n">y</span> <span class="o">&gt;</span> <span class="mi">1</span></code></pre></figure>
@@ -502,7 +530,7 @@
 
 </div></section>
 
-<!-- slide #34 -->
+<!-- slide #35 -->
 <section class="slide" id="push-predicate-to-subquery-1"><div><h2>Push predicate to subquery</h2>
 
 <figure class="highlight"><pre><code class="language-sql" data-lang="sql"><span class="k">select</span> <span class="n">z</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">y</span> <span class="k">from</span> <span class="p">(</span><span class="k">select</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span> <span class="k">as</span> <span class="n">z</span><span class="p">,</span> <span class="n">y</span> <span class="k">from</span> <span class="k">table</span>  <span class="k">where</span> <span class="n">y</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span></code></pre></figure>
@@ -513,7 +541,7 @@
 
 </div></section>
 
-<!-- slide #35 -->
+<!-- slide #36 -->
 <section class="slide" id="push-predicate-to-subquery-2"><div><h2>Push predicate to subquery</h2>
 
 <figure class="highlight"><pre><code class="language-sql" data-lang="sql"><span class="k">select</span> <span class="n">z</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">y</span> <span class="k">from</span> <span class="p">(</span><span class="k">select</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span> <span class="k">as</span> <span class="n">z</span><span class="p">,</span> <span class="n">y</span> <span class="k">from</span> <span class="k">table</span>  <span class="k">where</span> <span class="n">y</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span></code></pre></figure>
@@ -524,7 +552,7 @@
 
 </div></section>
 
-<!-- slide #36 -->
+<!-- slide #37 -->
 <section class="slide" id="resource-management"><div><h2>Resource management</h2>
 
 <p><strong>Manage quota for users</strong></p>
@@ -538,7 +566,7 @@
 
 </div></section>
 
-<!-- slide #37 -->
+<!-- slide #38 -->
 <section class="slide" id="common-pipeline-for-several-queries"><div><h2>Common pipeline for several queries</h2>
 
 <p>Example set of similar queries</p>
@@ -553,7 +581,7 @@
 
 </div></section>
 
-<!-- slide #38 -->
+<!-- slide #39 -->
 <section class="slide" id="pipeline-definition-language-dsl"><div><h2>Pipeline definition language (DSL)</h2>
 <p><strong>Idea</strong></p>
 <ul>
@@ -570,7 +598,7 @@
 
 </div></section>
 
-<!-- slide #39 -->
+<!-- slide #40 -->
 <section class="slide contacts" id="contacts"><div><h2>Contacts</h2>
 
 <ul>
