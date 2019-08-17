@@ -30,7 +30,7 @@
 <br/>&mdash; NONE;
 <br/>&mdash; Delta(N); &mdash; N is the size of the data type in bytes.</p>
 <p>Codecs can be chained together:</p>
-<code>time DateTime <b>CODEC(Delta(4), LZ4)</b></code>
+<code>time DateTime <b>CODEC(Delta, LZ4)</b></code>
 <p style="margin-top: 1em;">&mdash; Delta is not a compression itself, it must be chained with a second codec.</p>
 <p>Per-column codecs have priority over <b>&lt;compression></b> config settings.</p>
 </section>
@@ -66,7 +66,7 @@ LIMIT 10
 <section class="slide">
 <h2>Per-Column Compression Codecs</h2>
 <code style="margin-top: -1em;">ALTER TABLE test.hits
-    MODIFY COLUMN ClientEventTime <b>CODEC(Delta(4), LZ4)</b></code>
+    MODIFY COLUMN ClientEventTime <b>CODEC(Delta, LZ4)</b></code>
 <p style="margin-top: 1em;">Changes are applied lazily: only for new data and while merging.</p>
 <code>ALTER TABLE test.hits
     UPDATE ClientEventTime = ClientEventTime WHERE 1</code>
@@ -122,7 +122,7 @@ for string fields with low number of unique values.</p>
 <h2>LowCardinality Data Type</h2>
 <code>SELECT count()
 FROM hits_333
-WHERE URLDomain LIKE 'aena.es'
+WHERE URLDomain LIKE '%aena.es%'
 
 ┌─count()─┐
 │     101 │
@@ -149,7 +149,7 @@ Ok.
 <h2>LowCardinality Data Type</h2>
 <code>SELECT count()
 FROM hits_333
-WHERE URLDomain LIKE 'aena.es'
+WHERE URLDomain LIKE '%aena.es%'
 
 ┌─count()─┐
 │     101 │
@@ -240,7 +240,7 @@ Usually by date/time.</p>
 <h2>Data Skipping Indices</h2>
 <code style="margin-top: -1em;">SELECT count()
 FROM test.hits
-WHERE URLDomain LIKE 'aena.es'
+WHERE URLDomain LIKE '%aena.es%'
 
 ┌─count()─┐
 │       1 │
@@ -266,7 +266,7 @@ OPTIMIZE TABLE test.hits FINAL;</code>
 <h2>Data Skipping Indices</h2>
 <code style="margin-top: -1em;">SELECT count()
 FROM test.hits
-WHERE URLDomain LIKE 'aena.es'
+WHERE URLDomain LIKE '%aena.es%'
 
 ┌─count()─┐
 │       1 │
@@ -384,10 +384,10 @@ Read 333454281 rows, 28.95 GiB in 11.860 sec., 28116209 rows/sec., 2.44 GiB/sec.
 <p>(contributed by <b>TouTiao/ByteDance</b>)</p>
 <code style="margin-top: 1em;">SELECT * FROM <b>hdfs</b>(
     'hdfs://hdfs1:9000/file',
-    'TSV', 'id UInt64, text String);</code>
+    'TSV', 'id UInt64, text String');</code>
 <code style="margin-top: 1em;">INSERT INTO TABLE FUNCTION <b>hdfs</b>(
     'hdfs://hdfs1:9000/file',
-    'TSV', 'id UInt64, text String) VALUES ...</code>
+    'TSV', 'id UInt64, text String') VALUES ...</code>
 <code style="margin-top: 1em;">CREATE TABLE (...) ENGINE =
     <b>HDFS</b>('hdfs://hdfs1:9000/file', 'TSV');</code>
 <p><br/>Drawbacks: not all authentication methods supported.</p>
@@ -559,6 +559,8 @@ LIMIT 10
 <p>Multiple storage volumes</p>
 <p>S3 import/export</p>
 <p>Optimization of ORDER BY with table's order key</p>
+<p>Gorilla codec</p>
+<p>Sampling profiler on query level</p>
 </section>
 
 <section class="slide">
@@ -577,7 +579,7 @@ LIMIT 10
         <p>Web site: <a href="https://clickhouse.yandex/">https://clickhouse.yandex/</a></p>
         <p>Google groups: <a href="https://groups.google.com/forum/#!forum/clickhouse">https://groups.google.com/forum/#!forum/clickhouse</a></p>
         <p>Maillist: clickhouse-feedback@yandex-team.com</p>
-        <p>Telegram chat: <a href="https://telegram.me/clickhouse_en">https://telegram.me/clickhouse_en</a></p>
+        <p>Telegram chat: <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_ru</a>, <a href="https://telegram.me/clickhouse_en">clickhouse_en</a></p>
         <p>GitHub: <a href="https://github.com/yandex/ClickHouse/">https://github.com/yandex/ClickHouse/</a></p>
         <p>Twitter: <a href="https://twitter.com/ClickHouseDB">https://twitter.com/ClickHouseDB</a></p>
     </section>
