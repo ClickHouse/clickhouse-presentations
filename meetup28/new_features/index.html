@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Сверхновые возможности ClickHouse</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x10.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>Сверхновые возможности ClickHouse</h1>
+    </header>
+
+    <section class="slide" id="cover">
+        <h1 style="margin-top: 150px; font-size: 48pt;"><span style="background: rgba(255, 255, 255, 0.75)">Сверхновые возможности ClickHouse</span></h1>
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px; font-size: 48pt;"><span style="background: rgba(255, 255, 255, 0.75)">Случайный набор фич<br/>о которых я вспомнил</span></h1>
+    </section>
+
+<section class="slide">
+<h2>Поддержка CONSTRAINTs</h2>
+<code style="margin-top: -1em;">CREATE TABLE hits
+(
+    URL String,
+    Domain String,
+    <b>CONSTRAINT</b> c_valid_url <b>CHECK</b> isValidUTF8(URL),
+    <b>CONSTRAINT</b> c_domain <b>CHECK</b> Domain = domain(URL)
+)</code>
+<p style="margin-top: 1em;">Данные проверяются при INSERT.</p>
+<p style="margin-top: 3em; color: gray; font-size: 12pt;">Разработчик &mdash; Глеб Новиков, ВШЭ</p>
+</section>
+
+<section class="slide">
+<h2>Поддержка CONSTRAINTs</h2>
+<code style="margin-top: -1em; font-size: 16pt;">INSERT INTO hits VALUES ('https://yandex.ru/', 'google.com')
+
+Exception: Constraint `c_domain` for table `hits`
+is violated at row 1.
+Expression: (<b>Domain</b> = domain(<b>URL</b>)).
+Column values:
+<b>URL</b> = 'https://yandex.ru/',
+<b>Domain</b> = 'google.com'.</code>
+<p style="margin-top: 1em;">Не проверяются при фоновых мержах.</p>
+<p>Не проверяются при ALTER UPDATE.</p>
+</section>
+
+<section class="slide">
+<h2>Поддержка CONSTRAINTs</h2>
+<code style="margin-top: -1em;">ALTER TABLE hits <b>ADD CONSTRAINT</b>
+    c_valid_url <b>CHECK</b> isValidUTF8(URL)</code>
+<p style="margin-top: 1em;">При добавлении CONSTRAINT, старые данные не проверяются.</p>
+<code>ALTER TABLE hits <b>DROP CONSTRAINT</b> c_valid_url</code>
+</section>
+
+<section class="slide">
+<h2>Параметризованные запросы</h2>
+<code style="margin-top: -1em;">SELECT count()
+FROM test.hits
+WHERE CounterID = <b>{id:UInt32}</b>
+AND SearchPhrase = <b>{phrase:String}</b></code>
+<p style="margin-top: 1em;">&mdash; подстановки именованные и типизированные;<br/>
+&mdash; подставляются на уровне синтаксического дерева.</p>
+<p>TODO:<br/>
+&mdash; подстановки для множеств в секции IN;<br/>
+&mdash; подстановки для имён таблиц, столбцов, баз данных.<br/>
+&mdash; возможность задать URL с предустановленными запросами.</p>
+<p style="margin-top: 3em; color: gray; font-size: 12pt;">Разработчик &mdash; Александр Третьяков, ВШЭ</p>
+</section>
+
+<section class="slide">
+<h2>Параметризованные запросы</h2>
+<code style="margin-top: -1em; font-size: 14pt;">$ curl "http://localhost:8123/" --data-binary \
+  "SELECT count() FROM test.hits WHERE CounterID = {id:UInt32}"
+
+Exception: Query parameter `id` was not set.
+
+$ curl "http://localhost:8123/?param_id=34" --data-binary \
+  "SELECT count() FROM test.hits WHERE CounterID = {id:UInt32}"
+
+1962
+
+$ curl "http://localhost:8123/?param_id=34;%20<b style="color: red;">DROP</b>%20<b style="color: red;">DATABASE</b>%20<b style="color: red;">test</b>" ...
+  "SELECT count() FROM test.hits WHERE CounterID = {id:UInt32}"
+
+Exception: Value 34; DROP DATABASE test
+cannot be parsed as UInt32 for query parameter 'id'
+
+$ curl "http://localhost:8123/?param_id=34;%20DROP%20DATABASE%20test" ...
+  "SELECT count() FROM test.hits WHERE CounterID = {id:String}"
+
+Exception: Illegal types of arguments (UInt32, String) of function equals</code>
+</section>
+
+<section class="slide">
+<h2>Новые форматы</h2>
+<p>&mdash; Protobuf;</p>
+<p>&mdash; Parquet;</p>
+<p>&mdash; <span style="color: green;">ORC</span> <span style="color: gray;">(input-only)</span> &mdash; ivi.ru;</p>
+<p>&mdash; <span style="color: green;">Template</span>, <span style="color: green;">TemplateIgnoreSpaces</span>;</p>
+</section>
+
+<section class="slide">
+<h2>Формат Template</h2>
+<p>Позволяет задать шаблон для форматирования или парсинга данных.</p>
+<p>Шаблон содержит разделители и подстановки.</p>
+<p>Для подстановок указан способ экранирования значений:<br/>Quoted, Escaped, CSV, JSON, XML, Raw.</p>
+<code>Website ${domain:Quoted} has ${count:Raw} pageviews.</code>
+<p style="margin-top: 1em;">Задаётся шаблон для строк, разделитель между строками<br/>и шаблон для resultset.</p>
+<p style="margin-top: 1em;">Пример: распарсить access логи.<br/>
+Пример: распарсить сложный вложенный JSON.<br/>
+Пример: сформировать HTML прямо из ClickHouse.</p>
+</section>
+
+
+<section class="slide">
+<h2>Оптимизация запросов ORDER BY</h2>
+<p style="margin-top: -2em;">с использованием ключа сортировки таблицы</p>
+
+<code style="font-size: 14pt; margin-right: -12px;">SELECT event_time, message
+FROM system.text_log
+ORDER BY event_date DESC, event_time DESC
+LIMIT 10
+
+┌──────────event_time─┬─message───────────────────────────────────────────┐
+│ 2019-09-05 04:20:35 │ Renaming temporary part tmp_insert_201909_10_10_0 │
+│ 2019-09-05 04:20:35 │ Flushing system log                               │
+│ 2019-09-05 04:20:34 │ Flushing system log                               │
+│ 2019-09-05 04:20:34 │ Renaming temporary part tmp_insert_201909_10_10_0 │
+│ 2019-09-05 04:20:28 │ Renaming temporary part tmp_insert_201909_9_9_0 to│
+│ 2019-09-05 04:20:28 │ Flushing system log                               │
+│ 2019-09-05 04:20:27 │ Renaming temporary part tmp_insert_201909_9_9_0 to│
+  ...
+└─────────────────────┴───────────────────────────────────────────────────┘
+
+10 rows in set. Elapsed: <b>0.291</b> sec. Processed <b>42.21</b> million rows, 6.10 GB
+(145.13 million rows/s., 20.98 GB/s.)
+</code>
+</section>
+
+<section class="slide">
+<h2>Оптимизация запросов ORDER BY</h2>
+<p style="margin-top: -2em;">с использованием ключа сортировки таблицы</p>
+
+<code style="font-size: 14pt; margin-right: -12px;">:) SET <b>optimize_read_in_order</b> = 1
+
+:) SELECT event_time, message
+FROM system.text_log
+ORDER BY event_date DESC, event_time DESC
+LIMIT 10
+
+┌──────────event_time─┬─message───────────────────────────────────────────┐
+│ 2019-09-05 04:28:59 │ Merged 6 parts: from 201909_1_96_19 to 201909_101_│
+│ 2019-09-05 04:28:59 │ Renaming temporary part tmp_merge_201909_1_101_20 │
+│ 2019-09-05 04:28:59 │ Merge sorted 761 rows, containing 202 columns (202│
+│ 2019-09-05 04:28:59 │ Reading 2 marks from part 201909_101_101_0, total │
+│ 2019-09-05 04:28:59 │ Reading 2 marks from part 201909_100_100_0, total │
+  ...
+└─────────────────────┴───────────────────────────────────────────────────┘
+
+10 rows in set. Elapsed: <b>0.012</b> sec. Processed <b>54.41</b> thousand rows, 7.42 MB
+(4.68 million rows/s., 637.76 MB/s.)
+</code>
+</section>
+
+<section class="slide">
+<h2>Оптимизация запросов ORDER BY</h2>
+<p style="margin-top: -2em;">с использованием ключа сортировки таблицы</p>
+<p style="margin-top: 1em;">&mdash; ORDER BY по ключу сортировки;</p>
+<p style="margin-top: 1em;">&mdash; ASC / DESC / вперемешку:</p>
+<code>ORDER BY event_date DESC, event_time ASC</code>
+<p style="margin-top: 1em;">&mdash; или его префиксу:</p>
+<code>ORDER BY event_date DESC</code>
+<p style="margin-top: 1em;">&mdash; или по выражениям с монотонными функциями от него;</p>
+<code>ORDER BY event_date DESC, -toUInt32(event_time)</code>
+<p style="margin-top: 1em;">&mdash; доступно с версии <span style="color: green;">19.14</span>;</p>
+<p style="margin-top: -10px; color: gray; font-size: 12pt;">Разработчик &mdash; Антон Попов, Яндекс; Анастасия Родигина, ВШЭ</p>
+</section>
+
+<section class="slide">
+<h2>Заполнение пропусков в данных</h2>
+<code style="margin-top: -1em;">SELECT EventDate, count() FROM table
+GROUP BY EventDate ORDER BY EventDate
+
+┌──EventDate─┬─count()─┐
+│ 2019-09-01 │       5 │
+│ 2019-09-02 │       3 │
+│ 2019-09-04 │       4 │
+│ 2019-09-05 │       1 │
+└────────────┴─────────┘
+</code>
+</section>
+
+<section class="slide">
+<h2>Заполнение пропусков в данных</h2>
+<code style="margin-top: -1em;">SELECT EventDate, count() FROM table
+GROUP BY EventDate ORDER BY EventDate <b>WITH FILL</b>
+
+┌──EventDate─┬─count()─┐
+│ 2019-09-01 │       5 │
+│ 2019-09-02 │       3 │
+│ 2019-09-03 │       0 │
+│ 2019-09-04 │       4 │
+│ 2019-09-05 │       1 │
+└────────────┴─────────┘
+</code>
+</section>
+
+<section class="slide">
+<h2>Заполнение пропусков в данных</h2>
+<p><b>WITH FILL</b> &mdash; модификатор для элемента ORDER BY;</p>
+<p><b>WITH FILL FROM</b> start</p>
+<p><b>WITH FILL FROM</b> start <b>TO</b> end</p>
+<p><b>WITH FILL FROM</b> start <b>TO</b> end <b>STEP</b> step</p>
+<p><b>WITH FILL</b> может быть применён к каждому элементу ORDER BY:</p>
+<p>ORDER BY EventDate <b>WITH FILL</b>, EventTime <b>WITH FILL STEP</b> 3600</p>
+<p style="color: red; font-size: 14pt;">&mdash; ещё даже не помержено.</p>
+<p style="margin-top: 3em; color: gray; font-size: 12pt;">Разработчик &mdash; Антон Попов, Яндекс; Дмитрий Уткин, ВШЭ</p>
+</section>
+
+<section class="slide">
+<h2>Скрытие данных в логах</h2>
+<code style="margin-top: -1em;">SELECT * FROM table
+WHERE Passport = 7609164285</code>
+<code style="margin-top: 1em;">    &lt;query_masking_rules>
+        &lt;rule>
+            &lt;regexp>Passport = \d+&lt;/regexp>
+            &lt;replace>Passport = ***&lt;/replace>
+        &lt;/rule>
+    &lt;query_masking_rules>
+</code>
+<p style="margin-top: 1em;">&mdash; подавляет данные в логах и системных таблицах;</p>
+<p style="margin-top: 3em; color: gray; font-size: 12pt;">Разработчик &mdash; Михаил Филимонов, Altinity</p>
+</section>
+
+<section class="slide">
+<h2>Логи для интроспекции</h2>
+<p style="margin-top: -1em;">в системных таблицах:</p>
+<p>&mdash; system.query_log;</p>
+<p>&mdash; system.query_thread_log;</p>
+<p>&mdash; system.part_log;</p>
+<p style="color: green;">&mdash; system.trace_log;</p>
+<p style="color: green;">&mdash; system.text_log;</p>
+<p style="color: green;">&mdash; system.metric_log;</p>
+</section>
+
+<section class="slide">
+<h2>Логи для интроспекции</h2>
+<p style="margin-top: -1em;">system.<b>text_log</b></p>
+<p>Теперь мы пишем логи ClickHouse в ClickHouse!</p>
+<code style="margin-top: 1em; font-size: 14pt;">DESCRIBE TABLE system.text_log
+
+┌─name──────────┬─type───────────────────┐
+│ event_date    │ Date                   │
+│ event_time    │ DateTime               │
+│ microseconds  │ UInt32                 │
+│ thread_name   │ LowCardinality(String) │
+│ thread_number │ UInt32                 │
+│ os_thread_id  │ UInt32                 │
+│ level         │ Enum8('Fatal' = 1, '...│
+│ query_id      │ String                 │
+│ logger_name   │ LowCardinality(String) │
+│ message       │ String                 │
+│ revision      │ UInt32                 │
+│ source_file   │ LowCardinality(String) │
+│ source_line   │ UInt64                 │
+└───────────────┴────────────────────────┘</code>
+</section>
+
+<section class="slide">
+<h2>Логи для интроспекции</h2>
+<p style="margin-top: -1em;">system.<b>metric_log</b></p>
+<p>&mdash; для тех, кто забыл настроить мониторинг.</p>
+<p>&mdash; сохраняет все метрики ClickHouse раз в секунду (по-умолчанию).</p>
+
+<code style="font-size: 16pt;">SELECT
+    toStartOfMinute(event_time) AS h,
+    sum(ProfileEvent_<b>UserTimeMicroseconds</b>) AS user_time,
+    bar(user_time, 0, 60000000, 80) AS bar
+FROM system.<b>metric_log</b> WHERE event_date = today()
+GROUP BY h ORDER BY h</code>
+</section>
+
+<section class="slide">
+<h2>Логи для интроспекции</h2>
+<code style="font-size: 16pt; margin-top: -1em;">SELECT
+    toStartOfMinute(event_time) AS h,
+    sum(ProfileEvent_<b>UserTimeMicroseconds</b>) AS user_time,
+    bar(user_time, 0, 60000000, 80) AS bar
+FROM system.<b>metric_log</b> WHERE event_date = today()
+GROUP BY h ORDER BY h</code>
+
+<code style="font-size: 12pt; margin-top: 1em; margin-left: -30px; margin-right: -30px;">┌───────────────────h─┬─user_time─┬─bar───────────────────────────────────────────────┐
+│ 2019-09-05 04:12:00 │         0 │                                                   │
+│ 2019-09-05 04:13:00 │         0 │                                                   │
+│ 2019-09-05 04:14:00 │    524000 │ ▋                                                 │
+│ 2019-09-05 04:15:00 │  15880000 │ █████████████████████▏                            │
+│ 2019-09-05 04:19:00 │  36724000 │ ████████████████████████████████████████████████▊ │
+│ 2019-09-05 04:20:00 │  17508000 │ ███████████████████████▎                          │
+│ 2019-09-05 04:21:00 │         0 │                                                   │
+│ 2019-09-05 04:22:00 │         0 │                                                   │
+│ 2019-09-05 04:23:00 │         0 │                                                   │
+│ 2019-09-05 04:24:00 │         0 │                                                   │
+│ 2019-09-05 04:25:00 │         0 │                                                   │
+│ 2019-09-05 04:26:00 │         0 │                                                   │
+│ 2019-09-05 04:27:00 │         0 │                                                   │
+│ 2019-09-05 04:28:00 │         0 │                                                   │
+│ 2019-09-05 04:29:00 │     80000 │                                                   │
+│ 2019-09-05 04:30:00 │         0 │                                                   │
+│ 2019-09-05 04:31:00 │         0 │                                                   │</code>
+</section>
+
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Сэмплирующий профайлер запросов</h2>
+<p>Запоминает места в коде, в которых находилось выполнение запроса<br/>
+в каждом потоке выполнения, в каждый момент времени с заданной периодичностью.</p>
+<p style="font-weight: strong; font-size: 150%">Если запрос тормозит &mdash; то каким местом?</p>
+<p>&mdash; Где проводит время конкретный запрос?</p>
+<p>&mdash; Где проводят время запросы некоторого вида?</p>
+<p>&mdash; Где проводят время запросы конкретного пользователя?</p>
+<p>&mdash; Где проводят время все запросы на кластере?</p>
+<p style="margin-top: 3em; color: gray; font-size: 12pt;">Разработчик &mdash; Никита Лапков, ВШЭ; и другие.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Сэмплирующий профайлер запросов</h2>
+<p>1. Выставляем одну или обе из этих настроек:</p>
+<code>SET query_profiler_<b>cpu</b>_time_period_ns = 1000000;</code>
+<code style="margin-top: 10px;">SET query_profiler_<b>real</b>_time_period_ns = 1000000;</code>
+<p style="margin-top: 1em;">2. Выполняем запросы.<br/>Данные сохраняются в таблицу <b>system.trace_log</b>.</p>
+<code style="margin-top: 1em; font-size: 12pt;">event_date:    2019-09-05
+event_time:    2019-09-05 05:47:44
+revision:      54425
+timer_type:    CPU
+thread_number: 149
+query_id:      b1d8e7f9-48d8-4cb3-a768-0a6683f6f061
+trace:         [140171472847748,61781958,110943821,117594728,117595220,115654933,
+120321783,63251928,111161800,120329436,120331356,120308294,120313436,120319113,
+120143313,115666412,120146905,111013972,118237176,111013972,117990912,111013972,
+110986070,110986938,61896391,61897898,61887509,156206624,140171472807643]
+</code>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Сэмплирующий профайлер запросов</h2>
+<p style="margin-top: -1em;"><b>trace</b> &mdash; массив адресов в машинном коде (стек трейс);</p>
+<p>Преобразовать адрес в имя функции:<br/>&mdash; demangle(addressToSymbol(trace[1]))<br/>
+Преобразовать адрес в имя файла и номер строки:<br/>&mdash; addressToLine(trace[1])</p>
+<p>* не забудьте установить clickhouse-common-static-<b>dbg</b></p>
+<p>Пример: топ функций:</p>
+<code style="margin-right: -10px;">SELECT count(),
+  demangle(addressToSymbol(trace[1] AS addr)) AS symbol
+FROM system.trace_log
+WHERE event_date = today()
+GROUP BY symbol
+ORDER BY count() DESC LIMIT 10</code>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Сэмплирующий профайлер запросов</h2>
+<p>Пример: топ функций:</p>
+<code style="margin-left: -100px; margin-right: -100px;">┌─count()─┬─symbol──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│     517 │ void LZ4::(anonymous namespace)::decompressImpl&lt;32ul, false>(char const*, char*, unsigned long)                                                                                                                         │
+│     480 │ void DB::deserializeBinarySSE2&lt;4>(DB::PODArray&lt;unsigned char, 4096ul, Allocator&lt;false, false>, 15ul, 16ul>&, DB::PODArray&lt;unsigned long, 4096ul, Allocator&lt;false, false>, 15ul, 16ul>&amp;, DB::ReadBuffer&amp;, unsigned long) │
+│     457 │ DB::VolnitskyBase&lt;true, true, DB::StringSearcher&lt;true, true> >::search(unsigned char const*, unsigned long) const                                                                                                       │
+│     270 │ read                                                                                                                                                                                                                    │
+│     163 │ void LZ4::(anonymous namespace)::decompressImpl&lt;16ul, true>(char const*, char*, unsigned long)                                                                                                                          │
+│     130 │ void LZ4::(anonymous namespace)::decompressImpl&lt;16ul, false>(char const*, char*, unsigned long)                                                                                                                         │
+│      58 │ CityHash_v1_0_2::CityHash128WithSeed(char const*, unsigned long, std::pair&lt;unsigned long, unsigned long>)                                                                                                               │
+│      44 │ void DB::deserializeBinarySSE2&lt;2>(DB::PODArray&lt;unsigned char, 4096ul, Allocator&lt;false, false>, 15ul, 16ul>&, DB::PODArray&lt;unsigned long, 4096ul, Allocator&lt;false, false>, 15ul, 16ul>&amp;, DB::ReadBuffer&amp;, unsigned long) │
+│      37 │ void LZ4::(anonymous namespace)::decompressImpl&lt;8ul, true>(char const*, char*, unsigned long)                                                                                                                           │
+│      32 │ memcpy                                                                                                                                                                                                                  │
+└─────────┴─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘</code>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Сэмплирующий профайлер запросов</h2>
+<p>Пример: топ контекстов выполнения для запроса:</p>
+<code style="margin-right: -10px;">SELECT count(),
+  arrayStringConcat(arrayMap(x -> concat(
+    demangle(addressToSymbol(x)),
+    '\n    ',
+    addressToLine(x)), trace), '\n') AS sym
+FROM system.trace_log
+WHERE query_id = '1a1272b5-695a-4b17-966d-a1701b61b3eb'
+  AND event_date = today()
+GROUP BY trace
+ORDER BY count() DESC
+LIMIT 10</code>
+</section>
+
+<section class="slide">
+<code style="margin-left: -100px; margin-right: -100px; font-size: 11pt;">count(): 154
+sym:     DB::VolnitskyBase&lt;true, true, DB::StringSearcher&lt;true, true> >::search(unsigned char const*, unsigned long) const
+    /opt/milovidov/ClickHouse/build_gcc9/dbms/programs/clickhouse
+DB::MatchImpl&lt;true, false>::vector_constant(DB::PODArray&lt;unsigned char, 4096ul, Allocator&lt;false, false>, 15ul, 16ul> const&amp;, DB::PODArray&lt;unsigned long, 4096ul, Allocator&lt;false, false>, 15ul, 16ul> const&amp;, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char>, std::allocator&lt;char> > const&amp;, DB::PODArray&lt;unsigned char, 4096ul, Allocator&lt;false, false>, 15ul, 16ul>&amp;)
+    /opt/milovidov/ClickHouse/build_gcc9/dbms/programs/clickhouse
+DB::FunctionsStringSearch&lt;DB::MatchImpl&lt;true, false>, DB::NameLike>::executeImpl(DB::Block&amp;, std::vector&lt;unsigned long, std::allocator&lt;unsigned long> > const&amp;, unsigned long, unsigned long)
+    /opt/milovidov/ClickHouse/build_gcc9/dbms/programs/clickhouse
+DB::PreparedFunctionImpl::execute(DB::Block&amp;, std::vector&lt;unsigned long, std::allocator&lt;unsigned long> > const&amp;, unsigned long, unsigned long, bool)
+    /home/milovidov/ClickHouse/build_gcc9/../dbms/src/Functions/IFunction.cpp:464
+DB::ExpressionAction::execute(DB::Block&amp;, bool) const
+    /usr/local/include/c++/9.1.0/bits/stl_vector.h:677
+DB::ExpressionActions::execute(DB::Block&amp;, bool) const
+    /home/milovidov/ClickHouse/build_gcc9/../dbms/src/Interpreters/ExpressionActions.cpp:759
+DB::FilterBlockInputStream::readImpl()
+    /home/milovidov/ClickHouse/build_gcc9/../dbms/src/DataStreams/FilterBlockInputStream.cpp:84
+DB::IBlockInputStream::read()
+    /usr/local/include/c++/9.1.0/bits/stl_vector.h:108
+DB::ExpressionBlockInputStream::readImpl()
+    /home/milovidov/ClickHouse/build_gcc9/../dbms/src/DataStreams/ExpressionBlockInputStream.cpp:34
+DB::IBlockInputStream::read()
+    /usr/local/include/c++/9.1.0/bits/stl_vector.h:108
+DB::ParallelInputsProcessor&lt;DB::ParallelAggregatingBlockInputStream::Handler>::thread(std::shared_ptr&lt;DB::ThreadGroupStatus>, unsigned long)
+    /usr/local/include/c++/9.1.0/bits/atomic_base.h:419
+ThreadFromGlobalPool::ThreadFromGlobalPool&lt;void (DB::ParallelInputsProcessor&lt;DB::ParallelAggregatingBlockInputStream::Handler>::*)(std::shared_ptr&lt;DB::ThreadGroupStatus>, unsigned long), DB::ParallelInputsProcessor&lt;DB::ParallelAggregatingBlockInputStream::Handler>*, std::shared_ptr&lt;DB::ThreadGroupStatus>, unsigned long&amp;>(void (DB::ParallelInputsProcessor&lt;DB::ParallelAggregatingBlockInputStream::Handler>::*&amp;&amp;)(std::shared_ptr&lt;DB::ThreadGroupStatus>, unsigned long), DB::ParallelInputsProcessor&lt;DB::ParallelAggregatingBlockInputStream::Handler>*&amp;&amp;, std::shared_ptr&lt;DB::ThreadGroupStatus>&amp;&amp;, unsigned long&amp;)::{lambda()#1}::operator()() const
+    /usr/local/include/c++/9.1.0/bits/shared_ptr_base.h:729
+ThreadPoolImpl&lt;std::thread>::worker(std::_List_iterator&lt;std::thread>)
+    /usr/local/include/c++/9.1.0/bits/atomic_base.h:551
+execute_native_thread_routine
+    /home/milovidov/ClickHouse/ci/workspace/gcc/gcc-build/x86_64-pc-linux-gnu/libstdc++-v3/include/bits/unique_ptr.h:81
+start_thread
+    /lib/x86_64-linux-gnu/libpthread-2.27.so
+clone
+    /build/glibc-OTsEL5/glibc-2.27/misc/../sysdeps/unix/sysv/linux/x86_64/clone.S:97
+</code>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Сэмплирующий профайлер запросов</h2>
+<img style="width: 80%;" src="pictures/highload.png"/>
+<p style="margin-top: 1em;"><a href="http://www.highload.ru/moscow/2019/abstracts/5835">http://www.highload.ru/moscow/2019/abstracts/5835</a></p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Globs для File/URL/HDFS</h2>
+<code style="margin-right: -10px;">SELECT * FROM file(
+    'logs<b>*</b>_<b>{000..999}</b>.tsv',
+    TSV,
+    's String, x UInt8')</code>
+<p style="margin-top: 1em;">Множество файлов автоматически обрабатывается параллельно.</p>
+<p style="color: red; font-size: 14pt;">&mdash; ещё даже не помержено.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Правильные RPM пакеты</h2>
+<p>CentOS, RedHat... ГосЛинукс.</p>
+<p>Поддерживаемые версии начиная от CentOS 5.</p>
+<code style="margin-left: -20px; margin-right: 20px;">sudo yum install yum-utils
+sudo rpm --import \
+  https://repo.yandex.ru/clickhouse/CLICKHOUSE-KEY.GPG
+sudo yum-config-manager --add-repo \
+  https://repo.yandex.ru/clickhouse/rpm/stable/x86_64
+sudo yum install clickhouse-server clickhouse-client</code>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Ещё фичи</h2>
+<p>Изменение настроек таблиц налету</p>
+<p>Функция neighbor</p>
+<p>OS schedule priority</p>
+<p>Table function VALUES</p>
+<p>COLUMNS matcher</p>
+<p>Live View</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Ещё фичи</h2>
+<p>Каскадные Materialized Views</p>
+<p>Нормальная логика AND/OR с NULL</p>
+<p>Нормальная логика join_use_nulls</p>
+<p>Правильный учёт оперативки запросами</p>
+<p>Обновление DNS кэша</p>
+<p>Settings constraints</p>
+<p>Row Level security</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Ещё фичи</h2>
+<p>Мутации не мешают мержам</p>
+<p>Параллельная загрузка кусков</p>
+<p>Оптимизация GROUP BY</p>
+<p>Ускорение математических функций от Михаила Парахина</p>
+<p>Ускорение функций для работы с JSON</p>
+<p>Загрузка словарей не мешает друг другу</p>
+<p>Оптимизация Merge таблиц</p>
+<p>CREATE TABLE AS table_function()</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">А знаете ли вы...</h2>
+<p>&mdash; TTL для таблиц и отдельных столбцов;</p>
+<p>&mdash; MySQL протокол;</p>
+<p>&mdash; Adaptive granularity;</p>
+<p>&mdash; Вторичные индексы;</p>
+<p>&mdash; Функции текстового поиска;</p>
+<p>&mdash; Функции для работы с JSON;</p>
+<p>&mdash; WITH ROLLUP / WITH CUBE;</p>
+<p>&mdash; ASOF JOIN;</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Сентябрь 2019</h2>
+<p>&mdash; Поддержка гибридных хранилищ для свежих и старых данных;</p>
+<p>&mdash; Создание и манипуляция словарями с помощью DDL запросов;</p>
+<p>&mdash; Использование Z-Order для индексирования;</p>
+<p>&mdash; Импорт и экспорт данных в S3;</p>
+<p>&mdash; Параллельный парсинг форматов данных;</p>
+<p>&mdash; Табличная функция input;</p>
+<p>&mdash; Ускорение разбора VALUES с выражениями;</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Октябрь 2019</h2>
+<p>&mdash; Начальная реализация RBAC;</p>
+<p>&mdash; Начальная реализация Merge JOIN;</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Осень-зима 2019</h2>
+<p>&mdash; Не начальная реализация RBAC;</p>
+<p>&mdash; Не начальная реализация Merge JOIN;</p>
+<p>&mdash; Workload management;</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">2020</h2>
+<p>Развитие Replicated таблиц:</p>
+<p>&mdash; Wait-free ALTER ADD/DROP;<br/>
+&mdash; ALTER RENAME COLUMN;<br/>
+&mdash; полиморфные куски таблиц;<br/>
+&mdash; поддержка мелких вставок;<br/>
+&mdash; кворумный INSERT без линеаризуемости;<br/>
+&mdash; INSERT без доступного ZooKeeper;<br/>
+&mdash; отказ от хранения в ZooKeeper информации о кусках;<br/>
+&mdash; альтернатива использованию ZooKeeper;<br/>
+&mdash; VFS и хранение старых данных в S3;<br/>
+&mdash; нормальная поддержка JBOD;<br/>
+&mdash; эластичный кластер;</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">2020</h2>
+<p>&mdash; ALTER MATERIALIZED VIEW;<br/>
+&mdash; оптимизация GROUP BY с учётом сортированности таблицы;<br/>
+&mdash; функции обработки временных рядов;<br/>
+&mdash; функции для статистических тестов;<br/>
+&mdash; модификаторы DISTINCT и ORDER BY для всех агрегатных функций;<br/>
+&mdash; прототип GPU offloading;<br/>
+&mdash; пережатие старых данных в фоне;<br/>
+&mdash; минимальная поддержка транзакций для множества вставок/чтений;<br/>
+&mdash; реплицируемые базы данных;</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">2020, а вдруг повезёт</h2>
+<p>UDF на C++ и Rust.</p>
+<p>Оконные функции.</p>
+<p>Поддержка некоторых видов зависимых подзапросов.</p>
+</section>
+
+    <section class="slide">
+        <h2><span style="background: rgba(255, 255, 255, 0.75)">.</span></h2>
+    </section>
+
+    <section class="slide">
+        <h2>.</h2>
+        <p>Web site: <a href="https://clickhouse.yandex/">https://clickhouse.yandex/</a></p>
+        <p>Maillist: clickhouse-feedback@yandex-team.com</p>
+        <p>YouTube: <a href="https://www.youtube.com/c/ClickHouseDB">https://www.youtube.com/c/ClickHouseDB</a></p>
+        <p>Telegram chat: <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_ru</a>, <a href="https://telegram.me/clickhouse_en">clickhouse_en</a></p>
+        <p>GitHub: <a href="https://github.com/yandex/ClickHouse/">https://github.com/yandex/ClickHouse/</a></p>
+        <p>Twitter: <a href="https://twitter.com/ClickHouseDB">https://twitter.com/ClickHouseDB</a></p>
+        <p>Google groups: <a href="https://groups.google.com/forum/#!forum/clickhouse">https://groups.google.com/forum/#!forum/clickhouse</a></p>
+    </section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+</body>
+</html>
