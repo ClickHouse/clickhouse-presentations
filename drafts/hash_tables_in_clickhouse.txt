@@ -113,7 +113,7 @@ std::unordered_map:
 
 (производительность скрадывается зависимыми кэш-промахами)
 
-https://github.com/yandex/ClickHouse/blob/master/dbms/src/Common/tests/integer_hash_tables_and_hashes.cpp
+https://github.com/ClickHouse/ClickHouse/blob/master/dbms/src/Common/tests/integer_hash_tables_and_hashes.cpp
 
 
 4. Интерференция хэш-функций.
@@ -146,7 +146,7 @@ URL - много разных строк ~60 байт
 - CityHash64: 11 337 682 inserts/sec.
 - хэш-функция из ClickHouse: 13 637 320 insets/sec.
 
-https://github.com/yandex/ClickHouse/blob/master/dbms/src/Interpreters/tests/hash_map_string_3.cpp
+https://github.com/ClickHouse/ClickHouse/blob/master/dbms/src/Interpreters/tests/hash_map_string_3.cpp
 
 
 6. Использование криптографических хэш-функций без необходимости.
@@ -169,7 +169,7 @@ CityHash64: 822.56 MB/sec.
 SipHash: 183.35 MB/sec.
 MD5: 30.87 MB/sec.
 
-https://github.com/yandex/ClickHouse/blob/master/dbms/src/Common/tests/hashes_test.cpp
+https://github.com/ClickHouse/ClickHouse/blob/master/dbms/src/Common/tests/hashes_test.cpp
 
 
 Оценка качества некриптографической хэш-функции.
@@ -267,7 +267,7 @@ throughput до 1 такта на операцию
 Throughput, Latency, Avalanche
 хэш-функций для int-ов:
 
-https://github.com/yandex/ClickHouse/blob/master/dbms/src/Common/tests/int_hashes_perf.cpp
+https://github.com/ClickHouse/ClickHouse/blob/master/dbms/src/Common/tests/int_hashes_perf.cpp
 ./int_hashes_perf 1000000000
 
 

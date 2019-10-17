@@ -263,7 +263,7 @@ for (const auto &amp; haystack : haystacks)
 <p>* для своей задачи.<br/>
 * не одна, а много разных.<br/>
 * а сейчас сделаем ещё чуть лучше:<br/><br/>
-<a href="https://github.com/yandex/ClickHouse/pull/5417">https://github.com/yandex/ClickHouse/pull/5417</a></p>
+<a href="https://github.com/ClickHouse/ClickHouse/pull/5417">https://github.com/ClickHouse/ClickHouse/pull/5417</a></p>
 </section>
 
 <section class="slide">
@@ -333,7 +333,7 @@ for (const auto &amp; haystack : haystacks)
 ...Keys128Hash64 = HashMap&lt;UInt128, AggregateDataPtr, UInt128Hash>;
 ...Keys256Hash64 = HashMap&lt;UInt256, AggregateDataPtr, UInt256Hash>;
 </code>
-<p>&mdash; <a href="https://github.com/yandex/ClickHouse/blob/master/dbms/src/Interpreters/Aggregator.h">dbms/src/Interpreters/Aggregator.h</a></p>
+<p>&mdash; <a href="https://github.com/ClickHouse/ClickHouse/blob/master/dbms/src/Interpreters/Aggregator.h">dbms/src/Interpreters/Aggregator.h</a></p>
 </section>
 
 
@@ -344,13 +344,13 @@ for (const auto &amp; haystack : haystacks)
 &mdash; до 64 значений &mdash; плоский массив в арене;<br/>
 &mdash; до 5670 значений &mdash; плоский массив в куче;<br/>
 &mdash; больше &mdash; гистограмма фиксированного вида.<br/>
-(<a href="https://github.com/yandex/ClickHouse/blob/master/dbms/src/AggregateFunctions/QuantileTiming.h">QuantileTiming.h</a>)
+(<a href="https://github.com/ClickHouse/ClickHouse/blob/master/dbms/src/AggregateFunctions/QuantileTiming.h">QuantileTiming.h</a>)
 </p>
 <p>Пример: функция <b>uniqCombined</b>:<br/>
 &mdash; плоский массив;<br/>
 &mdash; хэш-таблица;<br/>
 &mdash; HyperLogLog.<br/>
-(<a href="https://github.com/yandex/ClickHouse/blob/master/dbms/src/Common/CombinedCardinalityEstimator.h">CombinedCardinalityEstimator.h</a>)
+(<a href="https://github.com/ClickHouse/ClickHouse/blob/master/dbms/src/Common/CombinedCardinalityEstimator.h">CombinedCardinalityEstimator.h</a>)
 </p>
 </section>
 
@@ -558,7 +558,7 @@ clickhouse hashmap is faster
         <p>Maillist: clickhouse-feedback@yandex-team.com</p>
         <p>YouTube: <a href="https://www.youtube.com/c/ClickHouseDB">https://www.youtube.com/c/ClickHouseDB</a></p>
         <p>Telegram chat: <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_ru</a>, <a href="https://telegram.me/clickhouse_en">clickhouse_en</a></p>
-        <p>GitHub: <a href="https://github.com/yandex/ClickHouse/">https://github.com/yandex/ClickHouse/</a></p>
+        <p>GitHub: <a href="https://github.com/ClickHouse/ClickHouse/">https://github.com/ClickHouse/ClickHouse/</a></p>
         <p>Twitter: <a href="https://twitter.com/ClickHouseDB">https://twitter.com/ClickHouseDB</a></p>
         <p>Google groups: <a href="https://groups.google.com/forum/#!forum/clickhouse">https://groups.google.com/forum/#!forum/clickhouse</a></p>
     </section>
