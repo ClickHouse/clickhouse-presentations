@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse Meetup: Introduction</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x10.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse Meetup: Introduction</h1>
+    </header>
+
+    <section class="slide" id="cover" style="background: url('pictures/title.jpg') no-repeat center center; background-size: 100%;">
+        <h1 style="margin-top: 50px; font-size: 64pt;"><span style="color: white; text-shadow: -2px 0 black, 0 2px black, 2px 0 black, 0 -2px black;">ClickHouse Meetup<br/>in Shanghai</span></h1>
+    </section>
+
+<section class="slide">
+<h2>Why do we need ClickHouse?</h2>
+
+<p>&mdash; interactive analytic queries;<br/>
+&mdash; on constantly appended data.</p>
+
+<p>&laquo;Double realtime&raquo;</p>
+<p>The most valuable feature of ClickHouse &mdash; it's speed.</p>
+<div style="text-align: center;">
+<img style="width: 50%" src="pictures/tweet_fast1.png"/>
+<img style="width: 50%" src="pictures/tweet_fast3.png"/>
+</div>
+</section>
+
+<section class="slide">
+<h2>How we developed ClickHouse</h2>
+<p>2008 &mdash; first commits in codebase;</p>
+<p>2010 &mdash; start of research and development;</p>
+<p>2012 &mdash; use in production for some tasks;</p>
+<p>2014 &mdash; use in production as core service technology;</p>
+<p>2015 &mdash; widespread inside Yandex;</p>
+<p style="color: red;">2016 &mdash; released in open-source!</p>
+<p>Now &mdash; more than 1000 companies are using ClickHouse.</p>
+</section>
+
+<section class="slide">
+<h2>How we developed ClickHouse</h2>
+<p>2008 &mdash; first commits in codebase;</p>
+<p>I was a developer of Yandex.Metrica service.</p><p>
+I had neither ideas or plans about ClickHouse<br/>but some commits are dated back then.</p>
+</section>
+
+<section class="slide">
+<h2>How we developed ClickHouse</h2>
+<p style="color: gray;">2008 &mdash; first commits in codebase;</p>
+<p>2010 &mdash; start of research and development;</p>
+<p>As an experimental side project.</p>
+<p>We have tested multiple existing solutions (as of 2010):<br/>
+MonetDB, Infobright, InfiniDB...</p>
+</section>
+
+<section class="slide">
+<h2>How we developed ClickHouse</h2>
+<p style="color: gray;">2008 &mdash; first commits in codebase;</p>
+<p>2010 &mdash; start of research and development;</p>
+<p>Nothing was good enough.</p>
+<p>Hypothesis:</p>
+<p>If we have good enough column-oriented DBMS,<br/>we could store all our data in non-aggregated form<br/>(raw pageviews and sessions) and generate all the reports on the fly,<br />to allow infinite customization.</p>
+</section>
+
+    <section class="slide">
+        <h2>Why column-oriented?</h2>
+        <p>This is how "traditional" row-oriented databases work:</p>
+        <p><img src="pictures/row_oriented.gif"/></p>
+    </section>
+
+    <section class="slide">
+        <h2>Why column-oriented?</h2>
+        <p>And this is how column-oriented databases work:</p>
+        <p><img src="pictures/column_oriented.gif"/></p>
+    </section>
+
+<section class="slide">
+<h2>How we developed ClickHouse</h2>
+<p style="color: gray;">2008 &mdash; first commits in codebase;</p>
+<p style="color: gray;">2010 &mdash; start of research and development;</p>
+<p>2012 &mdash; use in production for some tasks;</p>
+<p>(for intermediate data processing)</p>
+</section>
+
+<section class="slide">
+<h2>How we developed ClickHouse</h2>
+<p style="color: gray;">2008 &mdash; first commits in codebase;</p>
+<p style="color: gray;">2010 &mdash; start of research and development;</p>
+<p style="color: gray;">2012 &mdash; use in production for some data processing tasks;</p>
+<p>2014 &mdash; use in production as <b>core</b> service technology;</p>
+<p>(for realtime reporting)</p>
+<p style="color: red;">The hypothesis was proved!</p>
+</section>
+
+    <section class="slide">
+        <img src="pictures/metrika2.png" style="height:100%"/>
+    </section>
+    
+    <section class="slide">
+        <h2>The main cluster of Yandex.Metrica</h2>
+        <ul style="font-size:30px;">
+            <li>>30 trillions of rows (as of 2019)</li>
+            <li>>600 servers</li>
+            <li>total throughput of query processing is up to two terabytes per second</li>
+        </ul>
+        <p style="font-size:60%; margin-top:2em">* If you want to try ClickHouse, one server or VM is enough.</p>
+    </section>
+
+<section class="slide">
+<h2>How we developed ClickHouse</h2>
+<p style="color: gray;">2008 &mdash; first commits in codebase;</p>
+<p style="color: gray;">2010 &mdash; start of research and development;</p>
+<p style="color: gray;">2012 &mdash; use in production for some tasks;</p>
+<p style="color: gray;">2014 &mdash; use in production as core service technology;</p>
+<p>2015 &mdash; widespread <b>inside Yandex</b>;</p>
+<p>In multiple departments: search, e-commerce, advertisement, personalized news, infrastructure, NOC, business analytics...</p>
+<p></p>
+</section>
+
+<section class="slide">
+<h2>How we developed ClickHouse</h2>
+<p style="color: gray;">2008 &mdash; first commits in codebase;</p>
+<p style="color: gray;">2010 &mdash; start of research and development;</p>
+<p style="color: gray;">2012 &mdash; use in production for some tasks;</p>
+<p style="color: gray;">2014 &mdash; use in production as core service technology;</p>
+<p style="color: gray;">2015 &mdash; widespread inside Yandex;</p>
+<p style="color: red;">2016 &mdash; released in open-source!</p>
+</section>
+
+<section class="slide">
+<h2>How we developed ClickHouse</h2>
+<p style="color: gray;">2008 &mdash; first commits in codebase;</p>
+<p style="color: gray;">2010 &mdash; start of research and development;</p>
+<p style="color: gray;">2012 &mdash; use in production for some tasks;</p>
+<p style="color: gray;">2014 &mdash; use in production as core service technology;</p>
+<p style="color: gray;">2015 &mdash; widespread inside Yandex;</p>
+<p style="color: gray;">2016 &mdash; released in open-source!</p>
+<p>Now &mdash; more than 1000 companies are using ClickHouse.</p>
+</section>
+
+<section class="slide">
+<h2>Why open-source?</h2>
+<ol><li>The technology is <b>too good</b> to be used just inside Yandex.</li>
+<li>To have more fun!</li>
+</ol>
+<p>
+<br/><img src="pictures/repo.png" style="width: 50%;"/>
+<br/><img src="pictures/stars.png" style="width: 75%;"/>
+<br/><span style="padding-left: 40px;">Press here please :) ---^</span></p>
+</section>
+
+<section class="slide">
+<h2>Our goals as ClickHouse developers</h2>
+
+<p>1. Development and support for use cases in our company (Yandex).</p>
+<p>2. Maximum widespread of ClickHouse as open-source product.</p>
+
+<img src="pictures/tweet_rising2.png" style="width: 50%; margin-top: 2em;"/>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Goal: widespread as open-source product</h2>
+<p>Rules of successful open-source:</p>
+<p>&mdash; the product must <b>solve actual problem</b>;<br/>
+&mdash; and do it <b>better than others</b>.</p>
+<p>Our goal:</p>
+<p>ClickHouse must be the default choice<br/>as an open-source analytical DBMS</p>
+<p>&mdash; the first and the only right solution<br/>for appropriate use cases;</p>
+<p>&mdash; and everyone should be aware of it :)</p>
+</section>
+
+<section class="slide">
+<h2>Three years in open-source</h2>
+<p>No time to celebrate.</p>
+<img src='pictures/commits.png' style="width: 100%;"/>
+</section>
+
+<section class="slide">
+<h2>Notable users</h2>
+<div style="float: right; width: 600px; color: #888; line-height: 1.5em; text-align: center; font-size: 80%">
+<span style="padding: 20px;">Web/App&nbsp;Analytics</span>
+<span style="padding: 20px;">Adv&nbsp;Networks</span>
+<br/><span style="padding: 20px;">E-Commerce</span>
+<span style="padding: 20px;">Telecom</span>
+<span style="padding: 20px;">Social</span>
+<span style="padding: 20px;">News</span>
+<br/><span style="padding: 20px;">Monitoring/Telemetry</span>
+<span style="padding: 20px;">Banking/Finance</span>
+<br/><span style="padding: 20px;">Government</span>
+<span style="padding: 20px;">Adult</span>
+<span style="padding: 20px;">Online&nbsp;Games</span>
+<br/><span style="padding: 20px;">Info&nbsp;Sec</span>
+<span style="padding: 20px;">Agriculture</span>
+<span style="padding: 20px;">Blockchain</span>
+</div>
+
+<p>&mdash; VK;<br/>
+&mdash; nVidia;<br/>
+&mdash; Spotify;<br/>
+&mdash; Yandex;<br/>
+&mdash; Amadeus;<br/>
+&mdash; Bloomberg;<br/>
+&mdash; CloudFlare;<br/>
+&mdash; ContentSquare;<br/>
+&mdash; Deutsche Bank;<br/>
+&mdash; A-word fruit company;<br/>
+&mdash; C-word telecom company;<br/>
+&mdash; e-word ecommerce company;<br/>
+&mdash; National payment system of (undisclosed) country.</p>
+</section>
+
+<section class="slide">
+<h2>Notable users in China</h2>
+<p>&mdash; JD;<br/>
+&mdash; Sina;<br/>
+&mdash; Tencent;<br/>
+&mdash; ByteDance;<br/>
+&mdash; QuaiShou;<br/>
+&mdash; Analysys;<br/>
+&mdash; QingCloud;<br/>
+&mdash; OneAPM;<br/>
+&mdash; HUYA Internet;<br/>
+&mdash; Suning;<br/>
+&mdash; Ximalaya;<br/>
+&mdash; Zhongan Insuranse;<br/>
+
+<br/>
+<span style="color: green; font-size: 200%;">... your company?</span><br/>
+</section>
+
+    <section class="slide">
+        <h2>ClickHouse</h2>
+        <ul>
+            <li>column-oriented</li>
+            <li>distributed</li>
+            <li>linearly scalable</li>
+            <li>fault-tolerant</li>
+            <li>data ingestion in realtime</li>
+            <li>realtime (sub-second) queries</li>
+            <li>support of SQL dialect + extensions</li>
+        </ul>
+    </section>
+
+<section class="slide">
+<p style="text-align: center; font-size: 100pt; line-height: 1; margin-top: 100px;">ClickHouse</p>
+<p style="text-align: center; font-size: 75pt; line-height: 1; margin-top: -50px;">не тормозит</p>
+</section>
+
+<section class="slide">
+<p style="text-align: center; font-size: 100pt; line-height: 1; margin-top: 100px;">ClickHouse</p>
+<p style="text-align: center; font-size: 75pt; line-height: 1; margin-top: -50px;">is not slow*</p>
+</section>
+
+<section class="slide">
+<h2>Why ClickHouse is fast?</h2>
+<p style="font-size: 40px;">We really need it.</p>
+<p style="font-size: 40px;">Yandex.Metrica must work!</p>
+</section>
+
+<section class="slide">
+<h2>Why ClickHouse is so fast?</h2>
+<p><b>High level architecture:</b></p>
+<p>&mdash; Scale-out shared nothing;</p>
+<p>&mdash; Massive Parallel Processing;</p>
+</section>
+
+<section class="slide">
+<h2>Why ClickHouse is so fast?</h2>
+<p><b>Data storage optimizations:</b></p>
+<p>&mdash; Column-oriented storage;</p>
+<p>&mdash; Merge Tree;</p>
+<p>&mdash; Sparse index;</p>
+<p>&mdash; Data compression;</p>
+</section>
+
+<section class="slide">
+<h2>Why ClickHouse is so fast?</h2>
+<p><b>Algorithmic optimizations:</b></p>
+<p>Best algorithms in the world...
+<br/>... are happy to be used in ClickHouse.</p>
+<p>&mdash; Volnitsky substring search</p>
+<p>&mdash; Hyperscan and RE2</p>
+<p>&mdash; SIMD JSON</p>
+<p>&mdash; HDR Histograms</p>
+<p>&mdash; Roaring Bitmaps</p>
+<p>...</p>
+</section>
+
+<section class="slide">
+<h2>Why ClickHouse is so fast?</h2>
+<p><b>Low-level optimizations:</b></p>
+<p>Optimizations for CPU instruction sets
+<br/>using SIMD processing.</p>
+<p>&mdash; SIMD text parsing</p>
+<p>&mdash; SIMD data filtering</p>
+<p>&mdash; SIMD decompression</p>
+<p>&mdash; SIMD string operations</p>
+<p>...</p>
+</section>
+
+<section class="slide">
+<h2>Why ClickHouse is so fast?</h2>
+<p><b>Specializations of algorithms...<br/>
+... and attention to detail:</b></p>
+<p>&mdash; uniq, uniqExact, uniqCombined, uniqUpTo;</p>
+<p>&mdash; quantile, quantileTiming, quantileExact, quantileTDigest, quantileWeighted;</p>
+<p>&mdash; 40+ specializations of GROUP BY;</p>
+<p>&mdash; algorithms optimize itself for data distribution:<br/>
+LZ4 decompression with Bayesian Bandits.</p>
+</section>
+
+
+<section class="slide">
+<h2>Advantages of open-source</h2>
+<p>&mdash; better product quality;</p>
+<p>&mdash; better Yandex representation as tech company;</p>
+<p>&mdash; for hiring developers more easily;</p>
+<p>&mdash; motivation of developers;</p>
+
+<p><br/>Drawbacks:</p>
+<p>&mdash; it's hard work;</p>
+<p>&mdash; and we're working really a lot;</p>
+</section>
+
+<!-- Interfaces -->
+
+<section class="slide">
+    <h2>Interfaces</h2>
+    <p style="font-size: 30px;">HTTP REST</p>
+    <p style="font-size: 30px;">clickhouse-client</p>
+    <p style="font-size: 30px;">JDBC, ODBC</p>
+    <p style="font-size: 30px; color: green;">(new) MySQL protocol compatibility</p>
+    <p>&nbsp;</p>
+    <p style="font-size: 30px;">Python, PHP, Perl, Go,<br/>Node.js, Ruby, C++, .NET, Scala, R, Julia, Rust</p>
+</section>
+
+    <section class="slide">
+        <h2>Community</h2>
+        <img style="float: right; width: 25%;" src="pictures/wechat.svg"/>
+        <p>Web site: <a href="https://clickhouse.yandex/">https://clickhouse.yandex/</a></p>
+        <p>GitHub: <a href="https://github.com/ClickHouse/ClickHouse/">https://github.com/ClickHouse/ClickHouse/</a></p>
+        <p>Maillist: clickhouse-feedback@yandex-team.com</p>
+        <p>Wechat: 4 groups (ask your friend to invite)</p>
+        <p style="margin-top: 2em;">+ meetups. Moscow, Saint-Petersburg, Novosibirsk, Ekaterinburg, Minsk...<br/>... Berlin, Paris, Amsterdam, Madrid, Munich, San-Francisco, <br/>... Beijing, <b>Shenzhen</b>, Shanghai, Hong Kong, Singapore, Tokyo.</p>
+    </section>
+
+    <section class="slide" style="background: url('pictures/epilog.jpg') no-repeat center center; background-size: 100%;">
+        <h2><span style="font-size: 36pt; text-shadow: -1px 0 white, 0 1px white, 1px 0 white, 0 -1px white;">Next: ClickHouse for Machine Learning</span></h2>
+    </section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+</body>
+</html>

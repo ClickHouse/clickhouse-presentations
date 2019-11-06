@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>New features of ClickHouse</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x10.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>New features of ClickHouse</h1>
+    </header>
+
+    <section class="slide" id="cover" style="background: #FFF url('pictures/title.jpg') no-repeat; background-size: 100%;">
+        <h1 style="margin-top: 150px; font-size: 48pt;"><span style="color: white; text-shadow: -2px 0 black, 0 2px black, 2px 0 black, 0 -2px black;">New features of ClickHouse</span></h1>
+    </section>
+
+    <section class="slide" style="background: #FFF url('pictures/title2.jpg') no-repeat; background-size: 100%;">
+        <h1 style="margin-top: 150px; font-size: 48pt;"><span style="color: white; text-shadow: -2px 0 black, 0 2px black, 2px 0 black, 0 -2px black;">A random selection<br/> of features that I remember</span></h1>
+    </section>
+
+<section class="slide">
+<h2>CONSTRAINTs for INSERT queries</h2>
+<code style="margin-top: -1em;">CREATE TABLE hits
+(
+    URL String,
+    Domain String,
+    <b>CONSTRAINT</b> c_valid_url <b>CHECK</b> isValidUTF8(URL),
+    <b>CONSTRAINT</b> c_domain <b>CHECK</b> Domain = domain(URL)
+)</code>
+<p style="margin-top: 1em;">Checked on INSERT.</p>
+<p style="margin-top: 3em; color: gray; font-size: 12pt;">Developer &mdash; Gleb Novikov, HSE Moscow</p>
+</section>
+
+<section class="slide">
+<h2>CONSTRAINTs for INSERT queries</h2>
+<code style="margin-top: -1em; font-size: 16pt;">INSERT INTO hits VALUES ('https://yandex.ru/', 'google.com')
+
+Exception: Constraint `c_domain` for table `hits`
+is violated at row 1.
+Expression: (<b>Domain</b> = domain(<b>URL</b>)).
+Column values:
+<b>URL</b> = 'https://yandex.ru/',
+<b>Domain</b> = 'google.com'.</code>
+<p style="margin-top: 1em;">Don't checked on background merges.</p>
+<p>Don't checked on ALTER UPDATE.</p>
+</section>
+
+<section class="slide">
+<h2>CONSTRAINTs for INSERT queries</h2>
+<code style="margin-top: -1em;">ALTER TABLE hits <b>ADD CONSTRAINT</b>
+    c_valid_url <b>CHECK</b> isValidUTF8(URL)</code>
+<p style="margin-top: 1em;">Existing data is not checked when CONSTRAINT is added.</p>
+<code>ALTER TABLE hits <b>DROP CONSTRAINT</b> c_valid_url</code>
+</section>
+
+<section class="slide">
+<h2>Queries With Parameters</h2>
+<code style="margin-top: -1em;">SELECT count()
+FROM test.hits
+WHERE CounterID = <b>{id:UInt32}</b>
+AND SearchPhrase = <b>{phrase:String}</b></code>
+<p style="margin-top: 1em;">&mdash; substitutions have names and types;<br/>
+&mdash; substituted on AST level.</p>
+<p>TODO:<br/>
+&mdash; substitutions for sets in IN operator;<br/>
+&mdash; substitutions for table, column, database names.<br/>
+&mdash; support for custom server URLs with predefined queries.</p>
+<p style="margin-top: 3em; color: gray; font-size: 12pt;">Developer &mdash; Alexander Tretyakov, HSE Moscow</p>
+</section>
+
+<section class="slide">
+<h2>Queries With Parameters</h2>
+<code style="margin-top: -1em; font-size: 14pt;">$ curl "http://localhost:8123/" --data-binary \
+  "SELECT count() FROM test.hits WHERE CounterID = {id:UInt32}"
+
+Exception: Query parameter `id` was not set.
+
+$ curl "http://localhost:8123/?param_id=34" --data-binary \
+  "SELECT count() FROM test.hits WHERE CounterID = {id:UInt32}"
+
+1962
+
+$ curl "http://localhost:8123/?param_id=34;%20<b style="color: red;">DROP</b>%20<b style="color: red;">DATABASE</b>%20<b style="color: red;">test</b>" ...
+  "SELECT count() FROM test.hits WHERE CounterID = {id:UInt32}"
+
+Exception: Value 34; DROP DATABASE test
+cannot be parsed as UInt32 for query parameter 'id'
+
+$ curl "http://localhost:8123/?param_id=34;%20DROP%20DATABASE%20test" ...
+  "SELECT count() FROM test.hits WHERE CounterID = {id:String}"
+
+Exception: Illegal types of arguments (UInt32, String) of function equals</code>
+</section>
+
+
+<section class="slide">
+<h2>Data Gaps Filling</h2>
+<code style="margin-top: -1em;">SELECT EventDate, count() FROM table
+GROUP BY EventDate ORDER BY EventDate
+
+┌──EventDate─┬─count()─┐
+│ 2019-09-01 │       5 │
+│ 2019-09-02 │       3 │
+│ 2019-09-04 │       4 │
+│ 2019-09-05 │       1 │
+└────────────┴─────────┘
+</code>
+</section>
+
+<section class="slide">
+<h2>Data Gaps Filling</h2>
+<code style="margin-top: -1em;">SELECT EventDate, count() FROM table
+GROUP BY EventDate ORDER BY EventDate <b>WITH FILL</b>
+
+┌──EventDate─┬─count()─┐
+│ 2019-09-01 │       5 │
+│ 2019-09-02 │       3 │
+│ 2019-09-03 │       0 │
+│ 2019-09-04 │       4 │
+│ 2019-09-05 │       1 │
+└────────────┴─────────┘
+</code>
+</section>
+
+<section class="slide">
+<h2>Data Gaps Filling</h2>
+<p><b>WITH FILL</b> &mdash; a modifier for ORDER BY element;</p>
+<p><b>WITH FILL FROM</b> start</p>
+<p><b>WITH FILL FROM</b> start <b>TO</b> end</p>
+<p><b>WITH FILL FROM</b> start <b>TO</b> end <b>STEP</b> step</p>
+<p><b>WITH FILL</b> can be applied for any elements in ORDER BY:</p>
+<p>ORDER BY EventDate <b>WITH FILL</b>, EventTime <b>WITH FILL STEP</b> 3600</p>
+<p style="color: green; font-size: 14pt;">&mdash; available in version 19.14.</p>
+<p style="margin-top: 3em; color: gray; font-size: 12pt;">Developers &mdash; Anton Popov, Yandex; Dmitri Utkin, HSE Moscow</p>
+</section>
+
+
+<section class="slide">
+<h2>TTL expressions</h2>
+<p>&mdash; for columns:</p>
+<code>CREATE TABLE t (
+    date Date,
+    ClientIP UInt32 TTL date + INTERVAL 3 MONTH</code>
+<p style="margin-top: 1em;">&mdash; for all table data:</p>
+<code>CREATE TABLE t (date Date, ...)
+ENGINE = MergeTree ORDER BY ... 
+TTL date + INTERVAL 3 MONTH</code>
+</section>
+
+
+<section class="slide">
+<h2>Tiered Storage</h2>
+<p>Example: store hot data on SSD and archive data on HDDs.</p>
+<p>Multiple storage policies can be configured and used on per-table basis.</p>
+</section>
+
+<section class="slide">
+<h2>Tiered Storage</h2>
+<p>Step 1: configure available disks (storage paths):</p>
+<code>&lt;disks>
+    &lt;fast_disk> &lt;!-- disk name -->
+        &lt;path>/mnt/fast_ssd/clickhouse&lt;/path>
+    &lt;/fast_disk>
+    &lt;disk1>
+        &lt;path>/mnt/hdd1/clickhouse&lt;/path>
+        &lt;keep_free_space_bytes>10485760
+            &lt;/keep_free_space_bytes>
+    &lt;/disk1>
+    ...
+</code>
+</section>
+
+<section class="slide">
+<h2>Tiered Storage</h2>
+<p style="margin-top: -1em;">Step 2: configure storage policies:</p>
+<code>&lt;policies>
+    &lt;ssd_and_hdd>
+        &lt;volumes>
+            &lt;hot>
+                &lt;disk>fast_ssd&lt;/disk>
+                &lt;max_data_part_size_bytes>1073741824
+                    &lt;/max_data_part_size_bytes>
+            &lt;/hot>
+            &lt;cold>
+                &lt;disk>disk1&lt;/disk>
+            &lt;/cold>
+            &lt;move_factor>0.2&lt;/move_factor>
+        &lt;/volumes>
+    &lt;/ssd_and_hdd>
+    ...
+</code>
+</section>
+
+<section class="slide">
+<h2>Tiered Storage</h2>
+<p>Step 3: use the configured policy for your table:</p>
+<code>CREATE TABLE table
+(
+...
+)
+ENGINE = MergeTree
+ORDER BY ...
+SETTINGS <b>storage_policy</b> = 'ssd_and_hdd'
+</code>
+</section>
+
+<section class="slide">
+<h2>Tiered Storage</h2>
+<p>The data will be moved between volumes automatically.</p>
+<p>You can also do it manually:</p>
+<code>ALTER TABLE table 
+  MOVE PART|PARTITION ...
+  TO VOLUME|DISK ...</code>
+<p style="color: green; font-size: 14pt; margin-top: 2em;">&mdash; available in 19.15.</p>
+</section>
+
+
+
+<section class="slide">
+<h2>New Formats</h2>
+
+<p><b>Protobuf</b></p>
+<p>&mdash; efficient implementation, no excessive copies/allocations<br/>(ClickHouse style);</p>
+<p>&mdash; transparent type conversions between Proto's and ClickHouse types (UInt8, Int64, DateTime &lt;-> sint64, uint64, sint32, uint32, String &lt;-> bytes, string, etc.);</p>
+<p>&mdash; support for Nested types via repeated Messages or parallel repeated fields;</p>
+<p>&mdash; <b>format_schema</b> setting must be specified.</p>
+</section>
+
+<section class="slide">
+<h2>New Formats</h2>
+<p><b>Parquet</b></p>
+<p>&mdash; columnar format; naturally implemented without unpacking of columns;</p>
+<p>&mdash; transparent type conversions also supported.</p>
+<p><b>ORC</b></p>
+<p>&mdash; since 19.14 (input only).</p>
+</section>
+
+<section class="slide">
+<h2>Template Format</h2>
+<p>Allow to define a template for data formatting/parsing.</p>
+<p>A template contains substitutions and delimieters.</p>
+<p>Each substitution specifies data escaping rule:<br/>Quoted, Escaped, CSV, JSON, XML, Raw.</p>
+<code>Website ${domain:Quoted} has ${count:Raw} pageviews.</code>
+<p style="margin-top: 1em;">You can specify a template for rows, a delimiter between rows<br/>and a template to wrap resultset.</p>
+<p style="margin-top: 1em;">Example: to parse web access logs.<br/>
+Example: to parse deeply nested JSON.<br/>
+Example: generate HTML right in ClickHouse.</p>
+</section>
+
+
+<section class="slide">
+<h2>Table Functions</h2>
+<p>&mdash; url;</p>
+<p>&mdash; file;</p>
+<p>&mdash; cluster;</p>
+<p>&mdash; mysql;</p>
+<p>&mdash; odbc;</p>
+<p>&mdash; hdfs;</p>
+<p>&mdash; input (since 19.15).</p>
+</section>
+
+<section class="slide">
+<h2>Table Function 'input'</h2>
+<p>For data transformation at INSERT time:</p>
+<code>INSERT INTO table
+  SELECT *, domain(URL)
+  FROM input(TSV, 'URL String, ...')
+</code>
+<p style="margin-top: 1em;">You pipe your data to this query as with usual INSERT.</p>
+<p>Data is transformed on the fly by SELECT expression.</p>
+<p>Examples:<br/>
+&mdash; calculate data for columns;<br/>
+&mdash; skip unneeded columns;<br/>
+&mdash; do filtering, aggregations, joins.
+</p>
+<p style="color: green; font-size: 14pt; margin-top: 1em;">&mdash; available in 19.15 testing.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 36pt;">Optimization of queries with ORDER BY</h2>
+<p style="margin-top: -2em;">with respect to table sorting key</p>
+
+<code style="font-size: 14pt; margin-right: -12px;">SELECT event_time, message
+FROM system.text_log
+ORDER BY event_date DESC, event_time DESC
+LIMIT 10
+
+┌──────────event_time─┬─message───────────────────────────────────────────┐
+│ 2019-09-05 04:20:35 │ Renaming temporary part tmp_insert_201909_10_10_0 │
+│ 2019-09-05 04:20:35 │ Flushing system log                               │
+│ 2019-09-05 04:20:34 │ Flushing system log                               │
+│ 2019-09-05 04:20:34 │ Renaming temporary part tmp_insert_201909_10_10_0 │
+│ 2019-09-05 04:20:28 │ Renaming temporary part tmp_insert_201909_9_9_0 to│
+│ 2019-09-05 04:20:28 │ Flushing system log                               │
+│ 2019-09-05 04:20:27 │ Renaming temporary part tmp_insert_201909_9_9_0 to│
+  ...
+└─────────────────────┴───────────────────────────────────────────────────┘
+
+10 rows in set. Elapsed: <b>0.291</b> sec. Processed <b>42.21</b> million rows, 6.10 GB
+(145.13 million rows/s., 20.98 GB/s.)
+</code>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 36pt;">Optimization of queries with ORDER BY</h2>
+<p style="margin-top: -2em;">with respect to table sorting key</p>
+
+<code style="font-size: 14pt; margin-right: -12px;">:) SET <b>optimize_read_in_order</b> = 1
+
+:) SELECT event_time, message
+FROM system.text_log
+ORDER BY event_date DESC, event_time DESC
+LIMIT 10
+
+┌──────────event_time─┬─message───────────────────────────────────────────┐
+│ 2019-09-05 04:28:59 │ Merged 6 parts: from 201909_1_96_19 to 201909_101_│
+│ 2019-09-05 04:28:59 │ Renaming temporary part tmp_merge_201909_1_101_20 │
+│ 2019-09-05 04:28:59 │ Merge sorted 761 rows, containing 202 columns (202│
+│ 2019-09-05 04:28:59 │ Reading 2 marks from part 201909_101_101_0, total │
+│ 2019-09-05 04:28:59 │ Reading 2 marks from part 201909_100_100_0, total │
+  ...
+└─────────────────────┴───────────────────────────────────────────────────┘
+
+10 rows in set. Elapsed: <b>0.012</b> sec. Processed <b>54.41</b> thousand rows, 7.42 MB
+(4.68 million rows/s., 637.76 MB/s.)
+</code>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 36pt;">Optimization of queries with ORDER BY</h2>
+<p style="margin-top: -2em;">with respect to table sorting key</p>
+<p style="margin-top: 1em;">&mdash; ORDER BY table sorting key;</p>
+<p style="margin-top: 1em;">&mdash; ASC / DESC / mixed:</p>
+<code>ORDER BY event_date DESC, event_time ASC</code>
+<p style="margin-top: 1em;">&mdash; or by the prefix:</p>
+<code>ORDER BY event_date DESC</code>
+<p style="margin-top: 1em;">&mdash; of by expressions with monotonic functions of them;</p>
+<code>ORDER BY event_date DESC, -toUInt32(event_time)</code>
+<p style="margin-top: 1em;">&mdash; available from version <span style="color: green;">19.14</span>;</p>
+<p style="margin-top: -10px; color: gray; font-size: 12pt;">Developers &mdash; Anton Popov, Yandex; Anastasiya Rodigina, HSE Moscow</p>
+</section>
+
+<section class="slide">
+<h2>Server Logs for Introspection</h2>
+<p style="margin-top: -1em;">in system tables:</p>
+<p>&mdash; system.query_log;</p>
+<p>&mdash; system.query_thread_log;</p>
+<p>&mdash; system.part_log;</p>
+<p style="color: green;">&mdash; system.trace_log;</p>
+<p style="color: green;">&mdash; system.text_log;</p>
+<p style="color: green;">&mdash; system.metric_log;</p>
+</section>
+
+<section class="slide">
+<h2>Server Logs for Introspection</h2>
+<p style="margin-top: -1em;">system.<b>text_log</b></p>
+<p>Now we write ClickHouse logs into ClickHouse!</p>
+<code style="margin-top: 1em; font-size: 14pt;">DESCRIBE TABLE system.text_log
+
+┌─name──────────┬─type───────────────────┐
+│ event_date    │ Date                   │
+│ event_time    │ DateTime               │
+│ microseconds  │ UInt32                 │
+│ thread_name   │ LowCardinality(String) │
+│ thread_number │ UInt32                 │
+│ os_thread_id  │ UInt32                 │
+│ level         │ Enum8('Fatal' = 1, '...│
+│ query_id      │ String                 │
+│ logger_name   │ LowCardinality(String) │
+│ message       │ String                 │
+│ revision      │ UInt32                 │
+│ source_file   │ LowCardinality(String) │
+│ source_line   │ UInt64                 │
+└───────────────┴────────────────────────┘</code>
+</section>
+
+<section class="slide">
+<h2>Server Logs for Introspection</h2>
+<p style="margin-top: -1em;">system.<b>metric_log</b></p>
+<p>&mdash; for those who forgot to setup monitoring.</p>
+<p>&mdash; record all the ClickHouse metrics each second (by default).</p>
+
+<code style="font-size: 16pt;">SELECT
+    toStartOfMinute(event_time) AS h,
+    sum(ProfileEvent_<b>UserTimeMicroseconds</b>) AS user_time,
+    bar(user_time, 0, 60000000, 80) AS bar
+FROM system.<b>metric_log</b> WHERE event_date = today()
+GROUP BY h ORDER BY h</code>
+</section>
+
+<section class="slide">
+<h2>Server Logs for Introspection</h2>
+<code style="font-size: 16pt; margin-top: -1em;">SELECT
+    toStartOfMinute(event_time) AS h,
+    sum(ProfileEvent_<b>UserTimeMicroseconds</b>) AS user_time,
+    bar(user_time, 0, 60000000, 80) AS bar
+FROM system.<b>metric_log</b> WHERE event_date = today()
+GROUP BY h ORDER BY h</code>
+
+<code style="font-size: 12pt; margin-top: 1em; margin-left: -30px; margin-right: -30px;">┌───────────────────h─┬─user_time─┬─bar───────────────────────────────────────────────┐
+│ 2019-09-05 04:12:00 │         0 │                                                   │
+│ 2019-09-05 04:13:00 │         0 │                                                   │
+│ 2019-09-05 04:14:00 │    524000 │ ▋                                                 │
+│ 2019-09-05 04:15:00 │  15880000 │ █████████████████████▏                            │
+│ 2019-09-05 04:19:00 │  36724000 │ ████████████████████████████████████████████████▊ │
+│ 2019-09-05 04:20:00 │  17508000 │ ███████████████████████▎                          │
+│ 2019-09-05 04:21:00 │         0 │                                                   │
+│ 2019-09-05 04:22:00 │         0 │                                                   │
+│ 2019-09-05 04:23:00 │         0 │                                                   │
+│ 2019-09-05 04:24:00 │         0 │                                                   │
+│ 2019-09-05 04:25:00 │         0 │                                                   │
+│ 2019-09-05 04:26:00 │         0 │                                                   │
+│ 2019-09-05 04:27:00 │         0 │                                                   │
+│ 2019-09-05 04:28:00 │         0 │                                                   │
+│ 2019-09-05 04:29:00 │     80000 │                                                   │
+│ 2019-09-05 04:30:00 │         0 │                                                   │
+│ 2019-09-05 04:31:00 │         0 │                                                   │</code>
+</section>
+
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Sampling Profiler on a Query Level</h2>
+<p>Record code locations where the query was executing<br/>
+in every execution thread, at each moment of time with some period.</p>
+<p style="font-weight: strong; font-size: 150%">If the query is slow &mdash; where exactly (in code) it was slow?</p>
+<p>&mdash; where the specific query spent time?</p>
+<p>&mdash; where the time was spent for queries of some kind?</p>
+<p>&mdash; where the time was spent for queries of some user?</p>
+<p>&mdash; where the time was spent for queries, cluster wide?</p>
+<p style="margin-top: 3em; color: gray; font-size: 12pt;">Developer &mdash; Nikita Lapkov, HSE Moscow; et all.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Sampling Profiler on a Query Level</h2>
+<p>1. Turn on one of the following settings (or both):</p>
+<code>SET query_profiler_<b>cpu</b>_time_period_ns = 1000000;</code>
+<code style="margin-top: 10px;">SET query_profiler_<b>real</b>_time_period_ns = 1000000;</code>
+<p style="margin-top: 1em;">2. Run your queries.<br/>Recorded samples will be saved into <b>system.trace_log</b> table.</p>
+<code style="margin-top: 1em; font-size: 12pt;">event_date:    2019-09-05
+event_time:    2019-09-05 05:47:44
+revision:      54425
+timer_type:    CPU
+thread_number: 149
+query_id:      b1d8e7f9-48d8-4cb3-a768-0a6683f6f061
+trace:         [140171472847748,61781958,110943821,117594728,117595220,115654933,
+120321783,63251928,111161800,120329436,120331356,120308294,120313436,120319113,
+120143313,115666412,120146905,111013972,118237176,111013972,117990912,111013972,
+110986070,110986938,61896391,61897898,61887509,156206624,140171472807643]
+</code>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Sampling Profiler on a Query Level</h2>
+<p style="margin-top: -1em;"><b>trace</b> &mdash; an array of addresses in machine code (stack trace);</p>
+<p>Translate address to function name:<br/>&mdash; demangle(addressToSymbol(trace[1]))<br/>
+Translate address to source file name and line number:<br/>&mdash; addressToLine(trace[1])</p>
+<p>* don't forget to install clickhouse-common-static-<b>dbg</b> package</p>
+<p>Example: functions top:</p>
+<code style="margin-right: -10px;">SELECT count(),
+  demangle(addressToSymbol(trace[1] AS addr)) AS symbol
+FROM system.trace_log
+WHERE event_date = today()
+GROUP BY symbol
+ORDER BY count() DESC LIMIT 10</code>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Sampling Profiler on a Query Level</h2>
+<p>Пример: топ функций:</p>
+<code style="margin-left: -100px; margin-right: -100px;">┌─count()─┬─symbol──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│     517 │ void LZ4::(anonymous namespace)::decompressImpl&lt;32ul, false>(char const*, char*, unsigned long)                                                                                                                         │
+│     480 │ void DB::deserializeBinarySSE2&lt;4>(DB::PODArray&lt;unsigned char, 4096ul, Allocator&lt;false, false>, 15ul, 16ul>&amp;, DB::PODArray&lt;unsigned long, 4096ul, Allocator&lt;false, false>, 15ul, 16ul>&amp;, DB::ReadBuffer&amp;, unsigned long) │
+│     457 │ DB::VolnitskyBase&lt;true, true, DB::StringSearcher&lt;true, true> >::search(unsigned char const*, unsigned long) const                                                                                                       │
+│     270 │ read                                                                                                                                                                                                                    │
+│     163 │ void LZ4::(anonymous namespace)::decompressImpl&lt;16ul, true>(char const*, char*, unsigned long)                                                                                                                          │
+│     130 │ void LZ4::(anonymous namespace)::decompressImpl&lt;16ul, false>(char const*, char*, unsigned long)                                                                                                                         │
+│      58 │ CityHash_v1_0_2::CityHash128WithSeed(char const*, unsigned long, std::pair&lt;unsigned long, unsigned long>)                                                                                                               │
+│      44 │ void DB::deserializeBinarySSE2&lt;2>(DB::PODArray&lt;unsigned char, 4096ul, Allocator&lt;false, false>, 15ul, 16ul>&amp;, DB::PODArray&lt;unsigned long, 4096ul, Allocator&lt;false, false>, 15ul, 16ul>&amp;, DB::ReadBuffer&amp;, unsigned long) │
+│      37 │ void LZ4::(anonymous namespace)::decompressImpl&lt;8ul, true>(char const*, char*, unsigned long)                                                                                                                           │
+│      32 │ memcpy                                                                                                                                                                                                                  │
+└─────────┴─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘</code>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Sampling Profiler on a Query Level</h2>
+<p>Example: top of contexts (stacks) for a query:</p>
+<code style="margin-right: -10px;">SELECT count(),
+  arrayStringConcat(arrayMap(x -> concat(
+    demangle(addressToSymbol(x)),
+    '\n    ',
+    addressToLine(x)), trace), '\n') AS sym
+FROM system.trace_log
+WHERE query_id = '1a1272b5-695a-4b17-966d-a1701b61b3eb'
+  AND event_date = today()
+GROUP BY trace
+ORDER BY count() DESC
+LIMIT 10</code>
+</section>
+
+<section class="slide">
+<code style="margin-left: -100px; margin-right: -100px; font-size: 11pt;">count(): 154
+sym:     DB::VolnitskyBase&lt;true, true, DB::StringSearcher&lt;true, true> >::search(unsigned char const*, unsigned long) const
+    /opt/milovidov/ClickHouse/build_gcc9/dbms/programs/clickhouse
+DB::MatchImpl&lt;true, false>::vector_constant(DB::PODArray&lt;unsigned char, 4096ul, Allocator&lt;false, false>, 15ul, 16ul> const&amp;, DB::PODArray&lt;unsigned long, 4096ul, Allocator&lt;false, false>, 15ul, 16ul> const&amp;, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char>, std::allocator&lt;char> > const&amp;, DB::PODArray&lt;unsigned char, 4096ul, Allocator&lt;false, false>, 15ul, 16ul>&amp;)
+    /opt/milovidov/ClickHouse/build_gcc9/dbms/programs/clickhouse
+DB::FunctionsStringSearch&lt;DB::MatchImpl&lt;true, false>, DB::NameLike>::executeImpl(DB::Block&amp;, std::vector&lt;unsigned long, std::allocator&lt;unsigned long> > const&amp;, unsigned long, unsigned long)
+    /opt/milovidov/ClickHouse/build_gcc9/dbms/programs/clickhouse
+DB::PreparedFunctionImpl::execute(DB::Block&amp;, std::vector&lt;unsigned long, std::allocator&lt;unsigned long> > const&amp;, unsigned long, unsigned long, bool)
+    /home/milovidov/ClickHouse/build_gcc9/../dbms/src/Functions/IFunction.cpp:464
+DB::ExpressionAction::execute(DB::Block&amp;, bool) const
+    /usr/local/include/c++/9.1.0/bits/stl_vector.h:677
+DB::ExpressionActions::execute(DB::Block&amp;, bool) const
+    /home/milovidov/ClickHouse/build_gcc9/../dbms/src/Interpreters/ExpressionActions.cpp:759
+DB::FilterBlockInputStream::readImpl()
+    /home/milovidov/ClickHouse/build_gcc9/../dbms/src/DataStreams/FilterBlockInputStream.cpp:84
+DB::IBlockInputStream::read()
+    /usr/local/include/c++/9.1.0/bits/stl_vector.h:108
+DB::ExpressionBlockInputStream::readImpl()
+    /home/milovidov/ClickHouse/build_gcc9/../dbms/src/DataStreams/ExpressionBlockInputStream.cpp:34
+DB::IBlockInputStream::read()
+    /usr/local/include/c++/9.1.0/bits/stl_vector.h:108
+DB::ParallelInputsProcessor&lt;DB::ParallelAggregatingBlockInputStream::Handler>::thread(std::shared_ptr&lt;DB::ThreadGroupStatus>, unsigned long)
+    /usr/local/include/c++/9.1.0/bits/atomic_base.h:419
+ThreadFromGlobalPool::ThreadFromGlobalPool&lt;void (DB::ParallelInputsProcessor&lt;DB::ParallelAggregatingBlockInputStream::Handler>::*)(std::shared_ptr&lt;DB::ThreadGroupStatus>, unsigned long), DB::ParallelInputsProcessor&lt;DB::ParallelAggregatingBlockInputStream::Handler>*, std::shared_ptr&lt;DB::ThreadGroupStatus>, unsigned long&amp;>(void (DB::ParallelInputsProcessor&lt;DB::ParallelAggregatingBlockInputStream::Handler>::*&amp;&amp;)(std::shared_ptr&lt;DB::ThreadGroupStatus>, unsigned long), DB::ParallelInputsProcessor&lt;DB::ParallelAggregatingBlockInputStream::Handler>*&amp;&amp;, std::shared_ptr&lt;DB::ThreadGroupStatus>&amp;&amp;, unsigned long&amp;)::{lambda()#1}::operator()() const
+    /usr/local/include/c++/9.1.0/bits/shared_ptr_base.h:729
+ThreadPoolImpl&lt;std::thread>::worker(std::_List_iterator&lt;std::thread>)
+    /usr/local/include/c++/9.1.0/bits/atomic_base.h:551
+execute_native_thread_routine
+    /home/milovidov/ClickHouse/ci/workspace/gcc/gcc-build/x86_64-pc-linux-gnu/libstdc++-v3/include/bits/unique_ptr.h:81
+start_thread
+    /lib/x86_64-linux-gnu/libpthread-2.27.so
+clone
+    /build/glibc-OTsEL5/glibc-2.27/misc/../sysdeps/unix/sysv/linux/x86_64/clone.S:97
+</code>
+</section>
+
+
+<section class="slide">
+<h2>Row-Level Security</h2>
+<code>&lt;users>
+    &lt;user_name>
+        ...
+        &lt;databases>
+            &lt;database_name>
+                &lt;table_name>
+                    <b>&lt;filter>IsYandex = 1&lt;/filter></b>
+                &lt;table_name>
+            &lt;/database_name>
+        &lt;/databases>
+    &lt;/user_name>
+&lt;/users>
+</code>
+</section>
+
+<section class="slide">
+<h2>Adaptive Index Granularity</h2>
+<p>Automatically tune index granularity if you have fat columns.</p>
+<p>Everything is working out of the box.</p>
+<p style="color: green; font-size: 14pt; margin-top: 1em;">&mdash; available in 19.13.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Official RPM packages</h2>
+<p>CentOS, RedHat... GosLinux.</p>
+<p>Supported versions starting from CentOS 5.</p>
+<code style="margin-left: -20px; margin-right: 20px;">sudo yum install yum-utils
+sudo rpm --import \
+  https://repo.yandex.ru/clickhouse/CLICKHOUSE-KEY.GPG
+sudo yum-config-manager --add-repo \
+  https://repo.yandex.ru/clickhouse/rpm/stable/x86_64
+sudo yum install clickhouse-server clickhouse-client</code>
+</section>
+
+
+<section class="slide" style="background: #FFF url('pictures/roadmap.jpg') no-repeat; background-size: 100%;">
+<h2><span style="background: rgba(255, 255, 255, 0.75)">Upcoming</span></h2>
+</section>
+
+<section class="slide">
+<h2>Autumn 2019</h2>
+<p>&mdash; Indexing by z-Order curve</p>
+<p>&mdash; DDL queries for dictionaries</p>
+<p>&mdash; S3 import/export</p>
+<p>&mdash; Parallel parsing of data formats;</p>
+<p>&mdash; Speedup of INSERT with VALUES with expressions;</p>
+<p>&mdash; Aggregate functions for data clustering</p>
+<p>&mdash; Optimization of GROUP BY with table's order key</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">October 2019</h2>
+<p>&mdash; Initial implementation of RBAC;</p>
+<p>&mdash; Initial implementation of Merge JOIN;</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Autumn-Winter 2019</h2>
+<p>&mdash; More than initial implementation of RBAC;</p>
+<p>&mdash; More than initial implementation of Merge JOIN;</p>
+<p>&mdash; Workload management;</p>
+</section>
+
+<section class="slide" style="background: #FFF url('pictures/final.jpg') no-repeat; background-size: 100%;">
+    &nbsp;
+</section>
+
+    <section class="slide">
+        <h2>Community</h2>
+        <img style="float: right; width: 25%;" src="pictures/wechat.svg"/>
+        <p>Web site: <a href="https://clickhouse.yandex/">https://clickhouse.yandex/</a></p>
+        <p>GitHub: <a href="https://github.com/ClickHouse/ClickHouse/">https://github.com/ClickHouse/ClickHouse/</a></p>
+        <p>Maillist: clickhouse-feedback@yandex-team.com</p>
+        <p>Wechat: 4 groups (ask your friend to invite)</p>
+        <p style="margin-top: 2em;">+ meetups. Moscow, Saint-Petersburg, Novosibirsk, Ekaterinburg, Minsk...<br/>... Berlin, Paris, Amsterdam, Madrid, Munich, San-Francisco, <br/>... Beijing, <b>Shenzhen</b>, Shanghai, Hong Kong, Singapore, Tokyo.</p>
+    </section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+</body>
+</html>
