@@ -1,0 +1,87 @@
+OpenSSH_7.9p1, LibreSSL 2.7.3
+debug1: Reading configuration data /Users/sundy/.ssh/config
+debug1: /Users/sundy/.ssh/config line 1: Applying options for *
+debug1: /Users/sundy/.ssh/config line 40: Skipping Host block because of negated match for jj
+debug1: Reading configuration data /etc/ssh/ssh_config
+debug1: /etc/ssh/ssh_config line 48: Applying options for *
+debug1: Connecting to jj [172.26.14.30] port 32200.
+debug1: fd 5 clearing O_NONBLOCK
+debug1: Connection established.
+debug1: identity file /Users/sundy/.ssh/id_rsa type 0
+debug1: identity file /Users/sundy/.ssh/id_rsa-cert type -1
+debug1: identity file /Users/sundy/.ssh/id_dsa type -1
+debug1: identity file /Users/sundy/.ssh/id_dsa-cert type -1
+debug1: identity file /Users/sundy/.ssh/id_ecdsa type -1
+debug1: identity file /Users/sundy/.ssh/id_ecdsa-cert type -1
+debug1: identity file /Users/sundy/.ssh/id_ed25519 type -1
+debug1: identity file /Users/sundy/.ssh/id_ed25519-cert type -1
+debug1: identity file /Users/sundy/.ssh/id_xmss type -1
+debug1: identity file /Users/sundy/.ssh/id_xmss-cert type -1
+debug1: Local version string SSH-2.0-OpenSSH_7.9
+debug1: Remote protocol version 2.0, remote software version OpenSSH_7.2p2 Ubuntu-9ubuntu3
+debug1: match: OpenSSH_7.2p2 Ubuntu-9ubuntu3 pat OpenSSH_7.0*,OpenSSH_7.1*,OpenSSH_7.2*,OpenSSH_7.3*,OpenSSH_7.4*,OpenSSH_7.5*,OpenSSH_7.6*,OpenSSH_7.7* compat 0x04000002
+debug1: Authenticating to jj:32200 as 'libenwang'
+debug1: SSH2_MSG_KEXINIT sent
+debug1: SSH2_MSG_KEXINIT received
+debug1: kex: algorithm: curve25519-sha256@libssh.org
+debug1: kex: host key algorithm: rsa-sha2-512
+debug1: kex: server->client cipher: chacha20-poly1305@openssh.com MAC: <implicit> compression: zlib@openssh.com
+debug1: kex: client->server cipher: chacha20-poly1305@openssh.com MAC: <implicit> compression: zlib@openssh.com
+debug1: expecting SSH2_MSG_KEX_ECDH_REPLY
+debug1: Server host key: ssh-rsa SHA256:lsqj2hG8/Kgw7H+ZrSkfp0EwGZwUv0LjJW4rYauPRtc
+debug1: Host '[jj]:32200' is known and matches the RSA host key.
+debug1: Found key in /Users/sundy/.ssh/known_hosts:630
+debug1: rekey after 134217728 blocks
+debug1: SSH2_MSG_NEWKEYS sent
+debug1: expecting SSH2_MSG_NEWKEYS
+debug1: SSH2_MSG_NEWKEYS received
+debug1: rekey after 134217728 blocks
+debug1: Will attempt key: /Users/sundy/.ssh/id_rsa RSA SHA256:Jk97gjiI4JCmIINll6mF1pHvPiy9VAnajtMfkOGXSFg agent
+debug1: Will attempt key: /Users/sundy/.ssh/Identity DSA SHA256:vHkOFBl2RhbeUDpkHPuF/DOzlGJQSuIFXHNjfkXexVk agent
+debug1: Will attempt key: /Users/sundy/.ssh/id_dsa 
+debug1: Will attempt key: /Users/sundy/.ssh/id_ecdsa 
+debug1: Will attempt key: /Users/sundy/.ssh/id_ed25519 
+debug1: Will attempt key: /Users/sundy/.ssh/id_xmss 
+debug1: SSH2_MSG_EXT_INFO received
+debug1: kex_input_ext_info: server-sig-algs=<rsa-sha2-256,rsa-sha2-512>
+debug1: SSH2_MSG_SERVICE_ACCEPT received
+debug1: Authentications that can continue: publickey
+debug1: Next authentication method: publickey
+debug1: Offering public key: /Users/sundy/.ssh/id_rsa RSA SHA256:Jk97gjiI4JCmIINll6mF1pHvPiy9VAnajtMfkOGXSFg agent
+debug1: Authentications that can continue: publickey
+debug1: Offering public key: /Users/sundy/.ssh/Identity DSA SHA256:vHkOFBl2RhbeUDpkHPuF/DOzlGJQSuIFXHNjfkXexVk agent
+debug1: Server accepts key: /Users/sundy/.ssh/Identity DSA SHA256:vHkOFBl2RhbeUDpkHPuF/DOzlGJQSuIFXHNjfkXexVk agent
+Authenticated with partial success.
+debug1: Authentications that can continue: keyboard-interactive
+debug1: Next authentication method: keyboard-interactive
+debug1: Enabling compression at level 6.
+debug1: Authentication succeeded (keyboard-interactive).
+Authenticated to jj ([172.26.14.30]:32200).
+debug1: Local connections to LOCALHOST:2222 forwarded to remote address socks:0
+debug1: Local forwarding listening on ::1 port 2222.
+debug1: channel 0: new [port listener]
+debug1: Local forwarding listening on 127.0.0.1 port 2222.
+debug1: channel 1: new [port listener]
+debug1: Requesting no-more-sessions@openssh.com
+debug1: Entering interactive session.
+debug1: pledge: network
+debug1: client_input_global_request: rtype hostkeys-00@openssh.com want_reply 0
+debug1: Connection to port 2222 forwarding to socks port 0 requested.
+debug1: channel 2: new [dynamic-tcpip]
+debug1: Connection to port 2222 forwarding to socks port 0 requested.
+debug1: channel 3: new [dynamic-tcpip]
+channel 2: open failed: connect failed: Connection timed out
+debug1: channel 2: free: direct-tcpip: listening port 2222 for 10.64.97.18 port 32200, connect from 127.0.0.1 port 50072 to 127.0.0.1 port 2222, nchannels 4
+debug1: Connection to port 2222 forwarding to socks port 0 requested.
+debug1: channel 2: new [dynamic-tcpip]
+debug1: Connection to port 2222 forwarding to socks port 0 requested.
+debug1: channel 4: new [dynamic-tcpip]
+channel 3: open failed: connect failed: Connection timed out
+debug1: channel 3: free: direct-tcpip: listening port 2222 for 10.64.97.15 port 32200, connect from 127.0.0.1 port 50075 to 127.0.0.1 port 2222, nchannels 5
+channel 2: open failed: connect failed: Connection timed out
+debug1: channel 2: free: direct-tcpip: listening port 2222 for 10.64.97.11 port 32200, connect from 127.0.0.1 port 50078 to 127.0.0.1 port 2222, nchannels 4
+debug1: Connection to port 2222 forwarding to socks port 0 requested.
+debug1: channel 2: new [dynamic-tcpip]
+debug1: channel 4: free: direct-tcpip: listening port 2222 for 10.68.38.0 port 32200, connect from 127.0.0.1 port 50082 to 127.0.0.1 port 2222, nchannels 4
+debug1: Connection to port 2222 forwarding to socks port 0 requested.
+debug1: channel 3: new [dynamic-tcpip]
