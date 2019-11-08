@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Отъявленные баги и как их избежать на примере ClickHouse</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>Отъявленные баги и как их избежать на примере ClickHouse</h1>
+    </header>
+
+    <section class="slide" id="cover" style="background: #FFF url('pictures/title.png') no-repeat; background-size: 100%;">
+        <h1 style="margin-top: 50px; font-size: 32pt; color: white;">Отъявленные баги и как их избежать<br/>на примере ClickHouse</h1>
+    </section>
+
+    <section class="slide">
+        <h2>Обо мне</h2>
+        <p>Алексей, разработчик ClickHouse.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Отъявленные баги</h2>
+        <p><ul><li>Баги в коде</li>
+        <li>Баги компилятора</li>
+        <li>Баги ядра ОС</li>
+        <li>Баги железа</li>
+        <li>Баги конфигурации</li>
+        <li>Баги юзабилити</li></ul></p>
+    </section>
+
+    <section class="slide">
+        <h2>Баги конфигурации</h2>
+        <p>Этот пример взят из практики.</p>
+        <p>Не моей.</p><p>Очень давно.</p><p>Вообще в другой компании.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Баги конфигурации</h2>
+        <p>Есть map-reduce кластер.</p>
+        <p>Он состоит из data-nodes и master.</p>
+        <p>Data-ноды хранят данные.</p>
+        <p>Data-ноды знают адрес мастера и соединяются с ним.</p>
+        <p>Master-нода следит за тем, где какие данные должны находиться,<br/> и отдаёт команды data-нодам.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Баги конфигурации</h2>
+        <p>Обновили конфигурацию дата-нод на одном из кластеров.</p>
+        <p>По ошибке, дата-ноды получили адрес мастера от другого кластера.</p>
+        <p>...</p>
+        <p>Мастер решил, что на дата-нодах лежат какие-то неизвестные данные.</p>
+        <p>И отдал всем команду на удаление этих данных.</p>
+        <p>Когда половина данных удалилась, это кто-то заметил.</p>
+    </section>
+
+    <section class="slide">
+        <img src="pictures/classic.jpg" style="height: 90%;" />
+        <p style="font-size: 10pt; color: gray;">Megg, Mogg &amp; Owl Series by Simon Hanselmann</p>
+    </section>
+
+    <section class="slide">
+        <h2>Баги конфигурации</h2>
+        <p>Самые эпичные баги &mdash; которые приводят<br/>к непреднамеренному удалению данных.</p>
+        <p>Как избежать:</p>
+
+        <p>Не удалять данные, а откладывать в сторону.</p>
+        <p><b>Не удалять неожиданные данные</b>, если причина неизвестная.</p>
+        <p><b>Порог на количество</b> неожиданных данных<br/>&mdash; если их слишком много, то отказываться запускаться.</p>
+        <p>Изоляция тестинга и продакшена на уровне сети.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Баги конфигурации</h2>
+        <p>Этот пример взят из практики.</p>
+        <p>Теперь моей...</p>
+    </section>
+
+    <section class="slide">
+        <h2>Баги конфигурации</h2>
+        <p>У одной хорошей компании как-то странно работал кластер ClickHouse.</p>
+        <p>Во время работы, реплики не синхронизировались,<br/>а при перезапуске возникало сообщение о том,<br/>что &laquo;все данные неверны&raquo;, и сервер не запускался.</p>
+        <p>При выставлении флага <b>force_restore_data</b>,<br/>часть данных откладывалась в сторону.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Баги конфигурации</h2>
+        <p>Кластер ClickHouse для координации использует ZooKeeper.</p>
+        <p>ZooKeeper хранит метаданные о том,<br/>какие данные на какой реплике должны быть.</p>
+        <p>ZooKeeper &mdash; это тоже кластер, как правило три машины.</p>
+        <p>В конфигурации ClickHouse указываются все машины ZooKeeper<br/>и соединение устанавливается со случайной.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Баги конфигурации</h2>
+        <p>Причина: вместо <b style="color: green;">кластера из трёх узлов ZK</b>,<br/> было <b style="color: red;">три независимых узла</b> (три кластера из одного узла).</p>
+        <p>Решение:<br/>&mdash; исправить конфигурацию ZK;<br/>&mdash; выполнить <b>ATTACH</b> кусков данных из директории <b>detached/unexpeted_*</b>.</p>
+        <p>Итог:<br/>&mdash; <b style="color: green;">все данные восстановлены</b>;<br/>&mdash; реплики синхронизировались;<br/>&mdash; потерь ноль!</p>
+    </section>
+
+
+    <section class="slide">
+        <h2>Баги в коде</h2>
+        <p>Пример из 2015 года.</p>
+        <p>Этот баг проявлялся в продакшене на кластере Яндекс.Метрики...</p>
+    </section>
+
+    <section class="slide">
+        <h2>Баги в коде</h2>
+        <p>Симптом:</p>
+        <p>Очень редко пользователь получает исключение</p>
+        <p>&laquo;<span style="color: red;">Checksum doesn't match, corrupted data</span>&raquo;</p>
+        <p>или &laquo;<span style="color: red;">LRUCache became inconsistent. There must be a bug in it</span>&raquo;.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Баги в коде</h2>
+        <p>&laquo;Checksum doesn't match, corrupted data&raquo;</p>
+        <p>&mdash; проверяются чексуммы сжатых блоков данных до их разжатия;</p>
+        <p>&mdash; ошибка обычно говорит о том,<br/>что данные на файловой системе битые;</p>
+        <p>&mdash; но если прочитать тот же самый файл вручную, то ошибки нет;</p>
+        <p>&mdash; однажды появившись, ошибка стабильно воспроизводится при повторе запроса;</p>
+        <p>&mdash; при перезапуске сервера, ошибка исчезает на некоторое время.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Баги в коде</h2>
+        <p>&laquo;Checksum doesn't match, corrupted data&raquo;</p>
+        <p>&mdash; возможно, данные бьются в оперативке?</p>
+        <p>&mdash; но в <b>dmesg</b> (kern.log) нет machine check exceptions;</p>
+        <p>&mdash; но в остальном, проявлений ошибки нет;</p>
+    </section>
+
+    <section class="slide">
+        <h2>Баги в коде</h2>
+        <p>&laquo;LRUCache became inconsistent. There must be a bug in it.&raquo;</p>
+        <p>&mdash; здесь нам ясно говорят, что баг в коде;</p>
+        <p>&mdash; возможно, проезд по памяти?</p>
+        <p>&mdash; но тесты под <b>ASan</b> и <b>TSan</b> в CI ничего не показывают;</p>
+        <p>&mdash; и запуск сервера под <b>ASan</b> на продакшене ничего не ловит :(</p>
+        <p>&mdash; сброс mark cache на некоторое время лечит ошибку.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Баги в коде</h2>
+        <p>Ищу баг пристальным взглядом в код<br/>и просмотром изменений в последнем релизе.</p>
+        <p>Исправляю три других бага, а проблема остаётся.</p>
+        <p>Пытаюсь найти закономерность по серверам,<br/>по времени, по характеру нагрузки...</p>
+    </section>
+
+    <section class="slide">
+        <h2>Баги в коде</h2>
+        <p>Проблема проявляется только на одном из кластеров,<br/>а на других &mdash; никогда.</p>
+        <p>Только на этом кластере используется новая возможность<br/>&mdash; cache словари.</p>
+        <p>Кэш словари используют вручную написанный аллокатор<br/>&mdash; ArenaWithFreeLists.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Баги в коде</h2>
+    <code style="display: block; white-space: pre;">class ArenaWithFreeLists
+{
+    Block * free_lists[16] {};
+
+    static auto sizeToPreviousPowerOfTwo(size_t size)
+    {
+        return <b style="color: red;">_bit_scan_reverse</b>(size - 1);
+    }
+
+    char * alloc(size_t size)
+    {
+        const auto list_idx = findFreeListIndex(size);
+        free_lists[list_idx]->...
+    }
+}</code>
+    </section>
+
+    <section class="slide">
+        <h2>Баги в коде</h2>
+        <p style="margin-top: -1em;"><code>int _bit_scan_reverse(int a)</code></p>
+        <p style="margin-top: 1em;">Set dst to the index of the highest set bit in 32-bit integer a.<br/>If no bits are set in a then dst is <b>undefined</b>.</p>
+        <p>Компилятор может использовать undefined behaviour<br/>для оптимизации кода...</p>
+        <p>... но вместо этого просто генерирует <code>bsr %edi, %eax;</code></p>
+        <p>инструкция <code>bsr</code> имеет неопределённое поведение на уровне CPU,<br/>если операнд равен нулю.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Баги в коде</h2>
+        <p>Инструкция <code>bsr</code> имеет неопределённое поведение на уровне CPU,<br/>если операнд равен нулю.</p>
+        <p>По факту, в случае нулевого аргумента, процессор оставляет destination регистр неизменным.</p>
+        <p>Результат зависит от того, как и куда функция инлайнится компилятором.</p>
+        <p><code style="display: block; white-space: pre;">bsrl %edi, %eax
+retq</code></p>
+    </section>
+
+    <section class="slide">
+    <code style="display: block; white-space: pre; margin: 0 -70px 0 -70px; font-size: 12pt; line-height: 1.5; overflow: hidden;">$ objdump -Cd /usr/bin/clickhouse-server |
+    grep -E 'bsr|^000' | grep -B1 bsr | grep -A2 -E 'Cache|Arena'
+
+00000000010f8690 &lt;DB::ArenaWithFreeLists::findFreeListIndex(unsigned long)>:
+ 10f8694:       0f bd db                <span style="color: green; font-weight: bold;">bsr    %ebx,%ebx</span>
+00000000010f99d0 &lt;DB::CacheDictionary::setAttributeValue(DB::CacheDictionary::attribute_t&amp;, unsigned long, DB::Field const&amp;) const>:
+ 10f9a48:       44 0f bd f2             <span style="color: red; font-weight: bold;">bsr    %edx,%r14d</span>
+00000000010f9be0 &lt;DB::CacheDictionary::setDefaultAttributeValue(DB::CacheDictionary::attribute_t&amp;, unsigned long) const>:
+ 10f9c52:       44 0f bd ea             <span style="color: red; font-weight: bold;">bsr    %edx,%r13d</span>
+0000000001a888a0 &lt;DB::ComplexKeyCacheDictionary::setDefaultAttributeValue(DB::ComplexKeyCacheDictionary::attribute_t&amp;, unsigned long) const>:
+ 1a88917:       45 0f bd e4             <span style="color: green; font-weight: bold;">bsr    %r12d,%r12d</span>
+0000000001a88b40 &lt;DB::ComplexKeyCacheDictionary::allocKey(unsigned long, std::vector&lt;DB::IColumn const*, std::allocator&lt;DB::IColumn const*> > const&amp;, std::vector&lt;StringRef, std::allocator&lt;StringRef> >&amp;) const>:
+ 1a88be9:       45 0f bd ed             <span style="color: green; font-weight: bold;">bsr    %r13d,%r13d</span>
+0000000001a88e10 &lt;DB::ComplexKeyCacheDictionary::freeKey(StringRef) const>:
+ 1a88e5a:       0f bd db                <span style="color: green; font-weight: bold;">bsr    %ebx,%ebx</span>
+0000000001a88fd0 &lt;DB::ComplexKeyCacheDictionary::copyKey(StringRef) const>:
+ 1a89033:       0f bd ed                <span style="color: green; font-weight: bold;">bsr    %ebp,%ebp</span>
+0000000001a89780 &lt;DB::ComplexKeyCacheDictionary::setAttributeValue(DB::ComplexKeyCacheDictionary::attribute_t&amp;, unsigned long, DB::Field const&amp;) const>:
+ 1a897f8:       44 0f bd ea             <span style="color: red; font-weight: bold;">bsr    %edx,%r13d</span>
+ 1a89929:       45 0f bd e4             <span style="color: green; font-weight: bold;">bsr    %r12d,%r12d</span></code>
+    </section>
+
+    <section class="slide">
+        <h2>Баги в коде</h2>
+        <p style="margin-top: -1em;">&mdash; берём мусор вместо индекса массва;
+        <br/>&mdash; получаем проезд по памяти куда-то далеко;</p>
+        <p>&mdash; почти вся память заполнена кэшами &mdash; портим кэш;
+        <br/>&mdash; это &mdash; кэш &laquo;засечек&raquo;, смещений в файлах;</p>
+        <p>&mdash; читаем файл по неправильному смещению<br/>&mdash; получаем мусор вместо чексуммы;</p>
+        <p>&laquo;Checksum doesn't match, corrupted data&raquo;</p>
+        <p><a href="https://github.com/ClickHouse/ClickHouse/commit/2368ac36">https://github.com/ClickHouse/ClickHouse/commit/2368ac36</a></p>
+        <p style="color: green;">Исправлено 27 декабря 2015</p>
+    </section>
+
+
+    <section class="slide">
+        <h2><s>Баги</s> в железе</h2>
+        <p>А точнее, неизбежные эффекты.</p>
+        <p>&mdash; неатомарность записи на RAID;</p>
+        <p>&mdash; bit rot на HDD и SSD;</p>
+        <p>&mdash; bit flips в оперативке (а как же ECC?);</p>
+        <p>&mdash; bit flips на уровне CPU;</p>
+        <p>&mdash; bit flips в сети (а как же TCP и Ethernet checksums?)</p>
+    </section>
+
+    <section class="slide">
+        <h2>Баги в железе</h2>
+        <p><a href="https://github.com/ClickHouse/ClickHouse/issues/780">https://github.com/ClickHouse/ClickHouse/issues/780</a></p>
+        <p>&laquo;A malformed znode prevents ClickHouse from starting&raquo;</p>
+        <code style="display: block; white-space: pre; line-height: 1.5; font-size: 14pt;">format version: 3
+create_time: 2017-05-04 13:00:44
+source repliba: sde500
+block_id:
+merge
+20170501_20170504_200_49083_12589
+20170504_20170504_49084_49084_0
+into
+20170501_20170504_200_49084_12590</code>
+    </section>
+
+    <section class="slide">
+        <h2>Баги в железе</h2>
+        <p><a href="https://github.com/ClickHouse/ClickHouse/issues/780">https://github.com/ClickHouse/ClickHouse/issues/780</a></p>
+        <p>&laquo;A malformed znode prevents ClickHouse from starting&raquo;</p>
+        <code style="display: block; white-space: pre; line-height: 1.5; font-size: 14pt;">format version: 3
+create_time: 2017-05-04 13:00:44
+source repli<b style="color: red;">b</b>a: sde500
+block_id:
+merge
+20170501_20170504_200_49083_12589
+20170504_20170504_49084_49084_0
+into
+20170501_20170504_200_49084_12590</code>
+    </section>
+
+    <section class="slide">
+        <h2>Баги в железе</h2>
+        <p><a href="http://dinaburg.org/bitsquatting.html">http://dinaburg.org/bitsquatting.html</a><br/>
+        <br/>Rowhammer, ECCploit, RAMBleed...</p>
+        <p style="margin-top: 2em;"><b>Всегда чексуммируйте данные!</b></p>
+        <p>&mdash; при записи в файловую систему;</p>
+        <p>&mdash; при передаче по сети.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Ещё баги...</h2>
+
+        <p>Продакшен кластер Метрики. В ответ на запрос приходит исключение:</p>
+
+        <p style="line-height: 1.5"><b style="color: red;">Checksum doesn't match: corrupted data.</b><br/>Reference: a87ee784054ad3265e316ade23acb8d8.<br/>Actual: 0417637c7f711925046ab4f9d1cf1b68.<br/>Size of compressed block: 773:<br/>while receiving packet from mtxxxlog01-54-3.metrika.yandex.net:9000, 2a02:6b8:...</p>
+
+        <p>Выглядит знакомо! Опять проезд по памяти?</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">Checksum doesn't match: corrupted data</h2>
+
+        <p><br/>Ошибка стала проявляться 6 февраля 2019.</p>
+        <p>Воспроизводится несколько раз в сутки<br/>среди 1000+ серверов с ClickHouse.</p>
+        <p>Мы не катили релизы в это время :(</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">Checksum doesn't match: corrupted data</h2>
+
+        <p><br/>Ошибка стала проявляться 6 февраля 2019.</p>
+        <p>Воспроизводится несколько раз в сутки<br/>среди 1000+ серверов с ClickHouse.</p>
+        <p>Мы не катили релизы в это время :(</p>
+
+        <p>Отладить проблему не получилось<br/>и через несколько дней, ошибка исчезла сама.</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">Checksum doesn't match: corrupted data</h2>
+
+        <p><br/>Мы про это забыли, но 15 мая 2019, ошибка снова стала проявляться.</p>
+        <p>Воспроизводится несколько раз в сутки<br/>среди 1000+ серверов с ClickHouse.</p>
+        <p>Попытки воспроизвести, просмотр логов и графиков &mdash; ничего не даёт.</p>
+
+        <p>Если проблему не удаётся воспроизвести, единственный вариант<br/>&mdash; собирать все случаи и <b>искать закономерности</b>.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Ищем закономерности</h2>
+<p style="margin-top: -1em;">7 из 9 серверов с E5-2683 v4 были подвержены ошибке, но из подверженных ошибке только около половины E5-2683 v4.</p>
+<p>От ядра Linux не зависит.</p>
+<p>Ошибки обычно не повторяются. Кроме кластера mtauxyz, где Corrupted data настоящая (на диске) &mdash; другой случай.</p>
+<p>kern.log &mdash; ничего интересного.</p>
+<p>Графики CPU, IO, Network &mdash; ничего интересного.</p>
+<p>По типам сетевых адаптеров ничего интересного.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Снова ищем закономерности</h2>
+<p style="margin-top: -1em;">Аптайм серверов большой, они не падают. Нет сегфолтов и подобного.</p>
+<p>Ошибки сгруппированы по дням (проявляются в течение пары дней), но не сгруппированы более локально по времени. Солнечная активность?</p>
+<p>У разных случаев ошибки, совпадают сами пакеты: чексумма полученная, ожидаемая, размер: большинство ошибок имеют всего два варианта пакетов.</p>
+<p>Размер сжатого блока маленький (меньше килобайта).</p>
+<p>Закономерности по серверам, откуда читаем данные &mdash; нет.</p>
+<p>Бинарное представление размеров пакетов и чексумм ничем не примечательно.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Опять ищем закономерности</h2>
+<p style="margin-top: -1em;">Только один из кластеров.</p>
+<p>Только третьи реплики, находящиеся в ДЦ Владимир.</p>
+<p>Эти факты совпадают с предыдущим случаем, который был аж в феврале &mdash; точно на другой версии ClickHouse.</p>
+<p>Все ошибки при чтении пакетов по сети: while receiving packet from.</p>
+<p>Пакет, на котором произошла ошибка, зависит от структуры запроса. Для запросов, отличающихся по структуре, ошибка на разных чексуммах. Но в запросах, на которых ошибка на одной и той же чексумме, отличаются константы.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Не сдаёмся, ищем закономерности</h2>
+<p style="margin-top: -1em;">Во всех запросах кроме одного есть GLOBAL JOIN.<br/>Но один запрос необычно простой:<br/><pre style="font-size: 16pt; margin-top: 0; margin-bottom: 0;">SELECT max(ReceiveTimestamp) FROM tracking_events_all
+WHERE APIKey = 1111 AND (OperatingSystem IN ('android', 'ios'))</pre>И размер сжатого блока &mdash; всего 75 байт.</p>
+<p>Затронутые серверы сгруппированы по именам:<br/><b>mtxxxlog01-{39..44,57..58,64,68..71,73..74,76}-3</b></p>
+<p>Группы проблемных серверов совпадают с теми,<br/> которые были в феврале.</p>
+<p>Проблемные серверы стоят в VLA-03, VLA-04,<br/> а не проблемные &mdash; во VLA-02.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Отладка методом тыка</h2>
+
+        <p style="margin-top: -1em;">Найдём в <b>query_log</b> запрос с такой ошибкой, для которой<br/>size of compressed block маленький (= 107) и запрос простой:</p>
+<code style="display: block; white-space: pre; margin: 0 -50px 0 -50px; line-height: 1.5; font-size: 14pt; overflow: hidden;">SELECT hostName() AS h, exception, query
+FROM cluster('mtxxxlogs_all_replicas', system.query_log)
+WHERE type = 4 AND exception LIKE '%corrupted%' AND event_date >= '2019-01-01'
+SETTINGS skip_unavailable_shards = 1
+
+Row 1:
+──────
+h:         mtxxxlog04-01-3
+exception: Code: 40, e.displayText() = DB::Exception: Checksum doesn't match: corrupted data. Reference: f633b841a7a7a80838dd6a89d391bfda. Actual: 8b40502d2ffe5b712b52e03c505ca49f. Size of compressed block: 107.: while receiving packet from mtxxxlog01-14-1.yandex.ru:9000, 2a02:6b8:b011:3000:48fb:2439:729e:4709, e.what() = DB::Exception
+query:     SELECT uniqIf(DeviceIDHash,SessionType = 0) AS `ym:ge:users` FROM mobile.generic_events_all WHERE StartDate = toDate('2019-01-01') and APIKey IN (2162208,2174014,2188009,2216512,2216749,2233579,2251144,2254336,2265019,2371901) and EventType = 1 WITH TOTALS  ORDER BY `ym:ge:users` DESC limit 0,100 FORMAT JSONCompact
+</code>
+    </section>
+
+    <section class="slide">
+        <h2>Отладка методом тыка</h2>
+
+        <p style="margin-top: -1em;">Выполнил запрос с помощью программы clickhouse-local, чтобы наверняка получить по сети такие же блоки, какие были в том случае:</p>
+
+<code style="display: block; white-space: pre; margin: 0 -50px 0 -50px; line-height: 1.5; font-size: 14pt; overflow: hidden;">strace -f -e trace=network -s 1000 -x \
+<b>clickhouse-local</b> --query "
+    SELECT uniqIf(DeviceIDHash, SessionType = 0)
+    FROM remote('127.0.0.{2,3}', mobile.generic_events)
+    WHERE StartDate = '2019-02-07' AND APIKey IN (616988,711663,507671,835591,262098,159700,635121,509222)
+        AND EventType = 1 WITH TOTALS" --config config.xml</code>
+
+<p style="margin-top: 1em;">Запрос выполняется без ошибок.</p>
+<p>С помощью <b>strace</b> получаю дамп блоков.<br/>
+Расшифровал пакеты и обнаружил там ожидаемую чексумму.</p>
+    </section>
+
+    <section class="slide">
+<code style="display: block; white-space: pre; margin: 0 -50px 0 -50px; font-size: 12pt; overflow: hidden;">107 bytes
+Reference: <b style="color: green">f633b841a7a7a80838dd6a89d391bfda</b>. Actual: <b style="color: red">8b40502d2ffe5b712b52e03c505ca49f</b>.
+
+\x01\x00
+\x08\xa8\xa7\xa7\x41\xb8\x33\xf6\xda\xbf\x91\xd3\x89\x6a\xdd\x38
+
+\x82\x6b\x00\x00\x00\x62\x00\x00\x00\xf2\x3b\x01\x00\x02\xff\xff\xff\xff\x00\x01\x01\x2c\x75\x6e\x69\x71\x49\x66\x28\x44\x65\x76\x69\x63\x65\x49\x44\x48\x61\x73\x68\x2c\x20\x65\x71\x75\x61\x6c\x73\x28\x53\x65\x73\x73\x69\x6f\x6e\x54\x79\x70\x65\x2c\x20\x30\x29\x29\x28\x41\x67\x67\x72\x65\x67\x61\x74\x65\x46\x75\x6e\x63\x74\x69\x6f\x6e\x28\x3f\x00\xf0\x03\x2c\x20\x55\x49\x6e\x74\x36\x34\x2c\x20\x55\x49\x6e\x74\x38\x29\x00\x00
+
+\x01
+\x00
+<b style="color: green">\x08\xa8\xa7\xa7\x41\xb8\x33\xf6\xda\xbf\x91\xd3\x89\x6a\xdd\x38</b>
+\x82
+\x6b\x00\x00\x00
+\x62\x00\x00\x00
+\xf2\x3b\x01\x00\x02\xff\xff\xff\xff\x00
+\x01\x01\x2c\x75\x6e\x69\x71\x49\x66\x28
+\x44\x65\x76\x69\x63\x65\x49\x44\x48\x61
+\x73\x68\x2c\x20\x65\x71\x75\x61\x6c\x73
+\x28\x53\x65\x73\x73\x69\x6f\x6e\x54\x79
+\x70\x65\x2c\x20\x30\x29\x29\x28\x41\x67
+\x67\x72\x65\x67\x61\x74\x65\x46\x75\x6e
+\x63\x74\x69\x6f\x6e\x28\x3f\x00\xf0\x03
+\x2c\x20\x55\x49\x6e\x74\x36\x34\x2c\x20
+\x55\x49\x6e\x74\x38\x29\x00\x00
+
+^A^@^B&lt;FF>&lt;FF>&lt;FF>&lt;FF>^@^A^A,uniqIf(DeviceIDHash, equals(SessionType, 0))(AggregateFunction(uniqIf, UInt64, UInt8)^@^@
+
+01 - field_num
+00 - is_overflows
+02 - field_num
+ffffffff - bucket_num
+00 - end of block info
+
+01 - columns
+01 - rows
+2c 756e69714966284465766963654944486173682c20657175616c732853657373696f6e547970652c20302929    uniqIf(DeviceIDHash, equals(SessionType, 0))
+28 41676772656761746546756e6374696f6e28756e697149662c2055496e7436342c2055496e743829            AggregateFunction(uniqIf, UInt64, UInt8)
+00 - skip degree
+00 - size</code>
+    </section>
+
+    <section class="slide">
+        <h2>Отладка методом тыка</h2>
+        <p style="margin-top: -1em;">Написал программу, которая делает bit flip бита на каждой возможной позиции и считает чексумму.</p>
+
+        <p>Обнаружил, что если поменять значение одного бита, то получится ровно та битая чексумма, которая была в сообщении об ошибке:</p>
+
+        <code style="display: block; white-space: pre; margin: 0 -50px 0 -50px; font-size: 12pt; overflow: hidden; line-height: 1.5;">echo -ne "\x82\x6b\x00\x00\x00\x62\x00\x00\x00\xf2\x3b\x01\x00\x02\xff\xff\xff\xff\x00\x01
+\x01\x2c\x75\x6e\x69\x71\x49\x66\x28\x44\x65\x76\x69\x63\x65\x49\x44\x48\x61\x73\x68\x2c\x20
+\x65\x71\x75\x61\x6c\x73\x28\x53\x65\x73\x73\x69\x6f\x6e\x54\x79\x70\x65\x2c\x20\x30\x29\x29
+\x28\x41\x67\x67\x72\x65\x67\x61\x74\x65\x46\x75\x6e\x63\x74\x69\x6f\x6e\x28\x3f\x00\xf0\x03
+\x2c\x20\x55\x49\x6e\x74\x36\x34\x2c\x20\x55\x49\x6e\x74\x38\x29\x00\x00" \
+    | ./checksum | grep 8b40502d2ffe5b712b52e03c505ca49f
+
+<b style="color: red">8b40502d2ffe5b712b52e03c505ca49f</b>        32, 6</code>
+    </section>
+
+    <section class="slide">
+        <h2>Вывод: проблема аппаратная</h2>
+        <p>При ошибке в софте (например, проезде по памяти),<br/><b>single bit flip</b> маловероятен.</p>
+        <p>Но как локализовать источник проблемы?</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">Как локализовать аппаратную проблему?</h2>
+        <p>Проблема возникала и исчезала в определённые даты.</p>
+        <p>Затронутые серверы сгруппированы по именам:<br/>mtxxxlog01-{39..44,57..58,64,68..71,73..74,76}-3</p>
+        <p>Группы проблемных серверов совпадают с теми,<br/>которые были в феврале.</p>
+        <p>Проблемные серверы стоят в VLA-03, VLA-04,<br/>а не проблемные третьи реплики &mdash; во VLA-02.</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">Данные бьются на сетевых коммутаторах</h2>
+        <p>NOC-и сообщили, что меняли коммутаторы ровно в те даты.</p>
+        <p>После замены коммутаторов, проблема исчезла.</p>
+        <p>Но:</p>
+        <p>&mdash; почему не помогает ECC память на коммутаторах?</p>
+        <p>&mdash; почему не помогают TCP чексуммы?</p>
+        <p>&mdash; почему не помогают Ethernet чексуммы?</p>
+        <p><a href="https://www.evanjones.ca/tcp-and-ethernet-checksums-fail.html">https://www.evanjones.ca/tcp-and-ethernet-checksums-fail.html</a></p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">Зато помогают чексуммы в ClickHouse!</h2>
+        <p>Для блоков данных считается 128-битная чексумма.</p>
+        <p>Мы корректно сообщаем пользователю об ошибке.</p>
+        <p>Данные, повреждённые при передаче по сети, никуда не записываются.</p>
+        <p style="color: green;"><br/>Данные, хранящиеся в ClickHouse остаются целостными!</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">Зато помогают чексуммы в ClickHouse.</h2>
+        <p>На самом деле, мы считаем три чексуммы.</p>
+        <p>1. Для сжатых блоков данных при записи в файл, в сеть.</p>
+        <p>2. Общая чексумма сжатых данных для сверки при репликации.</p>
+        <p>3. Общая чексумма несжатых данных для сверки при репликации.</p>
+        <p style="color: green; margin-top: 2em;">Эти чексуммы не тормозят!</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">Улучшенное сообщение об ошибке</h2>
+        <p style="margin-top: -1em;">
+    Code: 40, e.displayText() = DB::Exception: Checksum doesn't match: corrupted data. Reference: c61530c3faa0827150b1634f0f87f274. Actual: d1e57e9605d7100d31df4f1ced3d53d5. Size of compressed block: 405633. The mismatch is caused by <b style="color: green;">single bit flip</b> in data block at byte 332325, bit 6. This is most likely due to hardware failure. If you receive broken data over network and the error does not repeat every time, this can be caused by bad RAM on network interface controller or bad controller itself or bad RAM on network switches or bad CPU on network switches (look at the logs on related network switches; note that TCP checksums don't help) or bad RAM on host (look at dmesg or kern.log for enormous amount of EDAC errors, ECC-related reports, Machine Check Exceptions, mcelog; note that ECC memory can fail if the number of errors is huge) or bad CPU on host. If you read data from disk, this can be caused by disk bit rott. <b style="color: green;">This exception protects ClickHouse from data corruption due to hardware failures</b>.
+        </p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">Упячки в данных</h2>
+        <p>В базу в один из столбцов записывается JSON</p><p>&mdash; пользовательские параметры из JS кода счётчика.</p>
+    </section>
+
+    <section class="slide">
+<code style="display: block; white-space: pre; margin: 0 -50px 0 -50px; font-size: 12pt; line-height: 1; overflow: hidden;">{"jserrs":{"1392":{"Failed to execute 'postMessage' on 'Window': Invalid target origin
+'*­xmlOÀîåhttp[ÂeSans)`USBÆCrugEêXR÷!add[O²done_ÁÅÐnex-µ4noneOQàepreví&lt;put|;4aí abbr¹êalt^&lt;pa
+rea¯\rasîÚaxis³kmb2ÈBbaseÔúábdi7*bdo \n#bigRä2JbodyïUbr\r¡»chaA8cit¡Ñ°codevÄcolw▒KcolsQ▒spPdata¿xû
+ddS+&del¹ÝNdfn ó*Ndir÷divNdlæÅ|dt5)emZC▒end[¡½faceFfont@?for \rform ;U&lt;h1▒h23\n¤êh4{h5«úh6Ò®hea
+dìE³highomhrHvXhref▒¸°lhtml²üjöi\rÆ]id´ì­img\nWinsÅNîisrkbd)kkind~8lang:SW©lib»øjlink&ælistjkÂloopP
+lowGÎmainØümap 5åûmarN¡4max@æÌmenuK¥Ömet6!min4äname óþènav³gnobrÌÎeolEÏÑopenSÕpØ partIping&õpre]aÀ
+q¯yHrbVÄrelÝjºrevÆoõroleÓrows´Drp,rtObBrtc5Ãrubyz§«sú17sampÂsizmslotÃ|lªspan¿¯srcÂoQstepÒÓðsub*bsu
+pÔMtd}*text8!¾;th/time)²ªýtr¤ïtto{=type6▒4Ëu\"¼ul\rvar5~wbrëþswrapH¼xmp­ø4bboxÒRùbiasn{)byåclip¡Lcx
+cyõá\"dyò7defsYdescÐdurºxEdxéúsdy|tãfillø5fr6öfromgÓéfx¯îfyÍúgZ ±in▒F×in2 ¶±#kS4ek1Ýák2MQk3îk4O él
+ine´maskã=ËmodÜØpath ×ÜrÖçrectaà¶refX4×refYONrxe#âryñ´åseedÇ@osetÞ÷stop Zzsvg¥Ìtoz°u1)P2u2®ãuseªÛv
+iewÑDìxîæx1UÇÙx2\rLyÃ®y1'2´zj³0showÚ|mathøûûmiâ 7mnñõmoØUPms)rNodeã7;blurÔúcopy ìgcut0ddrag¬Ìdrop¹
+èexit@É=}loadÎêmuteN`£playHpushqßsyncbÑ\\zoomH Ô¾css¬¾iconRp--P!0DateÝÒETagjj½GETr8HEAD!ïLink?_ÌPO
+STÑiPUT▒4WøVary 5©tel \"¡url Â¨dateH3ØfilegYÛweekBCridèÙ%scanN all#mËtty átvÀîå\nhttpÀîå\nhttpÀîå\
+nhttp\nfileyP\ndataÉä\nwssyP\ndataÀîå\nhttpyP\ndataÏo«B¼PèC B C S\nmidiÀQ\nvr È\nusbB¾ð\n/>% .not1
+àBcue 4`left\n ¯ÅI.autoXfq«B«°b\nNnòxtB¸Ð*jpgBBÐJ3140B ÐîG¾.elemB¿°\"ýÿÀ1B²ÐJ100BæH¾.IèØÀMHTMLàNÀ1
+®ù£1ttpB °§¶.5562NÀaOKTBµð C B`~BB°p*3371À.0ate▒,èýgzipB¦*jpgB\n¹TyesBðE£±N95teB­ÊjpgÞBð°òb0B°\"Óòd
+3BªMNYa00BPØEdaypB§Ð\"¶òb6B£p0:5RÀ9qN\n-B¾°¡ëÇchatB¬\"²òb2B¾0\n4561B·0Êc3B@*jpgBB¦0 2¾îwideB¤·xroo
+tB¢õ.pt22B» Npt17B® }}Rpt21BÐ}@ï\nenr1B`r¤¢pt20B¼ð*jpgÞB´`?OÔpt19BÐ¨ þ.4777B¢ ç [pt18B0*jpgBBÐW$AB
+~¡=pt16Bª°\"Õòd5B§ `8·pt15B·ÌN6157B® ¾vSpt14Tahoma1Bº`1bËpt13BÊjpgÞB¶À°jpt12B§P ▒r.5768Bàþâ>pt11B·
+?BИCBWB(DBBP^B? Bш?B@?BяяяяяяяяяяяяяяяяяяяяяяяяLяяяяяяяяяяяяяяяяяяяяяяяяЬаAР1яяяяяяяя0ПT?ПTПThПTРП
+T8йОTр\nПT \nПTpкОTиОTЁЮОTа?ОTx?ОT@?ОT?ЙОTdGИ1¤GИ1яяяяяяяяяяяяяяяяяяяяяяяяL@sР1яяяяр?B`ОВ1ёB`ОВ1?B
+8BАBР?BPYюEяяяя2тґ?\rhttp://avatar.botva.ru/fight_log.php?log_id=123456x\\х1!`ОВ1яяяяяяяяяяяяяяяяя
+яяяяяяяИCB?жB(DBBюяяя JBюяяяюяяяюяяяюяяяюяяяюяяя▒BGB> B0:>5 MDD5:B ?@O6:8?ИCBШєB(DBBИ¤mB8ЧmBИ№mB6n
+B -nBЁДmBр?BB?tHB ?B3?ж\rhttps://i.botva.ru/css/colorbox/images/controls.pngяяяяяяяяpBР?BX)BИ§mBа:
+nBp`mBяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяя`?BШ?B0ґBя}B`сm-?Жd\rhttps://i.botva.ru/i/global/icon
+/promo200.pngose(µЙT??ЙT??ЙTP«ЙTяяяяяяяяяяяяяяяяяяяяЬяяяяяяяяюяяя?JBюяяяюяяяюяяяюяяяюяяяюяяя-\nhtt
+ps://www.google-analytics.com/analytics.js4d\\&lt;\rhttps://i.botva.ru/i/global ýclass+Plassij3cod
+ebas(.rcodetyp×ø8colgroupQ»)colorw>colspan- command×¢compactZ­4icontent³h8controlsmt27BºPé'MNap11BW
+:mt26Bp\nwoffB«@u-úmt25B¨°*+6Ù1BÀ¾t/mt24 OÔ1À9qJ\nBB­@\\Rmt23B¤¼òbcB¯ÑÔLmt22B¨\njpgBB Cc³mt21B¼°h¨N
+399BB´\"çmt20B¥°105B­à^³mt19B«ÐBðCàBB¬àv°mt18q2.12Ó1B¶ ºmt17B© v½B0Â1pTHBB`!Émt16B¯0½òbdB@Ü/omt15B¹
+°i÷ÊÎ3483B¾`æhÉmt14B¹PJ100BB0Ûÿmt13BPù.\n                        B»ML±mt12B¥!7îJbtnCB@%©»mt11­Ú§.15
+ÿÿB¦óAtmt10Bp.¤bc2vB¨ ÀîÝmt92BðC B¸õCB£LJmt83B¨Ð(L5780B¶)ùmt74B\"Áòc1B Fìmt65B¤PÀÀ1Ð£À1 À1B \"Îmt5
+6BÃ|IExB`4        çmt47B0mµ.2093Bñ3[mt38B²P\n...B«ÀøD)mt29B *jpglB­9\\mt1aB¬¸òb8B¾
+</code>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">Упячки в данных</h2>
+        <img style="float: right; width: 230px;" src="pictures/frustration.jpg"/>
+        <p>Опять проезд по памяти?</p>
+        <p>Рейс кондишен?</p>
+        <p>И как мы будем это отлаживать?</p>
+        <p>И зачем мы выбрали язык C++?</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">Упячки в данных</h2>
+        <p>Путь к разгадке:</p>
+        <p>&mdash; это мусор, но валидный UTF-8;</p>
+        <p>&mdash; одинаковый мусор записался на два кластера независимо;</p>
+        <p>&mdash; в мусоре очень много букв &laquo;<b style="color: red;">я</b>&raquo;!</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">Баги со всего интернета</h2>
+        <p>Яндекс.Метрика собирает трафик с > 1 млрд. устройств в интернете.</p>
+        <p>В базе хранится > 30 000 000 000 000 строк (просмотров страниц).</p>
+        <p>В пользовательских устройствах бывают баги...</p>
+        <p style="color: green;">Эти баги лучше фильтровать до записи в базу.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Спасибо!</h2>
+    </section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
