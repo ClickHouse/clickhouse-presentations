@@ -112,9 +112,9 @@ for (int i = 0; i &lt; n; ++i)
 
 <p style="margin-top: 2em;">Но обычно надо просто реже её вызывать:</p>
 <code>std::vector&lt;int> vec;
-vec.reserve(n); // <b style="color: red;">memset</b>
+vec.resize(n); // <b style="color: red;">memset</b>
 for (int i = 0; i &lt; n; ++i)
-    vec.push_back(i);</code>
+    vec[i] = i;</code>
 </section>
 
 <section class="slide">
