@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>The Most Fresh ClickHouse Features</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x10.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.7; }
+         p.cloud span { font-size: 16pt; color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         p.cloud_big { text-align: center; line-height: 1.7; }
+         p.cloud_big span { font-size: 24pt; color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>The Most Fresh ClickHouse Features</h1>
+    </header>
+
+    <section class="slide" id="cover">
+        <h1 style="margin-top: 180px; font-size: 48pt;"><span>The Most Fresh<br/>ClickHouse Features</span></h1>
+    </section>
+
+    <section class="slide">
+        <h2>In previous episodes:</h2>
+        <p><a href="https://clickhouse.yandex/presentations/meetup28/new_features/">https://clickhouse.yandex/presentations/meetup36/new_features/</a></p>
+        <p class="cloud">
+            <span>CONSTRAINTs</span>
+            <span>Prepared Statements</span>
+            <span>Format ORC</span>
+            <span>Format Template</span>
+            <span>ORDER BY optimization</span>
+            <span>WITH FILL</span>
+            <span>text_log</span>
+            <span>metric_log</span>
+            <span>Query Profiler</span>
+            <span>Globs for File/URL/HDFS</span>
+            <span>RPM packages</span>
+            <span>neighbor</span>
+            <span>os_schedule_priority</span>
+            <span>ALTER MODIFY SETTING</span>
+            <span>SELECT FROM VALUES</span>
+            <span>COLUMNS matcher</span>
+            <span>LIVE VIEW</span>
+            <span>Settings constraints</span>
+            <span>Row Level Security</span>
+            <span>Secondary Indices</span>
+            <span>TTL expressions</span>
+            <span>MySQL protocol</span>
+            <span>Adaptive index granularity</span>
+            <span>Advanced text search</span>
+            <span>JSON functions</span>
+            <span>Cascade MATERIALIZED VIEWs</span>
+            <span>WITH ROLLUP/CUBE</span>
+            <span>ASOF JOIN</span>
+        </p>
+    </section>
+
+    <section class="slide">
+        <h2>I won't tell you...</h2>
+        <p><b>Tiered Storage</b><br/>
+        &mdash; Robert Hodges already presented it.</p>
+    </section>
+    
+<section class="slide">
+<h2 style="font-size: 32pt;">Managing Dictionaries With SQL Queries</h2>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">External Dictionaries (was)</h2>
+<p style="margin-top: -1em;">campaigns_dictionary.xml:</p>
+<code style="margin-top: -2em; font-size: 8pt; width: 50%;">&lt;yandex>
+    &lt;dictionary>
+        &lt;name>campaigns&lt;/name>
+        &lt;source>
+            &lt;mysql>
+                &lt;password>...&lt;/password>
+                &lt;port>3306&lt;/port>
+                &lt;user>metrika&lt;/user>
+                &lt;replica>
+                    &lt;host>mtexample.metr.yandex.net&lt;/host>
+                    &lt;priority>1&lt;/priority>
+                &lt;/replica>
+                &lt;db>dicts&lt;/db>
+                &lt;table>campaign_names&lt;/table>
+            &lt;/mysql>
+        &lt;/source>
+        &lt;lifetime>
+            &lt;min>14400&lt;/min>
+            &lt;max>18000&lt;/max>
+        &lt;/lifetime>
+        &lt;layout>
+            &lt;cache>
+                &lt;size_in_cells>1048576&lt;/size_in_cells>
+            &lt;/cache>
+        &lt;/layout>
+        &lt;structure>
+            &lt;id>
+                &lt;name>OrderID&lt;/name>
+            &lt;/id>
+            &lt;attribute>
+                &lt;name>cid&lt;/name>
+                &lt;type>UInt32&lt;/type>
+                &lt;null_value>0&lt;/null_value>
+            &lt;/attribute>
+            &lt;attribute>
+                &lt;name>name&lt;/name>
+                &lt;type>String&lt;/type>
+                &lt;null_value />
+            &lt;/attribute>
+        &lt;/structure>
+    &lt;/dictionary>
+&lt;/yandex></code>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Managing Dictionaries With SQL Queries</h2>
+<code style="margin-top: -1em;">CREATE DICTIONARY db.dict
+(
+  region_id Int64 DEFAULT -1,
+  name String DEFAULT 'unknown',
+  population UInt64
+)
+PRIMARY KEY region_id
+SOURCE(MYSQL(
+    USER 'root' PASSWORD '...'
+    DB 'dictionaries' TABLE 'regions'
+    REPLICA(PRIORITY 1 HOST 'server1' PORT 3306)
+    REPLICA(PRIORITY 2 HOST 'server2' PORT 3306)))
+LAYOUT(HASHED())
+LIFETIME(MIN 300 MAX 600);</code>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Managing Dictionaries With SQL Queries</h2>
+<code style="margin-top: -1em; margin-bottom: 1em;">SELECT dictGetString('<b>db.dict</b>', 'name', toInt64(213));</code>
+<p>Created dictionaries are also available as tables to read.</p>
+<code style="margin-top: 1em; margin-bottom: 1em;">SELECT * FROM db.dict;</code>
+
+<p style="margin-top: 1em;">&mdash; available since <span style="color: green;">19.17</span>.</p>
+<p style="margin-top: 3em; color: gray; font-size: 12pt;">Developers: &mdash; Alexander Sapin, Maxim Sabyanin</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Redis as Dictionary Source</h2>
+<p style="margin-top: 1em;">&mdash; available since <span style="color: green;">19.16</span>.</p>
+<p style="margin-top: 1em; color: gray; font-size: 12pt;">Developers &mdash; Alexey Basmanov, Anton Popov</p>
+<h2 style="font-size: 32pt;">Layout "sparse_hashed"</h2>
+<p style="margin-top: 1em;">&mdash; available since <span style="color: green;">19.15</span>.</p>
+<p style="margin-top: 1em; color: gray; font-size: 12pt;">Developer &mdash; Azat Khuzhin</p>
+</section>
+
+<!--
+<section class="slide">
+<h2>Tiered Storage</h2>
+<p>Example: store hot data on SSD and archive data on HDDs.</p>
+<p>Multiple storage policies can be configured and used on per-table basis.</p>
+</section>
+
+<section class="slide">
+<h2>Tiered Storage</h2>
+<p>Step 1: configure available disks (storage paths):</p>
+<code>&lt;disks>
+    &lt;fast_disk> &lt;!-- disk name --&gt;
+        &lt;path>/mnt/fast_ssd/clickhouse&lt;/path>
+    &lt;/fast_disk>
+    &lt;disk1>
+        &lt;path>/mnt/hdd1/clickhouse&lt;/path>
+        &lt;keep_free_space_bytes>10485760
+            &lt;/keep_free_space_bytes>
+    &lt;/disk1>
+    ...
+</code>
+</section>
+
+<section class="slide">
+<h2>Tiered Storage</h2>
+<p style="margin-top: -1em;">Step 2: configure storage policies:</p>
+<code>&lt;policies>
+    &lt;ssd_and_hdd>
+        &lt;volumes>
+            &lt;hot>
+                &lt;disk>fast_ssd&lt;/disk>
+                &lt;max_data_part_size_bytes>1073741824
+                    &lt;/max_data_part_size_bytes>
+            &lt;/hot>
+            &lt;cold>
+                &lt;disk>disk1&lt;/disk>
+            &lt;/cold>
+            &lt;move_factor>0.2&lt;/move_factor>
+        &lt;/volumes>
+    &lt;/ssd_and_hdd>
+    ...
+</code>
+</section>
+
+<section class="slide">
+<h2>Tiered Storage</h2>
+<p>Step 3: use the configured policy for your table:</p>
+<code>CREATE TABLE table
+(
+...
+)
+ENGINE = MergeTree
+ORDER BY ...
+SETTINGS <b>storage_policy</b> = 'ssd_and_hdd'
+</code>
+</section>
+
+<section class="slide">
+<h2>Tiered Storage</h2>
+<p>The data will be moved between volumes automatically.</p>
+<p>You can also do it manually:</p>
+<code>ALTER TABLE table 
+  MOVE PART|PARTITION ...
+  TO VOLUME|DISK ...</code>
+<p style="color: green; font-size: 14pt; margin-top: 2em;">&mdash; available in 19.15.</p>
+</section>
+
+<section class="slide">
+<h2>Tiered Storage</h2>
+<p>You can also setup TTL expressions to MOVE data.</p>
+<code>CREATE TABLE table (...) ENGINE = MergeTree ...
+  TTL date + INTERVAL 10 DAY
+  TO VOLUME|DISK 'name'</code>
+<p style="color: green; font-size: 14pt; margin-top: 2em;">&mdash; available in 20.1.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Do you remember that we already support TTL for data cleanup?<br/>Have you visited our previous meetup?</p>
+</section>
+-->
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Parallel Parsing Of Data Formats</h2>
+<code style="margin-top: -1em; margin-bottom: 1em; font-size: 16pt;">clickhouse-local \
+    -S 'WatchID UInt64, JavaEnable UInt8, Title String, ...' \
+    --query "SELECT count() FROM table" &lt; hits.tsv</code>
+<p>Was: <span style="color: red;">46.2</span> sec., 192 096 rows/sec., 168 MB/sec.<br/>
+Now: <span style="color: green;">4.5</span> sec., 1 935 419 rows/sec., 1.7 GB/sec.</p>
+<p>Works for TSV, CSV, JSONEachRow.</p>
+<p>Works in clickhouse-client, clickhouse-local,<br/>HTTP interface; File, URL, HDFS, S3 tables.</p>
+<p>Enabled with <b>input_format_parallel_parsing</b> setting.<br/>And it's already enabled by default!</p>
+<p style="margin-top: 1em;">&mdash; available since <span style="color: green;">20.1</span>.</p>
+<p style="margin-top: 1em; color: gray; font-size: 12pt;">Developers &mdash; Nikita Mikhailov, Oleg Ershov</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Import/Export Compressed Files Directly</h2>
+<p>For tables with File, URL, HDFS, S3 engines:</p>
+<code>SELECT * FROM url('https://site.ru/data.<b style="color: green;">gz</b>',
+    TSV, 'phrase String, counter_id UInt32, ...')
+
+INSERT INTO TABLE FUNCTION url(
+    'https://site.ru/data.<b style="color: green;">gz</b>',
+    TSV, 'phrase String, counter_id UInt32, ...')</code>
+<p><br/>Autodetect by file extension or explicit: gz/gzip, br/brotli, none, auto:</p>
+<code>SELECT * FROM url('https://site.ru/data', TSV,
+    'phrase String, counter_id UInt32, ...', <b style="color: green;">'gzip'</b>)</code>
+<p style="margin-top: 1em; color: gray; font-size: 12pt;">Developer &mdash; Andrey Bodrov</p>
+</section>
+
+<section class="slide">
+<h2>Demo</h2>
+<p>Processing ~TB of data from GHArchive.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Optimization of VALUES With Expressions</h2>
+<code style="margin-top: -1em; margin-bottom: 1em; font-size: 16pt;">CREATE TABLE test.null (x UInt64, d DateTime) ENGINE = Null</code>
+<code style="margin-top: -1em; margin-bottom: 1em; font-size: 16pt;">clickhouse-client --query "INSERT INTO test.null VALUES" &lt;...</code>
+<p>Inserting 1 mln. records like <span style="white-space: pre; font-family: Monospace;">(1, '2020-02-04 00:00:00')</span>:<br/>
+&mdash; <b style="color: green;">0.108</b> sec.</p>
+<p>Inserting 1 mln. records like <span style="white-space: pre; font-family: Monospace;">(1, now())</span>:<br/>
+&mdash; <b style="color: red;">40.4</b> sec. &mdash; <span style="color: red;">400 times slower</span>.</p>
+<p>Inserting 1 mln. records like <span style="white-space: pre; font-family: Monospace;">(1, now())</span> with enabled setting<br/> <b>input_format_values_deduce_templates_of_expressions:</b><br/>
+&mdash; <b style="color: green;">0.112</b> sec. &mdash; <span style="color: green;">almost without performance regression</span>.</p>
+<p style="margin-top: 1em;">&mdash; available since <span style="color: green;">19.16</span>.</p>
+<p style="margin-top: 1em; color: gray; font-size: 12pt;">Developer &mdash; Alexander Tokmakov</p>
+</section>
+
+
+<section class="slide">
+<h2>FORMAT JSONCompactEachRow</h2>
+<code>[11825667, "закрепление журные людьми и"]
+[7588965, "выпискусстановке фото 3д фирма"]
+[30622428, "губка перерьер ванновгород главный"]
+[15009727, "uhfvvf yfbck.n gtycb. ltym hj;ltyb 3"]
+[31235604, "порно друзья дачные коллетение спит 66"]
+[1036200, "oomph"]
+[22446879, "ионистранны в туре 17 март 2014 смотреть"]
+[792887, "пп оптики билей ремиум новый фасонвар"]
+[315961, "рангику"]
+[1151353, "дом-2 последние смотреть онлайн фигур"]</code>
+<p style="margin-top: 1em;">&mdash; available since <span style="color: green;">20.1</span>.</p>
+<p style="margin-top: 1em; color: gray; font-size: 12pt;">Developer &mdash; Mikhail Korotov</p>
+</section>
+
+
+<section class="slide">
+<h2>FORMAT CustomSeparated</h2>
+<p>Controlled by the settings:</p>
+<p>format_custom_escaping_rule
+<br/>format_custom_field_delimiter
+<br/>format_custom_row_before_delimiter
+<br/>format_custom_row_after_delimiter
+<br/>format_custom_row_between_delimiter
+<br/>format_custom_result_before_delimiter
+<br/>format_custom_result_after_delimiter
+</p>
+</section>
+
+<section class="slide">
+<h2>Template Format</h2>
+<p>Allow to define a template for data formatting/parsing.</p>
+<p>A template contains substitutions and delimieters.</p>
+<p>Each substitution specifies data escaping rule:<br/>Quoted, Escaped, CSV, JSON, XML, Raw.</p>
+<code>Website ${domain:Quoted} has ${count:Raw} pageviews.</code>
+<p style="margin-top: 1em;">You can specify a template for rows, a delimiter between rows<br/>and a template to wrap resultset.</p>
+<p style="margin-top: 1em;">Example: to parse web access logs.<br/>
+Example: to parse deeply nested JSON.<br/>
+Example: generate HTML right in ClickHouse.</p>
+</section>
+
+<section class="slide">
+<h2>Improvements of Text Formats</h2>
+<p><b>input_format_csv_unquoted_null_literal_as_null</b>
+<br/>&mdash; parse unquoted NULL in CSV as NULL (otherwise you have to \N).</p>
+<p><b>input_format_null_as_default</b>
+<br/>&mdash; parse NULL as default value for non-Nullable columns.</p>
+<p><b>input_format_tsv_empty_as_default</b>
+<br/>&mdash; parse empty values in TSV as default values.</p>
+<p><b>input_format_with_names_use_header</b>
+<br/>&mdash; use headers in TSV and CSV to determine column order;<br/>&mdash; fill missing columns with default values.</p>
+<p><b>input_format_defaults_for_omitted_fields</b>
+<br/>&mdash; calculate complex default values for JSONEachRow, TSV, CSV.</p>
+</section>
+
+
+<section class="slide">
+<h2>FORMAT Avro</h2>
+<p><b>Apache Avro</b> &mdash; row-oriented schemaful binary format with embedded schema.</p>
+<p>When data is exported in Avro format, the schema is derived from the table definition.</p>
+<p>When data is imported in Avro format, we read it according to the schema and convert types.</p>
+
+<p style="margin-top: 1em; color: gray; font-size: 12pt;">Developer &mdash; Andrew Onyshchuk</p>
+<p style="margin-top: 1em;">&mdash; available since <span style="color: gray;">20.2</span>.</p>
+</section>
+
+<section class="slide">
+<h2>FORMAT AvroConfluent</h2>
+<p>Schema is not embedded directly but loaded from schema registry.</p>
+<p>The format is designed specifically to use for <b>Kafka</b> messages.</p>
+
+<p style="margin-top: 1em; color: gray; font-size: 12pt;">Do you remember that we also support Parquet, ORC, Protobuf?</p>
+</section>
+
+
+<section class="slide">
+<h2>s3 Import/Export</h2>
+<p>Table function <b>s3</b> and table engine <b>S3</b>:</p>
+<code>SELECT * FROM s3(...)
+INSERT INTO TABLE FUNCTION s3(...)
+CREATE TABLE table ENGINE = S3(...)</code>
+<p style="margin-top: 1em;">Supports <b>wildcards</b> (globs) to read multiple files.</p>
+<p style="margin-top: 1em;">Supports <b>_file</b> and <b>_path</b> virtual columns.</p>
+<p style="margin-top: 1em;">Supports authentication, compressed files...</p>
+
+<p style="margin-top: 1em;">&mdash; full support in <span style="color: gray;">20.2</span>.</p>
+<p style="margin-top: 3em; color: gray; font-size: 12pt;">Developer &mdash; Vladimir Chebotarev, Olga Khvostikova and Pavel Kovalenko</p>
+</section>
+
+
+<section class="slide">
+<h2>JOINs In External Memory</h2>
+<p>Allows to execute JOIN even when right hand doesn't fit in memory.</p>
+<p>SET <b>partial_merge_join</b> = 1;</p>
+<p style="margin-top: 3em; color: gray; font-size: 12pt;">Developer &mdash; Artem Zuikov</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Geographical Data Processing</h2>
+<p><b>greatCircleDistance</b>
+<br/>&mdash; improved performance <b style="color: green;">3 times</b><br/>with the code from Andrey Aksenov;</p>
+<p><b style="color: green;">greatCircleAngle</b>
+<br/>&mdash; the distance on sphere in degrees;<br/>&mdash; useful for astronomical data;</p>
+<p><b style="color: green;">geoDistance</b>
+<br/>&mdash; calculates the distance on WGS-84 ellipsoid<br/>(under certain assumptions);</p>
+<p style="margin-top: 1em;">&mdash; available since <span style="color: green;">20.1</span>.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Integration With H3 Library</h2>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">DateTime64 Data Type</h2>
+<p>DateTime with arbitrary subsecond precision.</p>
+<p>It's like DECIMAL for DateTime.</p>
+<p style="margin-top: 3em; color: gray; font-size: 12pt;">Developer &mdash; Vasily Nemkov</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Open-Source Hardware Benchmark</h2>
+<p>To compare different hardware and cloud providers.</p>
+<p>(demo)</p>
+</section>
+
+
+<section class="slide">
+<h2>More Various Functions...</h2>
+<p class="cloud_big">
+    <span>arraySplit</span> <span>multiMatchAllIndices</span> <span>multiFuzzyMatchAllIndices</span> <span>arrayCompact</span> <span>isValidJSON</span> <span>arrayFill</span> <span>arrayReverseFill</span> <span>JSONExtractArrayRaw</span> <span>FQDN</span><br/><span>char</span> <span>repeat</span>
+</p>
+</section>
+
+<section class="slide">
+<h2>More Various Features...</h2>
+<p>Handler for Prometheus.</p>
+<p>Aggregate function combiners: -OrNull and -OrDefault.</p>
+<p>Bloom filter secondary index for arrays.</p>
+<p>Virtual column _shard_num.</p>
+<p>Skipping unknown settings in distributed queries.</p>
+<p>Allow using FINAL and SAMPLE simultaneously.</p>
+<p>Optimization of uniqCombined; uniqCombined64.</p>
+<p>Instant count() in trivial queries.</p>
+</section>
+
+
+<section class="slide">
+    <h2>What's Next?</h2>
+</section>
+
+<section class="slide">
+<h2>February 2020</h2>
+<p>RBAC</p>
+<p>Polymorphic Data Parts</p>
+<p>Lock-free ALTERs</p>
+<p>Custom HTTP handlers</p>
+<p>Query cache for IN subqueries</p>
+</section>
+
+<section class="slide">
+<h2>Spring 2020</h2>
+<p>VFS for storage/compute decoupling</p>
+<p>Pluggable authentication and access control</p>
+<p>Adaptive merge JOIN algorithm</p>
+<p>Workload management</p>
+</section>
+
+<section class="slide">
+    <h2>Public Roadmap 2020!</h2>
+    <p><a href="https://clickhouse.yandex/docs/ru/extended_roadmap/">https://clickhouse.yandex/docs/ru/extended_roadmap/</a></p>
+    <p>~ 500 tasks with detailed description &mdash; status, dependencies, assignees...</p>
+    <p>~ 50 are already done :)</p>
+</section>
+
+
+<section class="slide">
+    <h2>.</h2>
+</section>
+
+    <section class="slide">
+        <h2>.</h2>
+        <p>Web site: <a href="https://clickhouse.yandex/">https://clickhouse.yandex/</a></p>
+        <p>Maillist: clickhouse-feedback@yandex-team.com</p>
+        <p>YouTube: <a href="https://www.youtube.com/c/ClickHouseDB">https://www.youtube.com/c/ClickHouseDB</a></p>
+        <p>Telegram chat: <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_ru</a>, <a href="https://telegram.me/clickhouse_en">clickhouse_en</a></p>
+        <p>GitHub: <a href="https://github.com/ClickHouse/ClickHouse/">https://github.com/ClickHouse/ClickHouse/</a></p>
+        <p>Twitter: <a href="https://twitter.com/ClickHouseDB">https://twitter.com/ClickHouseDB</a></p>
+        <p>Google groups: <a href="https://groups.google.com/forum/#!forum/clickhouse">https://groups.google.com/forum/#!forum/clickhouse</a></p>
+    </section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+</body>
+</html>
