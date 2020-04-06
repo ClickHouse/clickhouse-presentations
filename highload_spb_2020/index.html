@@ -112,7 +112,7 @@
 <section class="slide">
 <h2>ClickHouse без сервера</h2>
 
-<code style="margin-top: -2em; margin-bottom: 1em; font-size: 16pt; line-height: 1.1"><pre>clickhouse-local --structure 's String' --query "
+<code style="margin-top: -2em; margin-bottom: 1em; font-size: 16pt; line-height: 1.1">clickhouse-local --structure 's String' --query "
     <span style="color: green;">SELECT count() AS c, trimLeft(s) AS key 
     FROM table WHERE key != '' 
     GROUP BY key ORDER BY c DESC LIMIT 10</span>" \
@@ -128,7 +128,7 @@
 1718    public:
 1433    break;
 1210    #pragma once
-</pre></code>
+</code>
 <p><b style="color: green;">0.103 sec.</b> &mdash; в 3.7&ndash;16 раз быстрее.</p>
 </section>
 
