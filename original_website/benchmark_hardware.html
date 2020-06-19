@@ -170,7 +170,7 @@ th {
 }
 
 #selectors {
-    font-size: 20px;
+    font-size: 12pt;
     font-family: 'Yandex Sans Display Web', Arial, sans-serif;
     margin: 5px;
 }
@@ -178,8 +178,8 @@ th {
 #selectors p span {
     border: 1px solid #DDD;
     background-color: #EEE;
-    padding: 1px 5px 1px 5px;
-    margin: 1px 5px 1px 5px;
+    padding: 1px 2px 1px 2px;
+    margin: 1px 2px 1px 2px;
     cursor: pointer;
     white-space: nowrap;
 }
@@ -2606,10 +2606,8 @@ for (r in results) {
     systems.push(results[r].system);
 }
 
-var current_systems = [
-'Xeon Gold 6230, 2 sockets, 40 threads',
-'Dell PowerEdge R640 DX292 2x Xeon SP Gold 16-Core 2.10GHz, 196 GB RAM, 2x SSD 960 GB RAID-1',
-'E5-2650 v2 @ 2.60GHz, 2 sockets, 16 threads, 8xHDD RAID-5'];
+var available_systems = results.map(function(run) { return run.system; });
+var current_systems = available_systems;
 
 var runs = ["first (cold cache)", "second", "third"];
 var current_runs = ['1', '2'];
@@ -2627,9 +2625,7 @@ function update_hash() {
 
 
 function generate_selectors(elem) {
-    var html = "<p id='systems_selector'>Compare: ";
-
-    var available_systems = results.map(function(run) { return run.system; });
+    var html = "<p id='systems_selector'>";
 
     for (var i = 0; i < systems.length; i++) {
         var selected = current_systems.indexOf(systems[i]) != -1;
