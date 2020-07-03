@@ -440,8 +440,12 @@ var queries =
 var results =
 [
     {
-        "system":       "Xeon Gold 6230, 2 sockets, 40 threads",
+        "system":       "Xeon Gold 6230",
+        "system_full":      "Xeon Gold 6230, 2 sockets, 40 threads",
+        "cpu_vendor":   "Intel",
+        "cpu_model":    "Xeon Gold 6230",
         "time":         "2020-01-01 00:00:00",
+        "kind": "server",
         "result":
         [
             [0.009, 0.002, 0.001],
@@ -490,8 +494,11 @@ var results =
         ]
     },
     {
-        "system":       "Yandex Cloud Cascade Lake, 64 vCPU (32 threads), 128 GB RAM, 400 GB SSD",
+        "system":       "Yandex Cloud s2.6xlarge",
+        "system_full":      "Yandex Cloud Cascade Lake, 64 vCPU (32 threads), 128 GB RAM, 400 GB SSD",
+        "cpu_vendor":   "Intel",
         "time":         "2020-01-11 00:00:00",
+        "kind":         "cloud",
         "result":
         [
             [0.037, 0.002, 0.002],
@@ -541,8 +548,10 @@ var results =
     },,
 
     {
-        "system":       "Yandex Cloud Cascade Lake, 64 vCPU (32 threads), 128 GB RAM, 4 TB SSD",
+        "system":       "Yandex Cloud s2.6xlarge 4TB SSD",
+        "system_full":  "Yandex Cloud Cascade Lake, 64 vCPU (32 threads), 128 GB RAM, 4 TB SSD",
         "time":         "2020-01-13 00:00:00",
+        "kind":         "cloud",
         "result":
         [
             [0.054, 0.002, 0.002],
@@ -591,8 +600,11 @@ var results =
         ]
     },
     {
-        "system":       "Yandex Cloud Cascade Lake, 4 vCPU (2 threads), 16 GB RAM, 30 GB SSD",
+        "system":       "Yandex Cloud s2.small",
+        "system_full":  "Yandex Cloud Cascade Lake, 4 vCPU (2 threads), 16 GB RAM, 30 GB SSD",
+        "cpu_vendor":   "Intel",
         "time":         "2020-01-13 00:00:00",
+        "kind":         "cloud",
         "result":
         [
             [0.621, 0.002, 0.002],
@@ -641,8 +653,11 @@ var results =
         ]
     },
     {
-        "system":       "Yandex Cloud Broadwell, 4 vCPU (2 threads), 16 GB RAM, 30 GB SSD",
+        "system":       "Yandex Cloud s1.small",
+        "system_full":  "Yandex Cloud Broadwell, 4 vCPU (2 threads), 16 GB RAM, 30 GB SSD",
+        "cpu_vendor":   "Intel",
         "time":         "2020-01-14 00:00:00",
+        "kind":         "cloud",
         "result":
         [
             [0.507, 0.002, 0.002],
@@ -691,8 +706,11 @@ var results =
         ]
     },
     {
-        "system":       "Dell PowerEdge R6415 DX180 AMD EPYC™ 7551P 32-Core Naples (Zen), 128 GB RAM, 2x SSD 960 GB RAID-1",
+        "system":       "Dell PowerEdge R6415",
+        "system_full":  "Dell PowerEdge R6415 DX180 AMD EPYC™ 7551P 32-Core Naples (Zen), 128 GB RAM, 2x SSD 960 GB RAID-1",
+        "cpu_vendor":   "AMD",
         "time":         "2020-01-13 00:00:00",
+        "kind":         "server",
         "result":
         [
             [0.007, 0.002, 0.001],
@@ -741,8 +759,12 @@ var results =
         ]
     },
     {
-        "system":       "Dell PowerEdge R640 DX292 2x Xeon SP Gold 16-Core 2.10GHz, 196 GB RAM, 2x SSD 960 GB RAID-1",
+        "system":       "Dell PowerEdge R640",
+        "system_full":      "Dell PowerEdge R640 DX292 2x Xeon SP Gold 16-Core 2.10GHz, 196 GB RAM, 2x SSD 960 GB RAID-1",
+        "cpu_vendor":   "Intel",
+        "cpu_model":   "Xeon SP Gold",
         "time":         "2020-01-13 00:00:00",
+        "kind":         "server",
         "result":
         [
             [0.005, 0.003, 0.003],
@@ -791,8 +813,10 @@ var results =
         ]
     },
     {
-        "system":       "E5-2650 v2 @ 2.60GHz, 2 sockets, 16 threads, 8xHDD RAID-5",
+        "system":       "Xeon E5-2650",
+        "system_full":      "Xeon E5-2650 v2 @ 2.60GHz, 2 sockets, 16 threads, 8xHDD RAID-5",
         "time":         "2020-01-12 00:00:00",
+        "kind":         "server",
         "result":
         [
             [0.101, 0.002, 0.002],
@@ -841,8 +865,10 @@ var results =
         ]
     },
     {
-        "system":       "Time4vps.eu VPS (KVM) Linux Ubuntu 4 Core (Skylake) 16GB RAM 160GB Disk",
+        "system":       "Time4vps.eu",
+        "system_full":       "Time4vps.eu VPS (KVM) Linux Ubuntu 4 Core (Skylake) 16GB RAM 160GB Disk",
         "time":         "2020-01-13 00:00:00",
+        "kind":         "vps",
         "result":
         [
             [0.068, 0.002, 0.002],
@@ -891,8 +917,10 @@ var results =
         ]
     },
     {
-        "system":       "Lenovo B580 Laptop (i5-3210M)",
+        "system":       "Lenovo B580",
+        "system_full":      "Lenovo B580 Laptop (i5-3210M)",
         "time":         "2020-01-11 00:00:00",
+        "kind":         "laptop",
         "result":
         [
             [0.035, 0.003, 0.005],
@@ -941,8 +969,10 @@ var results =
         ]
     },
     {
-        "system":       "Dell PowerEdge R730xd, 2 socket 10 cores E5-2640 v4, HW RAID5 3TBx12 SATA",
+        "system":       "Dell PowerEdge R730xd",
+        "system_full":       "Dell PowerEdge R730xd, 2 socket 10 cores E5-2640 v4, HW RAID5 3TBx12 SATA",
         "time":         "2020-01-14 00:00:00",
+        "kind":         "server",
         "result":
         [
             [0.225, 0.001, 0.002],
@@ -991,8 +1021,10 @@ var results =
         ]
     },
     {
-        "system":       "Yandex Managed ClickHouse, s3.3xlarge, Cascade Lake 32 vCPU, 128 GB RAM, 1 TB local SSD",
+        "system":       "Yandex Managed ClickHouse s3.3xlarge",
+        "system_full":       "Yandex Managed ClickHouse, s3.3xlarge, Cascade Lake 32 vCPU, 128 GB RAM, 1 TB local SSD",
         "time":         "2020-01-14 00:00:00",
+        "kind":         "cloud",
         "result":
         [
             [0.039, 0.041, 0.046],
@@ -1042,8 +1074,10 @@ var results =
     },,
 
     {
-        "system":       "Yandex Managed ClickHouse, s3.3xlarge, Cascade Lake 32 vCPU, 128 GB RAM, 12.5 TB local HDD",
+        "system":       "Yandex Managed ClickHouse s3.3xlarge",
+        "system_full":       "Yandex Managed ClickHouse, s3.3xlarge, Cascade Lake 32 vCPU, 128 GB RAM, 12.5 TB local HDD",
         "time":         "2020-01-14 00:00:00",
+        "kind": "cloud",
         "result":
         [
             [0.049, 0.049, 0.045],
@@ -1092,8 +1126,10 @@ var results =
         ]
     },
     {
-        "system":       "Dell R530, 128GB DDR4, 2x480 GB SATA SSD, Perc H730 RAID-1",
+        "system":       "Dell R530",
+        "system_full":  "Dell R530, 128GB DDR4, 2x480 GB SATA SSD, Perc H730 RAID-1",
         "time":         "2020-01-14 00:00:00",
+        "kind":         "server",
         "result":
         [
             [0.027, 0.002, 0.002],
@@ -1142,8 +1178,10 @@ var results =
         ]
     },
     {
-        "system":       "Xeon 2176G, 64GB RAM, 2xSSD 960GB (SAMSUNG MZQLB960HAJR-00007), ZFS RAID-1",
+        "system":       "Xeon 2176G",
+        "system_full":      "Xeon 2176G, 64GB RAM, 2xSSD 960GB (SAMSUNG MZQLB960HAJR-00007), ZFS RAID-1",
         "time":         "2020-01-14 00:00:00",
+        "kind":         "server",
         "result":
         [
             [0.001, 0.001, 0.001],
@@ -1192,8 +1230,10 @@ var results =
         ]
     },
     {
-        "system":       "Azure DS3v2 4vcpu 14GB RAM 1TB Standard SSD",
+        "system":       "Azure DS3v2 Standard SSD",
+        "system_full":  "Azure DS3v2 4vcpu 14GB RAM 1TB Standard SSD",
         "time":         "2020-01-15 00:00:00",
+        "kind":         "cloud",
         "result":
         [
             [0.709, 0.004, 0.004],
@@ -1242,8 +1282,10 @@ var results =
         ]
     },,
     {
-        "system":       "Azure DS3v2 4vcpu 14GB RAM 1TB Premium SSD",
+        "system":       "Azure DS3v2 Premium SSD",
+        "system_full":       "Azure DS3v2 4vcpu 14GB RAM 1TB Premium SSD",
         "time":         "2020-01-15 00:00:00",
+        "kind":         "cloud",
         "result":
         [
             [0.047, 0.004, 0.003],
@@ -1292,8 +1334,10 @@ var results =
         ]
     },
     {
-        "system":       "AWS i3.8xlarge 32vCPU 244GiB 4x1900 NVMe SSD",
+        "system":       "AWS i3.8xlarge",
+        "system_full":      "AWS i3.8xlarge 32vCPU 244GiB 4x1900 NVMe SSD",
         "time":         "2020-01-15 00:00:00",
+        "kind":         "cloud",
         "result":
         [
             [0.009, 0.002, 0.002],
@@ -1342,8 +1386,10 @@ var results =
         ]
     },
     {
-        "system":       "AWS m5d.24xlarge 96vCPU 384GiB 4x900 NVMe SSD",
+        "system":       "AWS m5d.24xlarge",
+        "system_full":      "AWS m5d.24xlarge 96vCPU 384GiB 4x900 NVMe SSD",
         "time":         "2020-01-15 00:00:00",
+        "kind":         "cloud",
         "result":
         [
             [0.012, 0.002, 0.002],
@@ -1392,8 +1438,10 @@ var results =
         ]
     },
     {
-        "system":       "AWS i3en.24xlarge 96vCPU 768GiB 8x7500 NVMe SSD",
+        "system":       "AWS i3en.24xlarge",
+        "system_full":      "AWS i3en.24xlarge 96vCPU 768GiB 8x7500 NVMe SSD",
         "time":         "2020-01-15 00:00:00",
+        "kind":         "cloud",
         "result":
         [
             [0.010, 0.002, 0.002],
@@ -1442,8 +1490,10 @@ var results =
         ]
     },
     {
-        "system":       "Huawei TaiShan 2280 v2 (AArch64) 64 core (2-die), one physical HDD",
+        "system":       "Huawei TaiShan",
+        "system_full":      "Huawei TaiShan 2280 v2 (AArch64) 64 core (2-die), one physical HDD",
         "time":         "2020-01-15 00:00:00",
+        "kind":         "server",
         "result":
         [
             [0.356, 0.002, 0.002],
@@ -1492,8 +1542,10 @@ var results =
         ]
     },
     {
-        "system":       "AWS m5ad.24xlarge 96vCPU 384GiB 4x900 NVMe SSD, AMD EPYC 7000 series 2.5 GHz",
+        "system":       "AWS m5ad.24xlarge",
+        "system_full":       "AWS m5ad.24xlarge 96vCPU 384GiB 4x900 NVMe SSD, AMD EPYC 7000 series 2.5 GHz",
         "time":         "2020-01-17 00:00:00",
+        "kind":         "cloud",
         "result":
         [
             [0.013, 0.002, 0.002],
@@ -1542,8 +1594,10 @@ var results =
         ]
     },
     {
-        "system":       "Lenovo Thinkpad X1 Carbon 6th Gen i7-8550U CPU @ 1.80GHz 4 threads, 16 GiB",
+        "system":       "Lenovo Thinkpad X1 Carbon",
+        "system_full":      "Lenovo Thinkpad X1 Carbon 6th Gen i7-8550U CPU @ 1.80GHz 4 threads, 16 GiB",
         "time":         "2020-01-18 00:00:00",
+        "kind":         "laptop",
         "result":
         [
             [0.006, 0.002, 0.002],
@@ -1592,8 +1646,10 @@ var results =
         ]
     },
     {
-        "system":       "E5645 @ 2.40GHz, 2 sockets, 12 threads, 96 GiB, 14 x 2TB HDD RAID-10",
+        "system":       "Xeon E5645",
+        "system_full":      "Xeon E5645 @ 2.40GHz, 2 sockets, 12 threads, 96 GiB, 14 x 2TB HDD RAID-10",
         "time":         "2020-01-18 00:00:00",
+        "kind":         "server",
         "result":
         [
             [0.061, 0.003, 0.003],
@@ -1642,8 +1698,10 @@ var results =
         ]
     },
     {
-        "system":       "AMD EPYC 7402P 2.8 GHz, 128 GB DDR4, SSD RAID1 2×1920 GB SSD (INTEL SSDSC2KB019T7)",
+        "system":       "AMD EPYC 7402P SSD",
+        "system_full":      "AMD EPYC 7402P 2.8 GHz, 128 GB DDR4, SSD RAID1 2×1920 GB SSD (INTEL SSDSC2KB019T7)",
         "time":         "2020-01-26 00:00:00",
+        "kind":         "server",
         "result":
         [
             [0.014, 0.002, 0.002],
@@ -1692,8 +1750,10 @@ var results =
         ]
     },,
     {
-        "system":       "AMD EPYC 7402P 2.8 GHz, 128 GB DDR4, HDD RAID1 2×8000 GB HDD (TOSHIBA MG06ACA800E)",
+        "system":       "AMD EPYC 7402P HDD",
+        "system_full":       "AMD EPYC 7402P 2.8 GHz, 128 GB DDR4, HDD RAID1 2×8000 GB HDD (TOSHIBA MG06ACA800E)",
         "time":         "2020-01-26 00:00:00",
+        "kind": "server",
         "result":
         [
             [0.149, 0.002, 0.002],
@@ -1742,8 +1802,10 @@ var results =
         ]
     },,
     {
-        "system":       "AMD EPYC 7502P / 128G DDR4 / 2NVME SAMSUNG MZQLB960HAJR",
+        "system":       "AMD EPYC 7502P nVME",
+        "system_full":       "AMD EPYC 7502P / 128G DDR4 / 2NVME SAMSUNG MZQLB960HAJR",
         "time":         "2020-03-05 00:00:00",
+        "kind":         "server",
         "result":
         [
             [0.012, 0.019, 0.009],
@@ -1792,8 +1854,10 @@ var results =
         ]
     },
     {
-        "system":       "Intel Xeon E5-1650v3 3.5 GHz, 64 GB DDR4, RAID1 2×480 GB SSD (INTEL SSDSC2BB480G4)",
+        "system":       "Intel Xeon E5-1650v3",
+        "system_full":       "Intel Xeon E5-1650v3 3.5 GHz, 64 GB DDR4, RAID1 2×480 GB SSD (INTEL SSDSC2BB480G4)",
         "time":         "2020-01-26 00:00:00",
+        "kind":         "server",
         "result":
         [
             [0.005, 0.001, 0.001],
@@ -1842,8 +1906,10 @@ var results =
         ]
     },
     {
-        "system":       "Selectel Cloud, 16 vCPU, 32 GB RAM, 'fast disk'",
+        "system":       "Selectel Cloud 'fast disk'",
+        "system_full":       "Selectel Cloud, 16 vCPU, 32 GB RAM, 'fast disk'",
         "time":         "2020-01-26 00:00:00",
+        "kind":         "cloud",
         "result":
         [
             [0.017, 0.002, 0.002],
@@ -1892,8 +1958,10 @@ var results =
         ]
     },,
     {
-        "system":       "Selectel Cloud, 16 vCPU, 32 GB RAM, 'basic disk'",
+        "system":       "Selectel Cloud 'basic disk'",
+        "system_full":       "Selectel Cloud, 16 vCPU, 32 GB RAM, 'basic disk'",
         "time":         "2020-01-26 00:00:00",
+        "kind":         "cloud",
         "result":
         [
             [0.142, 0.002, 0.002],
@@ -1942,8 +2010,10 @@ var results =
         ]
     },,
     {
-        "system":       "Selectel Cloud, 16 vCPU, 32 GB RAM, 'universal disk'",
+        "system":       "Selectel Cloud 'universal disk'",
+        "system_full":       "Selectel Cloud, 16 vCPU, 32 GB RAM, 'universal disk'",
         "time":         "2020-01-26 00:00:00",
+        "kind":         "cloud",
         "result":
         [
             [0.016, 0.002, 0.002],
@@ -1992,8 +2062,10 @@ var results =
         ]
     },
     {
-        "system":       "AWS a1.4xlarge (Graviton) 16 vCPU, 2.3 GHz, 32 GiB RAM, EBS",
+        "system":       "AWS a1.4xlarge",
+        "system_full":       "AWS a1.4xlarge (Graviton) 16 vCPU, 2.3 GHz, 32 GiB RAM, EBS",
         "time":         "2020-02-13 00:00:00",
+        "kind":         "cloud",
         "result":
         [
             [0.012, 0.003, 0.003],
@@ -2042,8 +2114,10 @@ var results =
         ]
     },
     {
-        "system":       "ProLiant DL380 G7, 12Gb RAM, 2x Xeon X5675 3.07GHz, 8x300GB SAS soft RAID5",
+        "system":       "ProLiant DL380 G7 (2 CPU)",
+        "system_full":       "ProLiant DL380 G7, 12Gb RAM, 2x Xeon X5675 3.07GHz, 8x300GB SAS soft RAID5",
         "time":         "2020-02-18 00:00:00",
+        "kind":         "server",
         "result":
         [
             [0.041, 0.005, 0.005],
@@ -2092,8 +2166,10 @@ var results =
         ]
     },,
     {
-        "system":       "ProLiant DL380 G7, 12Gb RAM, 1x Xeon X5675 3.07GHz, 8x300GB SAS Soft RAID5",
+        "system":       "ProLiant DL380 G7 (1 CPU)",
+        "system_full":       "ProLiant DL380 G7, 128Gb RAM, 1x Xeon X5675 3.07GHz, 8x300GB SAS Soft RAID5",
         "time":         "2020-02-18 00:00:00",
+        "kind":         "server",
         "result":
         [
             [0.048, 0.005, 0.005],
@@ -2142,8 +2218,10 @@ var results =
         ]
     },
     {
-        "system":       "Pinebook Pro (AArch64, 4 GiB RAM)",
+        "system":       "Pinebook Pro",
+        "system_full":       "Pinebook Pro (AArch64, 4 GiB RAM)",
         "time":         "2020-03-08 00:00:00",
+        "kind":         "laptop",
         "result":
         [
             [0.021, 0.009, 0.007],
@@ -2192,8 +2270,10 @@ var results =
         ]
     },
     {
-        "system":       "AMD Ryzen 9 3950X 16-Core Processor, 64 GiB RAM, Intel Optane 900P 280 GB",
+        "system":       "AMD Ryzen 9",
+        "system_full":       "AMD Ryzen 9 3950X 16-Core Processor, 64 GiB RAM, Intel Optane 900P 280 GB",
         "time":         "2020-03-14 00:00:00",
+        "kind":         "desktop",
         "result":
         [
             [0.002, 0.001, 0.001],
@@ -2242,8 +2322,10 @@ var results =
         ]
     },
     {
-        "system":       "Azure E32s v3 32 256 GiB 512 GiB",
+        "system":       "Azure E32s v3",
+        "system_full":       "Azure E32s v3 32 256 GiB 512 GiB",
         "time":         "2020-03-23 00:00:00",
+        "kind":         "cloud",
         "result":
         [
             [0.003, 0.002, 0.003],
@@ -2292,8 +2374,10 @@ var results =
         ]
     },
     {
-        "system":       "MacBook Pro 2018, 2.7 GHz Quad-Core Intel Core i7, 16 GiB RAM, 1TB SSD",
+        "system":       "MacBook Pro 2018",
+        "system_full":       "MacBook Pro 2018, 2.7 GHz Quad-Core Intel Core i7, 16 GiB RAM, 1TB SSD",
         "time":         "2020-04-04 00:00:00",
+        "kind":         "laptop",
         "result":
         [
             [0.002, 0.002, 0.002],
@@ -2342,8 +2426,10 @@ var results =
         ]
     },
     {
-        "system":       "AMD EPYC 7702, 256 cores, 512 GiB, NVMe SSD",
+        "system":       "AMD EPYC 7702",
+        "system_full":  "AMD EPYC 7702, 256 cores, 512 GiB, NVMe SSD",
         "time":         "2020-04-09 00:00:00",
+        "kind":         "server",
         "result":
         [
             [0.006, 0.002, 0.002],
@@ -2392,8 +2478,10 @@ var results =
         ]
     },
     {
-        "system":       "Intel NUC, 4 cores (Intel i7-6770HQ), 32 GiB RAM, 1 TB NVMe SSD",
+        "system":       "Intel NUC",
+        "system_full":  "Intel NUC, 4 cores (Intel i7-6770HQ), 32 GiB RAM, 1 TB NVMe SSD",
         "time":         "2020-04-15 00:00:00",
+        "kind":         "desktop",
         "result":
         [
             [0.003, 0.002, 0.001],
@@ -2442,8 +2530,10 @@ var results =
         ]
     },
     {
-        "system":       "AMD EPYC 7502P 32-Core Processor with HT (64 thread) / 512 Gb RAM / mdadm RAID1 SAMSUNG MZQLB3T8HALS-00007 + LVM",
+        "system":       "AMD EPYC 7502P",
+        "system_full":       "AMD EPYC 7502P 32-Core Processor with HT (64 thread) / 512 Gb RAM / mdadm RAID1 SAMSUNG MZQLB3T8HALS-00007 + LVM",
         "time":         "2020-04-16 00:00:00",
+        "kind":         "server",
         "result":
         [
             [0.007, 0.002, 0.002],
@@ -2492,8 +2582,10 @@ var results =
         ]
     },
     {
-        "system":       "Xeon Silver 4114, 256 Gb RAM, SSD RAID1",
+        "system":       "Xeon Silver 4114",
+        "system_full":       "Xeon Silver 4114, 256 Gb RAM, SSD RAID1",
         "time":         "2020-04-23 00:00:00",
+        "kind":         "server",
         "result":
         [
             [0.010, 0.002, 0.002],
@@ -2542,8 +2634,10 @@ var results =
         ]
     },
     {
-        "system":       "AWS m6g.16xlarge (Graviton2) 64 vCPU, 256 GiB RAM, EBS",
+        "system":       "AWS m6g.16xlarge",
+        "system_full":       "AWS m6g.16xlarge (Graviton2) 64 vCPU, 256 GiB RAM, EBS",
         "time":         "2020-02-13 00:00:00",
+        "kind": "cloud",
         "result":
         [
             [0.012, 0.003, 0.003],
@@ -2589,6 +2683,58 @@ var results =
             [0.059, 0.026, 0.030],
             [0.035, 0.031, 0.019],
             [0.010, 0.007, 0.007]
+        ]
+    },
+    {
+        "system":       "AWS Lightsail 4vCPU",
+        "system_full":  "AWS Lightsail E5-2686 v4 @ 2.30GHz, 16 GiB RAM",
+        "time":         "2020-07-02 00:00:00",
+        "kind":         "cloud",
+        "result":
+        [
+            [0.002, 0.001, 0.001],
+            [0.046, 0.026, 0.025],
+            [0.156, 0.077, 0.078],
+            [0.746, 0.098, 0.095],
+            [1.383, 0.233, 0.218],
+            [2.161, 0.646, 0.626],
+            [0.041, 0.037, 0.038],
+            [0.032, 0.029, 0.026],
+            [1.494, 1.190, 1.159],
+            [1.843, 1.354, 1.357],
+            [0.841, 0.375, 0.375],
+            [1.254, 0.446, 0.448],
+            [2.235, 1.792, 1.746],
+            [4.175, 2.354, 2.315],
+            [2.602, 2.075, 2.042],
+            [2.258, 2.085, 2.058],
+            [6.402, 5.909, 5.895],
+            [4.178, 3.618, 3.670],
+            [12.978, 12.037, 11.764],
+            [0.754, 0.107, 0.102],
+            [19.615, 1.888, 1.868],
+            [21.740, 2.208, 2.171],
+            [41.009, 5.277, 5.245],
+            [38.068, 2.475, 2.435],
+            [4.739, 0.693, 0.680],
+            [1.766, 0.549, 0.542],
+            [4.730, 0.684, 0.672],
+            [19.010, 1.849, 1.811],
+            [15.999, 3.086, 3.099],
+            [3.655, 3.609, 3.593],
+            [3.967, 1.768, 1.836],
+            [10.566, 3.036, 2.963],
+            [20.065, 19.091, null],
+            [21.474, 8.597, 8.501],
+            [21.484, 8.563, 8.533],
+            [3.850, 3.487, 3.477],
+            [0.408, 0.240, 0.239],
+            [0.125, 0.087, 0.084],
+            [0.132, 0.073, 0.073],
+            [0.685, 0.471, 0.480],
+            [0.089, 0.028, 0.025],
+            [0.044, 0.027, 0.018],
+            [0.007, 0.007, 0.006]
         ]
     }
 ];
