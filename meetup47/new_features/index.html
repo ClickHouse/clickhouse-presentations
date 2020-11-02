@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Outstandingly Fresh ClickHouse Features</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x10.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+
+         p.cloud { text-align: center; line-height: 2; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>Outstandingly Fresh ClickHouse Features</h1>
+    </header>
+
+    <section class="slide">
+        <h1 style="font-size: 34pt;">ClickHouse Meetup Online East</h1>
+        <p>Zoom (On Air): <a href=""></a></p>
+        <p>Telegram chat: <a href="https://telegram.me/clickhouse_en">clickhouse_en</a></p>
+        <p>Wechat: 4 groups (ask your friend to invite)</p>
+        <p style="margin-top: 1em;">YouTube: <a href="https://www.youtube.com/c/ClickHouseDB">https://www.youtube.com/c/ClickHouseDB</a></p>
+    </section>
+
+    <section class="slide" id="cover">
+        <h1 style="margin-top: 180px; font-size: 48pt;"><span>Outstandingly Fresh ClickHouse Features</h1>
+    </section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">In Previous Episodes: Spring/Summer 2020</h2>
+<p class="cloud">
+<span>PostgreSQL wire protocol</span>
+<span>Geographical dictionaries</span>
+<span>Data coarsening with TTL expressions</span>
+<span>Parallel calculation of FINAL</span>
+<span>Insertion into ODBC and JDBC</span>
+<span>Cassandra dictionary source</span>
+<span>Dictionary layout for SSD</span>
+<span>Settings for data formats in dictionaries</span>
+<span>Removal of leader election for replicas</span>
+<span>Support for Distributed over Distributed queries</span>
+<span>Query metrics from PMU</span>
+<span>GROUP BY optimization on sorted data</span>
+<span>Apache Arrow import/export</span>
+<span>MsgPack format</span>
+<span>"direct" dictionary source</span>
+</p>
+
+<!-- <p style="line-height: 1.4">&mdash; RBAC, LDAP;
+<br/>&mdash; PostgreSQL wire protocol;
+<br/>&mdash; Geographical dictionaries;
+<br/>&mdash; Data coarsening with TTL expressions;
+<br/>&mdash; Parallel calculation of FINAL;
+<br/>&mdash; Insertion into ODBC and JDBC;
+<br/>&mdash; Cassandra dictionary source;
+<br/>&mdash; Dictionary layout for SSD;
+<br/>&mdash; Settings for data formats in dictionaries;
+<br/>&mdash; Removal of leader election for replicas;
+<br/>&mdash; Support for Distributed over Distributed queries;
+<br/>&mdash; Query metrics on PMU (hardware performance measurement unit).</p> -->
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">New Data Formats For MergeTree</h2>
+<p>&mdash; Compact data parts (since version <span style="color: green">20.3</span>).</p>
+<p>&mdash; In-memory data parts (since version <span style="color: green">20.6</span>).</p>
+<p>&mdash; Write-Ahead Log (since version <span style="color: green">20.6</span>).</p>
+<p>&mdash; Durability settings (since version <span style="color: gray">20.10</span>).</p>
+
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Developer &mdash; Anton Popov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Three Formats For Data Parts</h2>
+<p>1. Wide &mdash; the classic format.</p>
+<p>2. Compact &mdash; all columns in a single file.</p>
+<p>3. Memory &mdash; all data in memory.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Three Formats For Data Parts</h2>
+<p>Managed by the following settings:</p>
+<p>&mdash; <b>min_bytes_for_wide_part</b>,<br/>&emsp; <b>min_rows_for_wide_part</b>:</p>
+<p>&emsp; if the size is bigger &mdash; then use <b>wide</b> format.</p>
+<p>&mdash; <b>min_bytes_for_compact_part</b>,<br/>&emsp; <b>min_rows_for_compact_part</b>:</p>
+<p>&emsp; if the size is bigger &mdash; then use <b>compact</b> format,<br/>
+&emsp; if less &mdash; use <b>memory</b> format.</p>
+<p>Wide > Compact > Memory</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Wide Data Parts</h2>
+<p>The classic format.</p>
+<p>Every column and index in its own files.</p>
+<p>Optimal for reading from disk, especially from slow HDDs.</p>
+<p>Zero-cost ALTER ADD/REMOVE COLUMN.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Compact Data Parts</h2>
+<p>All columns in a single file.</p>
+<p style="color: green;">Optimal for data insertion.<br/>
+Especially on slow filesystems.</p>
+<p style="color: red;">Less optimal for reading.</p>
+
+<p>It's recommended for small data parts.</p>
+<p>Not recommended to enable for all data parts.</p>
+
+<p>Available since version 20.3, but disabled by default.<br/>
+Since version 20.10 enabled by default for data parts up to 10 MB.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">In-Memory Data Parts</h2>
+<img style="float: left; height: 60%; margin-left: -60px; margin-top: -60px; margin-right: 20px;" src="pictures/optimal.webp" />
+<p>Data in RAM.</p>
+<p>+ optional Write-Ahead Log.</p>
+
+<p>&mdash; in_memory_parts_enable_wal;<br/>
+&mdash; write_ahead_log_max_bytes.</p>
+
+<p><span style="color: green;">Even better performance on insertion...</span><br/>
+... if you did not enable write-ahead log.</p>
+
+<p><span style="color: green;">Even better performance for reading...</span><br/>
+... but data in memory is stored uncompressed.</p>
+
+<p>All data parts are replicated as usual.</p>
+
+<p style="color: gray">This is an experimental feature.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Durability</h2>
+<p>What if all your data is stored on a single server?</p>
+<p>What if you don't use replication?</p>
+<p>What if you do use replication but within a single region?</p>
+
+<p style="margin-top: 2em; color: green;">&mdash; so, we need to simply call fsync before answering to INSERT query?</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Durability</h2>
+<p>Eat My Data (2007):<br/>
+<a href="http://mirror.linux.org.au/pub/linux.conf.au/2007/video/talks/278.pdf">http://mirror.linux.org.au/pub/linux.conf.au/2007/video/talks/278.pdf</a></p>
+
+<p>Files Are Hard (2015):<br/>
+<a href="https://danluu.com/file-consistency/">https://danluu.com/file-consistency/</a></p>
+
+<p>PostgreSQL "Fsyncgate" (2018):<br/>
+<a href="https://lwn.net/Articles/752063/">https://lwn.net/Articles/752063/</a></p>
+
+<p>Can Applications Recover from fsync Failures? (2020):<br/>
+<a href="https://www.usenix.org/conference/atc20/presentation/rebello">https://www.usenix.org/conference/atc20/presentation/rebello</a></p>
+
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Durability</h2>
+<p>What if all your data is stored on a single server?</p>
+<p>What if you don't use replication?</p>
+<p>What if you do use replication but within a single region?</p>
+
+<p style="color: green;">Then take this:</p>
+
+<p>&mdash; min_rows_to_fsync_after_merge;
+<br/>&mdash; min_compressed_bytes_to_fsync_after_merge;
+<br/>&mdash; min_compressed_bytes_to_fsync_after_fetch;
+<br/>&mdash; fsync_after_insert;
+<br/>&mdash; fsync_part_directory;
+<br/>&mdash; write_ahead_log_bytes_to_fsync;
+<br/>&mdash; write_ahead_log_interval_ms_to_fsync;
+<br/>&mdash; in_memory_parts_insert_sync.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Query Normalization and Obfuscation</h2>
+<p>The functions: <b>normalizeQuery</b>, <b>normalizedQueryHash</b>.</p>
+<code>SELECT <b>normalizeQuery</b>(query) FROM system.query_log</code>
+<p style="margin-top: 2em;">&mdash; replaces literals to <span style="background-color: #EEE; padding: 5px 10px; font-family: Monospace;">?</span></p>
+<p>&mdash; replaces lists of literals to <span style="background-color: #EEE; padding: 5px 10px; font-family: Monospace;">?..</span></p>
+<p>&mdash; replaces complex aliases to <span style="background-color: #EEE; padding: 5px 10px; font-family: Monospace;">`?`</span></p>
+
+<p style="margin-top: 100px; font-size: 14pt; color: green;">Available since version 20.8.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Query Obfuscation</h2>
+<p>One my friend has a query...<br/>
+... but he don't want to show it to me.</p>
+<p>Solution:</p>
+<code>clickhouse-format --<b>obfuscate</b> &lt; query.sql</code>
+
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Available since version 20.10.</p>
+<p style="font-size: 14pt; color: gray;">Data Obfuscation: <a href="https://presentations.clickhouse.tech/highload_spb_2019/#">https://presentations.clickhouse.tech/highload_spb_2019/#</a></p>
+</section>
+
+<section class="slide" style="background-image: url('pictures/query.png'); background-size: 100%;">
+&nbsp;
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Data Recompression</h2>
+<code>CREATE TABLE hits
+(
+  event_time DateTime,
+  ...
+) ENGINE MergeTree ORDER BY ...
+
+<b>TTL</b> event_time + INTERVAL 1 MONTH
+        <b>RECOMPRESS</b> CODEC(ZSTD(1)),
+    event_time + INTERVAL 1 YEAR
+        <b>RECOMPRESS</b> CODEC(ZSTD(6))</code>
+
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Developer &mdash; Alexander Sapin. Available since version 20.10.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Additions to ALTER</h2>
+<code>CREATE TABLE hits
+(
+  event_time DateTime CODEC(Delta, <b>Default</b>),
+  ...
+) ENGINE MergeTree ORDER BY ...</code>
+
+<code style="margin-top: 2em;">ALTER TABLE hits MODIFY COLUMN c
+    <b>REMOVE</b> COMMENT|CODEC|TTL
+        |DEFAULT|MATERIALIZED|ALIAS</code>
+
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Developer &mdash; Alexander Sapin. Available since version 20.10.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Column List Transformers</h2>
+<code>SELECT * <b>EXCEPT</b>(secret_column) FROM table;</code>
+<code style="margin-top: 0.5em;">SELECT table.* <b>REPLACE</b>(
+  (URL LIKE '%yandex%' ? '' : URL) AS URL) FROM table;</code>
+<code style="margin-top: 0.5em;">SELECT <b>COLUMNS('^packet_')</b> FROM table;</code>
+<code style="margin-top: 0.5em;">SELECT t.* <b>APPLY</b>(sum) FROM table AS t;</code>
+<code style="margin-top: 0.5em;">SELECT <b>COLUMNS(x, y, z)</b> <b>APPLY</b>(sum) FROM table;</code>
+
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Developer &mdash; <b>Amos Bird</b>, mfridental. Available since version 20.10.</p>
+<p style="font-size: 14pt; color: gray;">COLUMNS('regexp'): developer &mdash; mfridental. Available since version <span style="color: green;">19.12</span>.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">New ClickHouse versions</h2>
+<p style="color: gray">20.11 &mdash; testing.</p>
+<p style="color: green">20.10 &mdash; stable.</p>
+<p style="color: green">20.9 &mdash; stable.</p>
+<p style="color: green">20.8 &mdash; LTS until 2021-09-30.</p>
+<p style="color: gray">20.7 ... 20.4 &mdash; obsolete.</p>
+<p style="color: green">20.3 &mdash; LTS until 2021-03-12.</p>
+<p>...</p>
+<p style="color: gray">19.14 &mdash; obsolete.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">What else?</h2>
+<p>Streaming data import from RabbitMQ.</p>
+<p>Kerberos authentication for Kafka.</p>
+<p>WITH for subqueries with global scope (<b>Amos Bird</b>).</p>
+<p>New formats: Regexp, RawBLOB, JSONAsString, LinesAsString.</p>
+<p>Allow to run clickhouse without packages and configs.</p>
+<p>system.crash_log table, Sentry integration.</p>
+<p>Aggregate function for rank correlation statistic.</p>
+<p>256bit Decimal.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">What's next?</h2>
+<p>Backups.</p>
+<p>GRPC interface.</p>
+<p>Projections (<b>Amos Bird</b>).</p>
+<p>Support for OpenTracing.</p>
+<p>An alternative to ZooKeeper.</p>
+<p>Hedged distributed requests.</p>
+<p>Reading of subcolumns from tables.</p>
+<p>Semi-duplicate text matching (<b>ucasFL</b>).</p>
+<p>Functions for geographical data analysis.</p>
+</section>
+
+
+<section class="slide">
+    <h2>.</h2>
+</section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+</body>
+</html>
