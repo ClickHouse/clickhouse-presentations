@@ -198,7 +198,7 @@ fallback_to_stale_replicas_for_distributed_queries = 1;</code></p>
 <p>Failover for replicas where table doesn't exist.</p>
 <p>Manually disable replica from leader election:<br/>
 <br/>Example: conf.d/disable_leadership.xml:
-<br/><code style="font-size: 20px;">&lt;yandex&gt;&lt;merge_tree&gt;&lt;replicated_can_become_leader&gt;0&lt;replicated_can_become_leader&gt;&lt;/merge_tree&gt;&lt;/yandex&gt;</code></p>
+<br/><code style="font-size: 20px;">&lt;yandex&gt;&lt;merge_tree&gt;&lt;replicated_can_become_leader&gt;0&lt;/replicated_can_become_leader&gt;&lt;/merge_tree&gt;&lt;/yandex&gt;</code></p>
 <p>Synchronous INSERTs into Distributed tables:
 <br/><br/><code style="font-size: 24px;">SET insert_distributed_sync = 1;</code></p>
 </section>
