@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse Roadmap 2021</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x10.css">
+
+    <style type="text/css">
+         p.cloud { text-align: center; line-height: 2; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+
+         pre { display: block; white-space: pre; background-color: #EEE; padding: 5px; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse Roadmap 2021</h1>
+    </header>
+
+    <section class="slide" id="cover">
+        <h1 style="margin-top: 180px; font-size: 48pt;"><span>ClickHouse Roadmap 2021</h1>
+    </section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">You don't need this presentation</h2>
+<p>ClickHouse Roadmap is publicly available on GitHub:</p>
+<p><a href="https://github.com/ClickHouse/ClickHouse/issues/17623">https://github.com/ClickHouse/ClickHouse/issues/17623</a>
+<p>I will show you only some highlights and examples.</p>
+</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Main Tasks</h2>
+<p class="cloud">
+<span>Provide alternative for ZooKeeper</span>
+<span>Nested and semistructured data</span>
+<span>Limited support for transactions</span>
+<span>Backups</span>
+<span>Hedged requests</span>
+<span>Window functions</span>
+<span>Separation of storage and compute</span>
+<span>Short-circuit evaluation</span>
+<span>Projections</span>
+<span>Lightweight DELETE/UPDATE</span>
+<span>Workload management</span>
+<span>User Defined Functions</span>
+<span>Simplify replication</span>
+<span>JOIN improvements</span>
+<span>Embedded documentation</span>
+<span>Pluggable auth with tokens</span>
+</p>
+<p class="cloud"><a href="https://github.com/ClickHouse/ClickHouse/issues/17623">https://github.com/ClickHouse/ClickHouse/issues/17623</a>
+</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Support for Nested and Semistructured Data</h2>
+<p>Work in progress. <span style="color: green;">Initial support in version 21.1.</span></p>
+
+<p>Data types:</p>
+<p>
+<code>Tuple(T1, T2...)</code><br/>
+<code>Tuple(x1 T1, x2 T2...)</code><br/>
+<code>Map(T1, T2)</code><br/>
+<code>Nested(x1 T1, x2 T2...)</code><br/>
+</p>
+
+<p>Support for subcolumns:</p>
+
+<p><code>SELECT cart.id, cart.price FROM table</code><br/>
+&mdash; only queried subcolumns will be read from table.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Support for Nested and Semistructured Data</h2>
+<p>Work in progress. <span style="color: green;">Initial support in version 21.1.</span></p>
+
+<p>Multiple nesting:</p>
+
+<pre>cart Nested(
+    item_id UInt64,
+    item_price Decimal(20, 5),
+    features Nested(
+        ...))</pre>
+
+<p><code>SELECT cart.item_id, cart.features.f1 FROM table</code></p>
+<p><code>SELECT cart.* FROM table</code></p>
+</p>
+
+<p>
+Maps naturally to nested JSON and Protobuf.
+</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Window Functions</h2>
+
+<p>Work in progress. <span style="color: green;">Initial support in version 21.1.</span></p>
+
+<p><code>SET allow_experimental_window_functions = 1</code></p>
+
+<p>Already supported:<br/>
+&mdash; OVER (PARTITION BY ... ORDER BY ...)<br/>
+&mdash; aggregate functions over windows;<br/>
+&mdash; WINDOW clause;
+</p>
+
+<p>Upcoming:<br/>
+&mdash; non-aggregate window functions (rank, etc...);<br/>
+&mdash; frame specifications;
+</p>
+
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Projections</h2>
+
+<p>Multiple data representations inside a single table.</p>
+<p>
+&mdash; different data order;<br/>
+&mdash; subset of columns;<br/>
+&mdash; subset of rows;<br/>
+&mdash; aggregation.
+</p>
+
+<p style="color: green;">Work in progress.</p>
+
+<p>Difference to materialized views:
+<p>
+&mdash; projections data is always consistent;<br/>
+&mdash; updated atomically with the table;<br/>
+&mdash; replicated in the same way as the table;<br/>
+&mdash; projection can be automatically used for SELECT query.
+</p>
+
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Alternative to ZooKeeper</h2>
+
+<p style="color: green;">Work in Progress.</p>
+
+<p>
+&mdash; ZooKeeper network protocol is implemented;<br/>
+&mdash; Abstraction layer over ZooKeeper is used;<br/>
+&mdash; ZooKeeper data model is implemented for testing;<br/>
+&mdash; TestKeeperServer: a server with ZooKeeper data model for testing;
+</p>
+
+<p>Benefits:<br/>
+<b>&mdash; less operational complexity;</b><br/>
+&mdash; fix "zxid overflow" issue;<br/>
+&mdash; fix the issue with max packet size;<br/>
+&mdash; fix "session expired" due to gc pauses;<br/>
+&mdash; improve memory usage;<br/>
+&mdash; allow compressed snapshots;<br/>
+&mdash; allow embedding into clickhouse-server.
+</p>
+
+</section>
+
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Short-circuit Evaluation</h2>
+
+<code style="font-size: 16pt;">SELECT IF(number = 0, 0, 123 % number) FROM numbers(10)</code>
+<p style="color: red;">&mdash; division by zero.</p>
+
+<code style="font-size: 16pt;">SELECT * FROM numbers(10) WHERE number > 0 AND 10 % number > 0</code>
+<p style="color: red;">&mdash; division by zero.</p>
+
+<p>&mdash; both branches of IF, AND, OR are always evaluated.</p>
+
+<pre style="font-size: 16pt;">SELECT * FROM
+(
+    SELECT * FROM numbers(10)
+    WHERE number > 0
+)
+WHERE 10 % number > 0</pre>
+<p style="color: red;">&mdash; division by zero.</p>
+
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">User Defined Functions</h2>
+
+<p>We are considering five ways to implement UDF, two of them are mandatory:</p>
+
+<p>1. UDF as SQL expressions.</p>
+
+<p><pre>CREATE FUNCTION f AS x -> x + 1</pre></p>
+
+<p>2. UDF as executable script.</p>
+
+<p>Interaction via pipes, data is serialized using supported formats.</p>
+
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Hedged Requests</h2>
+
+<p>Send distributed query to multiple replicas &mdash; to mitigate tail latencies.</p>
+
+<p>This is needed for distributed queries on large clusters (with large "fanout").</p>
+
+<p style="color: green;">Work in progress.</p>
+
+<p style="font-size: 80%; margin-top: 2em; color: #888;">* The largest ClickHouse cluster in Yandex is 630+ servers,<br/>but there are many larger clusters in other companies.</p>
+
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Bonus</h2>
+
+<p>Native integration with PostgreSQL</p>
+
+<p>&mdash; PostgreSQL table engine and table function;<br/>
+&mdash; PostgreSQL dictionary source;<br/>
+&mdash; PostgreSQL database engine as a view to all tables in PG database;<br/>
+</p>
+
+<p>Available in version 21.2-testing.</p>
+
+<p style="color: gray;">In previous versions it was only available via ODBC with many complications.</p>
+</section>
+
+
+<section class="slide">
+<h2>?</h2>
+<p>Read the official roadmap and ask your questions:</p>
+<p><a href="https://github.com/ClickHouse/ClickHouse/issues/17623">https://github.com/ClickHouse/ClickHouse/issues/17623</a>
+</p>
+</section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+</body>
+</html>
