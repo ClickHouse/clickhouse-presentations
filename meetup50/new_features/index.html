@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse Features 2021</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x10.css">
+
+    <style type="text/css">
+         p.cloud { text-align: center; line-height: 2; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+
+         pre { display: block; white-space: pre; background-color: #EEE; padding: 5px; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse Features 2021</h1>
+    </header>
+
+    <section class="slide" id="cover">
+        <h1 style="margin-top: 180px; font-size: 48pt;"><span>ClickHouse Features 2021</h1>
+    </section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">In Previous Episodes: Autumn/Winter 2020</h2>
+<p class="cloud" style="font-size: 24pt;">
+<span>EXPLAIN queries</span>
+<span>Compact and In-memory data parts</span>
+<span>PostgreSQL wire protocol</span>
+<span>LDAP authentication</span>
+<span>Atomic database</span>
+<span>Background data recompression</span>
+<span>Column transformers</span>
+<span>RabbitMQ integration</span>
+<span>256 bit Decimal</span>
+<span>Kerberos for Kafka and HDFS</span>
+<span>Query obfuscation and normalization</span>
+<span>Embedded Web UI</span>
+</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">GRPC Protocol</h2>
+<p>Uncomment <code>&lt;grpc_port>9100&lt;/grpc_port></code> in config.</p>
+<p>Feature parity with native protocol:</p>
+<p>
+&mdash; TLS, compression, query progress,<br/>
+&emsp; query cancellation, sessions, external data...</p>
+<p>Example: clickhouse-client with GRPC in Python.</p>
+<p><code>utils/grpc-client/clickhouse-grpc-client.py</code></p>
+
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Developer &mdash; Vitaly Baranov. <span style="color: green;">Available since 21.1.</span></p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Native Integration With PostgreSQL</h2>
+<p>&mdash; <b>PostgreSQL</b> storage engine;</p>
+<p>&mdash; <b>postgresql</b> table function;</p>
+<p>&mdash; <b>postgresql</b> dictionary source;</p>
+<p>&mdash; <b>PostgreSQL</b> database engine as a view to all tables in PG database;</p>
+<p>Similar to MySQL integration... but for PostgreSQL.</p>
+<p>Upcoming: replication from PostgreSQL.</p>
+
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Developer &mdash; Ksenia Sumarokova. Available since 21.2.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">OpenTelemetry Support</h2>
+<p>Trace your ClickHouse queries within your infrastructure:</p>
+<p>&mdash; enabled by default;</p>
+<p>&mdash; supports opentelemetry HTTP headers;</p>
+<p>&mdash; multiple spans are annotated inside ClickHouse;</p>
+<p>&mdash; data is written to <code>system.opentelemetry_log</code>;</p>
+
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Developer &mdash; Alexander Kuzmenkov. <span style="color: green;">Available since 20.11.</span></p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">New Compression Formats For Import/Export</h2>
+<p>Transparent import/export of compressed files:</p>
+<p>&mdash; gz, brotli;</p>
+<p style="color: green;">&mdash; xz, zstd;</p>
+<p>Example:<br/>
+<pre style="font-size: 16pt;">CREATE TABLE github_events_url
+(
+...
+) ENGINE = URL(
+  'https://datasets.clickhouse.tech/github_events_v2.native.<b>xz</b>',
+  Native);</pre>
+
+<p style="margin-top: 50px; font-size: 14pt; color: gray;">Developer &mdash; Abi Palagashvili. <span style="color: green;">Available since 21.1.</span></p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">SQL Enhancements</h2>
+<p>&mdash; UNION DISTINCT;</p>
+<p>&mdash; REPLACE TABLE and CREATE OR REPLACE TABLE;</p>
+<p>&mdash; aggregate_functions_null_for_empty;</p>
+<p>&mdash; Extended CTE;</p>
+<p>&mdash; Type cast for IN subquery;</p>
+<p>&mdash; SHOW [CHANGED] SETTINGS;</p>
+<p>&mdash; POSITION(needle IN haystack);</p>
+<p>&mdash; DIV / MOD;</p>
+<p>&mdash; SELECT ALL;</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">ANTLR grammar</h2>
+<p>&mdash; experimental and incomplete;</p>
+<p>&mdash; allows to reuse it in third-party tools;</p>
+<p>E.g. implement syntax highlight in your query editor.</p>
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Developer &mdash; Ivan Lezhankin. <span style="color: green;">Available since 21.1.</span></p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Map Data Type</h2>
+<p>Example: <code>map Map(String, String)</code></p>
+<p><code>SELECT map['hello']</code></p>
+<p style="font-size: 14pt; color: gray;">Developer &mdash; Hexiaoting.</span>
+<h2 style="font-size: 30pt;">EmbeddedRocksDB Table Engine</h2>
+<p>&mdash; good for key-value queries;</p>
+<p>&mdash; intented to use as dictionary source;</p>
+<p style="font-size: 14pt; color: gray;">Developer &mdash; Sundy Li.</span>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">ALTER Improvements</h2>
+<p>ALTER UPDATE / DELETE IN PARTITION:</p>
+<p>&mdash; Limit the scope of mutations.</p>
+<p>ALTER DROP PART:</p>
+<p>&mdash; Available for Replicated tables.</p>
+<p>TTL now removes empty parts:</p>
+<p>&mdash; No confusion with leftover parts.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Semi-Duplicate Text Search</h2>
+<p>Text analysis with Min-Hash and Sim-Hash algorithms<br/>
+to find similar / copy-pasted content.</p>
+
+<p><b>Min-Hash</b> algorithm:</p>
+<p>1. Extract every N-word shingle from the text.</p>
+<p>2. Calculate hashes of every shingle.</p>
+<p>3. Select M hashes with minimum value and M hashes with maximum value.</p>
+<p>4. Calculate two total hashes of min-hashes and max-hashes.</p>
+<p>5. Texts are duplicates if at least one of their total hashes equals.</p>
+
+<p style="margin-top: 50px; font-size: 14pt; color: gray;">Developer &mdash; ucasFL. <span style="color: green;">Available since 21.1.</span></p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Statistical Tests</h2>
+<p>Test that two samples have different means,
+useful for A/B testing.</p>
+<p>&mdash; studentTTest;</p>
+<p>&mdash; welchTTest;</p>
+<p>&mdash; mannWitneyUTest;</p>
+<p><br/>Rank correlation:</p>
+<p>&mdash; rankCorr.</p>
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Developer &mdash; Nikita Mikhailov et all. <span style="color: green;">Available since 21.1.</span></p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Upcoming Features</h2>
+<p>ClickHouse Roadmap is publicly available on GitHub:</p>
+<p><a href="https://github.com/ClickHouse/ClickHouse/issues/17623">https://github.com/ClickHouse/ClickHouse/issues/17623</a>
+<p>I will show you only some highlights and examples.</p>
+</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Main Tasks</h2>
+<p class="cloud">
+<span>Provide alternative for ZooKeeper</span>
+<span>Nested and semistructured data</span>
+<span>Limited support for transactions</span>
+<span>Backups</span>
+<span>Hedged requests</span>
+<span>Window functions</span>
+<span>Separation of storage and compute</span>
+<span>Short-circuit evaluation</span>
+<span>Projections</span>
+<span>Lightweight DELETE/UPDATE</span>
+<span>Workload management</span>
+<span>User Defined Functions</span>
+<span>Simplify replication</span>
+<span>JOIN improvements</span>
+<span>Embedded documentation</span>
+<span>Pluggable auth with tokens</span>
+</p>
+<p class="cloud"><a href="https://github.com/ClickHouse/ClickHouse/issues/17623">https://github.com/ClickHouse/ClickHouse/issues/17623</a>
+</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Support for Nested and Semistructured Data</h2>
+<p>Work in progress. <span style="color: green;">Initial support in version 21.1.</span></p>
+
+<p>Multiple nesting:</p>
+
+<pre>cart <b>Nested</b>(
+    item_id UInt64,
+    item_price Decimal(20, 5),
+    features <b>Nested</b>(
+        ...))</pre>
+
+<p><code>SELECT cart.item_id, cart.features.f1 FROM table</code></p>
+<p><code>SELECT cart.* FROM table</code></p>
+</p>
+
+<p>Maps naturally to nested JSON and Protobuf.</p>
+
+<p style="margin-top: 25px; font-size: 14pt; color: gray;">Developer &mdash; Anton Popov. Available since 21.1.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Window Functions</h2>
+
+<p>Work in progress. <span style="color: green;">Initial support in version 21.1.</span></p>
+
+<p><code>SET allow_experimental_window_functions = 1</code></p>
+
+<p>Already supported:<br/>
+&mdash; OVER (PARTITION BY ... ORDER BY ...)<br/>
+&mdash; aggregate functions over windows;<br/>
+&mdash; WINDOW clause;
+</p>
+
+<p>Upcoming:<br/>
+&mdash; non-aggregate window functions (rank, etc...);<br/>
+&mdash; frame specifications;
+</p>
+
+<p style="margin-top: 50px; font-size: 14pt; color: gray;">Developer &mdash; Alexander Kuzmenkov.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Projections: <span style="color: green;">Announced today by Amos Bird!</span></h2>
+
+<p>Multiple data representations inside a single table.</p>
+<p>
+&mdash; different data order;<br/>
+&mdash; subset of columns;<br/>
+&mdash; subset of rows;<br/>
+&mdash; aggregation.
+</p>
+
+<p style="color: green;">Work in progress.</p>
+
+<p>Difference to materialized views:
+<p>
+&mdash; projections data is always consistent;<br/>
+&mdash; updated atomically with the table;<br/>
+&mdash; replicated in the same way as the table;<br/>
+&mdash; projection can be automatically used for SELECT query.
+</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Alternative to ZooKeeper</h2>
+
+<p style="color: green;">Work in Progress.</p>
+
+<p>
+&mdash; ZooKeeper network protocol is implemented;<br/>
+&mdash; Abstraction layer over ZooKeeper is used;<br/>
+&mdash; ZooKeeper data model is implemented for testing;<br/>
+&mdash; TestKeeperServer: a server with ZooKeeper data model for testing;
+</p>
+
+<p>Benefits:<br/>
+<b>&mdash; less operational complexity;</b><br/>
+&mdash; fix "zxid overflow" issue;<br/>
+&mdash; fix the issue with max packet size;<br/>
+&mdash; fix "session expired" due to gc pauses;<br/>
+&mdash; improve memory usage;<br/>
+&mdash; allow compressed snapshots;<br/>
+&mdash; allow embedding into clickhouse-server.
+</p>
+
+<p style="margin-top: 25px; font-size: 14pt; color: gray;">Developer &mdash; Alexander Sapin.</p>
+</section>
+
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Short-circuit Evaluation</h2>
+
+<code style="font-size: 16pt;">SELECT IF(number = 0, 0, 123 % number) FROM numbers(10)</code>
+<p style="color: red;">&mdash; division by zero.</p>
+
+<code style="font-size: 16pt;">SELECT * FROM numbers(10) WHERE number > 0 AND 10 % number > 0</code>
+<p style="color: red;">&mdash; division by zero.</p>
+
+<p>&mdash; both branches of IF, AND, OR are always evaluated.</p>
+
+<pre style="font-size: 16pt;">SELECT * FROM
+(
+    SELECT * FROM numbers(10)
+    WHERE number > 0
+)
+WHERE 10 % number > 0</pre>
+<p style="color: red;">&mdash; division by zero.</p>
+
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">User Defined Functions</h2>
+
+<p>We are considering five ways to implement UDF, two of them are mandatory:</p>
+
+<p>1. UDF as SQL expressions.</p>
+
+<p><pre>CREATE FUNCTION f AS x -> x + 1</pre></p>
+
+<p>2. UDF as executable script.</p>
+
+<p>Interaction via pipes, data is serialized using supported formats.</p>
+
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Hedged Requests</h2>
+
+<p>Send distributed query to multiple replicas &mdash; to mitigate tail latencies.</p>
+
+<p>This is needed for distributed queries on large clusters (with large "fanout").</p>
+
+<p style="color: green;">Work in progress.</p>
+
+<p style="font-size: 80%; margin-top: 2em; color: #888;">* The largest ClickHouse cluster in Yandex is 630+ servers,<br/>but there are many larger clusters in other companies.</p>
+
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Developer &mdash; Pavel Kruglov and Nikolai Kochetov.</p>
+
+</section>
+
+
+<section class="slide">
+<h2>?</h2>
+<p>Read the official roadmap and ask your questions:</p>
+<p><a href="https://github.com/ClickHouse/ClickHouse/issues/17623">https://github.com/ClickHouse/ClickHouse/issues/17623</a>
+</p>
+</section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+</body>
+</html>
