@@ -13,10 +13,14 @@
 
 ...
 
+## 2020-11-13. Матемаркетинг-2020
+
+* Алексей Миловидов. Типичные грабли аналитики на примере данных из Git. [slides](https://github.com/ClickHouse/clickhouse-presentations/blob/master/matemarketing_2020/index.html)
+
+Мероприятиe: [aнонс](https://matemarketing.timepad.ru/event/1130936/)
+
 ## 2020-12-09. С++ meetup Moscow #11 in Skolkovo Technopark
 
-* Женя Смирнов. Исследование и внедрение неблокирующих подходов
-* Александр Бычук. Кроссплатформенная разработка 
 * Алексей Миловидов / Clickhouse. Как я ускорил одну агрегатную функцию в ClickHouse. [slides](cpp_user_group_2020/index.html), [video](https://youtu.be/_pBR6Ecx7VI?t=6219)
 
 Мероприятиe: [aнонс](https://www.meetup.com/Moscow-C-User-Groups/events/274653685/)
