@@ -2,7 +2,7 @@
 
 ... please add ... 
 
-## 2020-06-18. ClickHouse: онлайн-встреча
+## 2020-06-18. ClickHouse: онлайн-встреча #44
 
 * Виталий Баранов. Управление доступом на основе ролей в ClickHouse. [slides](meetup44/RBAC.pdf), [video](https://youtu.be/Y7yhgjESF8s?t=1225)
 * Павел Коваленко. ClickHouse over Object Storage. [slides](meetup44/S3.pdf), [video](https://youtu.be/Y7yhgjESF8s?t=3389)
