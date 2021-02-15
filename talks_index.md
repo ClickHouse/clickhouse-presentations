@@ -13,7 +13,7 @@
 
 ...
 
-## С++ meetup Moscow #11 in Skolkovo Technopark
+## 2020-12-09. С++ meetup Moscow #11 in Skolkovo Technopark
 
 * Женя Смирнов. Исследование и внедрение неблокирующих подходов
 * Александр Бычук. Кроссплатформенная разработка 
@@ -29,7 +29,7 @@
 
 The meetup: [announce 1](https://altinity.com/events/clickhouse-january-virtual-meetup-office-hours), [announce 2](https://www.meetup.com/San-Francisco-Bay-Area-ClickHouse-Meetup/events/274273549/), [video recording](https://youtu.be/BhvxV3ZLIhk).
 
-## ClickHouse China User Group 2021 Spring Meetup. (#50)
+## 2021-02-06. ClickHouse China User Group 2021 Spring Meetup. (#50)
 
 1. William Guowei, Analysys CTO. ClickHouse China User Group Meetup 2017-2020 Review
 2. Alexey Milovidov, Yandex. ClickHouse New&upcoming Features. [slides](meetup50/new_features/index.html).
