@@ -61,7 +61,22 @@ The meetup: [announce](https://www.eventbrite.com/e/the-second-clickhouse-meetup
 
 The conference: [announce](https://fwdays.com/event/highload-fwdays-2020)
 
+## 2020-10-01. ClickHouse: онлайн-встреча (#46)
 
+* Николай Кочетов. Яндекс. Запрос EXPLAIN (Lightning talk)
+  [slides](meetup46/explain.pdf), [video](https://youtu.be/1LVJ_WcLgF8?t=530)
+* Александр Токмаков. Яндекс. Движки БД в ClickHouse (Lightning talk)
+  [slides](meetup46/database_engines.pdf), [video](https://youtu.be/1LVJ_WcLgF8?t=2785)
+* Денис Глазачев. Altinity Inc. LDAP в качестве user directory (Lightning Talk)
+  [slides](meetup46/Authenticators.pdf), [video](https://youtu.be/1LVJ_WcLgF8?t=6305)
+* Денис Журавлёв. revjet.com. MATERIALIZED VIEW, на самом деле
+  [slides](meetup46/MV_actually.pdf), [video](https://youtu.be/1LVJ_WcLgF8?t=7584)
+* Алексей Миловидов. Яндекс. Ещё более новые возможности ClickHouse
+  [slides](meetup46/new_features/index.html), [video](https://youtu.be/1LVJ_WcLgF8?t=10900)
+
+The meetup: [announce](https://events.yandex.ru/events/click-house-onlajn-vs-01-10-2020/)
+
+... please add ... 
 ## 2020-06-18. ClickHouse: онлайн-встреча (#44)
 
 * Виталий Баранов. Управление доступом на основе ролей в ClickHouse. [slides](meetup44/RBAC.pdf), [video](https://youtu.be/Y7yhgjESF8s?t=1225)
