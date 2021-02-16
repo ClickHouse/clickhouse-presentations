@@ -11,7 +11,18 @@
 
 Мероприятиe: [aнонс](https://yandex.ru/promo/events/generated/click-house-onlajn-vs-18-06-2020/index)
 
-...
+
+## 2020-10-31 The Second ClickHouse Meetup East (online)
+
+The meetup: [announce](https://www.eventbrite.com/e/the-second-clickhouse-meetup-east-tickets-126787955187)
+
+## 2020-11-10. ClickHouse в Enterprise — новинки версии 20.9 и соответствие стандартам безопасности (#48)
+
+* Алексей Миловидов. Ещё более новые возможности ClickHouse. [slides](meetup48/new_features/index.html), [video](https://youtu.be/_lWU-6ovKuk?t=87)
+* Андрей Коняев. Новая безопасность в ClickHouse. [video](https://youtu.be/_lWU-6ovKuk?t=2282)
+
+Мероприятиe: [анонс](https://arenadata-events.timepad.ru/event/1465249/)
+
 
 ## 2020-11-13. Матемаркетинг-2020
 
