@@ -55,7 +55,11 @@ The meetup: [announce 1](https://altinity.com/events/clickhouse-january-virtual-
 The meetup: [announce](https://www.eventbrite.com/e/the-second-clickhouse-meetup-east-tickets-126787955187)
 
 
-... please add ... 
+## 2020-10-24. Highload fwdays'20
+
+* Алексей Миловидов / Clickhouse. Как я ускорил одну агрегатную функцию в ClickHouse. [slides](highload_fwdays2020/index.html)
+
+The conference: [announce](https://fwdays.com/event/highload-fwdays-2020)
 
 
 ## 2020-06-18. ClickHouse: онлайн-встреча (#44)
