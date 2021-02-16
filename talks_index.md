@@ -76,7 +76,23 @@ The conference: [announce](https://fwdays.com/event/highload-fwdays-2020)
 
 The meetup: [announce](https://events.yandex.ru/events/click-house-onlajn-vs-01-10-2020/)
 
-... please add ... 
+## 2020-09-10. ClickHouse September \[Virtual\] Meetup
+
+* Robert Hodges, Altinity. Polyglot ClickHouse! [video](https://youtu.be/jzoRKYLTC8A)
+* Artjoms Iskovs and Miles Richardson from SplitGraph. Querying 40k+ open datasets through Splitgraph from ClickHouse [video](https://youtu.be/44CDs7hJTho)
+* Jorge Torres, Max Stepanov, and Zoran Pandovski from MindsDB. Add Automated Machine Learning Capabilities to Clickhouse Database [video](https://youtu.be/lTswa9Vf8ig)
+
+The meetup: [announce](https://www.eventbrite.com/e/clickhouse-september-virtual-meetup-data-integration-tickets-117421895049)
+
+## 2020-07-15. ClickHouse July \[Virtual\] Meetup
+
+https://www.youtube.com/watch?v=AcJm1E6_a5c
+
+* ClickHouse Tech Excerpts. 
+  [slides](https://github.com/ClickHouse/clickhouse-presentations/blob/master/meetup45/meetup.pdf)
+
+The meetup: [announce](https://www.meetup.com/pl-PL/San-Francisco-Bay-Area-ClickHouse-Meetup/events/271522978/)
+
 ## 2020-06-18. ClickHouse: онлайн-встреча (#44)
 
 * Виталий Баранов. Управление доступом на основе ролей в ClickHouse. [slides](meetup44/RBAC.pdf), [video](https://youtu.be/Y7yhgjESF8s?t=1225)
