@@ -36,7 +36,7 @@ The meetup: [announce 1](https://altinity.com/events/clickhouse-january-virtual-
 ## 2021-02-06. ClickHouse China User Group 2021 Spring Meetup. (#50)
 
 1. William Guowei, Analysys CTO. ClickHouse China User Group Meetup 2017-2020 Review
-2. Alexey Milovidov, Yandex. ClickHouse New&upcoming Features. [slides](meetup50/new_features/index.html).
+2. Alexey Milovidov, Yandex. ClickHouse New&upcoming Features. [slides](meetup50/new_features/index.html), [video](https://youtu.be/unsYvWzwyUY?t=460)
 3. Zejun Wu, Director of Tencent Music Data Center. Thinking of Agile BI using ClickHouse in Tencent Music
 4. Amos Bird. ClickHouse Projections, ETL and more
 5. Chenglxiang LI, Director of Blili Bigdata OLAP. Blibli's User Behavior Analysis Optimization on ClickHouse
