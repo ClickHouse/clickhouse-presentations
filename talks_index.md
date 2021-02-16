@@ -84,6 +84,13 @@ The meetup: [announce](https://events.yandex.ru/events/click-house-onlajn-vs-01-
 
 The meetup: [announce](https://www.eventbrite.com/e/clickhouse-september-virtual-meetup-data-integration-tickets-117421895049)
 
+## 2020-09-12. Я.Субботник по бэкенду: архитектура, ClickHouse и С++
+
+* Алексей Миловидов. Две низкоуровневые оптимизации, которые я сделал вчера. [slides](https://presentations.clickhouse.tech/database_saturday_2020/), 
+[video](https://youtu.be/chY9LnhLjco?t=8586)
+
+The meetup: [announce](https://yandex.ru/promo/events/generated/backend/12-sept-2020/index)
+
 ## 2020-07-15. ClickHouse July \[Virtual\] Meetup
 
 https://www.youtube.com/watch?v=AcJm1E6_a5c
@@ -100,7 +107,6 @@ The meetup: [announce](https://www.meetup.com/pl-PL/San-Francisco-Bay-Area-Click
 * Алексей Миловидов. Потрясающие возможности ClickHouse. [slides](meetup44/new_features/index.html), [video](https://youtu.be/Y7yhgjESF8s?t=6879)
 
 Мероприятиe: [aнонс](https://yandex.ru/promo/events/generated/click-house-onlajn-vs-18-06-2020/index)
-
 
 ## older talks?
 
