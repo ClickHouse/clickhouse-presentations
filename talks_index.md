@@ -93,10 +93,9 @@ The meetup: [announce](https://yandex.ru/promo/events/generated/backend/12-sept-
 
 ## 2020-07-15. ClickHouse July \[Virtual\] Meetup
 
-https://www.youtube.com/watch?v=AcJm1E6_a5c
-
 * ClickHouse Tech Excerpts. 
   [slides](https://github.com/ClickHouse/clickhouse-presentations/blob/master/meetup45/meetup.pdf)
+  [video](https://www.youtube.com/watch?v=AcJm1E6_a5c)
 
 The meetup: [announce](https://www.meetup.com/pl-PL/San-Francisco-Bay-Area-ClickHouse-Meetup/events/271522978/)
 
@@ -110,7 +109,9 @@ The meetup: [announce](https://www.meetup.com/pl-PL/San-Francisco-Bay-Area-Click
 
 ## older talks?
 
-They were not indexed yet, fell free to edit the file / send PRs with descriptions.
+... no index yet :\
+
+fell free to edit the file / send PRs with descriptions.
 
 
 
