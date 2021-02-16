@@ -12,7 +12,14 @@
 Мероприятиe: [aнонс](https://yandex.ru/promo/events/generated/click-house-onlajn-vs-18-06-2020/index)
 
 
-## 2020-10-31 The Second ClickHouse Meetup East (online)
+## 2020-10-31 The Second ClickHouse Meetup East (#47)
+
+* Nikolai Kochetov from Yandeх. EXPLAIN query in ClickHouse. [slides](meetup47/explain.pdf), [video](https://youtu.be/ckChUkC3Pns?t=1387)
+* 郑天祺 Amos Bird from kuaishou.com. ClickHouse Practice and Contributions — from academy to industry. [slides](meetup47/practice_and_contributions.pdf), [video](https://youtu.be/ckChUkC3Pns?t=3756)
+* 张健 Winter Zhang from qingcloud.com. MaterializeMySQL database engine in ClickHouse. (Chinese) [slides](meetup47/materialize_mysql.pdf), [video](https://youtu.be/ckChUkC3Pns?t=13047)
+* Denis Zhuravlev (Denny Crane) from revjet.com. Everything you should know about materialized views. [slides](meetup47/materialized_views.pdf), [video](https://youtu.be/ckChUkC3Pns?t=9326)
+* Zhaojie Niu from ByteDance. User Group Analysis with ClickHouse in ByteDance. [slides](meetup47/bytedance.pdf), [video](https://youtu.be/ckChUkC3Pns?t=6506)
+* Alexey Milovidov from Yandex. Astonishingly New ClickHouse Features. [slides](meetup47/new_features/index.html), [video](https://youtu.be/ckChUkC3Pns?t=15503)
 
 The meetup: [announce](https://www.eventbrite.com/e/the-second-clickhouse-meetup-east-tickets-126787955187)
 
