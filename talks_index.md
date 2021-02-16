@@ -111,7 +111,7 @@ The meetup: [announce](https://www.meetup.com/pl-PL/San-Francisco-Bay-Area-Click
 
 ... no index yet :\
 
-fell free to edit the file / send PRs with descriptions.
+feel free to edit the file / send PRs with descriptions.
 
 
 
