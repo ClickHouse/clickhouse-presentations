@@ -1,5 +1,11 @@
 # Talks index. 
 
+## 2021-02-16. GitHub Планета 2021
+
+* Алексей Миловидов. Как организовать живое сообщество вокруг open-source продукта.  [slides](github_planet_2021_02_16/index.html), [video](https://youtu.be/xddKLojmkus?t=4174)
+
+Мероприятиe: [aнонс](https://www.meetup.com/github-planeta/events/275867198/)
+        
 
 ## 2021-02-06. ClickHouse China User Group 2021 Spring Meetup. (#50)
 
