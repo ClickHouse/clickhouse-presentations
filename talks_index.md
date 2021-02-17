@@ -1,4 +1,4 @@
-# Talks index. 
+# Talks index
 
 ## 2021-02-16. GitHub Планета 2021
 
