@@ -261,7 +261,7 @@ int <b>LLVMFuzzerTestOneInput</b>(const uint8_t * data, size_t size)
 <p>1. Ставим сигнал по таймеру: <b>setitimer</b>.</p>
 <p>2. Ставим хуки на функции <b>pthread_mutex_lock</b>, <b>pthread_mutex_unlock</b>.</p>
 
-<p>В обработчике подкидываем монетку и делаем:</p>
+<p style="margin-top: 2em;">В обработчике подкидываем монетку и делаем:</p>
 <p>1. <b>sched_yield</b>.</p>
 <p>2. <b>sleep</b> на случайное время.</p>
 <p>3. <b>sched_setaffinity</b> на случайный CPU.</p>
