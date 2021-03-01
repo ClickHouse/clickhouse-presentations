@@ -1,5 +1,7 @@
 # Talks index
 
+* Алексей Миловидов. Фазинг: практические кейсы в ClickHouse. [slides](cpp_siberia_2021/index.html), [video](https://youtu.be/GbmK84ZwSeI?t=4481)
+
 ## 2021-02-16. GitHub Планета 2021
 
 * Алексей Миловидов. Как организовать живое сообщество вокруг open-source продукта.  [slides](github_planet_2021_02_16/index.html), [video](https://youtu.be/xddKLojmkus?t=4174)
