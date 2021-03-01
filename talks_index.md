@@ -2,6 +2,8 @@
 
 * Алексей Миловидов. Фазинг: практические кейсы в ClickHouse. [slides](cpp_siberia_2021/index.html), [video](https://youtu.be/GbmK84ZwSeI?t=4481)
 
+Мероприятиe: [aнонс](https://siberia-2021.cppug.ru/)
+
 ## 2021-02-16. GitHub Планета 2021
 
 * Алексей Миловидов. Как организовать живое сообщество вокруг open-source продукта.  [slides](github_planet_2021_02_16/index.html), [video](https://youtu.be/xddKLojmkus?t=4174)
@@ -11,12 +13,12 @@
 
 ## 2021-02-06. ClickHouse China User Group 2021 Spring Meetup. (#50)
 
-1. William Guowei, Analysys CTO. ClickHouse China User Group Meetup 2017-2020 Review
+1. William Guowei, Analysys CTO. ClickHouse China User Group Meetup 2017-2020 Review (Chinese). [slides](meetup50/0_contents.pdf), [video](https://youtu.be/unsYvWzwyUY).
 2. Alexey Milovidov, Yandex. ClickHouse New&upcoming Features. [slides](meetup50/new_features/index.html), [video](https://youtu.be/unsYvWzwyUY?t=460)
-3. Zejun Wu, Director of Tencent Music Data Center. Thinking of Agile BI using ClickHouse in Tencent Music
-4. Amos Bird. ClickHouse Projections, ETL and more
-5. Chenglxiang LI, Director of Blili Bigdata OLAP. Blibli's User Behavior Analysis Optimization on ClickHouse
-6. Tu Jiye, Architect of Alibaba Cloud. RTB User Profile Practice on ClickHouse
+3. Zejun Wu, Director of Tencent Music Data Center. Thinking of Agile BI using ClickHouse in Tencent Music (Chinese). [slides](meetup50/2_tencent.pdf), [video](https://youtu.be/unsYvWzwyUY?t=2354)
+4. Amos Bird. ClickHouse Projections, ETL and more (Chinese). [slides](meetup50/3_projections.pdf), [video](https://youtu.be/unsYvWzwyUY?t=6477)
+5. Chenglxiang LI, Director of Blili Bigdata OLAP. Blibli's User Behavior Analysis Optimization on ClickHouse (Chinese). [slides](meetup50/4_blibli.pdf), [video](https://youtu.be/unsYvWzwyUY?t=9850)
+6. Tu Jiye, Architect of Alibaba Cloud. RTB User Profile Practice on ClickHouse (Chinese). [slides](meetup50/5_alibaba.pdf), [video](https://youtu.be/unsYvWzwyUY?t=12092)
 
 The meetup: [announce](http://hdxu.cn/8KxZE)
 
