@@ -1,5 +1,7 @@
 # Talks index
 
+## 2021-02-26. C++ Siberia 2021.
+
 * Алексей Миловидов. Фазинг: практические кейсы в ClickHouse. [slides](cpp_siberia_2021/index.html), [video](https://youtu.be/GbmK84ZwSeI?t=4481)
 
 Мероприятиe: [aнонс](https://siberia-2021.cppug.ru/)
@@ -109,6 +111,41 @@ The meetup: [announcement](https://www.meetup.com/pl-PL/San-Francisco-Bay-Area-C
 * Алексей Миловидов. Потрясающие возможности ClickHouse. [slides](meetup44/new_features/index.html), [video](https://youtu.be/Y7yhgjESF8s?t=6879)
 
 Мероприятиe: [aнонс](https://yandex.ru/promo/events/generated/click-house-onlajn-vs-18-06-2020/index)
+
+# 2020-06-10. Курсовые работы студентов 3го курса ВШЭ.
+
+1. Ковальков Дмитрий. Оптимизация ClickHouse под современный набор инструкций CPU.
+[Курсовая работа](hse_2020/3rd/CPU_ISA_Optimization_full.pdf), [Презентация](hse_2020/3rd/CPU_ISA_Optimization_pres.pdf)
+
+2. Кот Михаил. Взаимная интеграция аллокатора и кеша.
+[Курсовая работа](hse_2020/3rd/CacheAllocator_full.pdf), [Презентация](hse_2020/3rd/CacheAllocator_pres.pdf)
+
+3. Ильговский Роман. Генерация искусственных данных для тестирования заданных запросов. Обфускация запросов для тестирования ClickHouse.
+[Курсовая работа](hse_2020/3rd/DatabaseGenerator_full.pdf), [Презентация](hse_2020/3rd/DatabaseGenerator_pres.pdf)
+
+4. Вишняков Артемий. Дифференциальная приватность в ClickHouse.
+[Курсовая работа](hse_2020/3rd/DifferentialPrivacy_full.pdf)
+
+5. Борзенкова София. Модификаторы DISTINCT и ORDER BY для всех агрегатных функций.
+[Курсовая работа](hse_2020/3rd/DistinctOrderByCombiners_full.pdf), [Презентация](hse_2020/3rd/DistinctOrderByCombiners_pres.pdf)
+
+6. Калмыков Азат. Разработка сайта "Play.ClickHouse".
+[Курсовая работа](hse_2020/3rd/Playground_full.pdf)
+
+7. Кваша Антон, Петуховский Артур, Чулков Андрей. Словари полигонов и geospatial структур.
+[Курсовая работа](hse_2020/3rd/PolygonDict_full.pdf), [Презентация](hse_2020/3rd/PolygonDict_pres.pdf)
+
+8. Попов Антон. Полиморфные куски данных в таблицах типа MergeTree в ClickHouse.
+[Курсовая работа](hse_2020/3rd/PolymorphicParts_full.pdf), [Презентация](hse_2020/3rd/PolymorphicParts_pres.pdf)
+
+9. Ибрагимов Рузель. Структуры данных для вероятностной фильтрации по подзапросам в ClickHouse.
+[Курсовая работа](hse_2020/3rd/ProbablisticFilters_full.pdf), [Презентация](hse_2020/3rd/ProbablisticFilters_pres.pdf)
+
+10. Васильев Никита. Cache-словари на SSD в ClickHouse.
+[Курсовая работа](hse_2020/3rd/SSD_Dictionary_full.pdf), [Презентация](hse_2020/3rd/SSD_Dictionary_pres.pdf)
+
+11. Гумеров Арслан, Кидрачев Альберт, Морозов Василий. Оптимизация сортировки в ClickHouse.
+[Курсовая работа](hse_2020/3rd/SortingOptimization_full.pdf), [Презентация](hse_2020/3rd/SortingOptimization_pres.pdf)
 
 ## older talks?
 
