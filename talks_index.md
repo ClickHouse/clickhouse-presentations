@@ -1,5 +1,7 @@
 # Talks index
 
+## 2021-02-26. C++ Siberia 2021.
+
 * Алексей Миловидов. Фазинг: практические кейсы в ClickHouse. [slides](cpp_siberia_2021/index.html), [video](https://youtu.be/GbmK84ZwSeI?t=4481)
 
 Мероприятиe: [aнонс](https://siberia-2021.cppug.ru/)
