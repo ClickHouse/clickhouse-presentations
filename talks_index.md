@@ -62,7 +62,7 @@ The meetup: [announcement](https://www.eventbrite.com/e/the-second-clickhouse-me
 
 ## 2020-10-24. Highload fwdays'20
 
-* Алексей Миловидов / Clickhouse. Как я ускорил одну агрегатную функцию в ClickHouse. [slides](highload_fwdays2020/index.html)
+* Алексей Миловидов / Clickhouse. Как я ускорил одну агрегатную функцию в ClickHouse. [slides](highload_fwdays2020/index.html), [video](https://youtu.be/MJJfWoWJq0o)
 
 The conference: [announcement](https://fwdays.com/event/highload-fwdays-2020)
 
