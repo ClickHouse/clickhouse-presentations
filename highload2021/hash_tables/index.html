@@ -18,14 +18,10 @@
 
     <section class="slide">
         <h2>Хэш-таблицы</h2>
-        <p>
-            <ul>
-                <li>Введение в хэш-таблицы</li>
-                <li>Основные вопросы дизайна</li>
-                <li>Бенчмарки</li>
-                <li>C++ дизайн хэш-таблицы</li>
-            </ul>
-        </p>
+        <p>1. Введение в хэш-таблицы.</p>
+        <p>2. Основные вопросы дизайна.</p>
+        <p>3. Бенчмарки.</p>
+        <p>4. C++ дизайн хэш-таблицы.</p>
     </section>
 
     <section class="slide">
@@ -39,42 +35,72 @@
         <h2>Хэш таблица</h2>
         <p>Основные методы
             <ul>
-                <li>lookup</li>
-                <li>insert</li>
-                <li>erase (Не очень важен для наших сценариев)</li>
+                <li>lookup O(1) average</li>
+                <li>insert O(1) average</li>
+                <li>erase O(1) average (Не очень важен для наших сценариев)</li>
             </ul>
         </p>
+
+
+    </section>
+
+    <section class="slide">
+        <h2>Хэш таблица</h2>
+        <img style="text-align: center; height:60%" src="pictures/hash_table_overview_1.png"/>
     </section>
 
     <section class="slide">
         <h2>Составляющие хэш-таблицы</h2>
-        <p>1. Хэш-функция</p>
-        <p>2. Способ разрешения коллизий</p>
-        <p>3. Ресайз</p>
-        <p>4. Способ размещения ячеек в памяти</p>
+        <p>1. Хэш-функция.</p>
+        <p>2. Способ разрешения коллизий.</p>
+        <p>3. Ресайз.</p>
+        <p>4. Способ размещения ячеек в памяти.</p>
     </section>
 
     <section class="slide">
         <h2>Выбор хэш-функции</h2>
-        <p>1. Не использовать identity функцию для целочисленных типов</p>
-        <p>2. Не использовать хэш-функции для строк для целочисленных типов</p>
-        <p>3. Не использовать криптографические хэш-функции если вас не атакуют</p>
-        <p>4. Использование устаревших хэш-функций</p>
+        <p>1. Не использовать identity функцию для целочисленных типов.</p>
+        <p>2. Не использовать хэш-функции для строк (CityHash) для целочисленных типов.</p>
+        <p>3. Не использовать криптографические хэш-функции если вас не атакуют. Например вычисление SipHash ~980 MB/s. CityHash ~9 GB/s.</p>
+        <p>4. Не использовать устаревшие хэш-функции. FNV1a.</p>
+
+        <p>
+            <a style="font-size: 15px;" href="https://github.com/rurban/smhasher">
+                https://github.com/rurban/smhasher
+            </a>
+        </p>
     </section>
 
     <section class="slide">
         <h2>Выбор хэш-функции</h2>
-        <p>По умолчанию в ClickHouse</p>
-        <p>1. crc32 для целочисленных типов. 1 инструкция процессора latency 3 такта.</p>
-        <p>2. CityHash для строк</p>
+        <p>По умолчанию в ClickHouse плохие хэш-функции</p>
+        <p>1. crc32_c для целочисленных типов. 2 инструкции процессора latency 3 такта.</p>
+        <p>2. Специальная хэш функция для строк. Стандартно можно использовать CityHash.</p>
+
+        <p>
+            <a style="font-size: 15px;" href="https://github.com/ClickHouse/ClickHouse/blob/master/src/Common/HashTable/Hash.h">
+                https://github.com/ClickHouse/ClickHouse/blob/master/src/Common/HashTable/Hash.h
+            </a>
+        </p>
     </section>
 
     <section class="slide">
         <h2>Разрешения коллизий</h2>
-        <p>Метод цепочек (Chaining)</p>
-        <p>Открытая адресация (Open Addressing)</p>
-        <p>Хорошие в теории (Cuckoo hashing, Hopscotch hashing, 2-choice hashing). Обычно либо тяжело реализуемые,
-            либо медленные за счет дополнительных фетчей из памяти</p>
+        <img style="text-align: center; height:60%" src="pictures/hash_table_collision.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Разрешения коллизий</h2>
+        <p>1. Метод цепочек (Chaining).</p>
+        <p>2. Открытая адресация (Open Addressing).</p>
+        <p>3. Хорошие в теории (Cuckoo hashing, Hopscotch hashing, 2-choice hashing). Обычно либо тяжело реализуемые,
+            либо медленные за счет дополнительных фетчей из памяти.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Метод цепочек</h2>
+
+        <img style="text-align: center; height:60%" src="pictures/hash_table_collision_chaining.png"/>
     </section>
 
     <section class="slide">
@@ -82,9 +108,9 @@
 
         <p>Пример: std::unordered_map</p>
 
-        <p>1. Стабильность указателей на ключ, значение</p>
-        <p>2. Возможность хранить большие объекты, неперемещаемые объекты (google советует брать std::unique_ptr)</p>
-        <p>3. Хорошо работает с плохой хэш-функцией даже с плохой хэш-функцией.</p>
+        <p>1. Стабильность указателей на ключ, значение.</p>
+        <p>2. Возможность хранить большие объекты, неперемещаемые объекты.</p>
+        <p>3. Хорошо работает с плохой хэш-функцией, высоким load_factor.</p>
         <p>5. Очень сильно тормозит. Нагружает аллокатор (даже просто вызов функции дорого для hot-path).</p>
         </li>
     </section>
@@ -92,45 +118,72 @@
     <section class="slide">
         <h2>Открытая адресация</h2>
 
-        <p>1. Линейный пробы (Linear probing). Кэш локальность. Требует аккуратного выбора хэш-функции.
-            Пример: ClickHouse HashMap, Abseil HashMap.
-        </p>
-        <p>2. Квадратичные пробы (Quadratic probing). Пример: Google DenseHashMap, LLVM DenseHashMap</p>
-        </li>
+        <p>Линейный пробы (Linear probing). Кэш локальность. Требует аккуратного выбора хэш-функции.</p>
+
+        <img style="text-align: center; height:40%" src="pictures/hash_table_collision_linear_probing.png"/>
+
+        <p>Пример: ClickHouse HashMap, Abseil HashMap.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Открытая адресация</h2>
+        <p>Квадратичные пробы (Quadratic probing).</p>
+
+        <img style="text-align: center; height:40%" src="pictures/hash_table_collision_quadratic_probing.png"/>
+
+        <p>Пример: Google DenseHashMap, LLVM DenseHashMap</p>
     </section>
 
     <section class="slide">
         <h2>Ресайз</h2>
         <p>Во сколько раз</p>
-        <p>По степеням двойки (ClickHouse HashMap, Abseil HashMap, Google DenseHashMap). Быстрое деление по модулю</p>
+        <p>1. По степеням двойки (ClickHouse HashMap, Abseil HashMap, Google DenseHashMap). Быстрое деление по модулю</p>
         <code style="display: block; white-space: pre; font-size: 19px;">size_t place = hash & (size - 1)</code>
-        <br>
-        <p>На размер простого числа близкого к степени двойки. Медленное деление даже с constant switch, libdivide.</p>
+        <p>2. На размер простого числа близкого к степени двойки. Медленное деление даже с constant switch, libdivide.</p>
     </section>
 
     <section class="slide">
         <h2>Ресайз</h2>
         <p>При каком load_factor</p>
-        <p>0.5 хороший вариант для линейных проб с шагом 1 (ClickHouse HashMap). Минус максимальный оверхед х4.</p>
-        <p>Google DenseHashMap использует 0.5.</p>
+        <p>0.5 хороший вариант для линейных проб с шагом 1. Минус максимальный оверхед по оперативной памяти х4.</p>
+        <p>ClickHouse HashMap, Google DenseHashMap использует 0.5.</p>
         <p>Abseil HashMap использует 0.875.</p>
         <p></p>
     </section>
 
     <section class="slide">
         <h2>Способ размещения в памяти</h2>
-        <p>1. Просить клиента выбрать ключи который никогда не будет использоваться, для пустого значения и удаленного. GoogleDenseMap.</p>
-        <p>2. Отдельно обрабатывать пустое значение. Как быть с удалением ? (Если оно нужно) ClickHouse HashMap</p>
-        <p>3. Использовать трюки для хранения метадаты и данные. Abseil HashMap.</p>
+        <img style="text-align: center; height:60%" src="pictures/hash_table_layout.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Способ размещения в памяти</h2>
+        <p>1. Просить клиента выбрать ключи который никогда не будет использоваться, для пустого значения и удаленного.</p>
+        <p>2. Отдельно обрабатывать пустое значение. Как быть с удалением ? (Если оно нужно).</p>
+        <p>3. Использовать трюки для сжатого хранения метадаты и данных.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Способ размещения в памяти</h2>
+        <p>Просить клиента выбрать ключи который никогда не будет использоваться, для пустого значения и удаленного.</p>
+        <img style="text-align: center; height:50%" src="pictures/hash_table_layout_sentinels.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Способ размещения в памяти</h2>
+        <p>Отдельно обрабатывать пустое значение и не хранить его в хэш таблице. Как быть с удалением ? (Если оно нужно)</p>
+        <img style="text-align: center; height:50%" src="pictures/hash_table_layout_null_special.png"/>
+        <p>Пример: ClickHouse HashMap.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Способ размещения в памяти</h2>
+        <p>Использовать трюки для сжатого хранения метадаты и данных. Abseil HashMap.</p>
+        <p>Пример:Abseil HashMap.</p>
     </section>
 
     <section class="slide">
         <h2>ClickHouse HashMap Удаление</h2>
-        <p>?</p>
-    </section>
-
-    <section class="slide">
-        <h2>Abseil HashMap</h2>
         <p>?</p>
     </section>
 
@@ -140,15 +193,26 @@
     </section>
 
     <section class="slide">
+        <h2>Бенчмарки</h2>
+
+        <div>
+            <img style="height:50%; position: absolute; opacity: 0.8; margin-left: 200px;" src="pictures/hash_table_benchmarks_1.png"/>
+            <img style="height:50%; position: absolute; opacity: 0.8;" src="pictures/hash_table_benchmarks_2.png"/>
+            <img style="height:50%; position: absolute; opacity: 0.8; margin-right: 200px;" src="pictures/hash_table_benchmarks_3.png"/>
+            <img style="height:50%; position: absolute; opacity: 0.8; margin-bottom: 200px;" src="pictures/hash_table_benchmarks_4.png"/>
+        </div>
+    </section>
+
+    <section class="slide">
         <h2>Как не надо делать бенчмарки</h2>
-        <p>1. Тестировать хэш-таблицы на случайных UInt64</p>
-        <p>2. Тестировать хэш-таблицы без учета load_factor, memory_consumption, etc.</p>
-        <p>3. Тестировать хэш-таблицы на сценариях при которых фишки хэш-таблицы работают лучше (abseil hashmap unsuccesfull lookups)</p>
+        <p>Тестировать хэш-таблицы на случайных целочисленных значениях.</p>
+        <p>Тестировать хэш-таблицы без учета максимального load_factor, memory_consumption.</p>
+        <p>Тестировать и не показывать код бенчмарка.</p>
     </section>
 
     <section class="slide">
         <h2>Как надо делать бенчмарки</h2>
-        <p>На реальных данных</p>
+        <p>На реальных сценариях и на реальных данных. В ClickHouse реальный сценарий агрегация данных.</p>
         <p style="font-size: 19px;">wget https://datasets.clickhouse.tech/hits/partitions/hits_100m_obfuscated_v1.tar.xz</p>
         <p>
             <a style="font-size: 15px;" href="https://clickhouse.tech/docs/en/operations/performance-test/">
@@ -170,6 +234,7 @@
             </p>
 
             <p>При выходе за LL кэши вся производительность упирается в доступ к памяти.</p>
+            <p>Деструктор std::unordered_map занял больше времени чем бенчмарки остальных таблиц.</p>
     </section>
 
     <section class="slide">
@@ -208,12 +273,6 @@ Round trip within same datacenter      500,000   ns      500 us
     </p>
     </section>
 
-
-    <section class="slide">
-        <h2>Бенчмарки</h2>
-        <p>В бенчмарке деструктор std::unordered_map занял больше времени чем весь бенчмарк ClickHouse HashMap</p>
-    </section>
-
     <section class="slide">
         <h2>Бенчмарки</h2>
         <p>RegionID часто повторяющиеся значения. Размер хэш таблицы 9040 элементов. Влазит в LL кэши.
@@ -229,9 +288,9 @@ Round trip within same datacenter      500,000   ns      500 us
 
     <section class="slide">
         <h2>С++ дизайн хэш-таблицы</h2>
-        <p>1. Cell</p>
+        <p>1. Hash</p>
         <p>2. Allocator</p>
-        <p>3. Hash (такой же как std::hash)</p>
+        <p>3. Cell</p>
         <p>4. Grower (интерфейс для ресайза)</p>
         <p>5. HashTable</p>
     </section>
@@ -239,20 +298,24 @@ Round trip within same datacenter      500,000   ns      500 us
     <section class="slide">
         <h2>C++ дизайн хэш-таблицы</h2>
         <p>Hash</p>
-        <p>Такой же как std::hash</p>
+        <p>Такой же как std::hash.</p>
+    </section>
+
+    <section class="slide">
+        <h2>C++ дизайн хэш-таблицы</h2>
         <p>Allocator</p>
         <p>Почти такой же как std::allocator, за исключением использования mmap, mrepmap для больших кусков памяти.</p>
+        <p>Есть аллокатор изначально выделяющий память на стэке:</p>
+        <code style="display: block; white-space: pre; font-size: 18px;">AllocatorWithStackMemory&lt;HashTableAllocator, initial_bytes&gt;;
+</code>
     </section>
 
     <section class="slide">
         <h2>С++ дизайн хэш-таблицы</h2>
         <p>Cell</p>
-        <code style="display: block; white-space: pre; font-size: 18px;">struct HashTableCell
+        <code style="display: block; white-space: pre; font-size: 18px;">struct HashTableCell &lt;KeyType, MappedType, HashTableState&gt;
 {
     ...
-
-    using HashTableState = NoState;
-
     const KeyType & getKey() const { return key; }
     bool keyEquals(const Key & key_) const;
     MappedType getMapped() const { return {}; }
@@ -281,19 +344,20 @@ Round trip within same datacenter      500,000   ns      500 us
 
     <section class="slide">
         <h2>C++ дизайн хэш-таблицы</h2>
-        <p>HashTable. Основная задача предоставить клиенту интерфейс хэш-таблицы используя Grower, Cell, Allocator</p>
+        <p>HashTable. Основная задача предоставить клиенту интерфейс хэш-таблицы используя Hash, Allocator, Grower, Cell</p>
         <code style="display: block; white-space: pre; font-size: 18px;">template
-<
+&lt;
     typename Key,
     typename Cell,
     typename Hash,
     typename Grower,
     typename Allocator
->
+&gt;
 class HashTable :
     protected Hash,
     protected Allocator,
     protected Cell::State;
+    protected ZeroValueStorage&lt;Cell::need_zero_value_storage, Cell&gt;
         </code>
 
     </section>
@@ -301,8 +365,8 @@ class HashTable :
     <section class="slide">
         <h2>C++ дизайн хэш-таблицы</h2>
         <p>Возможность передавать кастомный Grower</p>
-        <p>1. Передаем Grower с фиксированным размером получаем Lookup таблицу.</p>
-        <p>2. Передаем Grower с шагом не 1. Например Quadratic Probing.</p>
+        <p>1. Передаем Grower с фиксированным размером и без ресайза и разрешения цепочек коллизий получаем Lookup таблицу.</p>
+        <p>2. Передаем Grower с шагом не 1. Например передаем шаг 2 и получаем хэш-таблицу использующую квадратичные пробы.</p>
     </section>
 
     <section class="slide">
@@ -317,11 +381,16 @@ class HashTable :
     void setHash(size_t hash_value) { saved_hash = hash_value; }
     size_t getHash(const Hash &) const { return saved_hash; }
 };</code>
+
+    <p>
+        <a style="font-size: 15px;" href="https://github.com/ClickHouse/ClickHouse/blob/master/src/Common/HashTable/HashMap.h">
+            https://github.com/ClickHouse/ClickHouse/blob/master/src/Common/HashTable/HashMap.h
+        </a>
+    </p>
     </section>
 
     <section class="slide">
         <h2>C++ дизайн хэш-таблицы</h2>
-        <p>Возможность хранить состояние в ячейке</p>
         <p>Быстроочищаемая хеш таблица. Храним в ячейке версию хэш-таблицы, при проверке пустая ячейка или нет дополнительно сравниваем версии.</p>
 
         <code style="display: block; white-space: pre; font-size: 18px;">struct FixedClearableHashMapCell
@@ -337,29 +406,102 @@ class HashTable :
     void setZero() { version = 0; }
 };
 </code>
+
+    <p>
+        <a style="font-size: 15px;" href="https://github.com/ClickHouse/ClickHouse/blob/master/src/Common/HashTable/FixedClearableHashMap.h">
+            https://github.com/ClickHouse/ClickHouse/blob/master/src/Common/HashTable/FixedClearableHashMap.h
+        </a>
+    </p>
     </section>
 
     <section class="slide">
         <h2>C++ дизайн хэш-таблицы</h2>
-        <p>Возможность хранить состояние в ячейке</p>
         <p>LRUCache. Храним в ячейке 2 указателя на предыдущее и следующее значение для интрузивного листа. Во время перемещения элементов хеш таблица нотифицирует ячейку.</p>
 
         <code style="display: block; white-space: pre; font-size: 18px;">struct LRUHashMapCell
 {
     static bool constexpr need_to_notify_cell_during_move = true;
 
-    static void move(LRUHashMapCell * old_loc, LRUHashMapCell * new_loc);
-
+    static void move(LRUHashMapCell * old_loc, LRUHashMapCell * new_loc)
     LRUHashMapCell * next = nullptr;
     LRUHashMapCell * prev = nullptr;
 };
 </code>
+<p>
+    <a style="font-size: 15px;" href="https://github.com/ClickHouse/ClickHouse/blob/master/src/Common/HashTable/LRUHashMap.h">
+        https://github.com/ClickHouse/ClickHouse/blob/master/src/Common/HashTable/LRUHashMap.h
+    </a>
+</p>
     </section>
 
     <section class="slide">
         <h2>C++ дизайн хэш-таблицы</h2>
-        <p>LRUCache бенчмарк</p>
+        <p>LRUCache. Используем boost::intrusive::list.</p>
 
+        <code style="display: block; white-space: pre; font-size: 18px;">using LRUList = boost::intrusive::list
+    &lt;
+        Cell,
+        boost::intrusive::value_traits&lt;LRUHashMapCellIntrusiveValueTraits&gt;,
+        boost::intrusive::constant_time_size&lt;false&gt;
+    &gt;;
+
+LRUList lru_list;
+    </code>
+    <p>
+        <a style="font-size: 15px;" href="https://github.com/ClickHouse/ClickHouse/blob/master/src/Common/HashTable/LRUHashMap.h">
+            https://github.com/ClickHouse/ClickHouse/blob/master/src/Common/HashTable/LRUHashMap.h
+        </a>
+        <a style="font-size: 15px;" href="https://www.boost.org/doc/libs/1_76_0/doc/html/intrusive.html">
+            https://www.boost.org/doc/libs/1_76_0/doc/html/intrusive.html
+        </a>
+    </p>
+    </section>
+
+    <section class="slide">
+        <h2>Специализированные хэш таблицы</h2>
+        <p>SmallTable</p>
+        <p>Состоит из вектора на 10 элементов помещается в L1 кэш. Поиск линейный.</p>
+
+        <p>
+            <a style="font-size: 15px;" href="https://github.com/ClickHouse/ClickHouse/blob/master/src/Common/HashTable/SmallTable.h">
+                https://github.com/ClickHouse/ClickHouse/blob/master/src/Common/HashTable/SmallTable.h
+            </a>
+        </p>
+    </section>
+
+    <section class="slide">
+        <h2>Специализированные хэш таблицы</h2>
+        <p>StringHashTable</p>
+        <p>Состоит из 4 хэш таблиц:</p>
+        <p>1. Хэш таблица для строк размером 0-8 байт.</p>
+        <p>2. Хэш таблица для строк размером 9-16 байт.</p>
+        <p>3. Хэш таблица для строк размером 17-24 байта.</p>
+        <p>4. Хэш таблица для строк размером больше 24 байт.</p>
+
+        <p>
+            <a style="font-size: 15px;" href="https://www.researchgate.net/publication/339879042_SAHA_A_String_Adaptive_Hash_Table_for_Analytical_Databases">
+                https://www.researchgate.net/publication/339879042_SAHA_A_String_Adaptive_Hash_Table_for_Analytical_Databases
+            </a>
+            <a style="font-size: 15px;" href="https://github.com/ClickHouse/ClickHouse/blob/master/src/Common/HashTable/StringHashTable.h">
+                https://github.com/ClickHouse/ClickHouse/blob/master/src/Common/HashTable/StringHashTable.h
+            </a>
+        </p>
+    </section>
+
+    <section class="slide">
+        <h2>Специализированные хэш таблицы</h2>
+        <p>TwoLevelHashTable</p>
+        <p>Состоит из 256 хэш таблиц:</p>
+        <p>На вставке ключа мы вычисляем индекс хэш таблицы в которую будем вставлять ключ.</p>
+        <code style="display: block; white-space: pre; font-size: 19px;">size_t getBucketFromHash(size_t hash_value) {
+    return (hash_value >> (32 - BITS_FOR_BUCKET)) & MAX_BUCKET;
+}</code>
+        <p>Соединение хэш-таблиц происходит в несколько потоков</p>
+        <p>
+            <a style="font-size: 15px;" href="https://github.com/ClickHouse/ClickHouse/blob/master/src/Common/HashTable/TwoLevelHashTable.h.h">
+                https://github.com/ClickHouse/ClickHouse/blob/master/src/Common/HashTable/TwoLevelHashTable.h.h
+            </a>
+        </p>
     </section>
 
     <section class="slide">
