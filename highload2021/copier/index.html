@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse кластер ctrl-c ctrl-v</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+    <style>
+        code {
+            display: block;
+            white-space: pre;
+            margin: 0;
+            font-size: 15pt;
+            overflow: hidden;
+            line-height: 0.1;
+        }
+    </style>
+    <link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.2.0/styles/default.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/8.9.1/highlight.min.js"></script>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse кластер ctrl-c ctrl-v</h1>
+    </header>
+
+    <section class="slide" id="cover" style="background: #FFF url('pictures/title.png') no-repeat; background-size: 100%;">
+        <h1 style="margin-top: 50px; font-size: 40pt; color: white;">ClickHouse кластер ctrl-c ctrl-v</h1>
+        <h2 style="margin-top: 50px; font-size: 25pt; color: white;">Никита Михайлов</h2>
+    </section>
+
+    <section class="slide">
+        <h2>Обо мне</h2>
+        <p>Никита, разработчик ClickHouse.</p>
+    </section>
+
+
+    <section class="slide">
+        <h2>Мотивация </h2>
+        <p>Кластер Яндекс.Метрики расположен на 500 серверах</p>
+        <p>В таблице visits хранятся сессии пользователей.</p>
+        <p>Это ~10PB данных в сжатом виде. ~100PB в несжатом.</p>
+        <br>
+        <p>Кластер не эффективен. Железо мощное и разное.</p>
+        <p>Нужно заменить железо на новое и снизить его количество.</p>
+        <br>
+        <p>Для этого нужно перенести все данные...</p>
+    </section>
+
+
+    <section class="slide">
+        <h2>Как скопировать данные? </h2>
+        <p><ul><li>Перенести данные сервера с одной машины на другую "руками"</li>
+        <li>Используя встроенную функциональность</li>
+        <li>Используя встроенную утилиту clickhouse-copier</li></ul></p>
+    </section>
+
+
+    <section class="slide">
+        <h2>Как ClickHouse хранит данные </h2>
+        <div class="container">
+        <pre><code class="Bash">$ tree ~/ClickHouse/db/ -d -C -L 1
+    ├── config.d
+    ├── <b style="color: red;">data</b>
+    ├── dictionaries_lib
+    ├── flags
+    ├── <b style="color: red;">metadata</b>
+    ├── preprocessed_configs
+    ├── <b style="color: red;">store</b>
+    └── users.d
+        </code></pre>
+        </div>
+        <script>hljs.initHighlightingOnLoad();</script>
+    </section>
+
+    <section class="slide">
+        <h2>Как ClickHouse хранит данные</h2>
+        <p>Создадим базу с именем higload2021</p>
+
+        <div class="container">
+        <pre><code class="SQL">CREATE DATABASE IF NOT EXISTS highload2021;</code>
+        </pre>
+        </div>
+        <script>hljs.initHighlightingOnLoad();</script>
+    </section>
+
+    <section class="slide">
+        <p>Зайдем в папку metadata и увидим там два новых файла: highload2021 и highload2021.sql</p>
+        <div class="container">
+        <pre><code class="bash">$ file highload2021*
+highload2021: symbolic link to
+    ~/ClickHouse/db/store/bbd/bbdc8089-53c8-4d4a-9275-90f61bca08d5
+highload2021.sql: ASCII text </code>
+        <code class="sql">↳ $ cat highload2021.sql
+    ATTACH DATABASE _ UUID 'bbdc8089-53c8-4d4a-9275-90f61bca08d5'
+    ENGINE = Atomic
+        </code>
+        </pre>
+        </div>
+        <script>hljs.initHighlightingOnLoad();</script>
+    </section>
+
+    <section class="slide">
+
+        <p>Создадим в нашей базе таблицу</p>
+
+
+        <div class="container">
+        <pre><code class="SQL">CREATE TABLE highload2021.participants(name String)
+ENGINE=MergeTree() ORDER BY tuple();</code>
+<code class="SQL">↳ $ cat participants.sql
+    ATTACH TABLE _ UUID '26d186a7-891f-4a87-a502-abda5a8fb028' (
+        `name` String )
+    ENGINE = MergeTree
+    ORDER BY tuple()
+    SETTINGS index_granularity = 8192</code>
+        </pre>
+        </div>
+        <script>hljs.initHighlightingOnLoad();</script>
+
+        <p>Теперь в папке higload2020 появился файл с метаданными таблицы</p>
+    </section>
+
+    <section class="slide">
+        <p>Вставим данные в таблицу: </p>
+
+
+        <div class="container">
+        <pre><code class="SQL">INSERT INTO highload2021.participants
+    VALUES ('Oleg Bunin'), ('Alexey Milovidov');</code>
+        </pre>
+        </div>
+        <script>hljs.initHighlightingOnLoad();</script>
+
+        <p>Посмотрим, куда сохранились данные нашей таблицы.</p>
+
+<!--        <code>↳ $ ls ~/ClickHouse/db/<b style="color: blue;">data</b>/highload2021/-->
+<!--    participants-->
+<!--        </code>-->
+
+        <div class="container">
+        <pre><code class="SQL">$ file  ~/ClickHouse/db/data/highload2021/participants
+    ~/ClickHouse/db/data/highload2021/participants: <b style="color: green;">symbolic link</b> to
+        ~/ClickHouse/db/store/26d/26d186a7-891f-4a87-a502-abda5a8fb028
+        </code>
+        </pre>
+        </div>
+        <script>hljs.initHighlightingOnLoad();</script>
+
+    </section>
+
+    <section class="slide">
+        <p>Пройдем по symbolic link и увидим привычную директорию с данными для *MergeTree-таблиц</p>
+
+
+        <div class="container">
+        <pre><code class="SQL">$ tree -L 2 ~/ClickHouse/db/store/26d/26d186a7-891f-4a87-a502-abda5a8fb028
+├── all_1_1_0
+│   ├── checksums.txt
+│   ├── columns.txt
+│   ├── count.txt
+│   ├── data.bin
+│   ├── data.mrk3
+│   └── default_compression_codec.txt
+├── detached
+└── format_version.txt
+2 directories, 7 files</code>
+        </pre>
+        </div>
+        <script>hljs.initHighlightingOnLoad();</script>
+
+        <code>↳
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Инструкция:</h2>
+        <p>Ознакомиться со структорой папок на сервере A. </p>
+        <p>Скопировать все файлы на сервер B и "руками" сделать symbolic links.</p>
+        <p>Перезапустить сервер B. Поскольку инициализация таблиц происходит на старте.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Подводные камни:</h2>
+        <p>1) Сервер может быть сконфигурирован c multi-volume storage,
+            причем конфигурация сервера A может отличаться от конфигурации сервера B.</p>
+        <p>2) Версии серверов A и B могут сильно отличаться.
+            В рассмотренном примере был движок баз данных Atomic. В версиях < 20.3 его еще не было.</p>
+        <p>3) Вы можете иметь дело с реплицируемыми таблицами,
+            тогда помимо метаданных на диске нужно перенести сложную структуру метанных из Zookeeper.</p>
+    </section>
+
+
+    <section class="slide">
+        <h2>Движок Distributed</h2>
+        <p>Основная функциональность для создания шардов таблиц в ClickHouse.</p>
+        <p>Позволяет горизонтально масштабировать и storage, и compute.</p>
+        <p>Поскольку тяжелые вычисления (группировка, аггрегация) частично выполняются на шардах.</p>
+    </section>
+
+
+    <section class="slide">
+        <img src="pictures/distributed_table.png" alt="Distributed table" style="height: 90%;">
+    </section>
+
+
+    <section class="slide">
+        <p>Создадим Replicated-таблицу на каждом узле. <br/> Макросы {shard}, {replica} указываются в конфиге каждого сервера.</p>
+
+        <div class="container">
+        <pre>
+        <code class="SQL">CREATE TABLE hits_3 ON CLUSTER `{cluster}` (
+    `Browser` String,
+    `ClientID` UInt64,
+    `EventDate` Date
+)
+ENGINE = ReplicatedMergeTree('/ch/tables/{shard}/hits_3', '{replica}')
+PARTITION BY EventDate
+ORDER BY (EventDate, intHash32(ClientID))
+        </code></pre>
+        </div>
+        <script>hljs.initHighlightingOnLoad();</script>
+
+
+    </section>
+
+
+    <section class="slide">
+        <p>Создадим Distributed-таблицу на каждом узле кластера `{cluster}`.</p>
+
+        <div class="container">
+        <pre>
+        <code class="SQL">
+CREATE TABLE hits_3_dist ON CLUSTER `{cluster}`AS db1.hits_3
+ENGINE = Distributed('{cluster}', db1, hits_3, ClientID)
+        </code></pre>
+        </div>
+        <script>hljs.initHighlightingOnLoad();</script>
+
+        <p>Таким образом можно обращаться к любому узлу и иметь доступ к данным всего кластера.</p>
+    </section>
+
+
+    <section class="slide">
+        <img src="pictures/cluster_with_distributed.png" alt="Distributed table" style="height: 80%;">
+    </section>
+
+
+    <section class="slide">
+        <h2>Функциональность INSERT SELECT</h2>
+
+        <div class="container">
+        <pre>
+        <code class="SQL">CREATE TABLE destination ON CLUSTER remote_server AS source
+        </code>
+        <code class="SQL">INSERT INTO FUNCTION remote('127.0.0.1', currentDatabase(), destination)
+SELECT * FROM source
+        </code></pre>
+        </div>
+        <script>hljs.initHighlightingOnLoad();</script>
+
+    </section>
+
+
+    <section class="slide">
+        <h2>Функциональность INSERT SELECT</h2>
+
+        <p>Табличная функция remote:<br/>&mdash; создает неявную Distributed-таблицу;<br/>&mdash; запрос выполняется над ней;</p>
+        <p>INSERT SELECT:<br/>&mdash; создает пайплайн вычислений отдельно для INSERT и SELECT</b>;<br/>&mdash; склеивает их;</p>
+        <p>Итог:  <br/> &mdash; Данные передаются между серверами в Native-формате, то есть эффективно.</p>
+    </section>
+
+
+    <section class="slide">
+        <h2>Копирование целого кластера</h2>
+        <img src="pictures/copy_distributed.png" alt="Copy distributed" style="height: 70%;">
+    </section>
+
+    <section class="slide">
+        <h2>Копирование целого кластера</h2>
+        <img src="pictures/copy_cluster_with_distributed.png" alt="Copy cluster with distributed" style="height: 70%;">
+    </section>
+
+    <section class="slide">
+        <h2>Копирование целого кластера</h2>
+        <p>Выберем произвольный узел и создадим две Distributed-таблицы:
+        <br/>&mdash; Первая смотрит на кластер source
+        <br/>&mdash; Вторая смотрит на кластер destination
+        </p>
+
+
+        <div class="container">
+        <pre>
+        <code class="SQL">INSERT INTO destination_distributed
+    SELECT * FROM source_distributed;
+        </code></pre>
+        </div>
+        <script>hljs.initHighlightingOnLoad();</script>
+
+        <p></p>
+    </section>
+
+    <section class="slide">
+        <h2>Копирование целого кластера</h2>
+        <img src="pictures/copy_distributed_straight.png" alt="Copy cluster with distributed" style="height: 70%;">
+    </section>
+
+
+    <section class="slide">
+        <h2>Копирование целого кластера</h2>
+        <p>Distributed-таблицы созданы на каждом узле обоих кластеров:
+            <br/>&mdash; Выбираем любой узел из source кластера
+            <br/>&mdash; Выбираем любой узел destination кластера
+        </p>
+
+
+        <div class="container">
+        <pre>
+        <code class="SQL">INSERT INTO FUNCTION
+    remote('192.168.1.1', currentDatabase(), destination_distributed)
+SELECT * FROM source_distributed;
+        </code></pre>
+        </div>
+        <script>hljs.initHighlightingOnLoad();</script>
+
+        <p></p>
+    </section>
+
+
+    <section class="slide">
+        <h2>Но есть проблемы...</h2>
+        <p>&mdash; Что, если сеть моргнет при передаче данных?</p>
+        <p>&mdash; Копирование таким способом производится "в один поток".</p>
+    </section>
+
+    <section class="slide">
+        <h2>Единицы измерения данных</h2>
+        <p>&mdash; Гранула</p>
+        <p>&mdash; Блок (Чанк)</p>
+        <p>&mdash; Кусок</p>
+        <p>&mdash; Партиция</p>
+        <p>&mdash; Таблица</p>
+        <p>&mdash; Шард</p>
+        <p>&mdash; Кластер</p>
+    </section>
+
+    <section class="slide">
+        <h2>Решение</h2>
+        <p>Запустим отдельный INSERT SELECT для каждой партиции в исходной таблице.</p>
+        <p>Если получили ошибку – удаляем партицию в destination таблице и повторяем операцию.</p>
+
+        <p></p>
+        <p>Выглядит как алгоритм, поэтому этот процесс можно автоматизировать!</p>
+    </section>
+
+    <section class="slide">
+        <h2>clickhouse-copier</h2>
+        <p>Утилита, входящая в стандартную поставку clickhouse, позволяющая </p>
+        <p>&mdash; скопировать таблицу с одного кластера на другой;</p>
+        <p>&mdash; перешардировать кластер</p>
+        <p></p>
+        <p style="color: green;">clickhouse-copier умеет работать параллельно, используя Zookeeper для координации нескольких процессов </p>
+    </section>
+
+
+    <section class="slide">
+        <h2>Конфигурация clickhouse-copier</h2>
+        <p>Описывается в формате xml. Нужно указать:</p>
+        <p>&mdash; Узлы кластера Zookeeper</p>
+        <p>&mdash; Конфигурацию логгера</p>
+        <p>&mdash; Любые дополнительные настройки</p>
+    </section>
+
+    <section class="slide">
+        <h2>Конфигурация задачи</h2>
+        <p>Описывается в формате xml. Нужно указать:</p>
+        <p>&mdash; Конфигурацию source и destination кластера.</p>
+        <p>&mdash; Полное имя source и destination таблицы.</p>
+        <p>&mdash; Движок destination таблицы.</p>
+        <p>&mdash; Новый ключ шардирования.</p>
+        <p>&mdash; Условие для фильтрации данных при чтении.</p>
+    </section>
+
+
+    <section class="slide">
+        <img src="pictures/copy_copier.png" alt="Copy copier" style="height: 80%;">
+    </section>
+
+
+    <section class="slide">
+        <h2>Запуск</h2>
+        <div class="container">
+        <pre>
+        <code class="SQL">clickhouse-copier
+        --daemon
+        --config /path/to/config.xml
+        --task-path /task/path/zookeeper
+        --task-file /path/to/task/on/disk
+        --task-upload-force
+        --base-dir /path/to/dir
+        </code></pre>
+        </div>
+        <script>hljs.initHighlightingOnLoad();</script>
+    </section>
+
+
+
+    <section class="slide">
+        <h2>Сложности</h2>
+        <p>clickhouse-copier предполагает, что: </p>
+        <p>&mdash; Партиции не меняются в процессе.</p>
+        <p>&mdash; Схема таблиц сохраняется.</p>
+
+        <br>
+        <p>При партиционировании таблицы по месяцам копировать можно все партиции, кроме текущей.</p>
+        <p>Данные текущей партиции можно писать в оба кластера.</p>
+    </section>
+
+
+    <section class="slide">
+        <h2>Рассматриваем алгоритм</h2>
+        <p>Для начала нужно выяснить, какие партиции нужно копировать.</p>
+
+        <p>Для каждого шарда из source-кластера создадим Distributed-таблицу локально. <br/> И выполним запрос. </p>
+
+
+        <div class="container">
+        <pre>
+        <code class="SQL">SELECT DISTINCT <b style="color: blue;">$PARTITION_KEY_EXPRESSION$</b> AS partition
+        FROM _local.`.read_shard_0.<b style="color: blue;">$TABLE_NAME$`</b> ORDER BY partition DESC
+        </code></pre>
+        </div>
+        <script>hljs.initHighlightingOnLoad();</script>
+    </section>
+
+    <section class="slide">
+        <h2>Рассматриваем алгоритм</h2>
+        <p>Пользователь может задать явно список подлежащих копированию партиций.</p>
+
+        <p>Это делается в секции enabled_partitions в конфигурации задачи.</p>
+
+        <xmp>
+    <enabled_partitions>
+        <partition>2021</partition>
+    </enabled_partitions>
+        </xmp>
+
+    </section>
+
+    <section class="slide">
+        <h2>Процесс копирования</h2>
+        <p>Создадим destination-таблицу: </p>
+        <p>&mdash; Сделаем запрос SHOW CREATE TABLE на source-кластер;</p>
+        <p>&mdash; Преобразуем, изменив ENGINE, на новый, полученный из описания задачи;</p>
+        <p>&mdash; Выставим флажок, отвечающий за IF NOT EXISTS;</p>
+        <p>Последнее важно, поскольку пользователь мог сам создать таблицу, если колонки destination-таблицы отличаются.</p>
+    </section>
+
+
+    <section class="slide">
+        <h2>Процесс копирования</h2>
+        <p>Проитерируемся по всем партициям и скопируем их.</p>
+        <p>Сделаем запрос вида:</p>
+
+        <div class="container">
+        <pre>
+        <code class="SQL">INSERT INTO destination_table_distributed
+SELECT * FROM source_table_distributed
+    WHERE <b style="color:blue">PARTITION_KEY=CURRENT_PARTITION</b>
+        </code></pre>
+        </div>
+        <script>hljs.initHighlightingOnLoad();</script>
+    </section>
+
+
+    <section class="slide">
+        <h2>Процесс копирования</h2>
+        <p>Таблица destination_table_distributed смотрит на весь destination-кластер.</p>
+        <p>У этой таблицы можно задать ключ шардирования в описании задачи;</p>
+
+        <xmp>    <sharding_key>
+        rand()
+    </sharding_key></xmp>
+
+        <p>Таким образом можно перешардировать кластер.</p>
+    </section>
+
+
+    <section class="slide">
+        <h2>Проблема</h2>
+        <p>Разбиение по отдельным партициям не всегда хорошо работает.</p>
+        <p>Живой пример – кластер Яндекс.Метрики, где одна партиция занимает сотни гигабайт.</p>
+        <br>
+        <p>Копирование такого объема данных неизбежно обернется ошибкой </br>и все скопированные данные текущей партиции придется удалить из destination-таблицы.</p>
+    </section>
+
+
+    <section class="slide">
+        <img src="pictures/chart.png" alt="Chart" style="height: 90%;">
+    </section>
+
+
+    <section class="slide">
+        <h2>Решение</h2>
+        <p>Отдельно копироваться должны не целые партиции, а их небольшие части (кусочки)!</p>
+        <p>Парты?</p>
+        <br>
+        <p>Нет.</p>
+        <p>&mdash; Множество партов может меняться из-за процесса фоновых слияний.</p>
+        <p>&mdash; Парт может быть достаточно большого размера.</p>
+    </section>
+
+
+    <section class="slide">
+        <h2>Решение</h2>
+        <p>Как поделить партицию примерно на равные части?</p>
+        <p>Посчитаем хэш от каждой строчки и возьмем остаток от деления на количество частей.</p>
+        <p>Для ускорения будем считать хэш не от всей строчки, а только от первичного ключа.</p>
+
+        <div class="container">
+        <pre>
+        <code class="SQL">SELECT * FROM source_table
+WHERE <b style="color:blue">PARTITION_KEY = CURRENT_PARTITION</b> AND
+      <b style="color:blue">cityHash64(PRIMARY_KEY)</b> % N == 0
+        </code></pre>
+        </div>
+        <script>hljs.initHighlightingOnLoad();</script>
+
+    </section>
+
+    <section class="slide">
+        <h2>Альтернатива</h2>
+        <p>У таблицы можно указать ключ семплирования.</p>
+        <p>Это специальная функциональность, чтобы делать запросы по некоторой части данных.</p>
+        <p>Можем воспользоваться ей, задавая запросы вида:</p>
+
+        <div class="container">
+        <pre>
+        <code class="SQL">SELECT * FROM source_table
+SAMPLE 1/N OFFSET <b style="color:blue">CURRENT_PIECE_NUMBER</b>/N
+WHERE <b style="color:blue">PARTITION_KEY = CURRENT_PARTITION</b>
+        </code></pre>
+        </div>
+        <script>hljs.initHighlightingOnLoad();</script>
+
+        <code></b>
+        </code>
+    </section>
+
+
+    <section class="slide">
+        <h2>Конфигурация</h2>
+        <p>Пользователь может задать количество частей в конфиге задачи.</p>
+        <xmp>
+        <number_of_splits>
+            42
+        </number_of_splits>
+        </xmp>
+    </section>
+
+    <section class="slide">
+        <h2>Сложности</h2>
+        <p>Составные части партиции могут копироваться параллельно.</p>
+        <p>Что делать, если 9/10 частей партиции скопировались успешно, а при копировании последней вылетело исключение или любая другая ошибка?</p>
+        <br>
+        <p>Удалять всю партицию совсем не хочется...</p>
+    </section>
+
+    <section class="slide">
+        <h2>Возможное решение</h2>
+        <p>В случае неудачи можно запустить отдельный запрос вида:</p>
+
+        <div class="container">
+        <pre>
+        <code class="SQL">ALTER TABLE destination_table DELETE
+WHERE <b style="color:blue">PARTITION_KEY = CURRENT_PARTITION</b> AND
+      <b style="color:blue">cityHash64(PRIMARY_KEY)</b> % N == 10
+        </code></pre>
+        </div>
+        <script>hljs.initHighlightingOnLoad();</script>
+
+        <p>Но такой запрос будет выполняться долго, поскольку данные последнего кусочка партиции распределены неизвестным образом.</p>
+    </section>
+
+
+    <section class="slide">
+        <h2>Текущее решение</h2>
+        <p>Будем копировать кусочки во вспомогательные таблицы рядом с основной таблицей.</p>
+        <p>Например, если разбили исходную партицию на 10 частей, то получим 10 таблиц.</p>
+        <br>
+        <p>В i-ой таблице будут данные исходной таблицы, у которых хэш первичного ключа сравним с i по модулю 10.</p>
+    </section>
+
+
+    <section class="slide">
+        <img src="pictures/copy_copier_helping.png" alt="Copier helping" style="height: 85%;">
+    </section>
+
+
+
+    <section class="slide">
+        <h2>Объединение данных</h2>
+        <p>После успешного копирования партиции в auxiliary таблицы необходимо переместить данные в основную таблицу.</p>
+
+        <div class="container">
+        <pre>
+        <code class="SQL">ALTER TABLE destination_table
+    ATTACH PARTITION <b style="color:blue">PARTITION_NAME</b>  FROM auxiliary_table
+        </code></pre>
+        </div>
+        <script>hljs.initHighlightingOnLoad();</script>
+
+        <p>Заметим, что в auxiliary-таблице партиция имеет такое же имя.</p>
+    </section>
+
+
+<!--    <section class="slide">-->
+<!--        <h2>Синхронизация</h2>-->
+<!--        <p>Осуществляется с помощью сервиса распределенной координации Zookeeper.</p>-->
+<!--        <p>Модель данных в нем – дерево, в узлы которого можно поместить некоторую информацию.</p>-->
+<!--        <p>Помимо этого, каждый узел хранит метаинформацию о времени создания и последнем изменении.</p>-->
+<!--    </section>-->
+
+
+<!--    <section class="slide">-->
+<!--        <h2>Синхронизация</h2>-->
+<!--        <p>Заведем для каждого кусочка партиции свое поддерево в Zookeeper.</p>-->
+<!--        <p>Каждый узел в этом поддереве – флаг</p>-->
+<!--        <p>Например, is_dirty будет означать, что партицию необходимо удалить из вспомогательной таблицы.</p>-->
+<!--        <p>&mdash; Это могло возникнуть по причине того, что процесс, копирующий эту часть партиции, упал.</p>-->
+<!--        <p>Узел cleaned будет означать, что партиция удалена из вспомогательной таблицы и ее можно копировать заново.</p>-->
+<!--    </section>-->
+
+<!--    <section class="slide">-->
+<!--        <h2>Синхронизация</h2>-->
+<!--        <p>Как теперь узнать, в каком состоянии находится кусочек партиции, используя два флага?</p>-->
+<!--        <p>&mdash; Обратимся за помощью к метаинформации узлов Zookeeper, а именно mzxid.</p>-->
+<!--        <p>&mdash; Это 32-битное беззнаковое число (может переполняться).</p>-->
+<!--        <p>&mdash; Научимся сравнивать такие числа с учетом переполнения.</p>-->
+<!--    </section>-->
+
+
+<!--    <section class="slide">-->
+<!--        <h2>Синхронизация</h2>-->
+<!--        <p>Кусочек партиции является clean, если выполнено одно из двух:</p>-->
+<!--        <p>&mdash; Кусочек никогда не был dirty.</p>-->
+<!--        <p>&mdash; Последняя модификация узла is_dirty happens before модификации cleaned.</p>-->
+<!--    </section>-->
+
+    <section class="slide">
+        <h2>Синхронизация</h2>
+        <p>Zookeer используется еще для многих вещей, например:</p>
+        <p>&mdash; Ограничение количества одновременно работающих процессов.</p>
+        <p>&mdash; Mutual exclusion для каждого кусочка партиции.</p>
+        <p>&mdash; Хранения результатов копирования для каждого кусочка (кто, когда) </p>
+        <p>&mdash; Хранения статуса копирования всех партиций таблицы.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Тестирование</h2>
+        <p>Не было бы возможным без нашей замечательной инфраструктуры CI.</p>
+        <p>&mdash; Кластер ClickHouse поднимается в контейнерах.</p>
+        <p>&mdash; Процессы copier запускаются в случайных контейнерах.</p>
+        <br>
+        <p>По завершении всех процессов проверяются хитрые инварианты.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Fault injection</h2>
+
+        <p>Очень дешевый способ для проверки отказоустойчивости программы.</p>
+
+        <p>В тестах задается вероятность того, что в случайный момент времени:</p>
+        <p>&mdash; Упадет копирование кусочка</p>
+        <p>&mdash; Упадет слияние всех кусочков воедино</p>
+
+        <br>
+        <p>Тестирование происходит 24/7...</p>
+    </section>
+
+
+    <section class="slide">
+        <h2>Итог</h2>
+
+
+        <p>clickhouse-copier - отказоустойчивый инструмент, который позволяет копировать большие объемы данных ClickHouse.</p>
+
+        <br>
+        <p>Настроил и забыл.</p>
+
+        <br>
+        <p>С помощью него был скопирован не один кластер Яндекс.Метрики.</p>
+
+    </section>
+
+
+    <section class="slide">
+        <h2>Спасибо!</h2>
+        <p>Контакты:</p>
+        <p>Telegram: @nikitamikhaylov</p>
+        <p>email: jakalletti@yandex-team.ru</p>
+    </section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
