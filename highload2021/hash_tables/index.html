@@ -9,7 +9,7 @@
 </head>
 <body class="shower list">
     <header class="caption">
-        <h1>Zero cost абстракции на примере хэш-таблиц в ClickHouse</h1>
+        <h1>Zero cost-абстракции на примере хэш-таблиц в ClickHouse</h1>
     </header>
 
     <section class="slide" id="cover" style="background: #FFF url('pictures/title.png') no-repeat; background-size: 100%;">
@@ -57,9 +57,9 @@
 
     <section class="slide">
         <h2>Выбор хэш-функции</h2>
-        <p>1. Не использовать identity функцию для целочисленных типов.</p>
+        <p>1. Не использовать identity-функцию для целочисленных типов.</p>
         <p>2. Не использовать хэш-функции для строк (CityHash) для целочисленных типов.</p>
-        <p>3. Не использовать криптографические хэш-функции если вас не атакуют. Например вычисление SipHash ~980 MB/s. CityHash ~9 GB/s.</p>
+        <p>3. Не использовать криптографические хэш-функции, если вас не атакуют. Например, вычисление SipHash ~980 MB/s. CityHash ~9 GB/s.</p>
         <p>4. Не использовать устаревшие хэш-функции. FNV1a.</p>
 
         <p>
@@ -73,7 +73,7 @@
         <h2>Выбор хэш-функции</h2>
         <p>По умолчанию в ClickHouse плохие хэш-функции.</p>
         <p>1. CRC32-C для целочисленных типов. Одна инструкция (на самом деле две) процессора latency 3 такта.</p>
-        <p>2. Специальная хэш функция для строк. Стандартно можно использовать CityHash, xxHash, wyhash.</p>
+        <p>2. Специальная хэш-функция для строк. Стандартно можно использовать CityHash, xxHash, wyhash.</p>
     </section>
 
     <section class="slide">
@@ -151,7 +151,7 @@
 
     <section class="slide">
         <h2>Способ размещения в памяти</h2>
-        <p>Отдельно обрабатывать пустое значение и не хранить его в хэш таблице.</p>
+        <p>Отдельно обрабатывать пустое значение и не хранить его в хэш-таблице.</p>
         <img style="margin-left: 175px; height:55%" src="pictures/hash_table_layout_null_special.png"/>
     </section>
 
@@ -182,13 +182,13 @@
     <section class="slide">
         <h2>Как надо делать бенчмарки</h2>
         <p>На реальных сценариях и на реальных данных. В ClickHouse реальный сценарий - агрегация данных.</p>
-        <p>Датасет данных Яндекс метрики.</p>
+        <p>Датасет данных Яндекс.Метрики.</p>
         <p style="font-size: 19px;">wget https://datasets.clickhouse.tech/hits/partitions/hits_100m_obfuscated_v1.tar.xz</p>
     </section>
 
     <section class="slide">
         <h2>Бенчмарки</h2>
-            <p>WatchID почти все значения уникальные. Размер хэш таблицы 20714865 элементов. Это ~600 MB, не влазит в LL кэши.
+            <p>WatchID почти все значения уникальные. Размер хэш-таблицы 20714865 элементов. Это ~600 MB, не влазит в LL-кэши.
 
                 <table style="margin-top: -15px; font-size: 19px;">
                     <tr><td>ClickHouse HashMap: </td><td>7.366 сек.</td></tr>
@@ -198,7 +198,7 @@
                 </table>
             </p>
 
-            <p>Деинициализация std::unordered_map заняла больше времени чем бенчмарки остальных таблиц.</p>
+            <p>Деинициализация std::unordered_map заняла больше времени, чем бенчмарки остальных таблиц.</p>
     </section>
 
     <section class="slide">
@@ -286,7 +286,7 @@ struct Hash
     void * realloc(void * buf, size_t old_size, size_t new_size);
 };
 </code>
-        <p>Есть аллокатор изначально выделяющий память на стэке:</p>
+        <p>Есть аллокатор, изначально выделяющий память на стеке:</p>
         <code style="display: block; white-space: pre; font-size: 18px;">AllocatorWithStackMemory&lt;HashTableAllocator, initial_bytes&gt;
 </code>
     </section>
@@ -371,14 +371,14 @@ struct ZeroValueStorage&lt;false, Cell&gt;
     <section class="slide">
         <h2>C++ дизайн хэш-таблицы</h2>
         <p>Возможность передавать кастомный Grower.</p>
-        <p>1. Передаем Grower с фиксированным размером, без ресайза и разрешения цепочек коллизий получаем Lookup таблицу.</p>
+        <p>1. Передаем Grower с фиксированным размером, без ресайза и разрешения цепочек коллизий получаем Lookup-таблицу.</p>
         <p>2. Передаем Grower с шагом разрешения коллизий не 1.</p>
     </section>
 
     <section class="slide">
         <h2>C++ дизайн хэш-таблицы</h2>
         <p>Возможность хранить состояние в ячейке.</p>
-        <p>Сохранять хэш. Используется для строковых хэш таблиц.</p>
+        <p>Сохранять хэш. Используется для строковых хэш-таблиц.</p>
 
         <code style="display: block; white-space: pre; font-size: 18px;">struct HashMapCellWithSavedHash : public HashMapCell
 {
@@ -392,7 +392,7 @@ struct ZeroValueStorage&lt;false, Cell&gt;
 
     <section class="slide">
         <h2>C++ дизайн хэш-таблицы</h2>
-        <p>Быстроочищаемая хеш таблица.</p>
+        <p>Быстроочищаемая хеш-таблица.</p>
 
         <code style="display: block; white-space: pre; font-size: 18px;">struct FixedClearableHashMapCell
 {
@@ -450,9 +450,9 @@ LRUList lru_list;
     </section>
 
     <section class="slide">
-        <h2>Специализированные хэш таблицы</h2>
+        <h2>Специализированные хэш-таблицы</h2>
         <p>SmallTable</p>
-        <p>Состоит из массива на некоторое небольшое количество элементов. Помещается в L1 кэш.</p>
+        <p>Состоит из массива на некоторое небольшое количество элементов. Помещается в L1-кэш.</p>
 
 <code style="display: block; white-space: pre; font-size: 18px;">template &lt;typename Key, typename Cell, size_t capacity&gt;
 class SmallTable : protected Cell::State
@@ -465,9 +465,9 @@ class SmallTable : protected Cell::State
     </section>
 
     <section class="slide">
-        <h2>Специализированные хэш таблицы</h2>
+        <h2>Специализированные хэш-таблицы</h2>
         <p>StringHashTable</p>
-        <p>Состоит из 4 хэш таблиц:</p>
+        <p>Состоит из 4 хэш-таблиц:</p>
         <p>1. Для строк размером 0-8 байт.</p>
         <p>2. Для строк размером 9-16 байт.</p>
         <p>3. Для строк размером 17-24 байта.</p>
@@ -481,10 +481,10 @@ class SmallTable : protected Cell::State
     </section>
 
     <section class="slide">
-        <h2>Специализированные хэш таблицы</h2>
+        <h2>Специализированные хэш-таблицы</h2>
         <p>TwoLevelHashTable</p>
-        <p>Состоит из 256 хэш таблиц:</p>
-        <p>На вставке ключа мы вычисляем индекс хэш таблицы в которую будем вставлять ключ.</p>
+        <p>Состоит из 256 хэш-таблиц:</p>
+        <p>На вставке ключа мы вычисляем индекс хэш-таблицы в которую будем вставлять ключ.</p>
         <code style="display: block; white-space: pre; font-size: 19px;">size_t getBucketFromHash(size_t hash_value)
 {
     return (hash_value >> (32 - BITS_FOR_BUCKET)) & MAX_BUCKET;
