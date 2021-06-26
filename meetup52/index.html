@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse 2021: New Features and Roadmap</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 2; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse 2021: New Features and Roadmap</h1>
+    </header>
+    <section class="slide" id="cover">
+        <h1 style="margin-top: 150px; line-height: 150%;">ClickHouse 2021:<br/>New Features and Roadmap</h1>
+    </section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Window Functions</h2>
+<p>Does ClickHouse support Window Functions?</p>
+<p>&mdash; Yes.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Window Functions</h2>
+
+<p>Initial support in version 21.1. <span style="color: green;">Full support in 21.4.</span></p>
+
+<p><code>SET allow_experimental_window_functions = 1</code></p>
+
+<p>Implemented according to the SQL standard:</p>
+<p>&mdash; OVER (PARTITION BY ... ORDER BY ...)<br/>
+&mdash; aggregate functions over windows;<br/>
+&mdash; WINDOW clause;<br/>
+&mdash; frame specifications;<br/>
+&mdash; non-aggregate window functions<br/>
+&emsp; (rank, dense_rank, row_number, lagInFrame, leadInFrame, etc...);<br/>
+</p>
+
+<p style="margin-top: 50px; font-size: 14pt; color: gray;">Developer &mdash; Alexander Kuzmenkov.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Native Integration With PostgreSQL</h2>
+
+<p>You can query (read and write) <b>PostgreSQL</b> in ClickHouse queries*.</p>
+<p>You can JOIN with <b>PostgreSQL</b> tables inside your queries to ClickHouse!</p>
+<p>You can create a database that will have all the tables in <b>PostgreSQL</b> schema.</p>
+<p>You can use <b>PostgreSQL</b> as a dictionary source.</p>
+
+<p>And ClickHouse can also pretend to be <b>PostgreSQL</b>!</p>
+<code>&lt;!-- Compatibility with PostgreSQL protocol.
+     ClickHouse will pretend to be PostgreSQL
+     for applications connecting to this port.
+-->
+&lt;postgresql_port>9005&lt;/postgresql_port>
+</code>
+
+<p style="margin-top: 1em; font-size: 14pt; color: gray;">* &mdash; earlier it was also available via odbc.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Native Integration With PostgreSQL</h2>
+<p>&mdash; <b>PostgreSQL</b> storage engine;</p>
+<p>&mdash; <b>postgresql</b> table function; <span style="color: green;">It supports shards and replicas!</span></p>
+<code style="font-size: 80%; margin-bottom: 1em;">SELECT * FROM <b>postgresql</b>(`postgres<b>{1|2|3}</b>:5432`,
+  'clickhouse', 'test_replicas', 'postgres', 'password');</code>
+<p>&mdash; <b>postgresql</b> dictionary source;</p>
+<p>&mdash; <b>PostgreSQL</b> database engine as a view to all tables in PG database;</p>
+<p>Similar to MySQL integration... but for PostgreSQL.</p>
+<p>Upcoming: replication from PostgreSQL.</p>
+
+<p style="margin-top: 50px; font-size: 14pt; color: gray;">Developer &mdash; Ksenia Sumarokova. Available since 21.2.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">PostgreSQL-style Cast Operators</h2>
+<p style="margin-top: -1em;">The problem:</p>
+<code style="margin-top: -0.5em; line-height: 1.2;">SELECT CAST(0.1 AS Decimal(30, <b>10</b>))
+0.1000000000 - Ok.
+
+SELECT CAST(0.1 AS Decimal(30, <b>30</b>))
+<span style="color: red;">0.099999999992113607938064642130</span> - not Ok.
+
+SELECT CAST(<b>'0.1'</b> AS Decimal(30, <b>30</b>))
+0.100000000000000000000000000000 - Ok.
+</code>
+
+<p style="margin-top: 1em;">The solution:</p>
+<code style="margin-top: -0.5em; line-height: 1.2;">SELECT 0.1<b style="color: green;">::</b>Decimal(30, 30)
+0.100000000000000000000000000000 - Ok.
+</code>
+<p style="margin-top: 1em; font-size: 14pt; color: gray;">Developer &mdash; Anton Popov. Available since 21.6.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Native Integration With PostgreSQL</h2>
+<p>ClickHouse 💖 PostgreSQL</p>
+<p>ClickHouse 💖 MySQL equally well</p>
+<p>...</p>
+<p>And also ClickHouse is trying very hard to love
+<br/>s3, HDFS, ODBC, JDBC, Mongo, Redis, Cassandra,<br/>Arrow, GRPC, Kafka, RabbitMQ...</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">GRPC Protocol</h2>
+<p>Uncomment <code style="display: inline;">&lt;grpc_port>9100&lt;/grpc_port></code> in config.</p>
+<p>Feature parity with the native protocol:</p>
+<p>
+&mdash; TLS, compression, query progress,<br/>
+&emsp; query cancellation, sessions, external data...</p>
+<p>Example: clickhouse-client with GRPC in Python.</p>
+<p><code>utils/grpc-client/clickhouse-grpc-client.py</code></p>
+
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Developer &mdash; Vitaly Baranov. <span style="color: green;">Available since 21.1.</span></p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Extended Range For DateTime64</h2>
+<p>Was: 1970&ndash;2106 year.</p>
+<p>Now: 1925&ndash;2283 year.</p>
+<p>+222 years for free. No performance drawbacks.</p>
+<p>Our grandchildren will use ClickHouse.</p>
+
+<p style="margin-top: 150px; font-size: 14pt; color: gray;">Developer &mdash; Vasily Nemkov, Alexey Milovidov. Available since 21.4.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Parsing HTML in ClickHouse</h2>
+<p><b>extractTextFromHTML</b> function</p>
+<p>&mdash; best effort text extraction from HTML and XHTML.</p>
+
+<p>ClickHouse can parse HTML. It does this at 20 gigabytes per second.</p>
+<p style="margin-top: 200px; font-size: 14pt; color: gray;">On 40 cores Intel CascadeLake.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">OpenTelemetry Support</h2>
+<p>Trace your ClickHouse queries within your infrastructure:</p>
+<p>&mdash; enabled by default;</p>
+<p>&mdash; supports opentelemetry HTTP headers;</p>
+<p>&mdash; multiple spans are annotated inside ClickHouse;</p>
+<p>&mdash; data is written to <code style="display: inline;">system.opentelemetry_log</code></p>
+
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Developer &mdash; Alexander Kuzmenkov. <span style="color: green;">Available since 20.11.</span></p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">New Compression Formats For Import/Export</h2>
+<p>Transparent import/export of compressed files:</p>
+<p>&mdash; gz, brotli;</p>
+<p style="color: green;">&mdash; xz, zstd;</p>
+<p>Example:<br/>
+<pre style="font-size: 16pt;">CREATE TABLE github_events_url
+(
+...
+) ENGINE = URL(
+  'https://datasets.clickhouse.tech/github_events_v2.native.<b>xz</b>',
+  Native);</pre>
+
+<p style="margin-top: 50px; font-size: 14pt; color: gray;">Developer &mdash; Abi Palagashvili. <span style="color: green;">Available since 21.1.</span></p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Map Data Type</h2>
+<p>Example: <code style="display: inline;">map Map(String, String)</code></p>
+<p><code>SELECT map['hello']</code></p>
+<p style="font-size: 14pt; color: gray;">Developer &mdash; Hexiaoting.</span>
+<h2 style="font-size: 30pt;">EmbeddedRocksDB Table Engine</h2>
+<p>&mdash; good for key-value queries;</p>
+<p>&mdash; intended to use as dictionary source;</p>
+<p style="font-size: 14pt; color: gray;">Developer &mdash; Sundy Li.</span>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">SQL Enhancements</h2>
+<p style="margin-top: -1em; line-height: 1.75;">&mdash; UNION DISTINCT;<br/>
+&mdash; REPLACE TABLE and CREATE OR REPLACE TABLE;<br/>
+&mdash; aggregate_functions_null_for_empty;<br/>
+&mdash; Extended CTE;<br/>
+&mdash; Type cast for IN subquery; type cast for JOIN;<br/>
+&mdash; SHOW [CHANGED] SETTINGS;<br/>
+&mdash; POSITION(needle IN haystack);<br/>
+&mdash; DIV / MOD;<br/>
+&mdash; SELECT ALL;</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Semi-Duplicate Text Search</h2>
+<p>Text analysis with Min-Hash and Sim-Hash algorithms<br/>
+to find similar / copy-pasted content.</p>
+
+<p><b>Min-Hash</b> algorithm:</p>
+<p>1. Extract every N-word shingle from the text.</p>
+<p>2. Calculate hashes of every shingle.</p>
+<p>3. Select M hashes with minimum value and M hashes with maximum value.</p>
+<p>4. Calculate two total hashes of min-hashes and max-hashes.</p>
+<p>5. Texts are duplicates if at least one of their total hashes equals.</p>
+
+<p style="margin-top: 40px; font-size: 14pt; color: gray;">Developer &mdash; ucasFL. <span style="color: green;">Available since 21.1.</span></p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Statistical Tests</h2>
+<p>Test that two samples have different means,
+useful for A/B testing.</p>
+<p>&mdash; studentTTest;<br/>
+&mdash; welchTTest;<br/>
+&mdash; mannWitneyUTest;</p>
+<p><br/>Rank correlation:</p>
+<p>&mdash; rankCorr.</p>
+<p><br/>Upcoming: Cramer's V, Theil's U.</p>
+<p style="margin-top: 40px; font-size: 14pt; color: gray;">Developer &mdash; Nikita Mikhailov et all. <span style="color: green;">Available since 21.1.</span></p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Projections</h2>
+
+<p>Multiple data representations inside a single table.</p>
+<p>
+&mdash; different data order;<br/>
+&mdash; subset of columns;<br/>
+&mdash; subset of rows;<br/>
+&mdash; aggregation.</p>
+
+<p>Difference to materialized views:
+<p>
+&mdash; projections data is always consistent;<br/>
+&mdash; updated atomically with the table;<br/>
+&mdash; replicated in the same way as the table;<br/>
+&mdash; projection can be automatically used for SELECT query.
+</p>
+
+<p style="font-size: 14pt; color: gray;">Developer &mdash; Amos Bird. <span style="color: green;">Available since 21.6.</span></p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Hedged Requests</h2>
+
+<p>Send distributed query to multiple replicas &mdash; to mitigate tail latencies.</p>
+
+<p>This is needed for distributed queries on large clusters (with large "fanout").</p>
+
+<p style="font-size: 80%; margin-top: 2em; color: #888;">* The largest ClickHouse cluster in Yandex is 630+ servers,<br/>but there are many larger clusters in other companies.</p>
+
+<p style="margin-top: 100px; font-size: 14pt; color: green;">Available in 21.4. Developer &mdash; Pavel Kruglov and Nikolai Kochetov.</p>
+</section>
+
+<!--
+
+Window functions
+Projections
+Native integration with PostgreSQL
+PostgreSQL style cast operators
+GRPC protocol
+OpenTelemetry
+Compression and Formats
+SQL improvements
+Map data type
+Text search
+Statistical tests
+Geographical data types and functions
+ODBC performance improvements
+Hedged requests
+Extended range for DateTime64
+Dictionaries improvements: implicit key, executable pool, Nullable types and arrays
+extractTextFromHTML
+ATTACH PARTITION without replication
+Used features in query log, information about used databases, tables and columns in system.query_log
+
+Ops improvements: system.distributed_ddl_queue, multiple ZooKeeper clusters
+decodeXMLComponent
+Kerberos Authenticaiton for HDFS
+accurateCastOrNull
+
+Short circuit evaluation
+JIT enabled by default
+Semistructured data
+Alternative to ZooKeeper
+User Defined Functions
+Replicated databases
+Minimal support for transactions
+BACKUP/RESTORE commands
+YAML config
+Full disk encryption
+
+-->
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Upcoming Features</h2>
+<p>ClickHouse Roadmap is publicly available on GitHub:</p>
+<p><a href="https://github.com/ClickHouse/ClickHouse/issues/17623">https://github.com/ClickHouse/ClickHouse/issues/17623</a>
+<p>I will show you only some highlights and examples.</p>
+</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Main Tasks</h2>
+<p class="cloud">
+<span>Provide alternative for ZooKeeper</span>
+<span>Nested and semistructured data</span>
+<span>Enable JIT compilation by default</span>
+<span>Limited support for transactions</span>
+<span>Backups</span>
+<span>Separation of storage and compute</span>
+<span>Short-circuit evaluation</span>
+<span>Lightweight DELETE/UPDATE</span>
+<span>Workload management</span>
+<span>User Defined Functions</span>
+<span>Simplify replication</span>
+<span>JOIN improvements</span>
+<span>Embedded documentation</span>
+<span>Pluggable auth with tokens</span>
+<span>YAML configuration</span>
+<span>Full disk encryption</span>
+</p>
+<p class="cloud"><a href="https://github.com/ClickHouse/ClickHouse/issues/17623">https://github.com/ClickHouse/ClickHouse/issues/17623</a>
+</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Support For Semistructured Data</h2>
+<p>A working prototype:</p>
+<code style="font-size: 80%; line-height: 1.2; margin-bottom: 1em;">CREATE TABLE test (id UInt64, data <b>Object('JSON')</b>)
+    ENGINE = MergeTree;
+
+INSERT INTO test FORMAT JSONEachRow
+{"id": 1, "data": {"k1": "aa", "k2": {"k3": "bb", "k4": 123}}}
+{"id": 2, "data": {"k1": "ee", "k5": "ff"}};
+
+SELECT id, <b>data.k1</b>, <b>data.k2.*</b>, <b>data.k2.k4::String</b> FROM test;
+</code>
+
+<p>Nested JSON is automatically mapped to <b>dynamic subcolumns</b>
+<br/>and is stored in efficient columar format.</p>
+
+<p>Bonus: multiple levels of <b>Nested</b> types is already supported.</p>
+
+<p style="margin-top: 25px; font-size: 14pt; color: gray;">Developer &mdash; Anton Popov.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Enable JIT Compilation By Default</h2>
+<p>How to process analytical queries <i>not slowly</i>?</p>
+<p>There are two techniques:</p>
+<p>1. Vectorized query execution.<br/>
+2. Runtime code generation (JIT).</p>
+<p>ClickHouse implements <b>both</b>.</p>
+<p>Most of its performance comes from (1) &mdash; vectorized processing.</p>
+<p>The JIT (2) &mdash; was available since version 1.1.54388 in 2018.
+<br/>But it is disabled by default.</p>
+<p style="margin-top: 25px; font-size: 14pt; color: gray;">Developers &mdash; Denis Skorobogatov, Alexander Sapin, Alexey Milovidov, Maksim Kita.<br/>By default since 21.6.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Enable JIT Compilation By Default</h2>
+<p>Synthetic example: murmur hash in SQL.</p>
+<code style="font-size: 80%; line-height: 1.2; margin-bottom: 1em;">WITH
+    bitXor(number, 5544725790478674055) AS x0,
+    bitXor(x0, bitShiftRight(x0, 33)) AS x1,
+    x1 * 18397679294719823053 AS x2,
+    bitXor(x2, bitShiftRight(x2, 33)) AS x3,
+    x3 * 14181476777654086739 AS x4,
+    bitXor(x4, bitShiftRight(x4, 33)) AS x5
+SELECT count()
+FROM numbers_mt(1000000000)
+WHERE NOT ignore(x5)
+</code>
+<p>Before: <b>34.96 GB/s</b>. After: <b style="color: green;">87.23 GB/s</b>.<br/>
+&mdash; <b style="color: green;">2.5</b> times performance improvement.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Alternative to ZooKeeper</h2>
+
+<p style="color: green;">Work in Progress.</p>
+
+<p>
+&mdash; ZooKeeper network protocol is implemented;<br/>
+&mdash; Abstraction layer over ZooKeeper is used;<br/>
+&mdash; ZooKeeper data model is implemented for testing;<br/>
+&mdash; TestKeeperServer: a server with ZooKeeper data model for testing;<br/>
+&mdash; Jepsen tests continuously run in CI with various failure models;<br/>
+</p>
+
+<p>Benefits:<br/>
+<b>&mdash; less operational complexity;</b><br/>
+&mdash; fix "zxid overflow" issue; &mdash; fix the issue with max packet size;<br/>
+&mdash; fix "session expired" due to gc pauses; &mdash; improve memory usage;<br/>
+&mdash; allow compressed snapshots; &mdash; allow embedding into clickhouse-server.
+</p>
+
+<p style="margin-top: 25px; font-size: 14pt; color: gray;">Developer &mdash; Alexander Sapin.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Short-circuit Evaluation</h2>
+
+<code style="font-size: 16pt;">SELECT IF(number = 0, 0, 123 % number) FROM numbers(10)</code>
+<p style="color: red;">&mdash; division by zero.</p>
+
+<code style="font-size: 16pt;">SELECT * FROM numbers(10) WHERE number > 0 AND 10 % number > 0</code>
+<p style="color: red;">&mdash; division by zero.</p>
+
+<p>&mdash; both branches of IF, AND, OR are always evaluated.</p>
+
+<pre style="font-size: 16pt;">SELECT * FROM
+(
+    SELECT * FROM numbers(10)
+    WHERE number > 0
+)
+WHERE 10 % number > 0</pre>
+<p style="color: red;">&mdash; division by zero.</p>
+
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">User Defined Functions</h2>
+
+<p>We are considering five ways to implement UDF, two of them are mandatory:</p>
+
+<p>1. <b>UDF as SQL expressions</b>.</p>
+
+<p><pre>CREATE FUNCTION f AS x -> x + 1</pre></p>
+
+<p>2. <b>UDF as executable script</b>.</p>
+
+<p>Interaction via pipes, data is serialized using supported formats.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Replicated Databases</h2>
+
+<p>Before: you have to CREATE every replicated table on every replica.</p>
+<p>After: you can <b style="color: green;">CREATE DATABASE ... ENGINE = Replicated(<br/>
+&emsp; '/clickhouse/databases/test1', 'shard', 'replicaN')</b>;</p>
+
+<p>and every table operation is automatically replicated on all replicas.</p>
+
+<p style="margin-top: 150px; font-size: 14pt; color: gray;">Available since 21.3 as experimental feature. Developer &mdash; Alexander Tokmakov.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Distributed Processing Of External Datasets</h2>
+
+<code style="font-size: 90%; line-height: 1.3;">SELECT SearchPhrase, count() FROM <b>s3Cluster</b>('cluster_name',
+    'http://minio1:9001/root/data/{2010..2021}/*.csv',
+    'user', 'password', 'CSV', 'SearchPhrase String, ...')</code>
+
+<p style="margin-top: 1em;">The query will fetch and process data from <b>s3</b>
+<br/>in <b>parallel</b> and <b>distributed</b> fashion using compute power
+<br/>and network on all servers in a cluster.</p>
+
+<p>Upcoming: <b>MergeTree</b> tables on external storage<br/>(available as experimental feature).</p>
+<p>Upcoming: processing shared <b>MergeTree</b> tables<br/>with dynamically allocated compute nodes.</p>
+
+<p style="margin-top: 150px; font-size: 14pt; color: gray;">Available since 21.5. Developer &mdash; Nikita Mikhailov.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">YAML configuration</h2>
+
+<p>I heard you don't like XML...</p>
+<p>Then ClickHouse will support YAML as an alternative for you.</p>
+
+<code style="font-size: 80%; line-height: 1.2;">logger:
+  level: trace
+  log: /var/log/clickhouse-server/clickhouse-server.log
+  errorlog: /var/log/clickhouse-server/clickhouse-server.err.log
+  size: 1000M
+  count: 10
+http_port: 8123           # Don't worry, YAML configuration
+tcp_port: 9000            # will also contain comments.
+mysql_port: 9004          #
+postgresql_port: 9005     # It's not JSON after all.
+max_connections: 4096
+</code>
+
+<p style="margin-top: 10px; font-size: 14pt; color: gray;">Developer &mdash; Denis Bolonin.</p>
+</section>
+
+
+
+<section class="slide">
+<h2>?</h2>
+<p>Read the official roadmap and ask your questions:</p>
+<p><a href="https://github.com/ClickHouse/ClickHouse/issues/17623">https://github.com/ClickHouse/ClickHouse/issues/17623</a>
+</p>
+</section>
+
+
+
+<section class="slide">
+<h2>.</h2>
+</section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+
