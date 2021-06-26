@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>JIT in ClickHouse</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+        code { display: block; white-space: pre; background-color: #EEE; }
+   </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>JIT in ClickHouse</h1>
+    </header>
+
+    <section class="slide" id="cover">
+        <h1 style="margin-top: 150px">JIT in ClickHouse</h1>
+    </section>
+
+    <section class="slide">
+        <h2>About me</h2>
+        <p>Maksim, developer of ClickHouse.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Query processing</h2>
+
+        <p>1. Vectorized query execution</p>
+        <p>2. Runtime code generation</p>
+        <p>ClickHouse uses both</p>
+    </section>
+
+    <section class="slide">
+        <h2>Query execution plan</h2>
+        <img style="width: 60%; margin-left: 150px;" src="pictures/query_execution_plan.png"/>
+
+        <p>
+            <a style="font-size: 15px;" href="https://vladmihalcea.com/execution-plan-sql-server/">
+                https://vladmihalcea.com/execution-plan-sql-server/
+            </a>
+        </p>
+    </section>
+
+    <section class="slide">
+        <h2>Query execution plan</h2>
+        <code>EXPLAIN PIPELINE SELECT a + b + c FROM test_table
+┌─explain───────────────────┐
+│ (Expression)              │
+│ ExpressionTransform       │
+│   (SettingQuotaAndLimits) │
+│     (ReadFromStorage)     │
+│     TinyLog 0 → 1         │
+└───────────────────────────┘
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>ExpressionTransform</h2>
+        <p>Expressions are represented in DAG that has input, function, constant nodes.</p>
+        <code>SELECT a + b + c FROM test_table;</code>
+        <img style="width: 60%; margin-left: 150px;" src="pictures/simple_expression_before_compilation.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>How JIT can help</h2>
+        <p>1. Improve L1, L2 cache usages.</p>
+        <p>2. Less code to execute. Better usage of CPU branch predictor.</p>
+        <p>3. Eliminate indirections.</p>
+        <p>4. Multiple operations are fused in one function. More optimizations can be performed by compiler.</p>
+        <p>5. Using target CPU intructions.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Why does it matter</h2>
+        <pre style="font-size: 19px;">
+Latency Comparison Numbers
+----------------------------------
+L1 cache reference                           0.5 ns
+Branch mispredict                            5   ns
+L2 cache reference                           7   ns 14x L1 cache
+Mutex lock/unlock                           25   ns
+Main memory reference                      100   ns <b>20x L2 cache, 200x L1 cache</b>
+Compress 1K bytes with Zippy             3,000   ns        3 us
+Send 1K bytes over 1 Gbps network       10,000   ns       10 us
+Read 4K randomly from SSD*             150,000   ns      150 us ~1GB/sec SSD
+Read 1 MB sequentially from memory     250,000   ns      250 us
+Round trip within same datacenter      500,000   ns      500 us
+</pre>
+
+    <p>
+        <a style="font-size: 15px;" href="http://norvig.com/21-days.html#answers">
+            http://norvig.com/21-days.html#answers
+        </a>
+    </p>
+    </section>
+
+    <section class="slide">
+        <h2>Compilation costs</h2>
+
+        <p>JIT standard expression compilation time is around 15ms. Grows linearly with code size.</p>
+        <p>Typical compiled expression code take around 600 bytes.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Example</h2>
+        <code>SELECT a + b + c FROM test_table;</code>
+        <img style="width: 60%; margin-left: 150px;" src="pictures/simple_expression_before_compilation.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Example</h2>
+        <code>SET compile_expressions = 1;
+SELECT a + b + c FROM test_table;</code>
+        <img style="width: 60%; margin-left: 150px; margin-top: 20px;" src="pictures/simple_expression_after_compilation.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Settings</h2>
+        <p>compile_expressions is true by default from ClickHouse 21.6</p>
+        <p>min_count_to_compile_expression by default is 3</p>
+        <p>compiled_expression_cache_size by default is 1 GB</p>
+    </section>
+
+    <section class="slide">
+        <h2>Which functions can be compiled</h2>
+        <p>1. Binary operators. Example <b>plus</b>, <b>minus</b>, <b>multiply</b>, <b>xor</b>.</p>
+        <p>2. Unary operators. Example <b>abs</b>.</p>
+        <p>3. Logical functions. Example <b>and</b>, <b>or</b>, <b>not</b>.</p>
+        <p>4. Branch functions. Example <b>if</b>, <b>multiIf</b>.</p>
+        <p>5. Bit shift functions. Example <b>bitShiftLeft</b></p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT compilation examples</h2>
+        <code>SELECT count() FROM hits
+WHERE
+     ((EventDate >= '2018-08-01')
+    AND (EventDate &lt;= '2018-08-03')
+    AND (CounterID >= 34))
+OR    ((EventDate >= '2018-08-04')
+    AND (EventDate &lt;= '2018-08-05')
+    AND (CounterID &lt;= 101500))
+</code>
+
+        <p style="margin-top: 2em;">&mdash; 649 533 033 rows per second.</p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT compilation examples</h2>
+        <code style="margin-top: -1em;">SET compile_expressions = 1;
+
+SELECT count() FROM hits
+WHERE
+    ((EventDate >= '2018-08-01')
+    AND (EventDate &lt;= '2018-08-03')
+    AND (CounterID >= 34))
+OR    ((EventDate >= '2018-08-04')
+    AND (EventDate &lt;= '2018-08-05')
+    AND (CounterID &lt;= 101500))
+ </code>
+
+        <p style="margin-top: 2em;">&mdash; 865 491 052 rows per second.<br/>
+        &mdash; <span style="color: green;"><b>+33% performance improvement!</b></span></p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT compilation examples</h2>
+        <code>SELECT
+    number * 2 +
+    number * 3 +
+    number * 4 +
+    number * 5
+FROM system.numbers
+FORMAT Null
+        </code>
+
+        <p style="margin-top: 2em;">&mdash; 0 rows in set. Elapsed: 0.903 sec. Processed 329.23 million rows, 2.63 GB (364.78 million rows/s., 2.92 GB/s.</p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT compilation examples</h2>
+        <code>SET compile_expressions = 1;
+SELECT
+    number * 2 +
+    number * 3 +
+    number * 4 +
+    number * 5
+FROM system.numbers
+FORMAT Null
+        </code>
+
+        <p style="margin-top: 2em;">&mdash; 0 rows in set. Elapsed: 1.602 sec. Processed 1.89 billion rows, 15.15 GB (1.18 billion rows/s., 9.46 GB/s.)<br/>&mdash;
+        <span style="color: green;"><b>+323% performance improvement!</b></span></p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT compilation examples</h2>
+        <code>SET compile_expressions = 1;
+
+WITH number AS x, if(x = 1, 1, if(x = 2, 2,
+if(x = 3, 3, if(x = 4, 4, if(x = 5, 5,
+if(x = 6, 6,　if(x = 7, 7, if(x = 8, 8,
+if(x = 9, 9,　if(x = 10, 10,
+if(x = 11, 11, 12))))))))))) AS res
+SELECT sum(res)
+FROM numbers(10000000)
+        </code>
+
+        <p style="margin-top: 2em;">&mdash; 0 rows in set. Elapsed: 0.150 sec. Processed 10.02 million rows, 80.18 MB (66.95 million rows/s., 535.56 MB/s.).</p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT compilation examples</h2>
+        <code>SET compile_expressions = 1;
+
+WITH number AS x, if(x = 1, 1, if(x = 2, 2,
+if(x = 3, 3, if(x = 4, 4, if(x = 5, 5,
+if(x = 6, 6,　if(x = 7, 7, if(x = 8, 8,
+if(x = 9, 9,　if(x = 10, 10,
+if(x = 11, 11, 12))))))))))) AS res
+SELECT sum(res)
+FROM numbers(10000000)
+        </code>
+
+        <p style="margin-top: 2em;">&mdash; 0 rows in set. Elapsed: 0.061 sec. Processed 10.02 million rows, 80.18 MB (163.20 million rows/s., 1.31 GB/s.)<br/>&mdash;
+        <span style="color: green;"><b>+244% performance improvement!</b></span></p>
+    </section>
+
+    <section class="slide">
+        <h2>Performance CPU cycles</h2>
+
+        <img style="width: 80%" src="pictures/benchmark_jit_expression_cpu_cycles.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Performance CPU cache misses</h2>
+
+        <img style="width: 80%" src="pictures/benchmark_jit_expression_cpu_cache_misses.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Performance CPU branch misses</h2>
+
+        <img style="width: 80%" src="pictures/benchmark_jit_expression_cpu_branch_misses.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Aggregation in ClickHouse</h2>
+        <code>EXPLAIN SELECT sum(UserID)
+FROM default.hits_100m_obfuscated GROUP BY WatchID
+
+┌─explain──────────────────────────────────────┐
+│ Expression ((Projection + Before ORDER BY))  │
+│   Aggregating                                │
+│     Expression (Before GROUP BY)             │
+│       SettingQuotaAndLimits                  │
+│         ReadFromMergeTree                    │
+└──────────────────────────────────────────────┘
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Aggregation in ClickHouse</h2>
+
+        <img style="text-align: center; height:60%; margin-left: 150px;" src="pictures/aggregator_architecture.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Aggregator interaction with functions</h2>
+
+        <p>1. Initializaze aggregate data for each function.</p>
+        <p>2. Fill aggregate data for each function.</p>
+        <p>3. Merge aggregate data for each function.</p>
+        <p>4. Insert result into final columns for each function.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Additional cases</h2>
+
+        <p>1. Nullable wrapper.</p>
+        <p>2. Aggregation combinators -If, -Array.</p>
+        <p>Both contain are wrappers around other aggregate function. A lot of indirections.</p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT compilation examples</h2>
+        <code>SELECT
+    sum(UserID),
+    sum(ClientIP),
+    sum(CounterClass),
+    sum(CounterID),
+    sum(WatchID)
+FROM default.hits_100m_obfuscated
+GROUP BY WatchID
+</code>
+
+        <p style="margin-top: 2em;">&mdash; 0 rows in set. Elapsed: 5.504 sec. Processed 100.00 million rows, 2.50 GB (18.17 million rows/s., 454.21 MB/s.)</p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT compilation examples</h2>
+        <code style="margin-top: -1em;">SET compile_aggregate_expression = 1;
+
+SELECT
+    sum(UserID),
+    sum(ClientIP),
+    sum(CounterClass),
+    sum(CounterID),
+    sum(WatchID)
+FROM default.hits_100m_obfuscated
+GROUP BY WatchID
+        </code>
+
+        <p style="margin-top: 2em;">&mdash; 0 rows in set. Elapsed: 4.146 sec. Processed 100.00 million rows, 2.50 GB (24.12 million rows/s., 603.06 MB/s.)<br/>
+        &mdash; <span style="color: green;"><b>+34% performance improvement!</b></span></p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT compilation examples</h2>
+        <code style="margin-top: -1em;">SET compile_aggregate_expression = 1;
+
+WITH (WatchID % 2 == 0) AS predicate
+SELECT
+    minIf(UserID, predicate),
+    minIf(ClientIP, predicate),
+    minIf(CounterClass, predicate),
+    minIf(CounterID, predicate),
+    minIf(WatchID, predicate)
+FROM default.hits_100m_obfuscated
+GROUP BY WatchID
+        </code>
+
+        <p style="margin-top: 2em;">&mdash; 0 rows in set. Elapsed: 6.234 sec. Processed 100.00 million rows, 2.50 GB (16.04 million rows/s., 401.05 MB/s.)</p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT compilation examples</h2>
+        <code style="margin-top: -1em;">SET compile_aggregate_expression = 1;
+
+WITH (WatchID % 2 == 0) AS predicate
+SELECT
+    minIf(UserID, predicate),
+    minIf(ClientIP, predicate),
+    minIf(CounterClass, predicate),
+    minIf(CounterID, predicate),
+    minIf(WatchID, predicate)
+FROM default.hits_100m_obfuscated
+GROUP BY WatchID
+        </code>
+
+        <p style="margin-top: 2em;">&mdash; 0 rows in set. Elapsed: 4.146 sec. Processed 100.00 million rows, 2.50 GB (24.12 million rows/s., 603.06 MB/s.)<br/>
+        &mdash; <span style="color: green;"><b>+71% performance improvement!</b></span></p>
+    </section>
+
+    <section class="slide">
+        <h2>Performance CPU cycles</h2>
+
+        <img style="width: 80%" src="pictures/benchmark_jit_aggregation_cpu_cycles.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Performance CPU cache misses</h2>
+
+        <img style="width: 80%" src="pictures/benchmark_jit_aggregation_cpu_cache_misses.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Performance CPU branch misses</h2>
+
+        <img style="width: 80%" src="pictures/benchmark_jit_aggregation_cpu_branch_misses.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Settings</h2>
+        <p>compile_aggregate_expressions</p>
+        <p>min_count_to_compile_aggregate_expression by default is 3</p>
+        <p>compiled_expression_cache_size by default is 1 GB. Same cache with compiled expressions from ExpressionStep.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Which functions can be compiled</h2>
+        <p>1. Most common aggregate functions sum, count, min, max, avg, avgWeighted</p>
+        <p>2. Combinators -If</p>
+        <p>3. Null aggregation function adaptor.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Results</h2>
+
+        <p>JIT compilation improves performance of expression execution step in 1.5-3 times (for some cases more than 20 times), and aggregation step in 1.15-2 times</p>
+        <p>For expression step is available from release 21.6.</p>
+        <p>For aggregation step will be available from release 21.8 or 21.9.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Questions?</h2>
+    </section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
