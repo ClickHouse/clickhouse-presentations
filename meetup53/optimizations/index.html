@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Tales About Performance Optimizations in ClickHouse</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>Tales About Performance Optimizations in ClickHouse</h1>
+    </header>
+
+    <section class="slide" id="cover">
+        <h1 style="margin-top: 50px; font-size: 48pt;">Tales About<br/>Performance Optimizations<br/>in ClickHouse</h1>
+    </section>
+
+    <section class="slide">
+        <h2>Performance Optimizations</h2>
+        <div style="float: right; width: 30%">
+            <img style="width: 100%;" src="pictures/whack_a_mole.jpg" />
+            <p style="color: gray; font-size: 40%;">https://www.techdesignforums.com/practice/<br/>technique/winning-at-whac-a-mole-redesigning-an-rf-transceiver/</p>
+        </div>
+        <p>Profile on various workloads.</p>
+        <p>Optimize everything that stands out.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Episode 1: MergeTree vs Memory</h2>
+        <p>There are multiple table engines in ClickHouse:</p>
+        <p><b>MergeTree</b> tables store data on disk.</p>
+        <p><b>Memory</b> tables store data in memory.</p>
+
+        <p>RAM is faster than disk*.</p>
+        <p>So are Memory tables faster than MergeTree?</p>
+
+        <p style="color: gray; font-size: 75%; margin-top: 50px;">* What is "faster"? Sequential read/write throughput. Random read/write latencies.<br/>IOPS under specific parallelism and workload.</p>
+        <p style="color: gray; font-size: 75%;">Obviously RAM can be slower than disks, for example single channel RAM vs. 10x PCIe 4.0 SSDs.</p>
+    </section>
+
+    <!--
+        SELECT SearchPhrase, count() AS c FROM test.hits GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10;
+        CREATE TABLE test.hits_memory AS test.hits ENGINE = Memory;
+        SET max_memory_usage = '20G';
+        INSERT INTO test.hits_memory SELECT * FROM test.hits;
+        SELECT SearchPhrase, count() AS c FROM test.hits_memory GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10;
+        -->
+
+    <section class="slide">
+        <video style="height: 100%; margin-top: -10px; margin-left: -80px; margin-right: -80px;"><source src="video/mergetree_vs_memory.ogv" type="video/ogg"></video>
+    </section>
+
+    <section class="slide">
+        <h2>MergeTree vs Memory</h2>
+        <p><b>Memory</b> tables store data in memory.</p>
+        <p><b>MergeTree</b> tables store data on disk,<br/>actually in filesystem.</p>
+        <p>But data from filesystem is cached in <b>page cache</b> in memory.</p>
+        <p>And then read <span style="color: green;">from memory</span>.</p>
+
+        <p>So there is no difference between <b>Memory</b> and <b>MergeTree</b> tables
+        <br/>if data reside in page cache?</p>
+    </section>
+
+    <section class="slide">
+        <h2>MergeTree vs Memory</h2>
+        <p>There are obvious cases when <b>MergeTree</b> is faster than <b>Memory</b>.</p>
+        <p><b>MergeTree</b> tables have primary key and secondary indices,<br/>and allow to <span style="color: green;">read only subranges of data</span>.</p>
+        <p><b>Memory</b> tables only allow <span style="color: red;">full scan</span>.</p>
+
+        <p style="color: gray;">But that's not interesting...</p>
+
+        <p style="color: green;">Is it possible that MergeTree is faster than Memory <b>on full scan</b>?</p>
+    </section>
+
+    <!-- clickhouse-benchmark <<< "SELECT SearchPhrase, any(replaceAll(substring(URL, 1, 100), 'google', 'yandex')) AS s, count() AS c FROM test.hits GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10" -->
+
+    <section class="slide">
+        <video style="width: 100%;"><source src="video/memory_is_slower.ogv" type="video/ogg"></video>
+    </section>
+
+    <section class="slide">
+        <h2>MergeTree vs Memory</h2>
+        <p>Less obvious cases when <b>MergeTree</b> can be faster than <b>Memory</b>.</p>
+        <p><b>MergeTree</b> tables store data <b>sorted</b> in the primary key order.</p>
+        <p>Some algorithms in ClickHouse exploit<br/>the data locality, if there is it (fast path).</p>
+
+        <p>Example: if one value is met twice in consecutive records during GROUP BY
+        <br/>we don't perform excessive lookup in a hash table.</p>
+
+        <p style="color: green;">But if the tables store data in the same order,<br/>is it possible that MergeTree is faster than Memory?</p>
+    </section>
+
+    <!-- Пример про ClientIP и RegionID -->
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">How ClickHouse process the data?</h2>
+        <p>Data in ClickHouse is stored by columns
+        <br/>and processed also by columns.</p>
+
+        <table>
+            <thead>
+                <th>Array of Structures</th>
+                <th style="padding-left: 1em;">Structure of Arrays</th>
+            </thead>
+            <tr>
+                <td style="background-color: #FEE;">
+        <pre>struct Point3d
+{
+    float x;
+    float y;
+    float z;
+};
+std::vector&lt;Point3d> points;</pre>
+                </td>
+                <td style="background-color: #EFE; padding-left: 1em;">
+        <pre>struct Points
+{
+    std::vector&lt;float> x;
+    std::vector&lt;float> y;
+    std::vector&lt;float> z;
+};</pre>
+                </td>
+            </tr>
+        </table>
+    </section>
+
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">How ClickHouse process the data?</h2>
+        <p>Data in ClickHouse is stored by columns
+        <br/>and processed also by columns. <b style="color: green;">By chunks of columns</b>.</p>
+
+        <pre>struct Chunk
+{
+    std::vector&lt;float> x;
+    std::vector&lt;float> y;
+    std::vector&lt;float> z;
+};
+
+<b style="color: green;">std::vector&lt;Chunk> chunks;</b>
+</pre>
+    <p>&mdash; <b>Morsel-based processing</b>.</p>
+    </section>
+
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">How exactly is the data read?</h2>
+        <img style="float: right; height: 70%; margin-top: -70px; margin-right: -80px;" src="pictures/not_optimal.webp" />
+        <p>In case of <b>MergeTree</b>:</p>
+        <p>&mdash; read compressed files from filesystem;</p>
+        <p>&mdash; calculate and validate checksums;</p>
+        <p>&mdash; decompress the compressed blocks;</p>
+        <p>&mdash; deserialize chunks of columns;</p>
+        <p>&mdash; process them;</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">How exactly is the data read?</h2>
+        <img style="float: left; height: 70%; margin-top: -70px; margin-left: -80px;" src="pictures/optimal.webp" />
+        <p>In case of <b>Memory</b>:</p>
+        <p>&mdash; already prepared chunks of columns<br/>&emsp; are already in RAM,</p>
+        <p>&emsp; just process them;</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">What exactly happens while reading?</h2>
+        <p style="margin-top: -1em;">In case of <b>MergeTree</b>:</p>
+        <p>1. Read compressed files from filesystem:</p>
+        <p>&mdash; we can read with synchronous (<b>read</b>/<b>pread</b>, <b>mmap</b>)<br/>&emsp; or asynchronous (<b>AIO</b>, <b>uring</b>) IO methods;</p>
+        <p>&mdash; in case of synchronous IO, we can <br/>&emsp; use the page cache (simply with <b>read</b> or <b>mmap</b>)<br/>&emsp; or don't use the page cache (<b>O_DIRECT</b>);</p>
+        <p>&mdash; if we read from the page cache without <b>mmap</b>,<br/>&emsp; then the data will be <span style="color: red;">copied</span> from the page cache to userspace;</p>
+        <p>&mdash; we read compressed data &mdash; if compression rate is high,<br/>&emsp; then we spent little amount of time reading;</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">What exactly happens while reading?</h2>
+        <p style="margin-top: -1em;">In case of <b>MergeTree</b>:</p>
+        <p>2. Decompression of compressed blocks:</p>
+        <p>&mdash; LZ4* is used by default;</p>
+        <p>&mdash; you can choose more heavy (ZSTD),<br/>&emsp; or more weak method, up to no compression at all (NONE);</p>
+        <p>&mdash; sometimes NONE is surprisingly slower than LZ4, but why?</p>
+        <p>&mdash; what is the compressed block size?<br/>&emsp; and how it affects the speed?</p>
+
+        <p style="color: gray; font-size: 75%; margin-top: 50px;">* Read the article "<a href="https://habr.com/en/company/yandex/blog/457612/">How to speed up LZ4 decompression in ClickHouse?</a>".</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">What exactly happens while reading?</h2>
+        <p>In case of <b>MergeTree</b>:</p>
+        <p>3. Deserialization of columns chunks:</p>
+        <p>&mdash; there is almost no "deserialization";</p>
+        <p>&mdash; usually it is just copying of data (memcpy);</p>
+        <p>&mdash; but why need to copy data at all?</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">Difference between MergeTree and Memory</h2>
+        <p><b>Memory</b>:<br/>&mdash; already prepared chunks of columns in memory.</p>
+        <p><b>MergeTree</b>:<br/>&mdash; chunks of columns are formed dynamically during read.</p>
+        <p><b>MergeTree</b> is doing more work,<br/>but is it possible to be more efficient?</p>
+    </section>
+
+    <section class="slide">
+        <h2>MergeTree vs Memory</h2>
+        <p>In case of <b>MergeTree</b>:</p>
+        <p>&mdash; chunks of columns are formed dynamically during read,
+        <br/>&emsp; and their size in the number of records can be selected adaptively
+        <br/>&emsp; for better <span style="color: green;">cache locality</span>!</p>
+    </section>
+
+    <!-- SELECT round(avg(blockSize())) FROM test.hits WHERE NOT ignore(URL, SearchPhrase) -->
+
+    <section class="slide">
+        <h2>Cache locality</h2>
+        <p><b>What is the speed of the main memory?</b>
+        <br/>&mdash; what memory, on what server?</p>
+        <p><b>What is the speed of CPU cache?</b>
+        <br/>&mdash; cache of what level, on what CPU?
+        <br/>&mdash; on one CPU core or all cores together?</p>
+        <p><b>The speed of what?</b>
+        <br/>&mdash; throughput, latency?..</p>
+    </section>
+
+    <section class="slide">
+        <h2>Episode 2: is compression slow?</h2>
+        <p>ClickHouse compresses data by default.</p>
+        <p>Data is compressed on write and decompressed on read.</p>
+        <p>Let's profile some queries...</p>
+        <p>There is <b>LZ4_decomress_safe</b> function in top by CPU usage.</p>
+        <p style="margin-top: 2em;">🤔 So, let's just turn off compression and speed everything up?</p>
+    </section>
+
+    <section class="slide">
+        <img src="pictures/classic.jpg" style="height: 90%;" />
+        <p style="font-size: 10pt; color: gray;">Megg, Mogg &amp; Owl Series by Simon Hanselmann</p>
+    </section>
+
+    <section class="slide">
+        <h2>Trying to turn off data compression</h2>
+        <img style="float: right; width: 20%; margin-right: -80px;" src="pictures/frustration.jpg" />
+        <p style="color: red;">But nothing good happens:</p>
+        <p>1. Compression is turned off but data doesn't fit on disk anymore.</p>
+        <p>2. Compression is turned off but data is reading slowly from disk.</p>
+        <p>3. Compression is turned off but less amount of data fits in page cache.</p>
+        <p>...</p>
+        <p>But if all data fits in memory even uncompressed<br/>&mdash; <b>does it make sense to not compress the data</b>?</p>
+    </section>
+
+    <!-- Пример -->
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">What is faster: decompression or memcpy?</h2>
+        <p>The <b>memcpy</b> function is often used as a <b>baseline</b><br/> of the most weak possible compression or decompression in benchmarks.</p>
+        <p>Memcpy is the fastest example for comparison, for sure.</p>
+        <p>Example:
+        <br/>&mdash; memcpy: <b style="color: green;">12 GB</b> per second.
+        <br/>&mdash; LZ4 decompression: <b style="color: red;">2..4 GB</b> of decompressed data per second.</p>
+        <p>Conclusion: memcpy is faster than LZ4 decompression?</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">What is faster: decompression or memcpy?</h2>
+        <p>Let's look at the following scenario:</p>
+        <p style="line-height: 1.5">&mdash; data is stored in memory;
+        <br/>&mdash; data is processed by chunks;
+        <br/>&mdash; every chunk is small enough to fit in CPU cache;
+        <br/>&mdash; processing of every chunk also fits in CPU cache;
+        <br/>&mdash; <b style="color: green;">data is processed by multiple threads</b>;</p>
+
+        <p>Data is read from main memory, then all processing is inside CPU cache.</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">What is faster: decompression or memcpy?</h2>
+        <p>Example: Ryzen 3950 (16 cores)</p>
+        <p style="line-height: 1.5">&mdash; memcpy: 16×12 GB = <b>192 GB</b> per second.
+        <br/>&mdash; LZ4 decompression: 16×2..4 GB = <b>32..48 GB</b><br/>&emsp; of decompressed data per second.
+        <br/>&mdash; RAM read speed: <b style="color: red;">30 GB</b>* per second.
+        </p>
+
+        <p>For <b>memcpy</b> reading is limited by RAM speed.</p>
+        <p><span style="color: green;">But if data is compressed &mdash; then less amount of data is read from memory.</span>
+        <br/><b>"Memory is the new disk".</b> Is LZ4 decompression faster than <b>memcpy</b>?</p>
+
+        <p style="color: gray; font-size: 75%;">* 2-channel memory but it works not on it's max frequency.<br/>According to the specs of the CPU it should be 48 GB per second.</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">What is faster: decompression or memcpy?</h2>
+        <p>Example: 2 × AMD EPYC 7742 (<b>128 cores</b>)</p>
+        <p>8 channel memory, max throughput <b>190 GiB/s</b></p>
+
+        <p>LZ4 decompression is faster even on this server.</p>
+        <p>But if the number of cores is lower &mdash; then it is not so clear.</p>
+        <p style="color: gray;">If data is highly compressed then decompression is limited by CPU<br/> and therefore can be optimized!</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">Optimizations done in ClickHouse</h2>
+        <p style="margin-top: -1em;">For <b>Memory</b> tables:</p>
+        <p>&mdash; Lowered the block size on insertion<br/>&emsp; for better cache-locality of data processing <a href="https://github.com/ClickHouse/ClickHouse/pull/20169">#20169</a>.</p>
+        <p>&mdash; Support for compression of Memory tables <a href="https://github.com/ClickHouse/ClickHouse/pull/20168">#20168</a>.</p>
+        <p>For <b>MergeTree</b> tables:</p>
+        <p>&mdash; Eliminated unnecessary data copying for NONE codec <a href="https://github.com/ClickHouse/ClickHouse/pull/22145">#22145</a>.</p>
+        <p>&mdash; Allowed to turn off checksumming on read <a href="https://github.com/ClickHouse/ClickHouse/pull/19588">#19588</a>,<br/>&emsp; but you should not use this switch.</p>
+        <p>&mdash; Allowed to read data with mmap <a href="https://github.com/ClickHouse/ClickHouse/pull/8520">#8520</a><br/>&emsp; also added a cache of memory mappings <a href="https://github.com/ClickHouse/ClickHouse/pull/22206">#22206</a>.</p>
+    </section>
+
+    <!--
+        SELECT SearchPhrase, any(replaceAll(substring(URL, 1, 100), 'google', 'yandex')) AS s, count() AS c FROM test.hits GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10
+        SELECT SearchPhrase, any(replaceAll(substring(URL, 1, 100), 'google', 'yandex')) AS s, count() AS c FROM test.hits_memory GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10
+        DROP TABLE test.hits_memory
+        CREATE TABLE test.hits_memory AS test.hits ENGINE = Memory SETTINGS compress = 1;
+        INSERT INTO test.hits_memory SELECT * FROM test.hits;
+        SELECT SearchPhrase, any(replaceAll(substring(URL, 1, 100), 'google', 'yandex')) AS s, count() AS c FROM test.hits_memory GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10
+        -->
+
+    <section class="slide">
+        <video style="width: 100%;"><source src="video/memory_compressed_slower.ogv" type="video/ogg"></video>
+    </section>
+
+    <section class="slide">
+        <video style="width: 100%;"><source src="video/memory_compressed_faster.ogv" type="video/ogg"></video>
+    </section>
+
+    <section class="slide">
+        <h2>Conclusions</h2>
+        <p>If you want to optimize performance you just need:</p>
+        <p>&mdash; to know exactly what the code is doing;</p>
+        <p>&mdash; to profile the system on realistic workloads;</p>
+        <p>&mdash; to be aware of the hardware capabilities;</p>
+        <p>...</p>
+        <p>&mdash; don't forget that CPU has multiple cores and cache;<br/>&emsp; don't mess up latency with throughput :)</p>
+    </section>
+
+    <section class="slide">
+        <h2>Thank you!</h2>
+    </section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
