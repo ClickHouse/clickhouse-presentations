@@ -1,6 +1,91 @@
 # Talks index
 
-## 2021-02-26. C++ Siberia 2021.
+## 2021-08-25. SF Bay Area ClickHouse August Community Meetup (#54)
+
+* Building an observability platform with Clickhouse as storage -- Ankit Nayan, CTO of SigNoz. [slides](meetup54/signoz.pdf)
+* Zookeeper is going away! -- Alexander Sapin, Yandex. [slides](meetup54/keeper.pdf), [video](https://youtu.be/DrrijIv4HPI)
+
+The meetup: [announcement](https://www.meetup.com/San-Francisco-Bay-Area-ClickHouse-Meetup/events/279109379/).
+
+## 2021-07-31. C++ Zero Cost Conf
+
+* Алексей Миловидов. Как перекладывать байты. [slides](zero_cost_conf/memcpy/index.html), [video](https://youtu.be/8GlwkWxf3hk?t=15904)
+* Максим Кита. C++ zero-cost abstractions на примере хеш-таблиц в ClickHouse. [slides](zero_cost_conf/hash_tables/c%2B%2B_zero_cost_hash_tables.pdf), [video](https://youtu.be/8GlwkWxf3hk?t=14277)
+
+Мероприятиe: [aнонс](https://events.yandex.ru/events/c-zero-cost-conf)
+
+## 2021-07-23. ClickHouse Meetup by ByteDance (online)
+
+* Yiyang Shao. How to leverage ClickHouse to speed up your data analysis?
+* Zhaojie Niu. Introduction on Cloud-Native ClickHouse
+
+The meetup: [announcement](https://www.meetup.com/ByteDanceDev-group/events/279543467/), [video](https://live.bytedance.com/7938/155441)
+
+## 2021-08-08. PGDAY RUSSIA'21 
+
+* Ксения Сумарокова. Возможности интеграции PostgreSQL с ClickHouse. [video](https://youtu.be/UVSZRQyrXac), [slides](pgday2021/postgresql-integration-kssenii.pdf)
+
+Мероприятиe: [aнонс](https://pgday.ru/ru/2021/papers)
+
+## 2021-06-26. China ClickHouse Community Meetup (#53)
+
+* 《ClickHouse中国社区与志愿者介绍》社区组织者 郭炜. [slides](meetup53/intro.pdf)
+* 《ClickHouse统一网关设计与实践之缓存加速服务》腾讯音乐 麦嘉铭. [slides](meetup53/tencent.pdf)
+* 《ClickHouse Java客户端与JDBC桥》 ClickHouseJDBC作者 伍之春
+* 《跨AZ clickhouse集群管理之operator实践》E-bay 左启刚. [slides](meetup53/ebay.pdf)
+* 《ClickHouse在BIGO的实践及优化》 Bigo 徐帅. [slides](meetup53/bigo.pdf)
+* 《ClickHouse性能调优》 ClickHouse团队 Alexey Milovidov. [slides](meetup53/optimizations/index.html)
+* 《Jit In ClickHouse》  ClickHouse团队 Maksim Kita. [slides](meetup53/jit_in_clickhouse/index.html)
+* 答疑&讨论  全体Speak
+
+The meetup: [announcement](http://hdxu.cn/rhbfZ)
+
+## 2021-06-16. SF Bay Area ClickHouse Community Meetup (#52)
+
+* ClickHouse 2021: New Features and Roadmap — Alexey Milovidov from Yandex. [slides](meetup52/features/index.html), [video](https://youtu.be/4bixbIUHDQw?t=1409)
+* Seeing is Believing: Popular BI Tools for ClickHouse -- Robert Hodges and Dima Borovstov from Altinity. [slides](meetup52/bi.pdf), [video](https://youtu.be/4bixbIUHDQw?t=5718)
+
+The meetup: [announcement](https://www.meetup.com/San-Francisco-Bay-Area-ClickHouse-Meetup/events/278144089/), [video](https://youtu.be/4bixbIUHDQw)
+
+## 2021-05-12. Percona Live 2021
+
+* Amos Bird - kuaishou.com - Projections in ClickHouse. [slides](percona2021/projections.pdf). [video](https://youtu.be/jJ5VuLr2k5k?list=PLWhC0zeznqkkNYzcvHEfZ8hly3Cu9ojKk)
+* ClickHouse 2021: New Features and Roadmap. [slides](percona2021/index.html). [video](https://youtu.be/t7mA1aOx3tM?list=PLWhC0zeznqkkNYzcvHEfZ8hly3Cu9ojKk)
+* Robert Hodges and Alexander Zaitsev - ClickHouse Developer Tutorial, Part 1. [video](https://youtu.be/WVk5_tQ-wx8?list=PLWhC0zeznqkkNYzcvHEfZ8hly3Cu9ojKk)
+* Robert Hodges and Alexander Zaitsev- Altinity -ClickHouse Developer Tutorial, Part 2 - Lab Exercises. [video](https://youtu.be/j1vU43gbcd8?list=PLWhC0zeznqkkNYzcvHEfZ8hly3Cu9ojKk)
+* A Tale of Two Communities: How Open Source, ClickHouse and Superset Help Visualize Your Data. [video](https://youtu.be/GmLnGV3Phic?list=PLWhC0zeznqkkNYzcvHEfZ8hly3Cu9ojKk)
+* Stephen Borg - Fun and Games: Why We Picked ClickHouse To Drive Gaming Analytics at GiG. [video](https://youtu.be/vkYvuIs1KcU?list=PLWhC0zeznqkkNYzcvHEfZ8hly3Cu9ojKk&t=7)
+
+The meetup: [announcement](https://www.percona.com/conferences/percona-live-online-2021)
+
+## 2021-05-17. HighLoad++ Весна 2021
+
+* Алексей Миловидов. Необычные случаи оптимизации производительности на примере ClickHouse. [slides](highload2021/index.html)
+* Никита Михайлов. Кластер ClickHouse ctrl-с ctrl-v. [slides](highload2021/copier.pdf)
+* Александр Кузьменков. Сегодня я помержил в ClickHouse 30 пул-реквестов, а он всё ещё не тормозит: автотесты производительности. [slides](highload2021/perf-test.pdf)
+* Максим Кита. Zero cost-абстракции на примере хэш-таблиц в ClickHouse С++. [slides](highload2021/hash_tables/index.html)
+* Александр Зайцев. "Прокрустово ложе" или "испанский сапог" — мифы и реальность СУБД в Облаках. [slides](https://www.highload.ru/spring/2021/abstracts/7242)
+* Георгий Грибков. Статический анализ в open-source-проектах на примере разработки ClickHouse
+
+Мероприятиe: [aнонс](https://www.highload.ru/spring/2021)
+
+## 2021-04-09. Heisenbug 2021
+
+* Manuel Rigger, Ilya Yatsishin. Using SQLancer to test ClickHouse and other database systems. [slides](heisenbug2021/Heisenbug_2021_Using_SQLancer_to_test_ClickHoouse_and_other_DBMS_Manuel_Rigger_Yatsishin_Ilya.pdf)
+
+The meetup: [announcement](https://heisenbug-piter.ru/en/2021/spb/schedule/)
+
+## 2021-03-11. Онлайн ClickHouse Meetup (#51)
+
+* Максим Кита. Новые возможности внешних словарей в ClickHouse. [slides](meetup51/dictionaries/index.html), [video](https://youtu.be/HPJOgzQkRls?t=441)
+* Давлетгалиев Едиге. Практика использования ClickHouse в аналитике Blockchair. [video](https://youtu.be/HPJOgzQkRls?t=2878)
+* Ксения Сумарокова. Возможности ClickHouse для интеграции с PostgreSQL. [slides](meetup51/pg-ch-integration.pdf), [video](https://youtu.be/HPJOgzQkRls?t=4332)
+* Александр Токмаков. Реплицированные базы данных. [slides](meetup51/DatabaseReplicated.pdf), [video](https://youtu.be/HPJOgzQkRls?t=5024)
+* Алексей Миловидов. Возможности ClickHouse 2021. [slides](meetup51/new_features/index.html), [video](https://youtu.be/HPJOgzQkRls?t=6791)
+
+Видеозапись митапа: [video](https://youtu.be/HPJOgzQkRls)
+
+## 2021-02-26. C++ Siberia 2021
 
 * Алексей Миловидов. Фазинг: практические кейсы в ClickHouse. [slides](cpp_siberia_2021/index.html), [video](https://youtu.be/GbmK84ZwSeI?t=4481)
 
@@ -12,7 +97,7 @@
 
 Мероприятиe: [aнонс](https://www.meetup.com/github-planeta/events/275867198/)
 
-## 2021-02-06. ClickHouse China User Group 2021 Spring Meetup. (#50)
+## 2021-02-06. ClickHouse China User Group 2021 Spring Meetup (#50)
 
 1. William Guowei, Analysys CTO. ClickHouse China User Group Meetup 2017-2020 Review (Chinese). [slides](meetup50/0_contents.pdf), [video](https://youtu.be/unsYvWzwyUY).
 2. Alexey Milovidov, Yandex. ClickHouse New&upcoming Features. [slides](meetup50/new_features/index.html), [video](https://youtu.be/unsYvWzwyUY?t=460)
@@ -23,7 +108,7 @@
 
 The meetup: [announcement](http://hdxu.cn/8KxZE)
 
-## 2021-01-01. Online Meetup 49: SF Bay Area. (#49)
+## 2021-01-01. Online Meetup 49: SF Bay Area (#49)
 
 * Denis Zhuravlev. What's New In ClickHouse 20.12-21.1. [slides](meetup49/new_features.pdf), [video](https://youtu.be/BhvxV3ZLIhk?t=660)
 * Alexey Milovidov. ClickHouse Roadmap 2021. [slides](meetup49/roadmap/index.html), [video](https://youtu.be/BhvxV3ZLIhk?t=2938)
