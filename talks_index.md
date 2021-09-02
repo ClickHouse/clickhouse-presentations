@@ -232,6 +232,25 @@ The meetup: [announcement](https://www.meetup.com/pl-PL/San-Francisco-Bay-Area-C
 11. Гумеров Арслан, Кидрачев Альберт, Морозов Василий. Оптимизация сортировки в ClickHouse.
 [Курсовая работа](hse_2020/3rd/SortingOptimization_full.pdf), [Презентация](hse_2020/3rd/SortingOptimization_pres.pdf)
 
+# 2020-06-10. Выпускные работы студентов 4го курса ВШЭ.
+
+1. Токмаков Александр. Wait-free каталог баз данных в ClickHouse. [Выпускная работа](hse_2020/4th/AtomicDatabase_full.pdf), [Презентация](hse_2020/4th/AtomicDatabase_pres.pdf)
+2. Соколов Андрей. Реализация целых и десятичных чисел с фиксированной запятой с расширенной точностью в ClickHouse. [Выпускная работа](hse_2020/4th/DecimalExtended_full.pdf), [Презентация](hse_2020/4th/DecimalExtended_pres.pdf)
+5. Левушкин Алексей. Поддержка использования в ClickHouse систем координации помимо ZooKeeper. [Выпускная работа](hse_2020/4th/EtcdKeeper_full.pdf), [Презентация](hse_2020/4th/EtcdKeeper_pres.pdf)
+6. Серебряков Максим. Оптимизация параллельного GROUP BY с помощью flat combining. [Выпускная работа](hse_2020/4th/GroupBySpeedup_full.pdf), [Презентация](hse_2020/4th/GroupBySpeedup_pres.pdf)
+7. Бобровский Артемий. Улучшение интеграции ClickHouse с внешними базами данных. [Выпускная работа](hse_2020/4th/Integrations_final.pdf), [Презентация](hse_2020/4th/Integrations_pres.pdf)
+8. Кожихов Александр. Инфраструктура распределённой трассировки для ClickHouse. [Выпускная работа](hse_2020/4th/OpenTracing_full.pdf), [Презентация](hse_2020/4th/OpenTracing_pres.pdf)
+9. Обрезкова Дарья. Разработка интерфейса сравнения и анализа производительности ревизий ClickHouse. [Выпускная работа](hse_2020/4th/PerformanceVisualization_full.pdf), [Презентация](hse_2020/4th/PerformanceVisualization_pres.pdf)
+10. Элбакян Мовсес. Реализация в ClickHouse протокола PostgreSQL. [Выпускная работа](hse_2020/4th/Postgres_full.pdf), [Презентация](hse_2020/4th/Postgres_pres.pdf)
+11. Токарева Елизавета. Дэшборд для работы над Pull Requests. [Выпускная работа](hse_2020/4th/PullDashboard_full.pdf), [Презентация](hse_2020/4th/PullDashboard_pres.pdf)
+12. Новиков Глеб. RAID в Userspace для ClickHouse. [Выпускная работа](hse_2020/4th/RAID_full.pdf), [Презентация](hse_2020/4th/RAID_pres.pdf)
+13. Батурин Валерий. Реплицированные базы данных. [Выпускная работа](hse_2020/4th/ReplicatedDatabase_full.pdf), [Презентация](hse_2020/4th/ReplicatedDatabase_pres.pdf)
+14. Сорокин Николай. Управление прореживанием данных с помощью TTL выражений. [Выпускная работа](hse_2020/4th/TTLRollup_full.pdf), [Презентация](hse_2020/4th/TTLRollup_pres.pdf)
+15. Кузнецов Максим. Минимальная поддержка транзакций для множества вставок/чтений. [Выпускная работа](hse_2020/4th/TransactionsPrototype_full.pdf), [Презентация](hse_2020/4th/TransactionsPrototype_pres.pdf)
+16. Минеев Игорь. Пользовательские функции в ClickHouse. [Выпускная работа](hse_2020/4th/UDF_full.pdf), [Презентация](hse_2020/4th/UDF_pres.pdf)
+17. Филитов Михаил. Интеграция в ClickHouse функциональности обработки HTTP User Agent. [Выпускная работа](hse_2020/4th/UserAgent_full.pdf), [Презентация](hse_2020/4th/UserAgent_pres.pdf)
+18. Ершов Олег. Виртуальная файловая система для ClickHouse. [Выпускная работа](hse_2020/4th/VFS_HDFS_full.pdf), [Презентация](hse_2020/4th/VFS_HDFS_pres.pdf)
+
 ## older talks?
 
 ... no index yet :\
