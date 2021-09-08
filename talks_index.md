@@ -47,6 +47,12 @@ The meetup: [announcement](http://hdxu.cn/rhbfZ)
 
 The meetup: [announcement](https://www.meetup.com/San-Francisco-Bay-Area-ClickHouse-Meetup/events/278144089/), [video](https://youtu.be/4bixbIUHDQw)
 
+## 2021-05-20. CodeFest 11 Новосибирск.
+
+* Алексей Миловидов. Необычные случаи оптимизации производительности на примере ClickHouse. [slides](https://disk.yandex.ru/i/TB3_mzEWFzYIhw)
+
+Мероприятиe: [aнонс](https://11.codefest.ru/program/)
+
 ## 2021-05-12. Percona Live 2021
 
 * Amos Bird - kuaishou.com - Projections in ClickHouse. [slides](percona2021/projections.pdf). [video](https://youtu.be/jJ5VuLr2k5k?list=PLWhC0zeznqkkNYzcvHEfZ8hly3Cu9ojKk)
