@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse</h1>
+    </header>
+    <section class="slide" id="cover" style="background: linear-gradient(to bottom right, rgba(255, 51, 51, 1), rgba(255, 169, 0, 1))">
+        <img src="https://clickhouse.tech/images/logo.svg" style="width: 15%; position: absolute; right: 20px; bottom: 20px;" />
+        <h1 style="margin-top: 150px; line-height: 150%; color: white; font-size: 64pt">ClickHouse</h1>
+    </section>
+
+<section class="slide">
+<h2>История</h2>
+<p>2009 &mdash; конструктор отчётов в Метрике &mdash; первый прототип ClickHouse.</p>
+<p>2010..2011 &mdash; разработка ClickHouse как side project с перерывами.</p>
+<p>2012 &mdash; стали использовать ClickHouse в продакшене<br/>для обработки логов.</p>
+<p>2014 &mdash; сервис Метрика 2.0 полностью на основе ClickHouse.</p>
+<p>2014..2015 &mdash; распространение ClickHouse внутри Яндекса.</p>
+<p>2016 &mdash; выложили ClickHouse в open-source.</p>
+</section>
+
+<section class="slide" style="background: url('pictures/highload.png') no-repeat; background-size: 100%;">
+</section>
+
+<section class="slide">
+<h2>История</h2>
+<p>2016..2017 &mdash; первые пользователи снаружи<br/>&mdash; энтузиасты с похожими сценариями.</p>
+<p>2018 &mdash; запуск ClickHouse в Яндекс Облаке.</p>
+<p>2018..2019 &mdash; активное продвижение, митапы в Европе, Азии и США.</p>
+<p>2020 &mdash; продолжение роста за счёт WFH<br/>и миграции на ClickHouse в крупных компаниях.</p>
+</section>
+
+<section class="slide" style="background: url('pictures/meetups.jpg') no-repeat; background-size: 100%;">
+</section>
+
+<section class="slide">
+<p class="cloud">
+<span>2gis</span>
+<span>Admiral</span>
+<span>AdScribe</span>
+<span>Ahrefs</span>
+<span>Alibaba Cloud</span>
+<span>Aloha Browser</span>
+<span>Altinity</span>
+<span>Amazon</span>
+<span>ApiRoad</span>
+<span>Apple</span>
+<span>Appsflyer</span>
+<span>ArenaData</span>
+<span>Avito</span>
+<span>Badoo</span>
+<span>Benocs</span>
+<span>BIGO</span>
+<span>Bloomberg</span>
+<span>Bloxy</span>
+<span>Bytedance</span>
+<span>CardsMobile</span>
+<span>CARTO</span>
+<span>CERN</span>
+<span>Cisco</span>
+<span>Citadel Securities</span>
+<span>Citymobil</span>
+<span>Cloudflare</span>
+<span>Comcast</span>
+<span>ContentSquare</span>
+<span>Corunet</span>
+<span>CraiditX 氪信</span>
+<span>Crazypanda</span>
+<span>Criteo</span>
+<span>Cryptology</span>
+<span>Dataliance for China Telecom</span>
+<span>Deutsche Bank</span>
+<span>Deeplay</span>
+<span>Diva-e</span>
+<span>Ecwid</span>
+<span>eBay</span>
+<span>Exness</span>
+<span>EventBunker.io</span>
+<span>FastNetMon</span>
+<span>Flipkart</span>
+<span>FunCorp</span>
+<span>Geniee</span>
+<span>Genotek</span>
+<span>Glaber</span>
+<span>HUYA</span>
+<span>ICA</span>
+<span>Idealista</span>
+<span>Infovista</span>
+<span>InnoGames</span>
+<span>Instabug</span>
+<span>Instana</span>
+<span>Integros</span>
+<span>Ippon Technologies</span>
+<span>Ivi</span>
+<span>Jinshuju 金数据</span>
+<span>Kodiak Data</span>
+<span>Kontur</span>
+<span>Kuaishou</span>
+<span>Lawrence Berkeley National Laboratory</span>
+<span>LifeStreet</span>
+<span>Mail.ru Cloud Solutions</span>
+<span>MAXILECT</span>
+<span>Marilyn</span>
+<span>Mello</span>
+<span>MessageBird</span>
+<span>Microsoft</span>
+<span>MindsDB</span>
+<span>MUX</span>
+<span>MGID</span>
+<span>Netskope</span>
+<span>NIC Labs</span>
+<span>NOC Project</span>
+<span>Nuna Inc.</span>
+<span>OneAPM</span>
+<span>OZON</span>
+<span>Panelbear</span>
+<span>Percent 百分点</span>
+<span>Percona</span>
+<span>Plausible</span>
+<span>PostHog</span>
+<span>Postmates</span>
+<span>Pragma Innovation</span>
+<span>PRANA</span>
+<span>QINGCLOUD</span>
+<span>Qrator</span>
+<span>Raiffeisenbank</span>
+<span>Rambler</span>
+<span>Retell</span>
+<span>Rspamd</span>
+<span>RuSIEM</span>
+<span>S7 Airlines</span>
+<span>Sber</span>
+<span>scireum GmbH</span>
+<span>Segment</span>
+<span>sembot.io</span>
+<span>SEMrush</span>
+<span>Sentry</span>
+<span>seo.do</span>
+<span>SGK</span>
+<span>Sina</span>
+<span>SMI2</span>
+<span>Spark New Zealand</span>
+<span>Splunk</span>
+<span>Spotify</span>
+<span>Staffcop</span>
+<span>Suning</span>
+<span>Teralytics</span>
+<span>Tencent</span>
+<span>Tencent</span>
+<span>Tencent Music Entertainment (TME)</span>
+<span>Tinybird</span>
+<span>Traffic Stars</span>
+<span>Uber</span>
+<span>UTMSTAT</span>
+<span>VKontakte</span>
+<span>VMWare</span>
+<span>Walmart Labs</span>
+<span>Wargaming</span>
+<span>Wildberries</span>
+<span>Wisebits</span>
+<span>Workato</span>
+<span>Xenoss</span>
+<span>Xiaoxin Tech</span>
+<span>Ximalaya</span>
+<span>Yandex Cloud</span>
+<span>Yandex DataLens</span>
+<span>Yandex Market</span>
+<span>Yandex Metrica</span>
+<span>Yotascale</span>
+<span>ЦВТ</span>
+<span>МКБ</span>
+<span>ЦФТ</span>
+<span>Цифровой Рабочий</span>
+<span>kakaocorp</span>
+<span>ООО «МПЗ Богородский»</span>
+<span>Tesla</span>
+</p>
+</section>
+
+<section class="slide">
+<h2>Сообщество ClickHouse</h2>
+<pre style="margin-top: -1em;">:) SELECT * FROM system.contributors
+
+┌─name──────────────────────────────────┐
+│ Olga Khvostikova                      │
+│ abdrakhmanov                          │
+│ Mikhail Filimonov                     │
+│ Jason                                 │
+│ achulkov2                             │
+│ Veniamin Gvozdikov                    │
+  ...
+│ Artemeey                              │
+│ ivanzhukov                            │
+│ Ilya Khomutov                         │
+└───────────────────────────────────────┘
+
+1067 rows in set.</pre>
+</section>
+
+
+<section class="slide">
+<h2>Способы вовлечения сообщества</h2>
+
+<p><b>Низкий порог входа:</b><br/>
+&mdash; простота и понятность кода, наличие design docs;<br/>
+&mdash; хорошо документированный код &mdash; как учебник.</p>
+
+<p><b>Открытый не только код, но и процессы:</b><br/>
+&mdash; разработка open-source продукта может быть реалити-шоу!</p>
+
+<p><b>Основные разработчики используют те же инструменты, что и внешние:</b><br/>
+&mdash; отправляют pull requests и мержат их по одинаковым правилам.</p>
+
+<p><b>Обсуждения и планы доступны снаружи:</b><br/>
+&mdash; контрибьютор может выбрать для реализации крупную задачу,<br/>и обсудить способы её реализации.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Зачем?</h2>
+<p>Принципы успешного open-source:</p>
+<p>&mdash; решать востребованную задачу;<br/>
+&mdash; делать это лучше других*.</p>
+<p>Цель:</p>
+<p><b>ClickHouse должен быть выбором по-умолчанию<br/>в качестве open-source аналитической СУБД</b></p>
+<p>&mdash; единственным правильным, очевидным решением<br/>для соответствующего круга задач;</p>
+<p>&mdash; и об этом все должны знать :)</p>
+<p style="font-size: 14px; color: #888;">* &mdash; это условие не является ни необходимым, ни достаточным;</p>
+</section>
+
+<section class="slide">
+<h2>История</h2>
+<p>2020..2021:</p>
+<p>Компании с сервисами на основе ClickHouse.<br/>
+<span style="color: gray;">Hydrolix, Tinybird, Gigapipe, LogTail...</span></p>
+<p>Появление ClickHouse в других облаках.<br/>
+<span style="color: gray;">Alibaba, Tencent, Huawei, Bytedance, JD, Altinity, Mail.ru, Sber...</span></p>
+<p>Множество предложений от инвесторов<br/>по созданию отдельной компании.</p>
+<p>2021 &mdash; обсуждение вариантов с руководством и советом директоров.</p>
+</section>
+
+<section class="slide" style="background: url('pictures/discussion.jpg') no-repeat; background-size: 100%;">
+</section>
+
+<section class="slide">
+<h2>Что такое ClickHouse, Inc?</h2>
+<p><b>Это &mdash; дерзкий международный стартап.</b></p>
+<p>Распределённая команда, найм в Европе, США,<br/>
+&emsp; а также возможен в России и Китае.</p>
+</section>
+
+<section class="slide">
+<h2>Люди</h2>
+<p style="margin-top: -1em;"><b>Aaron Katz</b>, CEO - ex. Elastic, Salesforce.</p>
+<p><b>Yuri Izrailevsky</b>, President of Engineering - ex. Google, Netflix.</p>
+<div style="float: right; line-height: 0; margin-right: -50px;">
+    <img style="width: 100px;" src="pictures/people1.jpg"/><img style="width: 100px;" src="pictures/people2.jpg"/><img style="width: 100px;" src="pictures/people3.jpg"/><img style="width: 100px;" src="pictures/people4.jpg"/><img style="width: 100px;" src="pictures/people5.jpg"/>
+    <br/><img style="width: 100px;" src="pictures/people6.jpg"/><img style="width: 100px;" src="pictures/people7.jpg"/><img style="width: 100px;" src="pictures/people8.jpg"/><img style="width: 100px;" src="pictures/people9.jpg"/><img style="width: 100px;" src="pictures/people10.jpg"/>
+    <br/><img style="width: 100px;" src="pictures/people11.jpg"/><img style="width: 100px;" src="pictures/people12.jpg"/><img style="width: 100px;" src="pictures/people13.jpg"/><img style="width: 100px;" src="pictures/people14.jpg"/><img style="width: 100px;" src="pictures/people15.jpg"/>
+    <br/><b>...</b>
+</div>
+<img style="width: 50%; margin-left: -50px" src="pictures/founders.webp">
+</section>
+
+<section class="slide">
+<h2>Люди</h2>
+<img style="width: 100%;" src="pictures/home.webp" />
+<p>Вся команда ClickHouse перешла в ClickHouse,<br/>
+чтобы работать в ClickHouse над ClickHouse.</p>
+</section>
+
+<section class="slide">
+<div style="float: right; line-height: 1;">
+    <img style="height: 150px;" src="pictures/peter-fenton.jpg"/><br/>
+    <img style="height: 150px;" src="pictures/mike-volpi.jpg"/><br/>
+    <img style="height: 150px;" src="pictures/arkady-volozh.jpg"/>
+</div>
+<h2>Инвесторы</h2>
+<p>Yandex, Index, Benchmark</p>
+<p>... и ещё несколько.</p>
+<p>Раунд A - $50 млн,
+<br/>оценка не разглашается,
+<br/>доли не разглашаются.</p>
+</section>
+
+<section class="slide">
+<h2>Миссия компании</h2>
+<p>1. Сделать ClickHouse аналитической СУБД №1 в мире.</p>
+<p>2. Сделать лучшие коммерческие сервисы для ClickHouse.</p>
+<p>3. Захватить рынок решений для ClickHouse.</p>
+<p style="color: gray;">4. Ничего не испортить.</p>
+</section>
+
+<section class="slide">
+<h2>И ещё</h2>
+<p>Есть много классных технологий!</p>
+<p>Давайте ещё что-нибудь выложим в open-source?</p>
+</section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+
