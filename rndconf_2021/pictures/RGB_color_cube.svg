@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Generator: Adobe Illustrator 13.0.0, SVG Export Plug-In . SVG Version: 6.00 Build 14948)  -->
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" id="Ebene_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="1092px" height="306px" viewBox="5 5 728 204" enable-background="new 5 5 728 204">
+
+<defs>
+
+	<marker id="white_arrow_head" markerWidth="6" markerHeight="6" refX="10" refY="6" orient="auto" viewBox="0 0 12 12">
+	  <path d="M0,0 v12 L12,6 z" fill="white"/>
+	</marker>
+
+	<marker id="black_arrow_head" markerWidth="6" markerHeight="6" refX="10" refY="6" orient="auto" viewBox="0 0 12 12">
+	  <path d="M0,0 v12 L12,6 z" fill="black"/>
+	</marker>
+
+  <style type="text/css">
+
+    .inner_grid_on_dark {stroke:white}
+    .inner_grid_on_bright {stroke:black}
+    .outer_grid {stroke:black; fill:none}
+
+		text {font-family:DejaVu Sans,Liberation Sans, Arial, sans-serif}
+    text.inner_axis_on_dark {font-size:32px; text-anchor:middle; fill:white}
+    text.inner_axis_on_bright {font-size:32px; text-anchor:middle; fill:black}
+    .explanation_text { font-size:9px; text-anchor:end; fill:white}
+    text.outer_axis {font-size:22px; text-anchor:middle}
+    text.outer_axis_smaller {font-size:14px; text-anchor:middle}
+
+    .explanation_line {stroke:white;}
+    .explanation_arrow {stroke:white;fill:none; marker-end: url(#white_arrow_head)}
+    .inner_arrow_on_dark {stroke-width:3px;fill:none; stroke:white; marker-end: url(#white_arrow_head)}
+    .inner_arrow_on_bright {stroke-width:3px;fill:none; stroke:black; marker-end: url(#black_arrow_head)}
+
+		.mini_grid { stroke:white; stroke-dasharray:1; fill:none }
+    .explanation_circle { fill:#539642; stroke:white; stroke-width:2 }
+
+  </style>
+
+	<symbol id="B_GB" viewBox="-128 -128 256 256">
+		<image overflow="visible" width="256" height="256" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAYAAABccqhmAAAABHNCSVQICAgIfAhkiAAAAAlwSFlz AAAPYQAAD2EBqD+naQAAAx5JREFUeJzt1AEJAEEQxLBZeP+W74U0gVrobXvbTVKvbzcgygAgzAAg zAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAg zAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAg zAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAg zAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAg zAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAg zAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAg zAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAg zAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAg zAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAg zAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAg zAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAg zAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAg zAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAgzAAg zAAgzAAgzAAgzAAgzAAg7AeEIAb7+p29LAAAAABJRU5ErkJggg==" transform="matrix(1 0 0 1 -128 -128)"/>
+	</symbol>
+
+	<symbol id="B_RB" viewBox="-128 -128 256 256">
+		<image overflow="visible" width="256" height="256" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAYAAABccqhmAAAABHNCSVQICAgIfAhkiAAAAAlwSFlz AAAPYQAAD2EBqD+naQAAAx1JREFUeJzt1AEJAEEQxLBZeP+W74U0gVrobXvbTVKv7wZUGQCEGQCE GQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCE GQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCE GQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCE GQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCE GQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCE GQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCE GQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCE GQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCE GQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCE GQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCE GQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCE GQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCE GQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCE GQCEGQCEGQCEGQCEGQCE/YUfBvtEaIT/AAAAAElFTkSuQmCC" transform="matrix(1 0 0 1 -128 -128)"/>
+	</symbol>
+
+	<symbol id="B_RG" viewBox="-128 -128 256 256">
+		<image overflow="visible" width="256" height="256" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAYAAABccqhmAAAABHNCSVQICAgIfAhkiAAAAAlwSFlz AAAPYQAAD2EBqD+naQAAAx1JREFUeJzt1AEJAEEQxLBZeP+W74U0gVrobXu7TVKv7wZUGQCEGQCE GQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCE GQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCE GQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCE GQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCE GQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCE GQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCE GQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCE GQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCE GQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCE GQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCE GQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCE GQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCE GQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCEGQCE GQCEGQCEGQCEGQCEGQCE/YYeBvtUDHeuAAAAAElFTkSuQmCC" transform="matrix(1 0 0 1 -128 -128)"/>
+	</symbol>
+
+	<symbol id="W_B" viewBox="-128 -128 256 256">
+	
+		<image overflow="visible" width="256" height="256" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAYAAABccqhmAAAABHNCSVQICAgIfAhkiAAAAAlwSFlz AAAPYQAAD2EBqD+naQAAAx5JREFUeJzt1AEJAEEQxLB9eP+W54Q0gVrot223O0m9/h1QZQAQZgAQ ZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQ ZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQ ZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQ ZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQ ZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQ ZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQ ZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQ ZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQ ZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQ ZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQ ZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQ ZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQ ZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQ ZgAQZgAQZgAQZgAQZgAQ9gCo8wQa1SrwUwAAAABJRU5ErkJggg==" transform="matrix(1 0 0 1 -128 -128)"/>
+	</symbol>
+
+	<symbol id="W_G" viewBox="-128 -128 256 256">
+		<image overflow="visible" width="256" height="256" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAYAAABccqhmAAAABHNCSVQICAgIfAhkiAAAAAlwSFlz AAAPYQAAD2EBqD+naQAAAx5JREFUeJzt1AEJAEEQxLB9eP+W54Q0gVrot213O0m9/h1QZQAQZgAQ ZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQ ZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQ ZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQ ZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQ ZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQ ZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQ ZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQ ZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQ ZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQ ZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQ ZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQ ZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQ ZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQZgAQ ZgAQZgAQZgAQZgAQZgAQ9gCq4wQafrStoQAAAABJRU5ErkJggg==" transform="matrix(1 0 0 1 -128 -128)">
+		</image>
+	</symbol>
+
+	<symbol id="W_R" viewBox="-128 -128 256 256">
+		<image overflow="visible" width="256" height="256" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAYAAABccqhmAAAABHNCSVQICAgIfAhkiAAAAAlwSFlz AAAPYQAAD2EBqD+naQAAAx5JREFUeJzt1AEJAEEQxLB9eP+W54Q0gVrot213O0m9/tsBUQYAYQYA YQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYA YQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYA YQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYA YQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYA YQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYA YQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYA YQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYA YQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYA YQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYA YQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYA YQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYA YQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYA YQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYAYQYA YQYAYQYAYQYAYQYAYQYAYQ+s0wQaf94YmgAAAABJRU5ErkJggg==" transform="matrix(1 0 0 1 -128 -128)">
+		</image>
+	</symbol>
+
+</defs>
+
+<g>
+	
+	<g id="cube_1" class="black_cube">
+
+		<g class="transformed_faces">
+			
+			<g transform="matrix(-0.2885 0.1055 0 -0.483 -286.9285 -297.8369) matrix(1 0 0 1 -1226.6912 -1101.9382)">
+				<use xlink:href="#B_RG" width="256" height="256" x="-128" y="-128" overflow="visible"/>
+				<g transform="rotate(180) translate(0,110)">
+					<text class="inner_axis_on_dark">G+</text>
+					<path class="inner_arrow_on_dark" d="M30,5 h-75"/>
+				</g>
+			</g>
+
+			<g transform="matrix(0.408 7.449998e-002 0 -0.483 -197.7751 -301.8052) matrix(1 0 0 1 867.4027 -700.2046)">
+				<use xlink:href="#B_RB" width="256" height="256" x="-128" y="-128" overflow="visible"/>
+				<g transform="scale(0.95,-0.95) translate(-90,40)">
+					<text class="inner_axis_on_dark">R+</text>
+					<path class="inner_arrow_on_dark" d="M-30,10 v-55"/>
+				</g>
+				<g transform="scale(0.95,-0.95) translate(-10,118)">
+					<text class="inner_axis_on_dark">B+</text>
+					<path class="inner_arrow_on_dark" d="M-35,5 h70"/>
+				</g>
+			</g>
+
+			<g transform="matrix(0.408 7.449998e-002 -0.2885 0.1055 -234.7039 -226.4771) matrix(1 0 0 1 2379.251 2138.0725)">
+				<use xlink:href="#B_GB" width="256" height="256" x="-128" y="-128" overflow="visible"/>
+			</g>
+
+		</g>
+
+		<g class="grid">
+			<line class="inner_grid_on_dark" x1="208.3" y1="172.4" x2="103.9" y2="153.3"/>
+			<line class="inner_grid_on_dark" x1="103.9" y1="153.3" x2="103.9" y2="29.6"/>
+			<line class="inner_grid_on_dark" x1="103.9" y1="153.3" x2="30" y2="180.3"/>
+			<line class="inner_grid_on_dark" x1="30" y1="56.6" x2="134.5" y2="75.7"/>
+			<line class="inner_grid_on_dark" x1="134.5" y1="75.7" x2="134.5" y2="199.4"/>
+			<line class="inner_grid_on_dark" x1="134.5" y1="75.7" x2="208.3" y2="48.7"/>
+			<polygon class="outer_grid" points="103.9,29.6 208.3,48.7 208.3,172.4 134.5,199.4 30,180.3 30,56.6"/>
+		</g>
+
+	</g>
+
+
+	<g id="cube_2" class="white_cube">
+
+		<g class="transformed_faces">
+			
+			<g transform="matrix(-0.408 -7.449998e-002 0.2885 -0.1055 357.554 52.6631)"> 
+				<use xlink:href="#W_R" width="256" height="256" x="-128" y="-128" overflow="visible"/>
+			</g>
+
+			<g transform="matrix(-0.408 -7.449998e-002 0 0.483 320.6262 127.9912)">
+				<use xlink:href="#W_G" width="256" height="256" x="-128" y="-128" overflow="visible"/>
+				<g transform="scale(-0.95,0.95) translate(90,0)">
+					<text class="inner_axis_on_bright">R-</text>
+					<path class="inner_arrow_on_bright" d="M30,-35 v55"/>
+				</g>
+				<g transform="scale(-0.95,0.95) translate(0,-90)">
+					<text class="inner_axis_on_bright">B-</text>
+					<path class="inner_arrow_on_bright" d="M30,-30 h-70"/>
+				</g>				
+			</g>
+
+			<g transform="matrix(0.2885 -0.1055 0 0.483 409.7776 124.0234)">
+				<use xlink:href="#W_B" width="256" height="256" x="-128" y="-128" overflow="visible"/>
+				<g transform="translate(0,-85)">
+					<text class="inner_axis_on_bright">G-</text>
+					<path class="inner_arrow_on_bright" d="M-40,-30 h70"/>
+				</g>	
+			</g>
+				
+		</g>
+
+		<g class="grid">
+			<line class="inner_grid_on_bright" x1="268.3" y1="56.6" x2="372.8" y2="75.7"/>
+			<line class="inner_grid_on_bright" x1="372.8" y1="75.7" x2="372.8" y2="199.4"/>
+			<line class="inner_grid_on_bright" x1="372.8" y1="75.7" x2="446.6" y2="48.7"/>
+			<polygon class="outer_grid" points="342.3,29.6 446.6,48.7 446.6,172.4 372.8,199.4 268.3,180.3 268.3,56.6"/>			
+		</g>
+
+	</g>
+
+
+	<g id="cube_3" class="black_cube">
+		
+		<g class="transformed_faces">	
+				<use xlink:href="#B_RG" width="256" height="256" x="-128" y="-128" transform="matrix(-0.2885 0.1055 0 -0.483 543.5715 104.9834)" overflow="visible"/>
+				<use xlink:href="#B_RB" width="256" height="256" x="-128" y="-128" transform="matrix(0.408 7.449998e-002 0 -0.483 632.7249 101.0151)" overflow="visible"/>
+				<use xlink:href="#B_GB" width="256" height="256" x="-128" y="-128" transform="matrix(0.408 7.449998e-002 -0.2885 0.1055 595.7961 176.3438)" overflow="visible"/>
+		</g>
+
+		<g class="grid">
+			<line class="inner_grid_on_dark" x1="684.9" y1="172.4" x2="580.5" y2="153.3"/>
+			<line class="inner_grid_on_dark" x1="684.9" y1="172.4" x2="580.5" y2="153.3"/>
+			<line class="inner_grid_on_dark" x1="580.5" y1="153.3" x2="580.5" y2="29.6"/>
+			<line class="inner_grid_on_dark" x1="580.5" y1="153.3" x2="506.6" y2="180.3"/>
+			<line class="inner_grid_on_dark" x1="506.6" y1="56.6" x2="611.1" y2="75.7"/>
+			<line class="inner_grid_on_dark" x1="611.1" y1="75.7" x2="611.1" y2="199.4"/>
+			<line class="inner_grid_on_dark" x1="611.1" y1="75.7" x2="684.9" y2="48.7"/>
+			<polygon class="outer_grid on_dark" points="580.5,29.6 684.9,48.7 684.9,172.4 611.1,199.4 506.6,180.3 506.6,56.6"/>
+		</g>
+		
+		<g class="mini_grid">
+			<line x1="607.8" y1="118.3" x2="564.4" y2="134.2"/>
+			<line x1="564.4" y1="134.2" x2="537.1" y2="129.2"/>
+			<line x1="564.4" y1="134.2" x2="564.4" y2="174.2"/>
+			<polygon points="580.5,113.3 607.8,118.3 607.8,158.3 564.4,174.2 537.1,169.2 537.1,129.2"/>
+		</g>
+
+		<g class="explanation">
+			<line class="explanation_line" x1="560.6" y1="129.3" x2="548.8" y2="117"/>
+			<polyline class="explanation_arrow" points="553.4,181.8 544.4,181.8 537.2,171.6"/>
+			<polyline class="explanation_arrow" points="644,151.6 620.1,151.6 610.1,157.2"/>	
+			<polyline class="explanation_arrow" points="609,106.5 588.6,106.5 581.7,112.1"/>
+			<circle class="explanation_circle" cx="564.4" cy="134.2" r="7.5"/>
+			<g class="explanation_text">
+				<g transform="matrix(1 0 0 1 535 98)">
+					<text>R</text>  <text x="5">:</text>  <text x="25">83</text>
+				</g>
+				<g transform="matrix(1 0 0 1 535 106)">
+					<text>G</text>  <text x="5">:</text>	<text x="25">150</text>
+				</g>
+				<g transform="matrix(1 0 0 1 535 114)">
+					<text>B</text>	<text x="5">:</text>	<text x="25">60</text>
+				</g>
+				<text transform="matrix(1 0 0 1 585 184)">G: 150</text>
+				<text transform="matrix(1 0 0 1 645 150.208)">B: 60</text>
+				<text transform="matrix(1 0 0 1 610 104.5)">R: 83</text>
+		  </g>
+		</g>
+
+	</g>
+
+	<g>
+		<g>
+			<text class="outer_axis" transform="matrix(1 0 0 1 104 26)">R</text>
+			<text class="outer_axis" transform="matrix(1 0 0 1 18 190)">G</text>
+			<text class="outer_axis" transform="matrix(1 0 0 1 219 180)">B</text>
+		</g>
+		<g transform="matrix(1 0 0 1 238 0)">
+			<text class="outer_axis" transform="matrix(1 0 0 1 104 26)">R</text>
+			<text class="outer_axis" transform="matrix(1 0 0 1 18 190)">G</text>
+			<text class="outer_axis" transform="matrix(1 0 0 1 219 180)">B</text>
+		</g>
+		<g transform="matrix(1 0 0 1 475 0)">
+			<text class="outer_axis_smaller" transform="matrix(1 0 0 1 104 26)">R 255</text>
+			<text class="outer_axis_smaller" transform="matrix(1 0 0 1 19 194)">G 255</text>
+			<text class="outer_axis_smaller" transform="matrix(1 0 0 1 233 180)">B 255</text>
+		</g>
+	</g>
+
+</g>
+</svg>
