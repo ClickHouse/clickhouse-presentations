@@ -66,12 +66,13 @@ The meetup: [announcement](https://www.percona.com/conferences/percona-live-onli
 
 ## 2021-05-17. HighLoad++ Весна 2021
 
-* Алексей Миловидов. Необычные случаи оптимизации производительности на примере ClickHouse. [slides](highload2021/index.html)
-* Никита Михайлов. Кластер ClickHouse ctrl-с ctrl-v. [slides](highload2021/copier.pdf)
-* Александр Кузьменков. Сегодня я помержил в ClickHouse 30 пул-реквестов, а он всё ещё не тормозит: автотесты производительности. [slides](highload2021/perf-test.pdf)
-* Максим Кита. Zero cost-абстракции на примере хэш-таблиц в ClickHouse С++. [slides](highload2021/hash_tables/index.html)
-* Александр Зайцев. "Прокрустово ложе" или "испанский сапог" — мифы и реальность СУБД в Облаках. [slides](https://www.highload.ru/spring/2021/abstracts/7242)
-* Георгий Грибков. Статический анализ в open-source-проектах на примере разработки ClickHouse
+* Алексей Миловидов. Необычные случаи оптимизации производительности на примере ClickHouse. [slides](highload2021/index.html), [video](https://www.youtube.com/watch?v=GW07RZVpH4M)
+* Никита Михайлов. Кластер ClickHouse ctrl-с ctrl-v. [slides](highload2021/copier.pdf), [video](https://www.youtube.com/watch?v=VrTsxMcX4ZA)
+* Александр Кузьменков. Сегодня я помержил в ClickHouse 30 пул-реквестов, а он всё ещё не тормозит: автотесты производительности. [slides](highload2021/perf-test.pdf), [video](https://www.youtube.com/watch?v=_4HdQqR4kZQ)
+* Максим Кита. Zero cost-абстракции на примере хэш-таблиц в ClickHouse С++. [slides](highload2021/hash_tables/index.html), [video](https://www.youtube.com/watch?v=qcKwkmzwM_E)
+* Александр Зайцев. "Прокрустово ложе" или "испанский сапог" — мифы и реальность СУБД в Облаках. [slides](https://www.highload.ru/spring/2021/abstracts/7242), [video](https://www.youtube.com/watch?v=MyMl3NN13HQ)
+* Егор Маслов. Мониторинг большого количества движущихся по карте объектов. [slides](https://www.highload.ru/spring/2021/abstracts/7661), [video](https://www.youtube.com/watch?v=td541Uo1EKQ)
+* Георгий Грибков. Статический анализ в open-source-проектах на примере разработки ClickHouse [slides](https://www.highload.ru/spring/2021/abstracts/6479), [video](https://www.youtube.com/watch?v=iOXyKRmUxb8)
 
 Мероприятиe: [aнонс](https://www.highload.ru/spring/2021)
 
