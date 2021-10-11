@@ -2,8 +2,8 @@
 
 ## 2021-08-25. SF Bay Area ClickHouse August Community Meetup (#54)
 
-* Building an observability platform with Clickhouse as storage -- Ankit Nayan, CTO of SigNoz. [slides](meetup54/signoz.pdf)
-* Zookeeper is going away! -- Alexander Sapin, Yandex. [slides](meetup54/keeper.pdf), [video](https://youtu.be/DrrijIv4HPI)
+* Building an observability platform with Clickhouse as storage -- Ankit Nayan, CTO of SigNoz. [slides](meetup54/signoz.pdf), [video](https://youtu.be/IfgtdU1Mrm0?t=651)
+* Zookeeper is going away! -- Alexander Sapin, Yandex. [slides](meetup54/keeper.pdf), [video](https://youtu.be/IfgtdU1Mrm0?t=2682)
 
 The meetup: [announcement](https://www.meetup.com/San-Francisco-Bay-Area-ClickHouse-Meetup/events/279109379/).
 
@@ -57,8 +57,8 @@ The meetup: [announcement](https://www.meetup.com/San-Francisco-Bay-Area-ClickHo
 
 * Amos Bird - kuaishou.com - Projections in ClickHouse. [slides](percona2021/projections.pdf). [video](https://youtu.be/jJ5VuLr2k5k?list=PLWhC0zeznqkkNYzcvHEfZ8hly3Cu9ojKk)
 * ClickHouse 2021: New Features and Roadmap. [slides](percona2021/index.html). [video](https://youtu.be/t7mA1aOx3tM?list=PLWhC0zeznqkkNYzcvHEfZ8hly3Cu9ojKk)
-* Robert Hodges and Alexander Zaitsev - ClickHouse Developer Tutorial, Part 1. [video](https://youtu.be/WVk5_tQ-wx8?list=PLWhC0zeznqkkNYzcvHEfZ8hly3Cu9ojKk)
-* Robert Hodges and Alexander Zaitsev- Altinity -ClickHouse Developer Tutorial, Part 2 - Lab Exercises. [video](https://youtu.be/j1vU43gbcd8?list=PLWhC0zeznqkkNYzcvHEfZ8hly3Cu9ojKk)
+* Robert Hodges and Alexander Zaitsev (Altinity). ClickHouse Developer Tutorial, Part 1. [video](https://youtu.be/WVk5_tQ-wx8?list=PLWhC0zeznqkkNYzcvHEfZ8hly3Cu9ojKk)
+* Robert Hodges and Alexander Zaitsev (Altinity). ClickHouse Developer Tutorial, Part 2 - Lab Exercises. [video](https://youtu.be/j1vU43gbcd8?list=PLWhC0zeznqkkNYzcvHEfZ8hly3Cu9ojKk)
 * A Tale of Two Communities: How Open Source, ClickHouse and Superset Help Visualize Your Data. [video](https://youtu.be/GmLnGV3Phic?list=PLWhC0zeznqkkNYzcvHEfZ8hly3Cu9ojKk)
 * Stephen Borg - Fun and Games: Why We Picked ClickHouse To Drive Gaming Analytics at GiG. [video](https://youtu.be/vkYvuIs1KcU?list=PLWhC0zeznqkkNYzcvHEfZ8hly3Cu9ojKk&t=7)
 
