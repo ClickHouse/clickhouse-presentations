@@ -142,7 +142,7 @@ The meetup: [announcement 1](https://altinity.com/events/clickhouse-january-virt
 
 ## 2020-11-13. Матемаркетинг-2020
 
-* Алексей Миловидов. Типичные грабли аналитики на примере данных из Git. [slides](https://github.com/ClickHouse/clickhouse-presentations/blob/master/matemarketing_2020/index.html)
+* Алексей Миловидов. Типичные грабли аналитики на примере данных из Git. [slides](https://github.com/ClickHouse/clickhouse-presentations/blob/master/matemarketing_2020/index.html), [video](https://www.youtube.com/watch?v=y8HsXqQEyfE)
 
 Мероприятиe: [aнонс](https://matemarketing.timepad.ru/event/1130936/)
 
