@@ -1,9 +1,21 @@
 # Talks index
 
+## 2021-10-01. Russia Open Source Summit 2021
+
+* Алексей Миловидов. ClickHouse. [slides](ross2021/index.html)
+
+Мероприятиe: [aнонс](https://russiaos.ru/summit/), [видео](https://russiaos.ru/summit/translation/)
+
+## 2020-09-04. RndTechConf 2021 
+
+* Алексей Миловидов. Раскрашиваем логи. [slides](rndconf_2021/index.html)
+
+Мероприятиe: [aнонс](https://rndtech.pro/)
+
 ## 2021-08-25. SF Bay Area ClickHouse August Community Meetup (#54)
 
-* Building an observability platform with Clickhouse as storage -- Ankit Nayan, CTO of SigNoz. [slides](meetup54/signoz.pdf)
-* Zookeeper is going away! -- Alexander Sapin, Yandex. [slides](meetup54/keeper.pdf), [video](https://youtu.be/DrrijIv4HPI)
+* Building an observability platform with Clickhouse as storage -- Ankit Nayan, CTO of SigNoz. [slides](meetup54/signoz.pdf), [video](https://youtu.be/IfgtdU1Mrm0?t=651)
+* Zookeeper is going away! -- Alexander Sapin, Yandex. [slides](meetup54/keeper.pdf), [video](https://youtu.be/IfgtdU1Mrm0?t=2682)
 
 The meetup: [announcement](https://www.meetup.com/San-Francisco-Bay-Area-ClickHouse-Meetup/events/279109379/).
 
@@ -57,8 +69,8 @@ The meetup: [announcement](https://www.meetup.com/San-Francisco-Bay-Area-ClickHo
 
 * Amos Bird - kuaishou.com - Projections in ClickHouse. [slides](percona2021/projections.pdf). [video](https://youtu.be/jJ5VuLr2k5k?list=PLWhC0zeznqkkNYzcvHEfZ8hly3Cu9ojKk)
 * ClickHouse 2021: New Features and Roadmap. [slides](percona2021/index.html). [video](https://youtu.be/t7mA1aOx3tM?list=PLWhC0zeznqkkNYzcvHEfZ8hly3Cu9ojKk)
-* Robert Hodges and Alexander Zaitsev - ClickHouse Developer Tutorial, Part 1. [video](https://youtu.be/WVk5_tQ-wx8?list=PLWhC0zeznqkkNYzcvHEfZ8hly3Cu9ojKk)
-* Robert Hodges and Alexander Zaitsev- Altinity -ClickHouse Developer Tutorial, Part 2 - Lab Exercises. [video](https://youtu.be/j1vU43gbcd8?list=PLWhC0zeznqkkNYzcvHEfZ8hly3Cu9ojKk)
+* Robert Hodges and Alexander Zaitsev (Altinity). ClickHouse Developer Tutorial, Part 1. [video](https://youtu.be/WVk5_tQ-wx8?list=PLWhC0zeznqkkNYzcvHEfZ8hly3Cu9ojKk)
+* Robert Hodges and Alexander Zaitsev (Altinity). ClickHouse Developer Tutorial, Part 2 - Lab Exercises. [video](https://youtu.be/j1vU43gbcd8?list=PLWhC0zeznqkkNYzcvHEfZ8hly3Cu9ojKk)
 * A Tale of Two Communities: How Open Source, ClickHouse and Superset Help Visualize Your Data. [video](https://youtu.be/GmLnGV3Phic?list=PLWhC0zeznqkkNYzcvHEfZ8hly3Cu9ojKk)
 * Stephen Borg - Fun and Games: Why We Picked ClickHouse To Drive Gaming Analytics at GiG. [video](https://youtu.be/vkYvuIs1KcU?list=PLWhC0zeznqkkNYzcvHEfZ8hly3Cu9ojKk&t=7)
 
@@ -66,12 +78,13 @@ The meetup: [announcement](https://www.percona.com/conferences/percona-live-onli
 
 ## 2021-05-17. HighLoad++ Весна 2021
 
-* Алексей Миловидов. Необычные случаи оптимизации производительности на примере ClickHouse. [slides](highload2021/index.html)
-* Никита Михайлов. Кластер ClickHouse ctrl-с ctrl-v. [slides](highload2021/copier.pdf)
-* Александр Кузьменков. Сегодня я помержил в ClickHouse 30 пул-реквестов, а он всё ещё не тормозит: автотесты производительности. [slides](highload2021/perf-test.pdf)
-* Максим Кита. Zero cost-абстракции на примере хэш-таблиц в ClickHouse С++. [slides](highload2021/hash_tables/index.html)
-* Александр Зайцев. "Прокрустово ложе" или "испанский сапог" — мифы и реальность СУБД в Облаках. [slides](https://www.highload.ru/spring/2021/abstracts/7242)
-* Георгий Грибков. Статический анализ в open-source-проектах на примере разработки ClickHouse
+* Алексей Миловидов. Необычные случаи оптимизации производительности на примере ClickHouse. [slides](highload2021/index.html), [video](https://www.youtube.com/watch?v=GW07RZVpH4M)
+* Никита Михайлов. Кластер ClickHouse ctrl-с ctrl-v. [slides](highload2021/copier.pdf), [video](https://www.youtube.com/watch?v=VrTsxMcX4ZA)
+* Александр Кузьменков. Сегодня я помержил в ClickHouse 30 пул-реквестов, а он всё ещё не тормозит: автотесты производительности. [slides](highload2021/perf-test.pdf), [video](https://www.youtube.com/watch?v=_4HdQqR4kZQ)
+* Максим Кита. Zero cost-абстракции на примере хэш-таблиц в ClickHouse С++. [slides](highload2021/hash_tables/index.html), [video](https://www.youtube.com/watch?v=qcKwkmzwM_E)
+* Александр Зайцев. "Прокрустово ложе" или "испанский сапог" — мифы и реальность СУБД в Облаках. [slides](https://www.highload.ru/spring/2021/abstracts/7242), [video](https://www.youtube.com/watch?v=MyMl3NN13HQ)
+* Егор Маслов. Мониторинг большого количества движущихся по карте объектов. [slides](https://www.highload.ru/spring/2021/abstracts/7661), [video](https://www.youtube.com/watch?v=td541Uo1EKQ)
+* Георгий Грибков. Статический анализ в open-source-проектах на примере разработки ClickHouse [slides](https://www.highload.ru/spring/2021/abstracts/6479), [video](https://www.youtube.com/watch?v=iOXyKRmUxb8)
 
 Мероприятиe: [aнонс](https://www.highload.ru/spring/2021)
 
@@ -129,7 +142,7 @@ The meetup: [announcement 1](https://altinity.com/events/clickhouse-january-virt
 
 ## 2020-11-13. Матемаркетинг-2020
 
-* Алексей Миловидов. Типичные грабли аналитики на примере данных из Git. [slides](https://github.com/ClickHouse/clickhouse-presentations/blob/master/matemarketing_2020/index.html)
+* Алексей Миловидов. Типичные грабли аналитики на примере данных из Git. [slides](https://github.com/ClickHouse/clickhouse-presentations/blob/master/matemarketing_2020/index.html), [video](https://www.youtube.com/watch?v=y8HsXqQEyfE)
 
 Мероприятиe: [aнонс](https://matemarketing.timepad.ru/event/1130936/)
 
