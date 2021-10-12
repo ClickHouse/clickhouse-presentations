@@ -1,5 +1,17 @@
 # Talks index
 
+## 2021-10-01. Russia Open Source Summit 2021
+
+* Алексей Миловидов. ClickHouse. [slides](ross2021/index.html)
+
+Мероприятиe: [aнонс](https://russiaos.ru/summit/), [видео](https://russiaos.ru/summit/translation/)
+
+## 2020-09-04. RndTechConf 2021 
+
+* Алексей Миловидов. Раскрашиваем логи. [slides](rndconf_2021/index.html)
+
+Мероприятиe: [aнонс](https://rndtech.pro/)
+
 ## 2021-08-25. SF Bay Area ClickHouse August Community Meetup (#54)
 
 * Building an observability platform with Clickhouse as storage -- Ankit Nayan, CTO of SigNoz. [slides](meetup54/signoz.pdf), [video](https://youtu.be/IfgtdU1Mrm0?t=651)
