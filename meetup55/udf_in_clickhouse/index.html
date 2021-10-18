@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>JIT in ClickHouse</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+        code { display: block; white-space: pre; background-color: #EEE; }
+   </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>UDF in ClickHouse</h1>
+    </header>
+
+    <section class="slide" id="cover">
+        <h1 style="margin-top: 150px">UDF in ClickHouse</h1>
+    </section>
+
+    <section class="slide">
+        <h2>About me</h2>
+        <p>Maksim, developer of ClickHouse.</p>
+    </section>
+
+    <section class="slide">
+        <h2>SQL UDF</h2>
+
+        <code>CREATE FUNCTION name AS (parameter0,...) -> expression</code>
+        <br>
+        <code>CREATE FUNCTION a_plus_b AS (a, b) -> a + b;</code>
+        <br>
+        <code>SELECT a_plus_b(1, 2);</code>
+        <code>
+┌─plus(1, 2)─┐
+│          3 │
+└────────────┘
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>SQL UDF</h2>
+
+        <p>Syntax</p>
+
+        <code>CREATE FUNCTION name AS (parameter0,...) -> expression</code>
+        <br>
+
+        <p>1. Recursive functions are not allowed.</p>
+        <p>2. All identifiers used by a function must be specified in its parameter list.</p>
+        <p>3. The name of a function must be unique among user defined and system functions.</p>
+    </section>
+
+    <section class="slide">
+        <h2>SQL UDF</h2>
+
+        <p>Persistence</p>
+        <p>Stored in configuration_path/user_defined folder as SQL script</p>
+
+        <code>CREATE FUNCTION a_plus_b AS (a, b) -> a + b;</code>
+        <br>
+
+        <code>cat ../user_defined/function_a_plus_b.sql</code>
+        <br>
+        <code>
+CREATE FUNCTION a_plus_b AS (a, b) -> (a + b)
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>SQL UDF</h2>
+
+        <p>Introspection</p>
+
+        <code>CREATE FUNCTION a_plus_b AS (a, b) -> a + b;</code>
+        <br>
+        <code>SELECT name, create_query FROM system.functions
+WHERE origin = 'SQLUserDefined'</code>
+        <br>
+        <code style="font-size: 22px;">
+┌─name─────┬─create_query──────────────────────────────────┐
+│ a_plus_b │ CREATE FUNCTION a_plus_b AS (a, b) -> (a + b) │
+└──────────┴───────────────────────────────────────────────
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>SQL UDF</h2>
+
+        <p>Optimizations</p>
+
+        <code>SELECT a_plus_b(a, b) + c FROM test_table
+WHERE b + c > 5;</code>
+
+        <br>
+        <p>1. JIT Compilation.</p>
+        <p>2. Equal expression optimization.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Executable script</h2>
+
+        <p>1. Fork and execute script.
+        <p>2. Sending data to its stdin using pipe, waiting result in stdout.</p>
+        <p>3. Data is serialized and deserialized using formats (TabSeparated, ...).</p>
+    </section>
+
+    <section class="slide">
+        <h2>Executable script</h2>
+        <p>Example:</p>
+        <code>
+#!/bin/bash
+
+while read read_data;
+    do printf "Key $read_data\n";
+done
+        </code>
+    </section>
+
+
+    <section class="slide">
+        <h2>Executable Dictionary</h2>
+        <p>Example:</p>
+        <code style="font-size: 16px;">
+&lt;dictionary&gt;
+    &lt;name&gt;test_input_executable_dictionary&lt;/name&gt;
+    &lt;source&gt;
+        &lt;executable&gt;
+            &lt;format&gt;TabSeparated&lt;/format&gt;
+            &lt;command&gt;user_scripts/test_input.sh&lt;/command&gt;
+        &lt;/executable&gt;
+    &lt;/source&gt;
+    &lt;layout&gt;&lt;complex_key_direct/&gt;&lt;/layout&gt;
+    &lt;structure&gt;
+        &lt;key&gt;
+            &lt;attribute&gt;&lt;name&lt;key&gt;/name&gt;&lt;type&gt;String&lt;/type&gt;&lt;/attribute&gt;
+        &lt;/key&gt;
+        &gt;attribute&gt;&lt;name&gt;result&lt;/name&gt;&lt;type&gt;String&lt;/type&gt;&gt;/attribute&gt;
+    &lt/structure&gt;
+&lt;/dictionary&gt;
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Executable Dictionary</h2>
+<code>SELECT dictGet('test_input_executable_dictionary', 'result', '1') as result</code>
+<br>
+<code>
+┌─result─┐
+│ Key 1  │
+└────────┘
+</code>
+    </section>
+
+
+    <section class="slide">
+        <h2>Executable Pool</h2>
+        <p>Fork + exec script on each block of data is slow.</p>
+        <p>Create pool of running processes and reuse them during queries.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Executable Pool</h2>
+        <p>1. Pool size. If pool size == 0 then there is no size restrictions.</p>
+        <p>2. Command termination timeout.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Executable</h2>
+        <p>Executable, ExecutablePool dictionaries.</p>
+        <p>Executable, ExecutablePool engines. Executable table function.</p>
+        <p>Executable UDF.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Executable table function</h2>
+        <p>Syntax:</p>
+        <code>executable(script_name_optional_arguments,
+            format,
+            structure,
+            input_queries)</code>
+        <br>
+        <p>Data is processed in streaming fashion.</p>
+        <p>ClickHouse processing input queries and sending their results into process stdin. And simualteneosly read data from process stdout.</p>
+        <p>If more than one input query is passed file descriptor indexes are calculated as i + 2.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Executable table engine</h2>
+        <code style="font-size: 22px;">
+CREATE TABLE test_table (value String)
+ENGINE=Executable('test_input.sh',
+    'TabSeparated',
+    (SELECT 1));
+        </code>
+        <br>
+        <code style="font-size: 22px;">SELECT * FROM test_table;
+        </code>
+        <br>
+        <code style="font-size: 22px;">
+┌─value─┐
+│ Key 1 │
+└───────┘
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Executable pool table engine</h2>
+        <code style="font-size: 22px;">
+CREATE TABLE test_table (value String)
+ENGINE=ExecutablePool('test_input.sh',
+    'TabSeparated',
+    (SELECT 1));
+        </code>
+        <br>
+        <code style="font-size: 22px;">SELECT * FROM test_table;
+        </code>
+        <br>
+        <code style="font-size: 22px;">
+┌─value─┐
+│ Key 1 │
+└───────┘
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Executable pool table engine benchmarks</h2>
+        <p>TODO</p>
+    </section>
+
+    <section class="slide">
+        <h2>Executable UDF</h2>
+<code>
+&lt;function&gt;
+    &lt;type&gt;executable/executable_pool&lt;/type&gt;
+    &lt;name&gt;test_function&lt;/name&gt;
+    &lt;return_type&gt;String&lt;/return_type&gt;
+    &lt;argument&gt;
+        &lt;type&gt;String&lt;/type&gt;
+    &lt;/argument&gt;
+    &lt;format&gt;TabSeparated&lt;/format&gt;
+    &lt;command&gt;test_scripts/test_input.sh&lt;/command&gt;
+&lt;/function&gt;
+</code>
+    </section>
+
+    <section class="slide">
+        <h2>Executable UDF</h2>
+        <code>SELECT test_function('1')</code>
+        <br>
+        <code>
+┌─test_function('1')─┐
+│ Key 1              │
+└────────────────────┘
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Executable UDF</h2>
+        <p>Introspection</p>
+        <code>SELECT name FROM system.functions
+WHERE origin = 'ExecutableUserDefined'</code>
+        <br>
+        <code>
+┌─name──────────┐
+│ test_function │
+└───────────────┘
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Questions?</h2>
+    </section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
