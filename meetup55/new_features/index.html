@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Поразительные возможности ClickHouse</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>Поразительные возможности ClickHouse</h1>
+    </header>
+    <section class="slide" id="cover">
+        <img src="https://clickhouse.tech/images/logo.svg" style="width: 15%; position: absolute; right: 20px; bottom: 20px;" />
+        <h1 style="margin-top: 80px; line-height: 150%; color: black; font-size: 64pt">Поразительные возможности ClickHouse</h1>
+    </section>
+
+<section class="slide">
+<h2>Уже рассказали</h2>
+<p>— SQL UDF, executable UDF;</p>
+<p>— executable table function &amp; dictionary source;</p>
+<p>— full disk encryption;</p>
+<p>— column-level encryption;</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Short-circuit вычисления</h2>
+
+<p style="margin-top: -1em;">Было:</p>
+
+<code style="font-size: 16pt;">SELECT IF(number = 0, 0, 123 % number) FROM numbers(10)</code>
+<p style="color: red;">&mdash; division by zero.</p>
+
+<code style="font-size: 16pt;">SELECT * FROM numbers(10) WHERE number > 0 AND 10 % number > 0</code>
+<p style="color: red;">&mdash; division by zero.</p>
+
+<p>&mdash; обе стороны IF, AND, OR выполняются.</p>
+
+<pre style="font-size: 16pt;">SELECT * FROM
+(
+    SELECT * FROM numbers(10)
+    WHERE number > 0
+)
+WHERE 10 % number > 0</pre>
+<p style="color: red;">&mdash; division by zero.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Short-circuit вычисления</h2>
+
+<p>Сейчас:</p>
+<p style="color: green; font-size: 30pt;">&mdash; всё просто работает как надо.</p>
+<p style="color: green; margin-top: 5em;">Available in 21.9.</p><p>Developer — Pavel Kruglov.</p>
+</section>
+
+<section class="slide">
+<h2>Асинхронные INSERT запросы</h2>
+<p>Возможность делать много частых INSERT.</p>
+<p>Из множества параллельных соединений.</p>
+<p style="color: green;"><b>Без Kafka и без Buffer таблиц!</b></p>
+<p>Множество мелких INSERTs комбинируются вместе<br/>
+в одну пачку в оперативной памяти.</p>
+<p>Вставки надёжные по-умолчанию:<br/>клиент получает ответ, когда данные записаны в таблицу.</p>
+<p style="color: gray;">Available in 21.11-testing.
+<br/>Developer: Anton Popov, Ivan Lezhankin.</p>
+</section>
+
+<section class="slide">
+<h2>ZooKeeper уходит!</h2>
+<p>1. <b>clickhouse-keeper</b> &mdash; 100% совместимый с ZooKeeper<br/>по протоколу и модели данных.</p>
+<p>&mdash; compressed logs and snapshots;
+<br/>&mdash; no issues with zxid overflow;
+<br/>&mdash; no issues with large packets;
+<br/>&mdash; better memory usage;
+<br/>&mdash; no issues with GC and Java heap;</p>
+<p>2. Может запускаться <b>встроенным</b> в clickhouse-server.</p>
+<p>&mdash; нет необходимости в отдельном сервисе;</p>
+<p style="color: gray">Preproduction stage, planned for Q4 2021.
+<br/>Developer: Alexander Sapin.</p>
+</section>
+
+<section class="slide">
+<h2>Поддержка SQL/JSON</h2>
+<p>JSON_EXISTS, JSON_VALUE, JSON_QUERY</p>
+<code style="line-height: 1.5;">SELECT JSON_QUERY(
+    '<span style="color: green;">$.array[*][0 to 2, 4]</span>',
+    '{"array":[[0, 1, 2, 3, 4, 5],
+               [0, -1, -2, -3, -4, -5]]}');</code>
+<p style="color: green; margin-top: 5em;">Available in 21.8.
+<br/>Developers — Ksenia Sumarokova, Konstantin Rudenskii, Denis Semenov.</p>
+</section>
+
+<section class="slide">
+<h2>Support For Semistructured Data</h2>
+<p><b>JSON</b> data type:</p>
+<code>CREATE TABLE games (data JSON) ENGINE = MergeTree;</code>
+<p style="margin-top: 1em;">You can insert arbitrary nested JSONs.</p>
+<p>Types are automatically inferred on INSERT and merge.</p>
+<p>Data is stored in columnar format: columns and subcolumns.</p>
+<p>Query nested data naturally.</p>
+</section>
+
+<section class="slide">
+<h2>Support For Semistructured Data</h2>
+<p style="margin-top: -1em;">Example: NBA games dataset</p>
+
+<code>CREATE TABLE games (data String)
+ENGINE = MergeTree ORDER BY tuple();
+
+SELECT <span style="color: red;">JSONExtractString(data, 'teams', 1, 'name')</span>
+FROM games;</code>
+<p style="margin-top: 0.5em; color: red;">&mdash; 0.520 sec.</p>
+
+<code>CREATE TABLE games (data JSON)
+ENGINE = MergeTree;
+
+SELECT <span style="color: green;">data.teams.name[1]</span> FROM games;</code>
+<p style="margin-top: 0.5em; color: green;">&mdash; 0.015 sec.</p>
+</section>
+
+<section class="slide">
+<h2>Support For Semistructured Data</h2>
+<code style="font-size: 12pt; margin-top: -2em;">DESCRIBE TABLE games
+SETTINGS describe_extend_object_types = 1
+
+name: data
+type: Tuple(                                           &lt;-- inferred type
+    `_id.$oid` String,
+    `date.$date` String,
+    `teams.abbreviation` Array(String),
+    `teams.city` Array(String),
+    `teams.home` Array(UInt8),
+    `teams.name` Array(String),
+    `teams.players.ast` Array(Array(Int8)),
+    `teams.players.blk` Array(Array(Int8)),
+    `teams.players.drb` Array(Array(Int8)),
+    `teams.players.fg` Array(Array(Int8)),
+    `teams.players.fg3` Array(Array(Int8)),
+    `teams.players.fg3_pct` Array(Array(String)),
+    `teams.players.fg3a` Array(Array(Int8)),
+    `teams.players.fg_pct` Array(Array(String)),
+    `teams.players.fga` Array(Array(Int8)),
+    `teams.players.ft` Array(Array(Int8)),
+    `teams.players.ft_pct` Array(Array(String)),
+    `teams.players.fta` Array(Array(Int8)),
+    `teams.players.mp` Array(Array(String)),
+    `teams.players.orb` Array(Array(Int8)),
+    `teams.players.pf` Array(Array(Int8)),
+    `teams.players.player` Array(Array(String)),
+    `teams.players.plus_minus` Array(Array(String)),
+    `teams.players.pts` Array(Array(Int8)),
+    `teams.players.stl` Array(Array(Int8)),
+    `teams.players.tov` Array(Array(Int8)),
+    `teams.players.trb` Array(Array(Int8)),
+    `teams.results.ast` Array(Int8),
+    `teams.results.blk` Array(Int8),
+    `teams.results.drb` Array(Int8),
+    `teams.results.fg` Array(Int8),
+    `teams.results.fg3` Array(Int8),
+    `teams.results.fg3_pct` Array(String),
+    `teams.results.fg3a` Array(Int8),
+    `teams.results.fg_pct` Array(String),
+    `teams.results.fga` Array(Int16),
+    `teams.results.ft` Array(Int8),
+    `teams.results.ft_pct` Array(String),
+    `teams.results.fta` Array(Int8),
+    `teams.results.mp` Array(Int16),
+    `teams.results.orb` Array(Int8),
+    `teams.results.pf` Array(Int8),
+    `teams.results.plus_minus` Array(String),
+    `teams.results.pts` Array(Int16),
+    `teams.results.stl` Array(Int8),
+    `teams.results.tov` Array(Int8),
+    `teams.results.trb` Array(Int8),
+    `teams.score` Array(Int16),
+    `teams.won` Array(Int8))</code>
+</section>
+
+<section class="slide">
+<h2>Support For Semistructured Data</h2>
+<p>Flexible schema.</p>
+<p>You can have columns with strict and flexible schema in one table.</p>
+<p>Queries work <span style="color: green;">as fast as</span> with predefined types!</p>
+<p style="color: gray; margin-top: 5em;">Planned for Q1 2022.
+<br/>Developer: Anton Popov.</p>
+</section>
+
+<section class="slide">
+<h2>Schema Inference From Formats</h2>
+<p style="margin-top: -1em;">Before:</p>
+<code>clickhouse-local --input-format <b>Parquet</b> \
+  --query 'SELECT * FROM table' \
+  <span style="color: red;">--structure</span> '
+    id UInt32, deleted UInt8,
+    type String, by String, time DateTime,
+    text String, dead UInt8, parent UInt32,
+    poll UInt32, kids Array(UInt32),
+    url String, score Int32, title String,
+    parts Array(UInt32), descendants Int32'
+</code>
+<p style="margin-top: 1em;">After:</p>
+<code>clickhouse-local --input-format <b>Parquet</b> \
+  --query 'SELECT * FROM table'
+</code>
+</section>
+
+<section class="slide">
+<h2>Schema Inference From Formats</h2>
+<p>1. No need to specify schema if data already contains it:<br/>
+Native, Arrow, Parquet, ORC, Avro.</p>
+<p>2. Allow to infer schema from text formats:<br/>
+TSV, CSV, JSONEachRow.</p>
+<p>It works for:</p>
+<p>&mdash; clickhouse-local;
+<br/>&mdash; url;
+<br/>&mdash; file;
+<br/>&mdash; s3.</p>
+<p style="color: gray; margin-top: 1em;">Planned for Q1 2022.
+<br/>Developer: Pavel Kruglov.</p>
+</section>
+
+<section class="slide">
+<h2>Text Classification and NLP</h2>
+<p style="line-height: 1.5">1. Tokenization, stemming, lemmatization, synonims (<span style="color: green;">21.9</span>..21.11).
+<br/>&mdash; SELECT arrayMap(word -> lemmatize(word), tokens(text)).</p>
+<p style="color: gray;">Developer: Nikolai Degterinskiy</p>
+<p>2. Charset and language detection (Q4 2021).</p>
+<p style="line-height: 1.5">3. Semi-duplicate text search (21.1).
+<br/>&mdash; min-hash and sim-hash algorithms.</p>
+</section>
+
+<section class="slide">
+<h2>Decoupled Storage</h2>
+<p>ClickHouse over S3:</p>
+<p>&mdash; highly concurrent asynchronous reads (21.11);</p>
+<p>&mdash; parallel processing on multiple compute nodes (Q4);</p>
+<p>&mdash; caching in RAM or local disk with node affinity (Q4);</p>
+<p>&mdash; easy coordination of inserts and merges<br/>&emsp; without ReplicatedMergeTree (Q1 2022);</p>
+<p style="color: green;">Lower cost and higher throughput than EBS volumes.</p>
+<p>Bonus: "web" disk for static hosted datasets (21.10).</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">YAML configuration</h2>
+
+<p>I heard you don't like XML...</p>
+<p>Then ClickHouse will support YAML as an alternative for you.</p>
+
+<code style="font-size: 80%; line-height: 1.2;">logger:
+  level: trace
+  log: /var/log/clickhouse-server/clickhouse-server.log
+  errorlog: /var/log/clickhouse-server/clickhouse-server.err.log
+  size: 1000M
+  count: 10
+http_port: 8123           # Don't worry, YAML configuration
+tcp_port: 9000            # will also contain comments.
+mysql_port: 9004          #
+postgresql_port: 9005     # It's not JSON after all.
+max_connections: 4096
+</code>
+
+<p style="margin-top: 10px; font-size: 14pt; color: gray;">Developer &mdash; Denis Bolonin.</p>
+</section>
+
+
+
+<section class="slide">
+<h2>Удобные мелочи</h2>
+<p>Поддержка импорта и экспорта <b>gz</b>, <b>xz</b>, <b>bz2</b>, <b>zst</b>, <b>lz4</b>.</p>
+
+<p>Это работает для <b>url</b>, <b>file</b>, <b>s3</b>, <b>hdfs</b></p>
+<p>SELECT INTO OUTFILE,<br/><span style="color: green;">INSERT FROM INFILE</span>.</p>
+</section>
+
+<section class="slide">
+<h2>Синтаксис</h2>
+<p>Оператор <b style="font-family: monospace;">::</b> для преобразования типов:</p>
+<code>SELECT x::UInt64,
+       ['Hello', 'world!']::Array(Nullable(String))</code>
+<p style="margin-top: 1em;"><b>$heredoc$</b> для строковых литералов:</p>
+<code>SELECT
+$$
+   Hello, 'C:\WINDOWS\SYSTEM32'
+   world!
+$$</code>
+<p style="margin-top: 2em; color: green;">Developers &mdash; Anton Popov, Maksim Kita.</p>
+</section>
+
+
+<section class="slide">
+<h2>Удобные мелочи</h2>
+<p style="margin-top: -1em;">Тонна улучшений словарей:</p>
+<p>&mdash; поддержка массивов в словарях;
+<br/>&mdash; поддержка Nullable в словарях;
+<br/>&mdash; можно создавать словари только с ключами, без атрибутов;
+<br/>&mdash; complex_key_range_hashed;
+<br/>&mdash; executable_pool источник;
+<br/>&mdash; скорость работы cache словарей;
+<br/>&mdash; dictGetChildren; dictGetDescendants;
+<br/>&mdash; dictGetOrNull;
+</p>
+<p style="color: green; margin-top: -0.5em;">Developer &mdash; Maksim Kita.</p>
+<p>&mdash; поддержка одновременно IPv4/IPv6 в ip_trie;</p>
+<p style="color: green; margin-top: -0.5em;">Developer &mdash; Vladimir Cherkasov.</p>
+</section>
+
+<section class="slide">
+<h2>Удобные мелочи</h2>
+<p>Тонна улучшений словарей:</p>
+<p>Все источники словарей из внешних баз данных
+<br/>позволяют задать явно запрос:</p>
+<code>CREATE DICTIONARY dict
+... SOURCE(PostgreSQL(
+      DB 'db' HOST 'host' PORT 5432 USER 'postgres'
+      QUERY <span style="color: green;">$$
+        SELECT ... FROM t1 INNER JOIN t2 USING (key)
+      $$</span>))</code>
+<p style="margin-top: 2em; color: green;">Developer &mdash; Maksim Kita.</p>
+</section>
+
+<section class="slide">
+<h2>Удобные мелочи</h2>
+<p>Тонна улучшений JOIN:</p>
+<p>&mdash; Приведение типов в секции ON/USING.</p>
+<p>&mdash; Фильтры на таблицу в секции ON.</p>
+<p>&mdash; Преобразования CROSS в INNER JOIN и обратно.</p>
+<p>&mdash; Поддержка join_use_nulls для Array, LowCardinality.</p>
+<p style="margin-top: 2em; color: green;">Developer &mdash; Vladimir Cherkasov.</p>
+</section>
+
+<section class="slide">
+<h2>Удобные мелочи</h2>
+<p>Интерактивный режим <b>clickhouse-local</b>.</p>
+<p>INTERSECT, EXCEPT, ANY, ALL, EXISTS.</p>
+<p>Виртуальная файловая система поверх статических файлов: web disk.</p>
+<p>ALTER ... MATERIALIZE COLUMN.</p>
+<p>SYSTEM RESTORE REPLICA.</p>
+</section>
+
+<section class="slide">
+<h2>Удобные мелочи</h2>
+<p><b>SQLite</b> database engine.</p>
+<p>Integration with <b>S2 Geometry</b>.</p>
+<p><b>s3Cluster</b> table function.</p>
+<p>INFORMATION_SCHEMA.</p>
+<p>Хранение прав доступа в ZooKeeper.</p>
+</section>
+
+<section class="slide">
+<h2>А заметили ли вы, что:</h2>
+<p>ClickHouse уже поддерживает <b>window функции</b>!</p>
+<p>ClickHouse уже поддерживает <b>географические типы данных</b>:
+<br/><b>Point</b>, <b>Ring</b>, <b>Polygon</b>, <b>MultiPolygon</b> и функции:
+<br/>polygonsIntersection, polygonArea, polygonsWithin, ...</p>
+<p>MaterializedMySQL &mdash; <b>change data capture</b> из PostgreSQL.</p>
+</section>
+
+<section class="slide">
+<h2>Улучшения UI</h2>
+<p>Поддержка OPTIONS HTTP запроса,
+<br/><br/>&mdash; чтобы Grafana и Observable работали без прокси.</p>
+<p>Улучшения Play UI:
+<br/><br/>&mdash; графы для EXPLAIN;
+<br/>&mdash; спарклайны;
+<br/>&mdash; ссылки;</p>
+</section>
+
+<section class="slide" style="background: url('pictures/ui1.png') no-repeat; background-size: 100%;">
+</section>
+
+<section class="slide" style="background: url('pictures/ui2.png') no-repeat; background-size: 100%;">
+</section>
+
+<section class="slide">
+<h2>Что дальше</h2>
+</section>
+
+<section class="slide">
+<h2>Support For Transactions</h2>
+<p>ClickHouse is not a transactional DBMS, isn't it?</p>
+<p>But we need transactions to:</p>
+<p>&mdash; do atomic INSERTs to multiple partitions;</p>
+<p>&mdash; do atomic INSERTs to multiple tables and materialzied views;</p>
+<p>&mdash; make multiple SELECT queries from one snapshot.</p>
+<p style="color: gray;">Planned for Q2 2022
+<br/>Developer &mdash; Alexander Tokmakov.</p>
+</section>
+
+<section class="slide">
+<h2>Key-Value Data Marts</h2>
+<p>... And Incremental Aggregation In Memory</p>
+<p>Run GROUP BY query continuously.</p>
+<p>Aggregated data is accumulated in memory.</p>
+<p>It can be queried as a table.</p>
+<p>The server can serve key-value requests with Redis protocol.</p>
+<p><span style="color: green;">Example applications:</span>
+<br/>&mdash; realtime antifraud;
+<br/>&mdash; user profiles and personalization.</p>
+<p style="color: gray;">Planned for summer 2022.</p>
+</section>
+
+<section class="slide">
+<h2>Resource Pools</h2>
+<p>And workload isolation.</p>
+<p style="color: gray;">Planned for summer 2022.</p>
+</section>
+
+<section class="slide">
+<h2>.</h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+
