@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 21.10 Webinar</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 21.10 Webinar</h1>
+    </header>
+    <section class="slide" id="cover">
+        <img src="https://clickhouse.tech/images/logo.svg" style="width: 15%; position: absolute; right: 20px; bottom: 20px;" />
+        <h1 style="margin-top: 80px; line-height: 150%; color: black; font-size: 64pt">ClickHouse<br/>Release 21.10<br/>Webinar</h1>
+    </section>
+
+<section class="slide">
+<h2>Release 21.10 Webinar</h2>
+<p>1. (5 min) The news about ClickHouse, Inc.</p>
+<p>2. (35 min) What's new in ClickHouse 21.10.</p>
+<p>3. (20 min) Q&amp;A.</p>
+</section>
+
+<section class="slide">
+<h2>The News</h2>
+<p>ClickHouse has grown a lot in 2020..2021.</p>
+<p>Especially in the US and Europe.</p>
+<p>...</p>
+<p>We decided to create a company:</p>
+<h2>ClickHouse, Inc.</h2>
+</section>
+
+<section class="slide">
+<h2>What Is ClickHouse, Inc?</h2>
+<p><b>International, <span style="color: green;">independent</span> company.</b></p>
+<p>Incorporated in the US. Headquarters in Amsterdam and Bay Area.</p>
+<p>Distributed team. We are hiring in Europe, the US and all over the world.</p>
+</section>
+
+<section class="slide">
+<h2>ClickHouse, Inc: People</h2>
+<p style="margin-top: -1em;"><b>Aaron Katz</b>, CEO - ex. Elastic, Salesforce.
+<br/><b>Alexey Milovidov</b>, CTO.
+<br/><b>Yuri Izrailevsky</b>, President of Engineering - ex. Google, Netflix.</p>
+<div style="float: right; line-height: 0; margin-right: -50px;">
+    <img style="width: 100px;" src="pictures/people1.jpg"/><img style="width: 100px;" src="pictures/people2.jpg"/><img style="width: 100px;" src="pictures/people3.jpg"/><img style="width: 100px;" src="pictures/people4.jpg"/><img style="width: 100px;" src="pictures/people5.jpg"/>
+    <br/><img style="width: 100px;" src="pictures/people6.jpg"/><img style="width: 100px;" src="pictures/people7.jpg"/><img style="width: 100px;" src="pictures/people8.jpg"/><img style="width: 100px;" src="pictures/people9.jpg"/><img style="width: 100px;" src="pictures/people10.jpg"/>
+    <br/><img style="width: 100px;" src="pictures/people11.jpg"/><img style="width: 100px;" src="pictures/people12.jpg"/><img style="width: 100px;" src="pictures/people13.jpg"/><img style="width: 100px;" src="pictures/people14.jpg"/><img style="width: 100px;" src="pictures/people15.jpg"/>
+    <br/><b>...</b>
+</div>
+<img style="width: 50%; margin-left: -50px" src="pictures/founders.webp">
+<div style="color: gray; font-size: 12pt; text-align: right; width: 43%; line-height: 1;">the list is incomplete -->
+<br/>while I was preparing the slides,
+<br/>we hired even more people</div>
+</section>
+
+<!-- Introductions here -->
+
+<section class="slide">
+<h2 style="font-size: 30pt;">What's New in 21.10</h2>
+<p>Monthly stable release for October.</p>
+</section>
+
+<section class="slide">
+<h2>User Defined Functions</h2>
+<p style="margin-top: -1em;">SQL User Defined Functions (since 21.10)</p>
+<code style="line-height: 1.5;">CREATE FUNCTION ch AS (x) -> (exp(x) + exp(-x)) / 2;
+CREATE FUNCTION getRegionName AS (x)
+    -> dictGet('region', 'name', x);</code>
+
+<p style="margin-top: 1em;">&mdash; the functions are polymorphic;
+<br />&mdash; they are substituted as expressions;
+<br />&mdash; queries are optimized for CSE and JIT compilation;</p>
+
+<p>Limitations:
+<br/>&mdash; no loops;
+<br/>&mdash; no recursion;
+</p>
+</section>
+
+<section class="slide">
+<h2>User Defined Functions</h2>
+<p style="margin-top: -1em;">Introspection:</p>
+<code style="line-height: 1.5; font-size: 14pt;">SELECT name, create_query
+FROM system.functions
+WHERE origin = 'SQLUserDefined'
+
+┌─name─────┬─create_query────────────────────────────────────────┐
+│ ch       │ CREATE FUNCTION ch AS x -> ((exp(x) + exp(-x)) / 2) │
+└──────────┴─────────────────────────────────────────────────────┘</code>
+
+<p style="margin-top: 1em;">Persistence:
+<br />&mdash; functions are stored in /var/lib/clickhouse/<b>user_defined</b>/.</p>
+
+<p>Distributed queries:
+<br/>&mdash; functions should be available on initiator node.</p>
+</section>
+
+<section class="slide">
+<h2>Scriptable Tables</h2>
+<p style="margin-top: -1em;">Data generation and import:</p>
+<code style="font-size: 14pt; line-height: 1.1; margin-top: -0.5em;">CREATE TABLE test ... ENGINE =
+    <b>Executable</b>('my_script', TSV);</code>
+<p style="margin-top: 0.5em;">&mdash; the script should return data in stdout, similar to "file" engine.</p>
+<p>Data transformation:</p>
+<code style="font-size: 14pt; line-height: 1.1; margin-top: -0.5em;">CREATE TABLE test ... ENGINE =
+    <b>Executable</b>('my_script', TSV, (SELECT ...));</code>
+<p style="margin-top: 0.5em;">&mdash; the script will get source stream to stdin and return data in stdout.</p>
+<p>Custom JOIN logic:</p>
+<code style="font-size: 14pt; line-height: 1.1; margin-top: -0.5em;">CREATE TABLE test ... ENGINE =
+    <b>Executable</b>('my_script', TSV, (SELECT ...), (SELECT ...), ...);</code>
+<p style="margin-top: 0.5em;">&mdash; the script will get source stream to stdin and additional streams in fd 3, 4...</p>
+</section>
+
+<section class="slide">
+<h2>Scriptable Tables</h2>
+<p>Two variants:</p>
+<p>&mdash; <b>Executable</b>: script is run on every query;</p>
+<p>&mdash; <b>ExecutablePool</b>: a pool of persistent processes;</p>
+<p>Table function:</p>
+<code style="font-size: 14pt; line-height: 1.1;">SELECT * FROM
+    <b>executable</b>('my_script', TSV, 'x UInt64...');
+
+SELECT * FROM
+    <b>executable</b>('my_script', TSV, 'x UInt64...', (SELECT ...) ...);
+</code>
+</section>
+
+<section class="slide">
+<h2>Scriptable Tables</h2>
+<p>Applications:</p>
+<p>&mdash; loading data from foreign data source;</p>
+<p>&mdash; applying machine-learned models to dataset;</p>
+<p>&mdash; custom processing, e.g. DNS resolution, whois...</p>
+</section>
+
+<section class="slide">
+<h2>User Defined Functions</h2>
+<p>Upcoming:</p>
+<p>&mdash; Scriptable User Defined Functions (since 21.11-testing)</p>
+<code style="font-size: 14pt; line-height: 1.1">&lt;function>
+  &lt;type>executable&lt;/type>
+  &lt;name><b>myPlus</b>&lt;/name>
+  &lt;return_type>UInt64&lt;/return_type>
+  &lt;argument>&lt;type>UInt64&lt;/type>&lt;/argument>
+  &lt;argument>&lt;type>UInt64&lt;/type>&lt;/argument>
+  &lt;format>TabSeparated&lt;/format>
+  &lt;command><b>awk '{ print $1 + $2 }'</b>&lt;/command>
+&lt;/function>
+</code>
+<p style="margin-top: 1em;">&mdash; User Defined Types (21.11 .. 21.12)</p>
+</section>
+
+<section class="slide">
+<h2>Small and Neat Things</h2>
+<p>Transparent support for import &amp; export of compressed data.</p>
+<p>Now we support <b>gz</b>, <b>xz</b>, <b>zst</b> (21.1), <b>bz2</b> (21.9) and <b>lz4</b> (21.10).</p>
+
+<p>It works for <b>url</b>, <b>file</b>, <b>s3</b>, <b>hdfs</b>,</p>
+<p>HTTP Content-Encoding,</p>
+<p>SELECT INTO OUTFILE,<br/>and <span style="color: green;">INSERT FROM INFILE (21.11)</span>.</p>
+</section>
+
+<section class="slide">
+<h2>Small and Neat Things</h2>
+<p>Partitioned export to S3:</p>
+<code style="font-size: 14pt; line-height: 1.5">INSERT INTO TABLE FUNCTION
+    s3('http://test.s3.amazonaws.com/bucket/file<b>{_partition_id}</b>.csv.gz',
+        CSV, 'name String, time DateTime')
+    <b>PARTITION BY</b> toYYYYMMDD(time)
+    VALUES ...
+</code>
+
+<p style="margin-top: 2em;">Upcoming:</p>
+<p>Partitioned export to hdfs, file, url.</p>
+</section>
+
+<section class="slide">
+<h2>Small and Neat Things</h2>
+<p>ALTER ... MATERIALIZE COLUMN:</p>
+<code style="font-size: 14pt; line-height: 1.5">ALTER TABLE t MATERIALIZE COLUMN c;
+    -- write column if it was not materialized.
+
+ALTER TABLE t MATERIALIZE COLUMN c <b>FINAL</b>;
+    -- unconditionally rewrite column on disk.
+</code>
+
+<p style="margin-top: 2em;">Before:</p>
+<code style="font-size: 14pt; line-height: 1.5">ALTER TABLE t UPDATE c = c;    -- unconditionally rewrite column;
+OPTIMIZE TABLE t FINAL;        -- rewrite and merge all table parts.</code>
+</section>
+
+<section class="slide">
+<h2>Small and Neat Things</h2>
+<p>Positional arguments:</p>
+<code style="font-size: 14pt; line-height: 1.5">SELECT domain(URL) AS dom, uniq(UserID) AS u
+    FROM pageviews
+    GROUP BY dom
+    ORDER BY u DESC;
+
+SET enable_positional_arguments = 1;
+
+SELECT domain(URL), uniq(UserID)
+    FROM pageviews
+    GROUP BY <b style="color: green;">1</b>
+    ORDER BY <b style="color: green;">2</b> DESC;
+</code>
+</section>
+
+<section class="slide">
+<h2>What's Next?</h2>
+</section>
+
+<section class="slide">
+<h2>Text Classification and NLP</h2>
+<p style="line-height: 1.5">1. Tokenization, stemming, lemmatization, synonims (21.9..21.11).
+<br/>&mdash; SELECT arrayMap(word -> lemmatize(word), tokens(text)).</p>
+<p>2. Charset and language detection (Q4 2021).</p>
+<p style="line-height: 1.5">3. Semi-duplicate text search (21.1).
+<br/>&mdash; min-hash and sim-hash algorithms.</p>
+</section>
+
+<section class="slide">
+<h2>Asynchronous INSERTs</h2>
+<p>Allow to do many small INSERTS.</p>
+<p>From many concurrent connections.</p>
+<p style="color: green">Without Kafka and Buffer tables!</p>
+<p>Many small INSERTs are combined together<br/>
+and batched in memory.</p>
+<p>Safe by default: every client get response when data is inserted.</p>
+<p style="color: gray;">Available in 21.11-testing</p>
+</section>
+
+<section class="slide">
+<h2>What Else?</h2>
+<p>Learning portal: <a href="https://clickhouse.com/learn/">https://clickhouse.com/<b>learn</b>/</a></p>
+<p>&mdash; step-by-step tutorials and examples!</p>
+
+<p>Full changelog:</p>
+<p><a href="https://github.com/ClickHouse/ClickHouse/blob/master/CHANGELOG.md">https://github.com/ClickHouse/ClickHouse/blob/master/CHANGELOG.md</a></p>
+</section>
+
+<section class="slide">
+<h2>ClickHouse Is Hiring!</h2>
+<p>Calling all visionaries and builders!<br/>
+ClickHouse is growing and expects to double in size. Get in early:</p>
+<p>Apply here: <a href="https://clickhouse.com/careers/">clickhouse.com/careers</a> or <a href="mailto:careers@clickhouse.com">careers@clickhouse.com</a></p>
+<p>Global, fully remote roles available:<br/>
+&mdash; <b>Cloud Software Engineer</b> (Go, Kubernetes)<br/>
+&mdash; Support Engineer<br/>
+&mdash; Core Software Engineer (C++)</p>
+<p>Send feedback: <a href="mailto:feedback@clickhouse.com">feedback@clickhouse.com</a><br/>
+Sign up to our newsletter.</p>
+</section>
+
+<section class="slide">
+<h2>Q&amp;A</h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+
