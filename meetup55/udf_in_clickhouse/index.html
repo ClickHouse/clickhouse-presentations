@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>UDF in ClickHouse</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+        code { display: block; white-space: pre; background-color: #EEE; }
+   </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>UDF in ClickHouse</h1>
+    </header>
+
+    <section class="slide" id="cover">
+        <h1 style="margin-top: 150px">UDF in ClickHouse</h1>
+    </section>
+
+    <section class="slide">
+        <h2>About me</h2>
+        <p>Maksim, developer of ClickHouse.</p>
+    </section>
+
+    <section class="slide">
+        <h2>SQL UDF</h2>
+        <img style="text-align: center; height:60%;" src="pictures/udf_ticket.png"/>
+        <p><a style="font-size:15;" href="https://github.com/ClickHouse/ClickHouse/issues/11">https://github.com/ClickHouse/ClickHouse/issues/11</a></p>
+    </section>
+
+    <section class="slide">
+        <h2>SQL UDF</h2>
+
+        <p>Syntax</p>
+
+        <code>CREATE FUNCTION name AS (parameter0,...) ->
+expression</code>
+        <br>
+
+        <p>1. Recursive functions are not allowed.</p>
+        <p>2. All identifiers used by a function must be specified in its parameter list.</p>
+        <p>3. The name of a function must be unique among user defined and system functions.</p>
+    </section>
+
+    <section class="slide">
+        <h2>SQL UDF</h2>
+
+        <code>CREATE FUNCTION contains AS (string, value) ->
+position(string, value) > 0;</code>
+        <code></code>
+        <br>
+        <code>SELECT contains('Test', 'T') AS result</code>
+        <code>┌─result─┐
+│      1 │
+└────────┘</code>
+    </section>
+
+    <section class="slide">
+        <h2>SQL UDF persistence</h2>
+
+        <p>Stored in configuration_path/user_defined folder as SQL script</p>
+
+        <code>CREATE FUNCTION a_plus_b AS (a, b) -> a + b;</code>
+        <br>
+
+        <code>cat ../user_defined/function_a_plus_b.sql</code>
+        <code>CREATE FUNCTION a_plus_b AS (a, b) -> (a + b)</code>
+    </section>
+
+    <section class="slide">
+        <h2>SQL UDF introspection</h2>
+
+        <code>CREATE FUNCTION a_plus_b AS (a, b) -> a + b;</code>
+        <br>
+        <code>SELECT name, create_query FROM system.functions
+WHERE origin = 'SQLUserDefined'</code>
+        <code style="font-size: 22px;">┌─name─────┬─create_query──────────────────────────────────┐
+│ a_plus_b │ CREATE FUNCTION a_plus_b AS (a, b) -> (a + b) │
+└──────────┴───────────────────────────────────────────────</code>
+    </section>
+
+    <section class="slide">
+        <h2>SQL UDF optimizations</h2>
+
+        <p>SQL UDF is syntax level optimization</p>
+
+        <code >SELECT a_plus_b(a, b) + c FROM test_table
+WHERE b + c > 5;</code>
+
+        <p>Translated into:</p>
+
+        <code>SELECT a + b + c FROM test_table WHERE b + c > 5;</code>
+
+        <p>Optimizations will apply:</p>
+        <p>1. JIT Compilation.</p>
+        <p>2. Common subexpression elimination.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Executable script</h2>
+
+        <p>1. Run child process and execute script.
+        <p>2. Sending data to its stdin using pipe, reading result from stdout.</p>
+        <p>3. Data is serialized and deserialized using native formats (TabSeparated, ...).</p>
+    </section>
+
+    <section class="slide">
+        <h2>Executable script Bash</h2>
+        <p>Example:</p>
+        <code style="font-size: 22px;">#!/bin/bash
+
+while read read_data;
+    do printf "Key $read_data\n";
+done
+</code>
+    </section>
+
+    <section class="slide">
+        <h2>Executable script Python</h2>
+        <p>Example:</p>
+        <code style="font-size: 22px;">#!/usr/bin/python3
+
+import sys
+
+if __name__ == '__main__':
+    for line in sys.stdin:
+        print("Key " + line, end='')
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Executable script C++</h2>
+        <p>Example. Option send_chunk_header is true:</p>
+        <code style="font-size: 22px;">int main(int argc, char **argv)
+{
+    char value[4096]; size_t rows = 0;
+
+    std::cin.tie(nullptr); std::cin.sync_with_stdio(false);
+    std::cout.tie(nullptr); std::cout.sync_with_stdio(false);
+
+    while (std::cin >> rows) {
+        for (size_t i = 0; i < rows; ++i) {
+            std::cin >> value;
+            std::cout << "Key " << value << "\n";
+        }
+        std::cout.flush();
+    }
+    return 0;
+}</code>
+    </section>
+
+    <section class="slide">
+        <h2>ExecutableDictionary</h2>
+        <p>Example:</p>
+        <code style="font-size: 18px;">&lt;dictionary&gt;
+    &lt;name&gt;executable_dictionary&lt;/name&gt;
+    &lt;source&gt;
+        &lt;executable&gt;
+            &lt;format&gt;TabSeparated&lt;/format&gt;
+            &lt;command&gt;user_scripts/script_name&lt;/command&gt;
+        &lt;/executable&gt;
+    &lt;/source&gt;
+    &lt;layout&gt;&lt;complex_key_direct/&gt;&lt;/layout&gt;
+    &lt;structure&gt;
+        &lt;key&gt;
+            &lt;attribute&gt;&lt;name&gt;key&lt;/name&gt;&lt;type&gt;String&lt;/type&gt;&lt;/attribute&gt;
+        &lt;/key&gt;
+        &lt;attribute&gt;&lt;name&gt;result&lt;/name&gt;&lt;type&gt;String&lt;/type&gt;&gt;/attribute&gt;
+    &lt/structure&gt;
+&lt;/dictionary&gt;
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>ExecutableDictionary example</h2>
+<code>SELECT dictGet('executable_dictionary', 'result', '1')
+as result</code>
+<br>
+<code>┌─result─┐
+│ Key 1  │
+└────────┘</code>
+    </section>
+
+    <section class="slide">
+        <h2>ExecutableDictionary benchmark</h2>
+<code>clickhouse-benchmark --query="SELECT
+dictGet('dictionary', 'result', toString(number))
+FROM system.numbers LIMIT 1000000 FORMAT Null"
+--concurrency=3</code>
+<br>
+
+<table style="margin-top: -15px; font-size: 19px;">
+    <tr><td>Dictionary executable Bash: </td><td>16.112 MiB/s</td></tr>
+    <tr><td>Dictionary executable Python: </td><td>196.691 MiB/s</td></tr>
+    <tr><td>Dictionary executable C++: </td><td>264.827 MiB/s</td></tr>
+</table>
+
+    </section>
+
+    <section class="slide">
+        <h2>ExecutablePool</h2>
+        <p>ClickHouse process data in blocks.</p>
+        <p>Overhead of script creation (fork + exec) on each block of data is significant.</p>
+        <p>Script can have state, that need to be created on startup.</p>
+        <p>Solution:</p>
+        <p>Executable Pool. Create pool of running processes and reuse them during queries.</p>
+
+        <p><a style="font-size:15;" href="https://en.wikipedia.org/wiki/FastCGI">https://en.wikipedia.org/wiki/FastCGI</a></p>
+    </section>
+
+    <section class="slide">
+        <h2>ExecutablePool</h2>
+        <p>1. Pool size. If pool size == 0 then there is no size restrictions.</p>
+        <p>2. Command termination timeout. Default 10 seconds.</p>
+
+<code>&lt;source&gt;
+    &lt;executable_pool&gt;
+        &lt;format&gt;TabSeparated&lt;/format&gt;
+        &lt;command&gt;user_scripts/test_input.sh&lt;/command&gt;
+        &lt;pool_size&gt;16&lt;/pool_size&gt;
+        &lt;send_chunk_header&gt;1&lt;send_chunk_header&gt;
+    &lt;/executable_pool&gt;
+&lt;/source&gt;
+</code>
+    </section>
+
+    <section class="slide">
+        <h2>ExecutablePoolDictionary benchmark</h2>
+        <code>clickhouse-benchmark --query="SELECT
+dictGet('dictionary', 'result', toString(number))
+FROM system.numbers LIMIT 1000000 FORMAT Null"
+--concurrency=32</code>
+<br>
+
+<table style="margin-top: -15px; font-size: 19px;">
+    <tr><td>Dictionary executable C++: </td><td>264.827 MiB/s</td></tr>
+    <tr><td>Dictionary executable pool C++: </td><td> 305 MiB/s</td></tr>
+</table>
+
+<span style="color: green"><b>+16% performance improvement for script with zero startup cost</b></span>
+
+    </section>
+
+    <section class="slide">
+        <h2>ExecutablePoolDictionary issues</h2>
+        <p>305 MB/s is too slow. Just for copying data beetween processes.</p>
+
+        <img style="text-align: center; height:60%;" src="pictures/executable_dictionaries_benchmark.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Executable</h2>
+        <p>Executable, ExecutablePool dictionaries.</p>
+        <p>Executable, ExecutablePool engines. Executable table function.</p>
+        <p>Executable user defined functions.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Executable table function</h2>
+        <p>Syntax:</p>
+        <code>executable(script_name_optional_arguments,
+            format,
+            structure,
+            input_queries)</code>
+        <br>
+
+        <p>Data is processed in streaming fashion.</p>
+        <p>ClickHouse process input queries and sending their results into process stdin. And simualteneosly read data from process stdout.</p>
+        <p>If more than one input query is created clickhouse creates pipes for file descriptors starting from 3.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Executable table function example</h2>
+        <code style="font-size: 22px;">SELECT * FROM executable('test_input.sh',
+            'TabSeparated',
+            (SELECT 1))</code>
+        <code style="font-size: 22px;">┌─value─┐
+│ Key 1 │
+└───────┘</code>
+    </section>
+
+    <section class="slide">
+        <h2>Executable table engine</h2>
+        <code style="font-size: 22px;">CREATE TABLE test_table (value String)
+ENGINE=Executable('test_input.sh',
+    'TabSeparated',
+    (SELECT 1));</code>
+        <br>
+        <code style="font-size: 22px;">SELECT * FROM test_table;</code>
+        <code style="font-size: 22px;">┌─value─┐
+│ Key 1 │
+└───────┘</code>
+    </section>
+
+    <section class="slide">
+        <h2>ExecutablePool table engine</h2>
+        <code style="font-size: 22px;">CREATE TABLE test_table (value String)
+ENGINE=ExecutablePool('test_input.sh',
+    'TabSeparated',
+    (SELECT 1));</code>
+        <br>
+        <code style="font-size: 22px;">SELECT * FROM test_table;</code>
+        <code style="font-size: 22px;">┌─value─┐
+│ Key 1 │
+└───────┘</code>
+    </section>
+
+    <section class="slide">
+        <h2>ExecutableEngine example</h2>
+<code>#!/usr/bin/python3
+
+import sys
+
+from essential_generators import DocumentGenerator
+
+if __name__ == '__main__':
+    length = int(sys.argv[1]);
+
+    gen = DocumentGenerator()
+
+    for i in range(0, length):
+        print(gen.sentence())
+</code>
+    </section>
+
+    <section class="slide">
+        <h2>ExecutablePool table engine</h2>
+        <code style="font-size: 22px;">SELECT
+    length(tokens(sentence)) AS token_length,
+    length(sentence)
+FROM executable('sentence_generator.py 10000',
+    'TabSeparated',
+    'sentence String')
+ORDER BY token_length DESC LIMIT 5;
+
+┌─token_length─┬─length(sentence)─┐
+│           22 │              116 │
+│           21 │              110 │
+│           20 │              109 │
+│           20 │               85 │
+│           19 │              112 │
+└──────────────┴──────────────────┘
+</code>
+
+    </section>
+
+    <section class="slide">
+        <h2>Executable UDF</h2>
+<code>&lt;function&gt;
+    &lt;type&gt;executable/executable_pool&lt;/type&gt;
+    &lt;name&gt;test_function&lt;/name&gt;
+    &lt;return_type&gt;String&lt;/return_type&gt;
+    &lt;argument&gt;
+        &lt;type&gt;String&lt;/type&gt;
+    &lt;/argument&gt;
+    &lt;format&gt;TabSeparated&lt;/format&gt;
+    &lt;command&gt;user_scripts/test_input.sh&lt;/command&gt;
+&lt;/function&gt;
+</code>
+    </section>
+
+    <section class="slide">
+        <h2>Executable UDF</h2>
+        <code>SELECT test_function('1')</code>
+        <code>┌─test_function('1')─┐
+│ Key 1              │
+└────────────────────┘</code>
+    </section>
+
+    <section class="slide">
+        <h2>Executable UDF Introspection</h2>
+        <code>SELECT name FROM system.functions
+WHERE origin = 'ExecutableUserDefined'</code>
+        <code>┌─name──────────┐
+│ test_function │
+└───────────────┘</code>
+    </section>
+
+    <section class="slide">
+        <h2>Executable UDF Benchmark</h2>
+        <p></p>
+        <code>./clickhouse-benchmark
+--query="SELECT test_func(toString(number))
+FROM system.numbers LIMIT 100000 FORMAT Null"
+--concurrency=32</code>
+        <br>
+<table style="margin-top: -15px; font-size: 19px;">
+    <tr><td>ClickHouse concat('Key', toString(number)): </td><td>MiB/s: 3829.216</td></tr>
+    <tr><td>Function Bash: </td><td>MiB/s: 20.964</td></tr>
+    <tr><td>Function Python: </td><td>MiB/s: 174.635</td></tr>
+    <tr><td>Function executable C++: </td><td>MiB/s: 574.620</td></tr>
+    <tr><td>Function executable pool C++: </td><td>MiB/s: 859.483</td></tr>
+</table>
+    </section>
+
+    <section class="slide">
+        <h2>Executable UDF Benchmark</h2>
+        <p></p>
+        <img style="text-align: center; height:60%;" src="pictures/executable_udf_benchmark.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Executable UDF Benchmark</h2>
+<code style="font-size: 18px;">ReadBufferFromFileDescriptor read_buffer(0);
+WriteBufferFromFileDescriptor write_buffer(1);
+size_t rows = 0;
+char dummy;
+
+while (!read_buffer.eof()) {
+    readIntText(rows, read_buffer);
+    readChar(dummy, read_buffer);
+
+    for (size_t i = 0; i < rows; ++i) {
+        readString(buffer, read_buffer);
+        readChar(dummy, read_buffer);
+
+        writeString("Key ", write_buffer);
+        writeString(buffer, write_buffer);
+        writeChar('\n', write_buffer);
+    }
+
+    write_buffer.next();
+}</code>
+    </section>
+
+<section class="slide">
+    <h2>Executable UDF Benchmark</h2>
+    <p></p>
+    <code>./clickhouse-benchmark
+--query="SELECT test_func(toString(number))
+FROM system.numbers LIMIT 100000 FORMAT Null"
+--concurrency=32</code>
+    <br>
+<table style="margin-top: -15px; font-size: 19px;">
+<tr><td>ClickHouse concat('Key', toString(number)): </td><td>MiB/s: 3829.216</td></tr>
+<tr><td>Function executable pool C++: </td><td>MiB/s: 859.483</td></tr>
+<tr><td>Function executable pool C++ ClickHouse buffers: </td><td>MiB/s: 1124.672</td></tr>
+</table>
+
+<span style="color: green"><b>+31% performance improvement over basic script</b></span>
+</section>
+
+    </section>
+
+    <section class="slide">
+        <h2>Executable UDF Example</h2>
+<code style="font-size: 18px;">#!/usr/bin/python3
+import sys
+import nltk
+from nltk.sentiment import SentimentIntensityAnalyzer
+
+if __name__ == '__main__':
+    sentiment_analyzer = SentimentIntensityAnalyzer()
+
+    # Read chunk length
+    for number in sys.stdin:
+        length = int(number)
+
+        # Read lines from chunk
+        for _ in range(0, length):
+            line = sys.stdin.readline()
+            score = sentiment_analyzer.polarity_scores(line)
+            print(str(score['compound']) + '\n', end='')
+
+        # Flush results to stdout
+        sys.stdout.flush()
+</code>
+    </section>
+
+    <section class="slide">
+        <h2>Executable UDF Example</h2>
+<code>&lt;function&gt;
+    &lt;type&gt;executable_pool&lt;/type&gt;
+    &lt;name&gt;sentenceScore&lt;/name&gt;
+    &lt;return_type&gt;Double&lt;/return_type&gt;
+    &lt;argument&gt;
+        &lt;type&gt;String&lt;/type&gt;
+    &lt;/argument&gt;
+    &lt;format&gt;TabSeparated&lt;/format&gt;
+    &lt;command&gt;user_scripts/sentence_analyzer&lt;/command&gt;
+    &lt;send_chunk_header&gt;1&lt;/send_chunk_header&gt;
+&lt;/function&gt;
+</code>
+    </section>
+
+    <section class="slide">
+        <h2>Executable UDF Example</h2>
+        <code style="font-size: 18px;">SELECT sentenceScore('ClickHouse is fast') as score</code>
+        <code style="font-size: 18px;">┌─score─┐
+│     0 │
+└───────┘</code>
+        <br>
+
+        <code style="font-size: 18px;">SELECT avg(sentenceScore(sentence)) AS avg_sentence_score
+FROM executable('sentence_generator.py 10000',
+    'TabSeparated',
+    'sentence String')</code>
+    <code style="font-size: 18px;">┌────────────avg_score─┐
+│ 0.030663238759543694 │
+└──────────────────────┘</code>
+    </section>
+
+    <section class="slide">
+        <h2>Questions?</h2>
+    </section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
