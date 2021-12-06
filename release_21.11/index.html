@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 21.11 Webinar</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 21.11 Webinar</h1>
+    </header>
+    <section class="slide" id="cover">
+        <img src="https://clickhouse.tech/images/logo.svg" style="width: 15%; position: absolute; right: 20px; bottom: 20px;" />
+        <h1 style="margin-top: 80px; line-height: 150%; color: black; font-size: 64pt">ClickHouse<br/>Release 21.11<br/>Webinar</h1>
+    </section>
+
+<section class="slide">
+<h2>Release 21.11 Webinar</h2>
+<p>1. (30 min) What's new in ClickHouse 21.11.</p>
+<p>2. (30 min) Q&amp;A.</p>
+</section>
+
+<section class="slide">
+<h2>What's New in 21.11</h2>
+<p>Monthly stable release for November.</p>
+</section>
+
+<section class="slide">
+<h2>Interactive mode for clickhouse-local</h2>
+<p><b>clickhouse-local</b> is like <b>clickhouse-client</b> and <b>clickhouse-server</b> together<br/>
+but without the server.</p>
+<p>Demo.</p>
+</section>
+
+<!--
+
+clickhouse-local --query "SELECT 1 + 2"
+
+echo -e '1,Hello\n2,World' | clickhouse-local --input-format CSV --output-format JSONEachRow --structure 'a UInt8, b String' --query "SELECT * FROM table"
+
+clickhouse-local
+
+SELECT 1 + 2
+
+SELECT * FROM url('https://datasets.clickhouse.com/hackernews.native.zst', Native,
+$$
+    id UInt32,
+    deleted UInt8,
+    type Enum('story' = 1, 'comment' = 2, 'poll' = 3, 'pollopt' = 4, 'job' = 5),
+    by LowCardinality(String),
+    time DateTime,
+    text String,
+    dead UInt8,
+    parent UInt32,
+    poll UInt32,
+    kids Array(UInt32),
+    url String,
+    score Int32,
+    title String,
+    parts Array(UInt32),
+    descendants Int32
+$$) WHERE text ILIKE '%google%' FORMAT Vertical
+-->
+
+<section class="slide">
+<h2>Asynchronous INSERTs</h2>
+<p>Allows to do many small INSERTS.</p>
+<p>From many concurrent connections.</p>
+<p style="color: green">Without Kafka and Buffer tables!</p>
+<p>Many small INSERTs are combined together<br/>
+and batched in memory.</p>
+<p>Safe by default: every client get response when data is inserted.</p>
+<p style="margin-top: 2em; color: gray; font-size: 14pt;">Developer: Anton Popov.</p>
+</section>
+
+<section class="slide">
+<h2>Asynchronous INSERTs</h2>
+<p>Demo.</p>
+</section>
+
+<!--
+clickhouse-client --query "SELECT 'INSERT INTO test.hits2 FORMAT JSONEachRow ' || formatRow('JSONEachRow', *) FROM test.hits LIMIT 1000" > queries.txt
+
+clickhouse-benchmark < queries.txt
+- 200
+
+clickhouse-benchmark -c16 < queries.txt
+- 2000
+
+clickhouse-benchmark -c1000 < queries.txt
+- too many parts
+
+clickhouse-benchmark --async_insert 1 -c1000 < queries.txt
+- 5000
+
+clickhouse-benchmark --async_insert 1 < queries.txt
+- 5
+
+clickhouse-benchmark --async_insert 1 --wait_for_async_insert 0 < queries.txt
+- 3500
+-->
+
+<section class="slide">
+<h2>Scriptable UDF</h2>
+<p>In 21.10 we have introduced <b>SQL UDFs</b><br/>
+and <b>scriptable tables</b>.</p>
+<p>Now we have scriptable UDFs.</p>
+<code style="font-size: 14pt; line-height: 1.1">&lt;function>
+  &lt;type>executable&lt;/type>
+  &lt;name><b>myPlus</b>&lt;/name>
+  &lt;return_type>UInt64&lt;/return_type>
+  &lt;argument>&lt;type>UInt64&lt;/type>&lt;/argument>
+  &lt;argument>&lt;type>UInt64&lt;/type>&lt;/argument>
+  &lt;format>TabSeparated&lt;/format>
+  &lt;command><b>awk '{ print $1 + $2 }'</b>&lt;/command>
+&lt;/function>
+</code>
+<p style="margin-top: 2em; color: gray; font-size: 14pt;">Developer: Maksim Kita.</p>
+</section>
+
+<section class="slide">
+<h2>Scriptable UDF</h2>
+<p>Two variants:<br/>
+<br/><b>executable</b> &mdash; a worker process is run for every block of data;
+<br/><b>executable_pool</b> &mdash; a pool of long running worker processes.</p>
+<p>Multiple processes are run concurrently &mdash; as the number of query threads.</p>
+<p>Data is serialized/deserialized in specified format via stdin/stdout.</p>
+</section>
+
+<section class="slide">
+<h2>Scriptable UDF, Example</h2>
+<code style="font-size: 18px;">#!/usr/bin/python3
+import sys
+import nltk
+from nltk.sentiment import SentimentIntensityAnalyzer
+
+if __name__ == '__main__':
+    sentiment_analyzer = SentimentIntensityAnalyzer()
+
+    # Read chunk length
+    for number in sys.stdin:
+        length = int(number)
+
+        # Read lines from chunk
+        for _ in range(0, length):
+            line = sys.stdin.readline()
+            score = sentiment_analyzer.polarity_scores(line)
+            print(str(score['compound']) + '\n', end='')
+
+        # Flush results to stdout
+        sys.stdout.flush()
+</code>
+</section>
+
+<section class="slide">
+<h2>Executable UDF Example</h2>
+<code>&lt;function&gt;
+    &lt;type&gt;executable_pool&lt;/type&gt;
+    &lt;name&gt;<b>sentenceScore</b>&lt;/name&gt;
+    &lt;return_type&gt;Float64&lt;/return_type&gt;
+    &lt;argument&gt;
+        &lt;type&gt;String&lt;/type&gt;
+    &lt;/argument&gt;
+    &lt;format&gt;TabSeparated&lt;/format&gt;
+    &lt;command&gt;user_scripts/sentence_analyzer&lt;/command&gt;
+    &lt;send_chunk_header&gt;1&lt;/send_chunk_header&gt;
+&lt;/function&gt;
+</code>
+</section>
+
+<section class="slide">
+<h2>Executable UDF Example</h2>
+<code>function:
+    type: executable_pool
+    name: <b>sentenceScore</b>
+    return_type: Float64
+    arguments:
+        - argument:
+            type: UInt64
+    format: TSV
+    command: user_scripts/sentence_analyzer
+</code>
+</section>
+
+<section class="slide">
+        <h2>Executable UDF Example</h2>
+        <code style="font-size: 18px;">SELECT <b>sentenceScore</b>('ClickHouse is fast') as score</code>
+        <code style="font-size: 18px;">┌─score─┐
+│     0 │
+└───────┘</code>
+        <br>
+
+        <code style="font-size: 18px;">SELECT avg(<b>sentenceScore</b>(sentence)) AS avg_sentence_score
+FROM executable('sentence_generator.py 10000',
+    'TabSeparated',
+    'sentence String')</code>
+    <code style="font-size: 18px;">┌────────────avg_score─┐
+│ 0.030663238759543694 │
+└──────────────────────┘</code>
+    </section>
+
+<section class="slide">
+<h2>User Defined Functions</h2>
+<p>Upcoming:</p>
+<p>&mdash; User Defined Types (21.12)</p>
+</section>
+
+<section class="slide">
+<h2>Predefined Connections</h2>
+<p>For external data sources.</p>
+<p>Was: <pre>SELECT * FROM mysql('myserver:3306',
+                    'Northwind', 'Orders',
+                    'user', 'password')</pre></p>
+<p>Now: <pre>SELECT * FROM mysql(mydb, table = 'Orders')</pre></p>
+</section>
+
+<section class="slide">
+<h2>Predefined Connections</h2>
+<code>&lt;named_collections>
+    &lt;postgres1>
+        &lt;user>postgres&lt;/user>
+        &lt;password>mysecretpassword&lt;/password>
+        &lt;host>postgres1&lt;/host>
+        &lt;port>5432&lt;/port>
+        &lt;database>postgres&lt;/database>
+        &lt;table>test_table&lt;/table>
+    &lt;/postgres1>
+    &lt;postgres2>
+        &lt;user>postgres&lt;/user>
+        &lt;password>mysecretpassword&lt;/password>
+        &lt;host>postgres1&lt;/host>
+    &lt;/postgres2>
+&lt;/named_collections>
+</code>
+</section>
+
+<section class="slide">
+<h2>Predefined Connections</h2>
+<p>&mdash; Allow to predefine connection parameters in config file.</p>
+<p>&mdash; Any parameters (address, database/table name, user/password, etc).</p>
+<p>&mdash; Parameters can be overridden in the query.</p>
+<p>&mdash; Work for table engines, table functions and dictionaries.</p>
+<p>&mdash; Work for mysql, postgresql, mongo, s3, remote, hdfs...</p>
+<p>&mdash; Configuration is updated on the fly.</p>
+<p style="margin-top: 2em; color: gray; font-size: 14pt;">Developer: Ksenia Sumarokova.</p>
+</section>
+
+<section class="slide">
+<h2>INFORMATION_SCHEMA</h2>
+<p>SQL standard way for database introspection</p>
+<p>&mdash; for compatibility with tools and protocols.</p>
+<p>Demo</p>
+<p style="margin-top: 2em; color: gray; font-size: 14pt;">Developer: Alexander Tokmakov.</p>
+</section>
+
+<!--
+
+SHOW DATABASES ILIKE 'INFO%'
+SHOW TABLES FROM INFORMATION_SCHEMA LIMIT 10
+
+-->
+
+<section class="slide">
+<h2>Text Processing</h2>
+<p style="line-height: 1.5">1. Tokenization, stemming, lemmatization, synonims (21.9..21.11).
+<br/>&mdash; SELECT arrayMap(word -> lemmatize(word), tokens(text)).</p>
+<p>New function: <b>tokens</b>.</p>
+<code>SELECT tokens('I 💖 ClickHouse')
+
+['I','💖','ClickHouse']</code>
+<p style="margin-top: 2em; color: gray; font-size: 14pt;">Developers: Nikolai Degterinskiy, Maksim Kita.</p>
+</section>
+
+<section class="slide">
+<h2>Text Processing</h2>
+<p style="line-height: 1.5">2. Unicode normalization:
+<br/>normalizeUTF8NFC, normalizeUTF8NFD,
+<br/>normalizeUTF8NFKC, normalizeUTF8NFKD.</p>
+<p>Demo</p>
+<p style="margin-top: 2em; color: gray; font-size: 14pt;">Developer: Slava Boben.</p>
+</section>
+
+<!--
+
+SELECT k, count() FROM Values('k String', ('ёлка'), ('ёлка')) GROUP BY k
+
+SELECT normalizeUTF8NFC(k) AS k, count() FROM Values('k String', ('ёлка'), ('ёлка')) GROUP BY k
+
+-->
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Multidimensional Distances and Norms</h2>
+<p>&mdash; L<sub>1</sub>, L<sub>2</sub>, L<sub>p</sub>, L<sub>∞</sub> spaces, any dimension;</p>
+<p>&mdash; distance, norm, cosine distance functions;
+<p>&mdash; scalar product on tuples and arrays.</p>
+<p>Applications:</p>
+<p>&mdash; analysis of scientific datasets;</p>
+<p>&mdash; analysis of vector embeddings;</p>
+<p>Example: <br/>
+SELECT L2Norm((1, 2, 3)), LpNorm((1, 2, 3), 10), L1Distance((1, 2, 3), (3, 2, 1))</p>
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Alexey Boykov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Small and Neat Things</h2>
+<p>&mdash; EXISTS (subquery).</p>
+<p>&mdash; JOIN condition supports OR.</p>
+<p>&mdash; CapNProto as output format.</p>
+<p>&mdash; OPTIONS HTTP request for CORS.</p>
+<p>&mdash; Binary literals: SELECT 0b101010.</p>
+<p>&mdash; Allow user to change log levels without restart.</p>
+</section>
+
+<section class="slide">
+<h2>FileLog Table Engine</h2>
+<p>&mdash; experimental feature!</p>
+<p>Streming consumption of log files.</p>
+<p>It's like <b>Kafka</b> and <b>RabbitMQ</b> engine<br/>
+but for local append-only logs, e.g. application logs.</p>
+<p>Supports log rotation, tracks offsets...</p>
+<p style="margin-top: 2em; color: gray; font-size: 14pt;">Developers: ucasFL (flynn) and Ksenia Sumarokova.</p>
+</section>
+
+
+<section class="slide">
+<h2>Performance And Reliability</h2>
+<p>Preemptive scheduler for background merges.</p>
+<p>&mdash; lower the chance to get "Too many parts" on insertion.</p>
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Nikita Mikhaylov.</p>
+<p>Make reading from MergeTree over <b>s3</b> to work properly.</p>
+<p>&mdash; it's x100 performance improvement, <br/>like 40 sec -> 394 ms for point query with 100 columns.</p>
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developers: Alexander Sapin, Ksenia Sumarokova, Alexey Milovidov.</p>
+</section>
+
+
+
+<section class="slide">
+<h2>What Else?</h2>
+<p>Learning portal: <a href="https://clickhouse.com/learn/">https://clickhouse.com/<b>learn</b>/</a></p>
+<p>&mdash; step-by-step tutorials and examples!</p>
+
+<p>Full changelog:</p>
+<p><a href="https://github.com/ClickHouse/ClickHouse/blob/master/CHANGELOG.md">https://github.com/ClickHouse/ClickHouse/blob/master/CHANGELOG.md</a></p>
+</section>
+
+<section class="slide">
+<h2>ClickHouse Is Hiring!</h2>
+<p>Calling all visionaries and builders!<br/>
+ClickHouse is growing and expects to double in size. Get in early:</p>
+<p>Apply here: <a href="https://clickhouse.com/careers/">clickhouse.com/careers</a> or <a href="mailto:careers@clickhouse.com">careers@clickhouse.com</a></p>
+<p>Global, fully remote roles available:<br/>
+&mdash; <b>Cloud Software Engineer</b> (Go, Kubernetes)<br/>
+&mdash; Support Engineer<br/>
+&mdash; Core Software Engineer (C++)</p>
+<p>Send feedback: <a href="mailto:feedback@clickhouse.com">feedback@clickhouse.com</a><br/>
+Sign up to our newsletter.</p>
+</section>
+
+<section class="slide">
+<h2>Q&amp;A</h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+
