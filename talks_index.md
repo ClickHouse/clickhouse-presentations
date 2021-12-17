@@ -1,5 +1,11 @@
 # Talks index
 
+## 2021-12-03. YaTalks 2021.
+
+* Алексей Миловидов. ClickHouse: настоящее и будущее. [slides](yatalks_2021/index.html), [видео](https://youtu.be/Ay6_ffxK4us?t=5136)ю
+
+Мероприятиe: [aнонс](https://yatalks.yandex.ru/)
+
 ## 2021-10-01. Russia Open Source Summit 2021
 
 * Алексей Миловидов. ClickHouse. [slides](ross2021/index.html)
