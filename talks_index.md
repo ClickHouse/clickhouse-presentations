@@ -19,7 +19,7 @@ The meetup: [announcement](https://www.huodongxing.com/event/8625502445223), [vi
 
 ## 2021-11-09. Release 21.11 Webinar 
 
-* ClickHouse: Release 21.11 Webinar. [slides](release_21.11/index.html), [blog](https://clickhouse.com/blog/en/2021/clickhouse-v21.11-released/)
+* ClickHouse: Release 21.11 Webinar. [slides](release_21.11/index.html), [video](https://www.youtube.com/watch?v=xb64zoPYvqQ), [blog](https://clickhouse.com/blog/en/2021/clickhouse-v21.11-released/)
 
 ## 2021-10-19. ClickHouse: онлайн-встреча  (#55)
 
