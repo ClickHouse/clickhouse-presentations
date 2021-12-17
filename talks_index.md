@@ -1,5 +1,9 @@
 # Talks index
 
+## 2021-12-16. 
+
+https://clickhouse.com/blog/en/2021/clickhouse-v21.12-released/
+
 ## 2021-12-11. Chinese ClickHouse Community Online Meetup  (#56)
 
 * ClickHouse 中国社区及志愿者介绍 ---ClickHouse中国社区负责人 郭炜. [slides](meetup56/eoi.pdf)
@@ -21,14 +25,14 @@ The meetup: [announcement](https://www.huodongxing.com/event/8625502445223), [vi
 
 * ClickHouse: Release 21.11 Webinar. [slides](release_21.11/index.html), [video](https://www.youtube.com/watch?v=xb64zoPYvqQ), [video (East)](https://www.youtube.com/watch?v=S_kJ4tk8AaI), [blog](https://clickhouse.com/blog/en/2021/clickhouse-v21.11-released/)
 
-## 2021-10-19. ClickHouse: онлайн-встреча  (#55)
+## 2021-10-19. ClickHouse: онлайн-встреча (#55)
 
 * Вступление. [slides](meetup55/intro/index.html)
 * Максим Кита. UDF in ClickHouse. [slides](udf_in_clickhouse/index.html)
 * Виталий Баранов, Артур Филатенков. Шифрование хранимых данных в ClickHouse. [slides](meetup55/Encryption.pdf)
 * Алексей Миловидов. Потрясающие возможности ClickHouse. [slides](meetup55/new_features/index.html)
 
-Мероприятиe: [aнонс](https://events.yandex.ru/events/click-house-19/10/2021), [видео](https://youtu.be/W6h3_xykd2Y)
+Мероприятиe: [aнонс](https://events.yandex.ru/events/click-house-19/10/2021), [видео](https://youtu.be/W6h3_xykd2Y), [blog](https://clickhouse.com/blog/en/2021/clickhouse-october-moscow-meetup/)
 
 ## 2021-10-. STW 2021
 
