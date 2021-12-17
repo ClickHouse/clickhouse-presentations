@@ -2,12 +2,12 @@
 
 ## 2021-12-11. Chinese ClickHouse Community Online Meetup  (#56)
 
-* ClickHouse 中国社区及志愿者介绍 ---ClickHouse中国社区负责人 郭炜  [slides](meetup56/eoi.pdf)
-* ClickHouse New and Incoming Features ---ClickHouse Alexy Milovidov  [slides](meetup56/new_features/index.html)
-* 京东ClickHouse的实践之路 ---京东OLAP架构师 吴建超  [slides](/meetup56/jd.pdf)
-* ClickHouse在政务领域实时数据检索及数据交换实践 ---万山数据 鲁四海  [slides](meetup56/wanshandata.pdf)
-* 基于ClickHouse的海量数据交互式OLAP分析场景实践 B站 胡甫旺  [slides](meetup56/bilibili.pdf)
-* ClickHouse Practice in EOI 擎创科技 余志昌  [slides](meetup56/eoi.pdf)
+* ClickHouse 中国社区及志愿者介绍 ---ClickHouse中国社区负责人 郭炜. [slides](meetup56/eoi.pdf)
+* ClickHouse New and Incoming Features ---ClickHouse Alexy Milovidov. [slides](meetup56/new_features/index.html)
+* 京东ClickHouse的实践之路 ---京东OLAP架构师 吴建超. [slides](/meetup56/jd.pdf)
+* ClickHouse在政务领域实时数据检索及数据交换实践 ---万山数据 鲁四海. [slides](meetup56/wanshandata.pdf)
+* 基于ClickHouse的海量数据交互式OLAP分析场景实践 B站 胡甫旺. [slides](meetup56/bilibili.pdf)
+* ClickHouse Practice in EOI 擎创科技 余志昌. [slides](meetup56/eoi.pdf)
 
 The meetup: [announcement](https://www.huodongxing.com/event/8625502445223), [video](https://www.youtube.com/watch?v=H4m8StggJms)
 
