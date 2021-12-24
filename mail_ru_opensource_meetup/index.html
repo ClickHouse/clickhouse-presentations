@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse OpenSource community</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+        code { display: block; white-space: pre; background-color: #EEE; }
+        p.cloud { text-align: center; line-height: 1.5; }
+        p.cloud span { font-size: 13pt; color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+   </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse OpenSource community</h1>
+    </header>
+
+    <section class="slide" id="cover">
+        <h1 style="margin-top: 150px;">ClickHouse OpenSource community</h1>
+    </section>
+
+    <section class="slide">
+        <h2>About me</h2>
+        <p>Maksim, developer of ClickHouse.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Plan</h2>
+        <p>1. Introduction</p>
+        <p>2. Statistics</p>
+        <p>3. OpenSource community</p>
+        <p>4. Code-review and contribution processes.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Introduction</h2>
+        <p>ClickHouse is an open-source, high performance columnar OLAP database management system for real-time analytics using SQL.</p>
+        <p>
+            <a style="font-size: 15px;" href="https://clickhouse.com/">
+                https://clickhouse.com/
+            </a>
+        </p>
+    </section>
+
+    <section class="slide">
+        <h2>Repository</h2>
+        <p>All development is on GitHub.</p>
+        <p>ClickHouse as of December 24 2021</p>
+        <p>21200 stars</p>
+        <p>4200 forks</p>
+        <p>867 contributors</p>
+        <p>
+            <a style="font-size: 15px;" href="https://github.com/ClickHouse/ClickHouse">
+                https://github.com/ClickHouse/ClickHouse
+            </a>
+        </p>
+    </section>
+
+    <section class="slide">
+        <h2>Pull request statistics</h2>
+        <p>Core engineering team 15 people</p>
+        <p>400 pull requests per month</p>
+        <p>4 big pull requests per month (More than 5k LOC)</p>
+        <p>95 percent of external pull requests merged.</p>
+        <p>46 percent of new code is external.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Releases</h2>
+        <p>Release each month</p>
+        <p>Include tons of improvement, bug fixes, new features</p>
+
+        <p>
+            <a style="font-size: 15px;" href="https://clickhouse.com/docs/en/whats-new/changelog/">
+                https://clickhouse.com/docs/en/whats-new/changelog/
+            </a>
+        </p>
+    </section>
+
+    <section class="slide">
+        <h2>OpenSource community</h2>
+        <p>46 percent of new code is from external contributors.</p>
+        <p>Contributions include not only pull requests:</p>
+        <p>1. Translation of documentation.</p>
+        <p>2. Drivers for JDBC, ODBC, Go.</p>
+        <p>3. Answers on question GitHub issues.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Interaction with community</h2>
+        <p>Pull requests review.</p>
+        <p>Managing issues on GitHub.</p>
+        <p>Public roadmap.</p>
+        <p>Answering questions on GitHub, Google groups, Telegram chats.</p>
+        <p>Meetups (Release meetups, Community meetups).</p>
+    </section>
+
+    <section class="slide">
+        <h2>Pull requests</h2>
+        <img style="width: 80%;" src="pictures/external_pull_requests.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Pull requests authors</h2>
+        <img style="width: 80%;" src="pictures/external_authors.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Pull request review</h2>
+        <p>1. Everyone from core team can merge.</p>
+        <p>2. Single code reviewer is enought, big pull requests can be discussed as whole team.</p>
+        <p>3. Robust continious integration pipeline.</p>
+        <p>4. All author commits are included.</p>
+        <p>5. Keep small count of code-review iterations.</p>
+        <p>6. If pull request is abandoned independently merge it, author contribution is appreciated.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Continious integration</h2>
+        <p>1. Unit, functional, integation tests.</p>
+        <p>2. Sanitizers (MSan, UBSan, Tsan, Address).</p>
+        <p>3. Static linters (clang-tidy, clang-format).</p>
+        <p>4. Performance tests.</p>
+        <p>5. Fuzzers.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Contibution process</h2>
+        <p>1. Implement some feature needed for your ClickHouse setup.</p>
+        <p>2. Experience on production project.</p>
+        <p>3. Implement some interesting task from our roadmap (public available).</p>
+        <p>4. Feature can be implemented without a lot of codebase changes.
+            For example adding function, aggregate function, change parser.</p>
+        <p>5. Easy to find task to work.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Examples</h2>
+        <img style="width: 80%;" src="pictures/projections_pull_request.png">
+    </section>
+
+    <section class="slide">
+        <h2>Examples</h2>
+        <img style="width: 80%;" src="pictures/four_letter_commands_pull_request.png">
+    </section>
+
+    <section class="slide">
+        <h2>Examples</h2>
+        <img style="width: 80%;" src="pictures/azure_pull_request.png">
+    </section>
+
+    <section class="slide">
+        <h2>Questions?</h2>
+    </section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
