@@ -99,7 +99,7 @@ The meetup: [announcement](https://www.meetup.com/San-Francisco-Bay-Area-ClickHo
 
 ## 2021-05-20. CodeFest 11 Новосибирск.
 
-* Алексей Миловидов. Необычные случаи оптимизации производительности на примере ClickHouse. [slides](https://disk.yandex.ru/i/TB3_mzEWFzYIhw)
+* Алексей Миловидов. Необычные случаи оптимизации производительности на примере ClickHouse. [slides](https://disk.yandex.ru/i/TB3_mzEWFzYIhw), [video](https://youtu.be/LJUEiOUvlpQ)
 
 Мероприятиe: [aнонс](https://11.codefest.ru/program/)
 
