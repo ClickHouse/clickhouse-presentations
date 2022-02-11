@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Top Features 2021 vs 2022</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.8; font-size: 18pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Top Features 2021 vs 2022</h1>
+    </header>
+    <section class="slide" id="cover" style="background: linear-gradient(to bottom right, rgba(255, 51, 51, 1), rgba(255, 169, 0, 1))">
+        <img src="https://clickhouse.tech/images/logo.svg" style="width: 15%; position: absolute; right: 20px; bottom: 20px;" />
+        <h1 style="margin-top: 100px; line-height: 150%; color: white; font-size: 56pt">ClickHouse: Top Features<br/>2021 vs 2022</h1>
+    </section>
+
+<section class="slide">
+<h2>What's New In ClickHouse</h2>
+<p>Season 2021/2022</p>
+<p>1. My favorite features of 2021.</p>
+<p>2. The most interesting to come in 2022.</p>
+</section>
+
+<section class="slide">
+<h2>My favorite features of 2021</h2>
+<p class="cloud">
+<span>Window functions</span>
+<span>UDF</span>
+<span>Async inserts</span>
+<span>PostgreSQL integration</span>
+<span>clickhouse-local interactive</span>
+<span>SQL/JSON</span>
+<span>Full disk encryption</span>
+<span>Short circuit evaluation</span>
+<span>Big integers</span>
+<span>clickhouse-keeper</span>
+<span>Projections</span>
+<span>VFS over web server</span>
+<span>YAML configs</span>
+<span>GRPC protocol</span>
+<span>Replicated databases</span>
+<span>simhash/minhash</span>
+<span>Text tokenization</span>
+<span>Transparent compression gz/bz2/xz/zst/lz4</span>
+<span>s3Cluster</span>
+<span>Hedged requests</span>
+<span>Optimizations with constraints</span>
+<span>Map data type</span>
+<span>INTERSECT/EXCEPT</span><span>ANY/ALL/EXISTS</span><span>UNION DISTINCT</span>
+<span>JIT compilation</span><span>Dictionaries completeness</span>
+</p>
+</section>
+
+
+<section class="slide">
+<h2>Window Functions</h2>
+
+<p>They work.</p>
+
+<code style="line-height: 1.5;">SELECT
+    RANK() OVER (PARTITION BY user_id ORDER BY ts),
+    AVG() OVER (ORDER BY ts RANGE
+        BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
+    ...
+</code>
+
+<p style="margin-top: 50px; font-size: 14pt; color: gray;">Developer &mdash; Alexander Kuzmenkov. Available since 21.1.</p>
+</section>
+
+<section class="slide">
+<h2>SQL/JSON</h2>
+<p>JSON_EXISTS, JSON_VALUE, JSON_QUERY</p>
+<code style="line-height: 1.5;">SELECT JSON_QUERY(
+    '{"array":[[0, 1, 2, 3, 4, 5],
+               [0, -1, -2, -3, -4, -5]]}',
+    '<span style="color: green;">$.array[*][0 to 2, 4]</span>');</code>
+<p style="color: gray; margin-top: 5em;">Available in 21.8.
+<br/>Developers — Ksenia Sumarokova, Konstantin Rudenskii, Denis Semenov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">YAML configuration</h2>
+
+<p>I heard you don't like XML...</p>
+<p>Then ClickHouse will support YAML as an alternative for you.</p>
+
+<code style="font-size: 80%; line-height: 1.2;">logger:
+  level: trace
+  log: /var/log/clickhouse-server/clickhouse-server.log
+  errorlog: /var/log/clickhouse-server/clickhouse-server.err.log
+  size: 1000M
+  count: 10
+http_port: 8123           # Don't worry, YAML configuration
+tcp_port: 9000            # will also contain comments.
+mysql_port: 9004          #
+postgresql_port: 9005     # It's not JSON after all.
+max_connections: 4096
+</code>
+
+<p style="margin-top: 10px; font-size: 14pt; color: gray;">Developer &mdash; Denis Bolonin.</p>
+</section>
+
+<section class="slide">
+<h2>Data Encryption On-Rest</h2>
+<p>&mdash; Full Disk Encryption:</p>
+<p><code>&lt;disk_local_encrypted>
+    &lt;type><b>encrypted</b>&lt;/type>
+    &lt;disk>disk_local&lt;/disk>
+    &lt;path>encrypted/&lt;/path>
+    &lt;key from_env="DISK_ENCRYPTION_KEY" />
+&lt;/disk_local_encrypted></code></p>
+<p>&mdash; Per-Column Encryption:</p>
+<p><code>secret String Codec(LZ4, AES_128_GCM_SIV),</code></p>
+<p style="margin-top: 2em; color: gray; font-size: 14pt;">Developer: Vitaly Baranov, Arthur Filatenkov, depressed-pho.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Native Integration With PostgreSQL</h2>
+
+<p>You can query (read and write) <b>PostgreSQL</b> in ClickHouse queries*.</p>
+<p>You can JOIN with <b>PostgreSQL</b> tables inside your queries to ClickHouse!</p>
+<p>You can create a database that will have all the tables in <b>PostgreSQL</b> schema.</p>
+<p>You can use <b>PostgreSQL</b> as a dictionary source.</p>
+
+<p>And ClickHouse can also pretend to be <b>PostgreSQL</b>!</p>
+<code>&lt;!-- Compatibility with PostgreSQL protocol.
+     ClickHouse will pretend to be PostgreSQL
+     for applications connecting to this port.
+-->
+&lt;postgresql_port>9005&lt;/postgresql_port>
+</code>
+
+<p style="margin-top: 1em; font-size: 14pt; color: gray;">* &mdash; earlier it was also available via odbc.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Native Integration With PostgreSQL</h2>
+<p>&mdash; <b>PostgreSQL</b> storage engine;</p>
+<p>&mdash; <b>postgresql</b> table function; <span style="color: green;">It supports shards and replicas!</span></p>
+<code style="font-size: 80%; margin-bottom: 1em;">SELECT * FROM <b>postgresql</b>(`postgres<b>{1|2|3}</b>:5432`,
+  'clickhouse', 'test_replicas', 'postgres', 'password');</code>
+<p>&mdash; <b>postgresql</b> dictionary source;</p>
+<p>&mdash; <b>PostgreSQL</b> database engine as a view to all tables in PG database;</p>
+<p>Similar to MySQL integration... but for PostgreSQL.</p>
+<p>Bonus: replication from PostgreSQL.</p>
+
+<p style="margin-top: 50px; font-size: 14pt; color: gray;">Developer &mdash; Ksenia Sumarokova. Available since 21.2.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">What integrations do we have?</h2>
+<p>&mdash; MySQL, PostgreSQL, Hive</p>
+<p>&mdash; MongoDB, Redis, Cassandra</p>
+<p>&mdash; Kafka, RabbitMQ</p>
+<p>&mdash; S3, HDFS, Azure</p>
+<p>&mdash; ODBC, JDBC</p>
+</section>
+
+
+<section class="slide">
+<h2>User Defined Function</h2>
+<p style="margin-top: -1em;">1. SQL User Defined Functions (since 21.10)</p>
+<code style="line-height: 1.5;">CREATE FUNCTION ch AS (x) -> (exp(x) + exp(-x)) / 2;
+CREATE FUNCTION getRegionName AS (x)
+    -> dictGet('region', 'name', x);</code>
+<p style="margin-top: 1em;">2. Scriptable User Defined Functions (since 21.11)</p>
+<code style="font-size: 14pt; line-height: 1.1">&lt;function>
+  &lt;type>executable&lt;/type>
+  &lt;name><b>myPlus</b>&lt;/name>
+  &lt;return_type>UInt64&lt;/return_type>
+  &lt;argument>&lt;type>UInt64&lt;/type>&lt;/argument>
+  &lt;argument>&lt;type>UInt64&lt;/type>&lt;/argument>
+  &lt;format>TabSeparated&lt;/format>
+  &lt;command><b>awk '{ print $1 + $2 }'</b>&lt;/command>
+&lt;/function>
+</code>
+</section>
+
+<section class="slide">
+<h2>Scriptable Tables</h2>
+<p style="margin-top: -1em;">Data generation and import:</p>
+<code style="font-size: 14pt; line-height: 1.1; margin-top: -0.5em;">CREATE TABLE test ... ENGINE =
+    <b>Executable</b>('my_script', TSV);</code>
+<p style="margin-top: 0.5em;">&mdash; the script should return data in stdout, similar to "file" engine.</p>
+<p>Data transformation:</p>
+<code style="font-size: 14pt; line-height: 1.1; margin-top: -0.5em;">CREATE TABLE test ... ENGINE =
+    <b>Executable</b>('my_script', TSV, (SELECT ...));</code>
+<p style="margin-top: 0.5em;">&mdash; the script will get source stream to stdin and return data in stdout.</p>
+<p>Custom JOIN logic:</p>
+<code style="font-size: 14pt; line-height: 1.1; margin-top: -0.5em;">CREATE TABLE test ... ENGINE =
+    <b>Executable</b>('my_script', TSV, (SELECT ...), (SELECT ...), ...);</code>
+<p style="margin-top: 0.5em;">&mdash; the script will get source stream to stdin and additional streams in fd 3, 4...</p>
+</section>
+
+<section class="slide">
+<h2>Scriptable Tables</h2>
+<p>Two variants:</p>
+<p>&mdash; <b>Executable</b>: script is run on every query;</p>
+<p>&mdash; <b>ExecutablePool</b>: a pool of persistent processes;</p>
+<p>Table function:</p>
+<code style="font-size: 14pt; line-height: 1.1;">SELECT * FROM
+    <b>executable</b>('my_script', TSV, 'x UInt64...');
+
+SELECT * FROM
+    <b>executable</b>('my_script', TSV, 'x UInt64...', (SELECT ...) ...);
+</code>
+</section>
+
+<section class="slide">
+<h2>Scriptable Tables</h2>
+<p>Applications:</p>
+<p>&mdash; loading data from foreign data source;</p>
+<p>&mdash; applying machine-learned models to dataset;</p>
+<p>&mdash; custom processing, e.g. DNS resolution, whois...</p>
+<p style="color: gray;">Developer &mdash; Maksim Kita</p>
+</section>
+
+<section class="slide">
+<h2>Asynchronous INSERTs</h2>
+<p>Allow to do many small INSERTS.</p>
+<p>From many concurrent connections.</p>
+<p style="color: green">Without Kafka and Buffer tables!</p>
+<p>Many small INSERTs are combined together<br/>
+and batched in memory.</p>
+<p>Safe by default: every client get response when data is inserted.</p>
+<p style="color: gray;">Developer &mdash; Anton Popov. Available since 21.11</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">GRPC Protocol</h2>
+<p>Uncomment <code style="display: inline;">&lt;grpc_port>9100&lt;/grpc_port></code> in config.</p>
+<p>Feature parity with the native protocol:</p>
+<p>
+&mdash; TLS, compression, query progress,<br/>
+&emsp; query cancellation, sessions, external data...</p>
+<p>Example: clickhouse-client with GRPC in Python.</p>
+<p><code>utils/grpc-client/clickhouse-grpc-client.py</code></p>
+
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Developer &mdash; Vitaly Baranov. <span style="color: green;">Available since 21.1.</span></p>
+</section>
+
+<section class="slide">
+<h2>Experimental Features of 2021</h2>
+<p>That will graduate in 2022:</p>
+<p>&mdash; ClickHouse Keeper</p>
+<p>&mdash; Projections</p>
+<p>&mdash; Replicated database engine</p>
+<p>&mdash; VFS over S3</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Projections</h2>
+
+<p>Multiple data representations inside a single table.</p>
+<p>
+&mdash; different data order;<br/>
+&mdash; subset of columns;<br/>
+&mdash; subset of rows;<br/>
+&mdash; aggregation.</p>
+
+<p>Difference to materialized views:
+<p>
+&mdash; projections data is always consistent;<br/>
+&mdash; updated atomically with the table;<br/>
+&mdash; replicated in the same way as the table;<br/>
+&mdash; projection can be automatically used for SELECT query.
+</p>
+
+<p style="font-size: 14pt; color: gray;">Developer &mdash; Amos Bird. <span style="color: green;">Available since 21.6.</span></p>
+</section>
+
+<section class="slide">
+<h2>Decoupled Storage</h2>
+<p>ClickHouse over S3:</p>
+<p>&mdash; highly concurrent asynchronous reads (21.11);</p>
+<p>&mdash; parallel processing on multiple compute nodes (22.1);</p>
+<p>&mdash; caching in RAM or local disk with node affinity (Q1 2022);</p>
+<p>&mdash; easy coordination of inserts and merges<br/>&emsp; without ReplicatedMergeTree (Q2 2022);</p>
+<p style="color: green;">Lower cost and higher throughput than EBS volumes.</p>
+<p>Bonus: "web" disk for static hosted datasets (21.10).</p>
+</section>
+
+<section class="slide">
+<h2>Features 2022</h2>
+<p>Already released in 22.1:</p>
+<p>&mdash; Schema Inference</p>
+<p>&mdash; Replicas for MPP</p>
+</section>
+
+<section class="slide">
+<h2>Table Structure Autodetection</h2>
+<p>Was:</p>
+<code style="font-size: 14pt; white-space: pre-wrap; margin-left: -4em; margin-right: -4em;">SELECT * FROM url('https://datasets.clickhouse.com/github_events_v2.native.xz', Native,
+$$<span style="color: gray">
+    file_time DateTime, event_type Enum('CommitCommentEvent' = 1, 'CreateEvent' = 2, 'DeleteEvent' = 3, 'ForkEvent' = 4, 'GollumEvent' = 5, 'IssueCommentEvent' = 6, 'IssuesEvent' = 7, 'MemberEvent' = 8, 'PublicEvent' = 9, 'PullRequestEvent' = 10, 'PullRequestReviewCommentEvent' = 11, 'PushEvent' = 12, 'ReleaseEvent' = 13, 'SponsorshipEvent' = 14, 'WatchEvent' = 15, 'GistEvent' = 16, 'FollowEvent' = 17, 'DownloadEvent' = 18, 'PullRequestReviewEvent' = 19, 'ForkApplyEvent' = 20, 'Event' = 21, 'TeamAddEvent' = 22), actor_login LowCardinality(String), repo_name LowCardinality(String), created_at DateTime, updated_at DateTime, action Enum('none' = 0, 'created' = 1, 'added' = 2, 'edited' = 3, 'deleted' = 4, 'opened' = 5, 'closed' = 6, 'reopened' = 7, 'assigned' = 8, 'unassigned' = 9, 'labeled' = 10, 'unlabeled' = 11, 'review_requested' = 12, 'review_request_removed' = 13, 'synchronize' = 14, 'started' = 15, 'published' = 16, 'update' = 17, 'create' = 18, 'fork' = 19, 'merged' = 20), comment_id UInt64, body String, path String, position Int32, line Int32, ref LowCardinality(String), ref_type Enum('none' = 0, 'branch' = 1, 'tag' = 2, 'repository' = 3, 'unknown' = 4), creator_user_login LowCardinality(String), number UInt32, title String, labels Array(LowCardinality(String)), state Enum('none' = 0, 'open' = 1, 'closed' = 2), locked UInt8, assignee LowCardinality(String), assignees Array(LowCardinality(String)), comments UInt32, author_association Enum('NONE' = 0, 'CONTRIBUTOR' = 1, 'OWNER' = 2, 'COLLABORATOR' = 3, 'MEMBER' = 4, 'MANNEQUIN' = 5), closed_at DateTime, merged_at DateTime, merge_commit_sha String, requested_reviewers Array(LowCardinality(String)), requested_teams Array(LowCardinality(String)), head_ref LowCardinality(String), head_sha String, base_ref LowCardinality(String), base_sha String, merged UInt8, mergeable UInt8, rebaseable UInt8, mergeable_state Enum('unknown' = 0, 'dirty' = 1, 'clean' = 2, 'unstable' = 3, 'draft' = 4), merged_by LowCardinality(String), review_comments UInt32, maintainer_can_modify UInt8, commits UInt32, additions UInt32, deletions UInt32, changed_files UInt32, diff_hunk String, original_position UInt32, commit_id String, original_commit_id String, push_size UInt32, push_distinct_size UInt32, member_login LowCardinality(String), release_tag_name String, release_name String, review_state Enum('none' = 0, 'approved' = 1, 'changes_requested' = 2, 'commented' = 3, 'dismissed' = 4, 'pending' = 5)</span>
+$$)
+LIMIT 10
+</code>
+</section>
+
+<section class="slide">
+<code style="font-size: 12pt; white-space: pre-wrap; margin-left: -4em; margin-right: -4em;">SELECT * FROM url('https://datasets.clickhouse.com/github_events_v2.native.xz', Native,
+$$<span style="color: gray">
+    file_time DateTime, event_type Enum('CommitCommentEvent' = 1, 'CreateEvent' = 2, 'DeleteEvent' = 3, 'ForkEvent' = 4, 'GollumEvent' = 5, 'IssueCommentEvent' = 6, 'IssuesEvent' = 7, 'MemberEvent' = 8, 'PublicEvent' = 9, 'PullRequestEvent' = 10, 'PullRequestReviewCommentEvent' = 11, 'PushEvent' = 12, 'ReleaseEvent' = 13, 'SponsorshipEvent' = 14, 'WatchEvent' = 15, 'GistEvent' = 16, 'FollowEvent' = 17, 'DownloadEvent' = 18, 'PullRequestReviewEvent' = 19, 'ForkApplyEvent' = 20, 'Event' = 21, 'TeamAddEvent' = 22), actor_login LowCardinality(String), repo_name LowCardinality(String), created_at DateTime, updated_at DateTime, action Enum('none' = 0, 'created' = 1, 'added' = 2, 'edited' = 3, 'deleted' = 4, 'opened' = 5, 'closed' = 6, 'reopened' = 7, 'assigned' = 8, 'unassigned' = 9, 'labeled' = 10, 'unlabeled' = 11, 'review_requested' = 12, 'review_request_removed' = 13, 'synchronize' = 14, 'started' = 15, 'published' = 16, 'update' = 17, 'create' = 18, 'fork' = 19, 'merged' = 20), comment_id UInt64, body String, path String, position Int32, line Int32, ref LowCardinality(String), ref_type Enum('none' = 0, 'branch' = 1, 'tag' = 2, 'repository' = 3, 'unknown' = 4), creator_user_login LowCardinality(String), number UInt32, title String, labels Array(LowCardinality(String)), state Enum('none' = 0, 'open' = 1, 'closed' = 2), locked UInt8, assignee LowCardinality(String), assignees Array(LowCardinality(String)), comments UInt32, author_association Enum('NONE' = 0, 'CONTRIBUTOR' = 1, 'OWNER' = 2, 'COLLABORATOR' = 3, 'MEMBER' = 4, 'MANNEQUIN' = 5), closed_at DateTime, merged_at DateTime, merge_commit_sha String, requested_reviewers Array(LowCardinality(String)), requested_teams Array(LowCardinality(String)), head_ref LowCardinality(String), head_sha String, base_ref LowCardinality(String), base_sha String, merged UInt8, mergeable UInt8, rebaseable UInt8, mergeable_state Enum('unknown' = 0, 'dirty' = 1, 'clean' = 2, 'unstable' = 3, 'draft' = 4), merged_by LowCardinality(String), review_comments UInt32, maintainer_can_modify UInt8, commits UInt32, additions UInt32, deletions UInt32, changed_files UInt32, diff_hunk String, original_position UInt32, commit_id String, original_commit_id String, push_size UInt32, push_distinct_size UInt32, member_login LowCardinality(String), release_tag_name String, release_name String, review_state Enum('none' = 0, 'approved' = 1, 'changes_requested' = 2, 'commented' = 3, 'dismissed' = 4, 'pending' = 5)</span>
+$$)
+LIMIT 10
+</code>
+</section>
+
+
+<section class="slide">
+<h2>Table Structure Autodetection</h2>
+<p>Now:</p>
+<p>
+<code style="font-size: 14pt;">SELECT * FROM url(
+    'https://datasets.clickhouse.com/github_events_v2.<b style="color: green;">native.xz</b>') LIMIT 10</code>
+</p>
+<p>Read the structure:</p>
+<p>
+<code style="font-size: 14pt;"><b style="color: green;">DESCRIBE</b> url('https://datasets.clickhouse.com/github_events_v2.native.xz')</code>
+</p>
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Pavel Kruglov.</p>
+</section>
+
+<section class="slide">
+<h2>Schema Inference</h2>
+<p>&mdash; automatically extracts schema from Native, Parquet, ...</p>
+<p>&mdash; automatically derives schema from JSON, CSV, ...</p>
+<p>&mdash; works for file/url/s3/hdfs table functions and clickhouse-local</p>
+<p>&mdash; automatically extracts schema on creation<br/>&emsp; of Replicated, Distributed and Merge tables</p>
+</section>
+
+<section class="slide">
+<h2>Features to come in 2022</h2>
+<p>&mdash; GROUPING sets</p>
+<p>&mdash; Memory overcommit</p>
+<p>&mdash; Transactions</p>
+<p>&mdash; Semistructured data</p>
+<p>&mdash; Backup and Restore</p>
+<p>&mdash; Extended merge JOIN</p>
+<p>&mdash; Correlated subqueries</p>
+</section>
+
+<section class="slide">
+<h2>Support For Semistructured Data</h2>
+<p><b>JSON</b> data type:</p>
+<code>CREATE TABLE games (data JSON) ENGINE = MergeTree;</code>
+<p style="margin-top: 1em;">You can insert arbitrary nested JSONs.</p>
+<p>Types are automatically inferred on INSERT and merge.</p>
+<p>Data is stored in columnar format: columns and subcolumns.</p>
+<p>Query nested data naturally.</p>
+</section>
+
+<section class="slide">
+<h2>Support For Semistructured Data</h2>
+<p style="margin-top: -1em;">Example: NBA games dataset</p>
+
+<code>CREATE TABLE games (data String)
+ENGINE = MergeTree ORDER BY tuple();
+
+SELECT <span style="color: red;">JSONExtractString(data, 'teams', 1, 'name')</span>
+FROM games;</code>
+<p style="margin-top: 0.5em; color: red;">&mdash; 0.520 sec.</p>
+
+<code>CREATE TABLE games (data JSON)
+ENGINE = MergeTree;
+
+SELECT <span style="color: green;">data.teams.name[1]</span> FROM games;</code>
+<p style="margin-top: 0.5em; color: green;">&mdash; 0.015 sec.</p>
+</section>
+
+<section class="slide">
+<h2>Support For Semistructured Data</h2>
+<code style="font-size: 12pt; margin-top: -2em;">DESCRIBE TABLE games
+SETTINGS describe_extend_object_types = 1
+
+name: data
+type: Tuple(                                           &lt;-- inferred type
+    `_id.$oid` String,
+    `date.$date` String,
+    `teams.abbreviation` Array(String),
+    `teams.city` Array(String),
+    `teams.home` Array(UInt8),
+    `teams.name` Array(String),
+    `teams.players.ast` Array(Array(Int8)),
+    `teams.players.blk` Array(Array(Int8)),
+    `teams.players.drb` Array(Array(Int8)),
+    `teams.players.fg` Array(Array(Int8)),
+    `teams.players.fg3` Array(Array(Int8)),
+    `teams.players.fg3_pct` Array(Array(String)),
+    `teams.players.fg3a` Array(Array(Int8)),
+    `teams.players.fg_pct` Array(Array(String)),
+    `teams.players.fga` Array(Array(Int8)),
+    `teams.players.ft` Array(Array(Int8)),
+    `teams.players.ft_pct` Array(Array(String)),
+    `teams.players.fta` Array(Array(Int8)),
+    `teams.players.mp` Array(Array(String)),
+    `teams.players.orb` Array(Array(Int8)),
+    `teams.players.pf` Array(Array(Int8)),
+    `teams.players.player` Array(Array(String)),
+    `teams.players.plus_minus` Array(Array(String)),
+    `teams.players.pts` Array(Array(Int8)),
+    `teams.players.stl` Array(Array(Int8)),
+    `teams.players.tov` Array(Array(Int8)),
+    `teams.players.trb` Array(Array(Int8)),
+    `teams.results.ast` Array(Int8),
+    `teams.results.blk` Array(Int8),
+    `teams.results.drb` Array(Int8),
+    `teams.results.fg` Array(Int8),
+    `teams.results.fg3` Array(Int8),
+    `teams.results.fg3_pct` Array(String),
+    `teams.results.fg3a` Array(Int8),
+    `teams.results.fg_pct` Array(String),
+    `teams.results.fga` Array(Int16),
+    `teams.results.ft` Array(Int8),
+    `teams.results.ft_pct` Array(String),
+    `teams.results.fta` Array(Int8),
+    `teams.results.mp` Array(Int16),
+    `teams.results.orb` Array(Int8),
+    `teams.results.pf` Array(Int8),
+    `teams.results.plus_minus` Array(String),
+    `teams.results.pts` Array(Int16),
+    `teams.results.stl` Array(Int8),
+    `teams.results.tov` Array(Int8),
+    `teams.results.trb` Array(Int8),
+    `teams.score` Array(Int16),
+    `teams.won` Array(Int8))</code>
+</section>
+
+<section class="slide">
+<h2>Support For Semistructured Data</h2>
+<p>Flexible schema.</p>
+<p>You can have columns with strict and flexible schema in one table.</p>
+<p>Queries work <span style="color: green;">as fast as</span> with predefined types!</p>
+<p style="color: gray; margin-top: 5em;">Planned for Q1 2022.</p>
+</section>
+
+<section class="slide">
+<h2>Support For Transactions</h2>
+<p>ClickHouse is not a transactional DBMS, isn't it?</p>
+<p>But we need transactions to:</p>
+<p>&mdash; do atomic INSERTs to multiple partitions;</p>
+<p>&mdash; do atomic INSERTs to multiple tables and materialzied views;</p>
+<p>&mdash; make multiple SELECT queries from one snapshot.</p>
+<p style="color: gray;">Planned for Q2 2022.</p>
+</section>
+
+<section class="slide">
+<h2>And more...</h2>
+<p>&mdash; Lightweight DELETE</p>
+<p>&mdash; Unique key constraint</p>
+<p>&mdash; User Defined Data Types</p>
+<p>&mdash; Batch jobs and MV with periodic refresh</p>
+<p>&mdash; Key-value data marts</p>
+<p>&mdash; CPU, IO and network priorities</p>
+<p>&mdash; Vector search indices (ANN search)</p>
+<p>&mdash; Streaming queries</p>
+</section>
+
+<section class="slide">
+<h2>Key-Value Data Marts</h2>
+<p>... And Incremental Aggregation In Memory</p>
+<p>Run GROUP BY query continuously.</p>
+<p>Aggregated data is accumulated in memory.</p>
+<p>It can be queried as a table.</p>
+<p>The server can serve key-value requests with Redis protocol.</p>
+<p><span style="color: green;">Example applications:</span>
+<br/>&mdash; realtime antifraud;
+<br/>&mdash; user profiles and personalization.</p>
+<p style="color: gray;">Planned for summer 2022.</p>
+</section>
+
+<section class="slide">
+<h2>What Else?</h2>
+<p>Streaming queries:<br/>
+&mdash; GROUP BY and ORDER BY on time frames;<br/>
+&mdash; distributed streams;<br/>
+&mdash; persistent streams;<br/>
+&mdash; subscription to tables and external data streams;
+</p>
+</section>
+
+<section class="slide">
+<h2>Thank You!</h2>
+<p>Please:</p>
+<p>&mdash; Use ClickHouse.</p>
+<p>&mdash; 💖 ClickHouse.</p>
+<p>&mdash; Contribute to ClickHouse!</p>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+
