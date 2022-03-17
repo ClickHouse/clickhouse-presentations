@@ -1,5 +1,43 @@
 # Talks index
 
+## 2021-12-16. 
+
+https://clickhouse.com/blog/en/2021/clickhouse-v21.12-released/
+
+## 2021-12-11. Chinese ClickHouse Community Online Meetup  (#56)
+
+* ClickHouse 中国社区及志愿者介绍 ---ClickHouse中国社区负责人 郭炜. [slides](meetup56/eoi.pdf)
+* ClickHouse New and Incoming Features ---ClickHouse Alexy Milovidov. [slides](meetup56/new_features/index.html)
+* 京东ClickHouse的实践之路 ---京东OLAP架构师 吴建超. [slides](/meetup56/jd.pdf)
+* ClickHouse在政务领域实时数据检索及数据交换实践 ---万山数据 鲁四海. [slides](meetup56/wanshandata.pdf)
+* 基于ClickHouse的海量数据交互式OLAP分析场景实践 B站 胡甫旺. [slides](meetup56/bilibili.pdf)
+* ClickHouse Practice in EOI 擎创科技 余志昌. [slides](meetup56/eoi.pdf)
+
+The meetup: [announcement](https://www.huodongxing.com/event/8625502445223), [video](https://www.youtube.com/watch?v=H4m8StggJms)
+
+## 2021-12-03. YaTalks 2021.
+
+* Алексей Миловидов. ClickHouse: настоящее и будущее. [slides](yatalks_2021/index.html), [видео](https://youtu.be/Ay6_ffxK4us?t=5136)
+
+Мероприятиe: [aнонс](https://yatalks.yandex.ru/)
+
+## 2021-11-09. Release 21.11 Webinar 
+
+* ClickHouse: Release 21.11 Webinar. [slides](release_21.11/index.html), [video](https://www.youtube.com/watch?v=xb64zoPYvqQ), [video (East)](https://www.youtube.com/watch?v=S_kJ4tk8AaI), [blog](https://clickhouse.com/blog/en/2021/clickhouse-v21.11-released/)
+
+## 2021-10-19. ClickHouse: онлайн-встреча (#55)
+
+* Вступление. [slides](meetup55/intro/index.html)
+* Максим Кита. UDF in ClickHouse. [slides](udf_in_clickhouse/index.html)
+* Виталий Баранов, Артур Филатенков. Шифрование хранимых данных в ClickHouse. [slides](meetup55/Encryption.pdf)
+* Алексей Миловидов. Потрясающие возможности ClickHouse. [slides](meetup55/new_features/index.html)
+
+Мероприятиe: [aнонс](https://events.yandex.ru/events/click-house-19/10/2021), [видео](https://youtu.be/W6h3_xykd2Y), [blog](https://clickhouse.com/blog/en/2021/clickhouse-october-moscow-meetup/)
+
+## 2021-10-. STW 2021
+
+* Алексей Миловидов. ClickHouse: New Horizons. [slides](stw2021/index.html).
+
 ## 2021-10-01. Russia Open Source Summit 2021
 
 * Алексей Миловидов. ClickHouse. [slides](ross2021/index.html)
@@ -61,7 +99,7 @@ The meetup: [announcement](https://www.meetup.com/San-Francisco-Bay-Area-ClickHo
 
 ## 2021-05-20. CodeFest 11 Новосибирск.
 
-* Алексей Миловидов. Необычные случаи оптимизации производительности на примере ClickHouse. [slides](https://disk.yandex.ru/i/TB3_mzEWFzYIhw)
+* Алексей Миловидов. Необычные случаи оптимизации производительности на примере ClickHouse. [slides](https://disk.yandex.ru/i/TB3_mzEWFzYIhw), [video](https://youtu.be/LJUEiOUvlpQ)
 
 Мероприятиe: [aнонс](https://11.codefest.ru/program/)
 
