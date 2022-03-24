@@ -150,14 +150,6 @@ a:hover
     vertical-aling: middle;
 }
 
-.informer
-{
-    width: 1000px;
-    margin: 20px auto 10px auto;
-
-    text-align: right;
-}
-
 .show-example
 {
     display: none;
