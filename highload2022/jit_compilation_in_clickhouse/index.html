@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>JIT compilation of queries in ClickHouse</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+        code { display: block; white-space: pre; background-color: #EEE; }
+        p.cloud { text-align: center; line-height: 1.5; }
+        p.cloud span { font-size: 13pt; color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+   </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>JIT compilation of queries in ClickHouse</h1>
+    </header>
+
+    <section class="slide" id="cover">
+        <h1 style="margin-top: 150px;">JIT compilation of queries in ClickHouse</h1>
+    </section>
+
+    <section class="slide">
+        <h2>About me</h2>
+        <p>Maksim, developer of ClickHouse.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Plan</h2>
+        <p>1. ClickHouse query execution.</p>
+        <p>2. JIT compilation.</p>
+        <p>3. ClickHouse compilation of expressions.</p>
+        <p>4. ClickHouse compilation of operator GROUP BY.</p>
+        <p>5. ClickHouse compilation of ORDER BY comparator.</p>
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">ClickHouse query execution</h1>
+    </section>
+
+    <section class="slide">
+        <h2>ClickHouse Query Execution</h2>
+
+        <p>Column-oriented storage &mdash; data is physically stored by columns. Only necessary columns are read from disk during query.</p>
+        <p>Vectorized query execution &mdash; data is processing in blocks. Block contains multiple columns with <b>max_block_size</b> rows (65536 by default).</p>
+        <p>Each column is stored as a vector of primitive data types or their combination:</p>
+        <p>1. Better utilization for CPU caches and pipeline.</p>
+        <p>2. Data is processed using SIMD instructions.</p>
+    </section>
+
+    <section class="slide">
+        <h2>ClickHouse Columns</h2>
+
+        <p><b>Numeric</b> columns  &mdash; <b>PODArray</b>. Almost same as <b>std::vector</b>.</p>
+        <p>1. Use our <b>Allocator</b> with support of <b>realloc</b>.</p>
+        <p>2. No additional <b>memset</b> during <b>resize</b>.</p>
+        <p>3. Padding with 15 bytes at the end.</p>
+    </section>
+
+    <section class="slide">
+        <h2>ClickHouse Columns</h2>
+
+        <p><b>Nullable</b> columns contain data column and UInt8 column bitmask is element null.</p>
+        <p><b>Array</b> columns contain data column and UInt64 column with offsets.</p>
+        <p><b>Const</b> column contain 1 constant value.</p>
+    </section>
+
+    <section class="slide">
+        <h2>ClickHouse Function</h2>
+
+        <p>Takes arguments as columns and returns function result as column.</p>
+
+            <code style="font-size: 10pt;">class IFunction
+{
+
+virtual ~IFunction() = default;
+
+virtual ColumnPtr executeImpl(
+    const ColumnsWithTypeAndName & arguments,
+    const DataTypePtr & result_type,
+    size_t input_rows_count) const = 0;
+
+...
+
+}
+    </code>
+        <p>Specializations using templates for different types. Example <b>plus</b>, <b>multiply</b> for different types combinations.</p>
+        <p>Specializations for constant columns. Example <b>plus</b>, <b>multiply</b> with constant column.</p>
+    </section>
+
+    <section class="slide">
+        <h2>ClickHouse Plus Function</h2>
+
+        <p>Function <b>plus</b> has: </p>
+        <p><code style="font-size: 90%">UInt8 UInt16 UInt32 UInt64     UInt8 UInt16 UInt32 UInt64
+    Int8 Int16 Int32 Int64  ✕  Int8 Int16 Int32 Int64
+           Float32 Float64     Float32 Float64</code></p>
+        <p>specialization.</p>
+        <p>In addition specialization if one of columns is constant column.</p>
+        <p>20 x 20 = 400 specializations for single <b>plus</b> function.</p>
+    </section>
+
+
+    <section class="slide">
+        <h2>ClickHouse Function</h2>
+
+        <p>Advantages:</p>
+        <p>1. Code isolation.</p>
+        <p>2. High efficiency (Necessary specializations can be generated).</p>
+        <p>3. Compiler can generate SIMD instructions.</p>
+
+        <p>Disadvantages:</p>
+        <p>1. Heavy templates usage (Templates can be complex).</p>
+        <p>2. Binary code bloat.</p>
+        <p>3. No way to fuse multiple expressions into one. Example: x * y + 5.</p>
+    </section>
+
+    <section class="slide">
+        <h2>ClickHouse Query Execution</h2>
+
+        <p>1. Parse query into AST.</p>
+        <p>2. Make AST optimizations (Most of them need to be moved into logical, physical query plans or expression DAG optimizations).</p>
+        <p>3. Build logical query plan + make logical query plan optimizations.</p>
+        <p>4. Build physical query plan + make physical query plan optimizations.</p>
+        <p>5. Execution.</p>
+    </section>
+
+    <section class="slide">
+        <h2>AST</h2>
+
+        <code>EXPLAIN AST value * 2 + 1 FROM test_table
+WHERE value > 10 ORDER BY value;</code>
+        <code style="font-size: 10pt;">┌─explain─────────────────────────────────────┐
+│ SelectWithUnionQuery (children 1)           │
+│  ExpressionList (children 1)                │
+│   SelectQuery (children 4)                  │
+│    ExpressionList (children 1)              │
+│     Function plus (children 1)              │
+│      ExpressionList (children 2)            │
+│       Function multiply (children 1)        │
+│        ExpressionList (children 2)          │
+│         Identifier value                    │
+│         Literal UInt64_2                    │
+│       Literal UInt64_1                      │
+│    TablesInSelectQuery (children 1)         │
+│     TablesInSelectQueryElement (children 1) │
+│      TableExpression (children 1)           │
+│       TableIdentifier test_table            │
+│    Function greater (children 1)            │
+│     ExpressionList (children 2)             │
+│      Identifier value                       │
+│      Literal UInt64_10                      │
+│    ExpressionList (children 1)              │
+│     OrderByElement (children 1)             │
+│      Identifier value                       │
+└─────────────────────────────────────────────┘</code>
+    </section>
+
+    <section class="slide">
+        <h2>Logical Query Plan</h2>
+
+        <code>EXPLAIN SELECT value * 2 + 1 FROM test_table
+WHERE value > 10 ORDER BY value;</code>
+        <code style="font-size: 15pt;">┌─explain──────────────────────────────────────────────────────────┐
+│ Expression ((Projection + Before ORDER BY [lifted up part]))     │
+│   Sorting (Sorting for ORDER BY)                                 │
+│     Expression (Before ORDER BY)                                 │
+│       Filter (WHERE)                                             │
+│         SettingQuotaAndLimits                                    │
+│           ReadFromMergeTree (default.test_table)                 │
+└──────────────────────────────────────────────────────────────────┘</code>
+    </section>
+
+    <section class="slide">
+        <h2>Physical Query Plan</h2>
+
+        <code>EXPLAIN PIPELINE SELECT value * 2 + 1 FROM test_table
+WHERE value > 10 ORDER BY value;</code>
+        <code style="font-size: 15pt;">┌─explain────────────────────────────────────┐
+│ (Expression)                               │
+│ ExpressionTransform                        │
+│   (Sorting)                                │
+│   MergingSortedTransform 16 → 1            │
+│     MergeSortingTransform × 16             │
+│       LimitsCheckingTransform × 16         │
+│         PartialSortingTransform × 16       │
+│           (Expression)                     │
+│           ExpressionTransform × 16         │
+│             (Filter)                       │
+│             FilterTransform × 16           │
+│               (SettingQuotaAndLimits)      │
+│                 (ReadFromMergeTree)        │
+│                 MergeTreeThread × 16 0 → 1 │
+└────────────────────────────────────────────┘</code>
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">JIT compilation</h1>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Compilation</h2>
+
+        <p>JIT - Just in time compilation</p>
+        <p>Generate machine code and execute in runtime.</p>
+        <p>Examples: JVM Hotspot, V8.</p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Compilation</h2>
+
+        <p>Use LLVM for JIT compilation.</p>
+        <p>Use our own wrapper around LLVM dynamic linker and compiler.</p>
+    </section>
+
+    <section class="slide">
+        <h2>ClickHouse JIT Compilation</h2>
+
+        <p>2018 - First implementation for JIT compilation of expressions. Developer Denis Skorobogatov.</p>
+        <p>2019 - Improvements in initial implementation. Enable by default in production. Developers Alexey Milovidov, Alexander Sapin.</p>
+        <p>2019 - Disable JIT by default. Available as experimental feature.</p>
+        <p>2021 - Fix issues with JIT compilation of expressions. Enable JIT compilation by default. Developer Maksim Kita.</p>
+        <p>2021 - Implement JIT compilation for GROUP BY operator.</p>
+        <p>2022 - Implement JIT compilation for ORDER BY comparator.</p>
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">ClickHouse compilation of expressions</h1>
+    </section>
+
+    <section class="slide">
+        <h2>Expressions Evaluation</h2>
+
+        <code>EXPLAIN PIPELINE SELECT value * 2 + 1 FROM test_table
+WHERE value > 10 ORDER BY value;</code>
+        <code style="font-size: 15pt;">┌─explain────────────────────────────────────┐
+│ (Expression)                               │
+│ <b>ExpressionTransform</b>                        │
+│   (Sorting)                                │
+│   MergingSortedTransform 16 → 1            │
+│     MergeSortingTransform × 16             │
+│       LimitsCheckingTransform × 16         │
+│         PartialSortingTransform × 16       │
+│           (Expression)                     │
+│           <b>ExpressionTransform</b> × 16         │
+│             (Filter)                       │
+│             <b>FilterTransform</b> × 16           │
+│               (SettingQuotaAndLimits)      │
+│                 (ReadFromMergeTree)        │
+│                 MergeTreeThread × 16 0 → 1 │
+└────────────────────────────────────────────┘</code>
+    </section>
+
+    <section class="slide">
+        <h2>ExpressionTransform</h2>
+        <code>SELECT a + b + c FROM test_table;</code>
+
+        <p>Expressions are represented in DAG that has input, function, constant nodes. Example:</p>
+        <img style="width: 60%; margin-left: 150px;" src="pictures/simple_expression_before_compilation.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Expressions Evaluation Problems</h2>
+
+        <p>1. During DAG interpretation, data is moving between functions. Operations are not fused.</p>
+        <p>Example <b>plus(plus(a, b), c))</b> first plus on columns a and b is performed and result stored in temporary column.
+Then plus with temporary column and column c is performed.</p>
+        <p>2. Code bloat for different function specializations using templates, increase binary size.</p>
+        <p>3. For AVX256, AVX512 instructions need to use runtime instructions specialization using CPUID. Necessary for distributing portable binary.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Expressions Compilation Algorithm</h2>
+
+        <p>1. For each node in <b>ActionsDAG</b> get <b>compilable_children_size</b></p>
+        <p>2. Sort nodes in descending order of <b>compilable_children_size</b>, to first compile nodes with most children.</p>
+        <p>3. Check if node can be compiled using heuristics currently we require node to contain at least 1 compilable children.</p>
+        <p>4. Compile node functions together into function that takes raw columns data pointers and return expression result.</p>
+        <p>4. Replace node in DAG with special <b>LLVMFunction</b> node. <b>LLVMFunction</b> execute method converts columns into raw data and call compiled function.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Expressions DAG Without JIT</h2>
+
+        <code>SELECT a + b + c FROM test_table;</code>
+        <img style="width: 60%; margin-left: 150px;" src="pictures/simple_expression_before_compilation.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Expressions DAG With JIT</h2>
+
+        <code>SET compile_expressions = 1;
+SELECT a + b + c FROM test_table;</code>
+        <img style="width: 60%; margin-left: 150px; margin-top: 20px;" src="pictures/simple_expression_after_compilation.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>How JIT can help</h2>
+
+        <p>1. Improve L1, L2 cache usages.</p>
+        <p>2. Less code to execute. It is placed on 1 page. Better usage of CPU branch predictor.</p>
+        <p>3. Eliminate indirections.</p>
+        <p>4. Multiple operations are fused in one function. More optimizations can be performed by compiler.</p>
+        <p>5. Using target CPU intructions (AVX256, AVX512) if necessary.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Which Functions Can Be Compiled</h2>
+
+        <p>Any function potentially can be compiled, but generate IR is inconvenient. Currently supported:</p>
+        <p>1. Binary operators. Example <b>plus</b>, <b>minus</b>, <b>multiply</b>, <b>xor</b>.</p>
+        <p>2. Unary operators. Example <b>abs</b>.</p>
+        <p>3. Logical functions. Example <b>and</b>, <b>or</b>, <b>not</b>.</p>
+        <p>4. Branch functions. Example <b>if</b>, <b>multiIf</b>.</p>
+        <p>5. Bit shift functions. Example <b>bitShiftLeft</b>.</p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Expressions Compilation Example</h2>
+
+        <code style="font-size: 14pt;">SELECT a + b * c + 5 FROM test_jit_merge_tree;</code>
+
+        <code style="font-size: 10pt; margin-top: 4pt;">loop:                                             ; preds = %loop, %entry
+%19 = phi i64 [ 0, %entry ], [ %34, %loop ] /// <b>Get counter phi node. If started from entry it is 0.</b>
+%20 = phi i64* [ %5, %entry ], [ %30, %loop ] /// <b>Argument column phi node</b>
+%21 = phi i64* [ %9, %entry ], [ %31, %loop ] /// <b>Argument column phi node</b>
+%22 = phi i64* [ %13, %entry ], [ %32, %loop ] /// <b>Argument column phi node</b>
+%23 = phi i64* [ %17, %entry ], [ %33, %loop ] /// <b>Result column phi node</b>
+%24 = load i64, i64* %20, align 8 /// <b>Load argument current row</b>
+%25 = load i64, i64* %21, align 8 /// <b>Load argument current row</b>
+%26 = load i64, i64* %22, align 8 /// <b>Load argument current row</b>
+%27 = mul i64 %25, %26 /// <b>Multiply b * c</b>
+%28 = add i64 %24, %27 /// <b>Add a + result of multiply b * c</b>
+%29 = add i64 %28, 5 /// <b>Add with constant 5</b>
+store i64 %29, i64* %23, align 8 /// <b>Store value in result column</b>
+%30 = getelementptr inbounds i64, i64* %20, i64 1 /// <b>Adjust pointer to next element</b>
+%31 = getelementptr inbounds i64, i64* %21, i64 1 /// <b>Adjust pointer to next element</b>
+%32 = getelementptr inbounds i64, i64* %22, i64 1 /// <b>Adjust pointer to next element</b>
+%33 = getelementptr inbounds i64, i64* %23, i64 1 /// <b>Adjust pointer to next element</b>
+%34 = add i64 %19, 1 /// <b>Increase counter</b>
+%35 = icmp eq i64 %34, %0br i1 %35, label %end, label %loop /// <b>Check loop predicate</b></code>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Expressions Compilation Example</h2>
+
+        <code style="font-size: 14pt;">void aPlusBMulitplyCPlusConstant(
+    int64_t * a,
+    int64_t * b,
+    int64_t * c,
+    int64_t constant,
+    int64_t * result,
+    size_t size)
+{
+    for (size_t i = 0; i &lt; size; ++i)
+    {
+        *result = (*a) + (*b) * (*c) + constant;
+
+        ++a;
+        ++b;
+        ++c;
+        ++result;
+    }
+}</code>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Expressions Compilation Example</h2>
+        <code style="font-size: 10pt;">
+.LBB0_8:                                # %vector.body
+    vmovdqu	(%r11,%rax,8), %ymm1
+    vmovdqu	(%r9,%rax,8), %ymm3
+    vmovdqu	32(%r11,%rax,8), %ymm2
+    vmovdqu	32(%r9,%rax,8), %ymm4
+    vpsrlq	$32, %ymm3, %ymm5
+    vpsrlq	$32, %ymm1, %ymm6
+    vpmuludq	%ymm1, %ymm5, %ymm5
+    vpmuludq	%ymm6, %ymm3, %ymm6
+    vpmuludq	%ymm1, %ymm3, %ymm1
+    vpsrlq	$32, %ymm4, %ymm3
+    vpmuludq	%ymm2, %ymm3, %ymm3
+    vpaddq	%ymm5, %ymm6, %ymm5
+    vpsllq	$32, %ymm5, %ymm5
+    vpaddq	%ymm5, %ymm1, %ymm1
+    vpsrlq	$32, %ymm2, %ymm5
+    vpmuludq	%ymm2, %ymm4, %ymm2
+    vpaddq	(%r14,%rax,8), %ymm1, %ymm1
+    vpmuludq	%ymm5, %ymm4, %ymm5
+    vpaddq	%ymm3, %ymm5, %ymm3
+    vpsllq	$32, %ymm3, %ymm3
+    vpaddq	%ymm3, %ymm2, %ymm2
+    vpaddq	32(%r14,%rax,8), %ymm2, %ymm2
+    vpaddq	%ymm0, %ymm1, %ymm1 /// <b>in ymm0 there is constant 5. vpbroadcastq	(%rbp), %ymm0</b>
+    vmovdqu	%ymm1, (%r10,%rax,8)
+    vpaddq	%ymm0, %ymm2, %ymm2
+    vmovdqu	%ymm2, 32(%r10,%rax,8)
+    addq	$8, %rax
+    cmpq	%rax, %r8</code>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Compilation Costs</h2>
+
+        <p>JIT standard expression compilation time is around 15 ms. Grows linearly with code size.</p>
+        <p>Typical compiled expression use 1 page for code section and 1 page for data section. 4096 * 2 = 8192 bytes on most configurations.</p>
+        <p>Introspection works inside ClickHouse using `CompileExpressionsMicroseconds`, `CompileExpressionsBytes` metrics.</p>
+        <code style="font-size: 10pt; margin-top: -18pt;">SELECT
+    ProfileEvents['CompileExpressionsMicroseconds'] AS compiled_time,
+    ProfileEvents['CompileExpressionsBytes'] AS compiled_bytes
+FROM system.query_log
+WHERE compiled_time > 0;
+
+┌─compiled_time─┬─compiled_bytes─┐
+│         16258 │           8192 │
+│         26792 │           8192 │
+│         15280 │           8192 │
+│         11594 │           8192 │
+│         14989 │           8192 │
+└───────────────┴────────────────┘</code>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Expressions Compilation Results</h2>
+        <code>SELECT count() FROM hits
+WHERE
+     ((EventDate >= '2018-08-01')
+    AND (EventDate &lt;= '2018-08-03')
+    AND (CounterID >= 34))
+OR    ((EventDate >= '2018-08-04')
+    AND (EventDate &lt;= '2018-08-05')
+    AND (CounterID &lt;= 101500))
+</code>
+
+        <p style="margin-top: 2em;">&mdash; 649 533 033 rows per second.</p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Expressions Compilation Results</h2>
+        <code style="margin-top: -1em;">SET compile_expressions = 1;
+
+SELECT count() FROM hits
+WHERE
+    ((EventDate >= '2018-08-01')
+    AND (EventDate &lt;= '2018-08-03')
+    AND (CounterID >= 34))
+OR    ((EventDate >= '2018-08-04')
+    AND (EventDate &lt;= '2018-08-05')
+    AND (CounterID &lt;= 101500))
+ </code>
+
+        <p style="margin-top: 2em;">&mdash; 865 491 052 rows per second.<br/>
+        &mdash; <span style="color: green;"><b>+33% performance improvement!</b></span></p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Expressions Compilation Results</h2>
+        <code>SELECT
+    number * 2 +
+    number * 3 +
+    number * 4 +
+    number * 5
+FROM system.numbers
+FORMAT Null
+        </code>
+
+        <p style="margin-top: 2em;">&mdash; 0 rows in set. Elapsed: 0.903 sec. Processed 329.23 million rows, 2.63 GB (364.78 million rows/s., 2.92 GB/s.</p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Expressions Compilation Results</h2>
+        <code>SET compile_expressions = 1;
+SELECT
+    number * 2 +
+    number * 3 +
+    number * 4 +
+    number * 5
+FROM system.numbers
+FORMAT Null
+        </code>
+
+        <p style="margin-top: 2em;">&mdash; 0 rows in set. Elapsed: 1.602 sec. Processed 1.89 billion rows, 15.15 GB (1.18 billion rows/s., 9.46 GB/s.)<br/>&mdash;
+        <span style="color: green;"><b>+323% performance improvement!</b></span></p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Expressions Compilation Results</h2>
+        <code>SET compile_expressions = 1;
+
+WITH number AS x, if(x = 1, 1, if(x = 2, 2,
+if(x = 3, 3, if(x = 4, 4, if(x = 5, 5,
+if(x = 6, 6, if(x = 7, 7, if(x = 8, 8,
+if(x = 9, 9, if(x = 10, 10,
+if(x = 11, 11, 12))))))))))) AS res
+SELECT sum(res)
+FROM numbers(10000000)
+        </code>
+
+        <p style="margin-top: 2em;">&mdash; 0 rows in set. Elapsed: 0.150 sec. Processed 10.02 million rows, 80.18 MB (66.95 million rows/s., 535.56 MB/s.).</p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Expressions Compilation Results</h2>
+        <code>SET compile_expressions = 1;
+
+WITH number AS x, if(x = 1, 1, if(x = 2, 2,
+if(x = 3, 3, if(x = 4, 4, if(x = 5, 5,
+if(x = 6, 6, if(x = 7, 7, if(x = 8, 8,
+if(x = 9, 9, if(x = 10, 10,
+if(x = 11, 11, 12))))))))))) AS res
+SELECT sum(res)
+FROM numbers(10000000)
+        </code>
+
+        <p style="margin-top: 2em;">&mdash; 0 rows in set. Elapsed: 0.061 sec. Processed 10.02 million rows, 80.18 MB (163.20 million rows/s., 1.31 GB/s.)<br/>&mdash;
+        <span style="color: green;"><b>+244% performance improvement!</b></span></p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Performance CPU Cycles</h2>
+
+        <img style="width: 80%" src="pictures/benchmark_jit_expression_cpu_cycles.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Performance CPU Cache Misses</h2>
+
+        <img style="width: 80%" src="pictures/benchmark_jit_expression_cpu_cache_misses.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Performance CPU Branch Misses</h2>
+
+        <img style="width: 80%" src="pictures/benchmark_jit_expression_cpu_branch_misses.png"/>
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">ClickHouse compilation of operator GROUP BY</h1>
+    </section>
+
+    <section class="slide">
+        <h2>ClickHouse Aggregation</h2>
+        <code>EXPLAIN PIPELINE SELECT sum(UserID)
+FROM default.hits_100m_single GROUP BY WatchID;
+
+┌─explain────────────────────────────────┐
+│ (Expression)                           │
+│ ExpressionTransform                    │
+│   (Aggregating)                        │
+│   Resize 16 → 1                        │
+│     <b>AggregatingTransform</b> × 16          │
+│       StrictResize 16 → 16             │
+│         (Expression)                   │
+│         ExpressionTransform × 16       │
+│           (SettingQuotaAndLimits)      │
+│             (ReadFromMergeTree)        │
+│             MergeTreeThread × 16 0 → 1 │
+└────────────────────────────────────────┘
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>ClickHouse Aggregation</h2>
+
+        <img style="text-align: center; height:60%; margin-left: 150px;" src="pictures/aggregator_architecture.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Aggregate Function Interface</h2>
+
+        <code style="font-size: 10pt">class IAggregateFunction
+{
+...
+    virtual ~IAggregateFunction() = default;
+
+    <span style="color: green;">/// AggregateDataPtr pointer to aggregate data for unique key during GROUP BY</span>
+
+    <span style="color: green;">/// Create empty data for aggregation with `placement new` at the specified location.</span>
+    virtual void <b>create</b>(AggregateDataPtr place) const = 0;
+
+    <span style="color: green;">/** Adds a value into aggregation data on which place points to.</span>
+    <span style="color: green;">* columns points to columns containing arguments of aggregation function.</span>
+    <span style="color: green;">* row_num is number of row which should be added.</span>
+    <span style="color: green;">*/</span>
+    virtual void <b>add</b>(
+        AggregateDataPtr place,
+        const IColumn ** columns,
+        size_t row_num,
+        Arena * arena) const = 0;
+
+    <span style="color: green;">/// Merges state (on which place points to) with other state of current aggregation function.</span>
+    virtual void <b>merge</b>(AggregateDataPtr place, ConstAggregateDataPtr rhs, Arena * arena) const = 0;
+
+    <span style="color: green;">/// Inserts results into a column. This method might modify the state (e.g.</span>
+    <span style="color: green;">/// sort an array), so must be called once, from single thread.</span>
+    virtual void <b>insertResultInto</b>(AggregateDataPtr place, IColumn & to, Arena * arena) const = 0;
+...
+}
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Aggregator Functions Interaction</h2>
+
+        <code style="font-size: 14pt;">SELECT
+    sum(UserID),
+    sum(ClientIP),
+    sum(CounterClass),
+    sum(CounterID),
+    sum(WatchID)
+FROM default.hits_100m_obfuscated
+GROUP BY WatchID
+</code>
+
+        <p>1. For each unique key create aggregate state for each function.</p>
+        <p>2. For each key update aggregate state for each.</p>
+        <p>3. For each unique key merge aggregate state for each function, in case multiple threads are used.</p>
+        <p>4. For each unique key insert result from aggregate state into final columns for each function.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Aggregation Problems</h2>
+
+        <p>1. A lot of virtual function calls.</p>
+        <p>2. For Nullable columns we have Nullable wrapper, additional indirection layer.</p>
+        <p>3. Aggregation combinators. -If, -Array, additional indirection layer.</p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Compilation Strategy</h2>
+
+        <p>Fuse multiple aggregate functions actions into one.</p>
+        <p>Functions require 4 actions create, add, merge, insert. Fuse them and compile into 4 functions.</p>
+        <p>1. Create function for multiple aggregate functions.</p>
+        <p>2. Add function for multiple aggregate functions.</p>
+        <p>3. Merge function for mutiple aggregate function.</p>
+        <p>4. Insert final result function for multiple aggregate functions.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Which functions can be compiled</h2>
+        <p>1. Most common aggregate functions <b>sum</b>, <b>count</b>, <b>min</b>, <b>max</b>, <b>avg</b>, <b>avgWeighted</b>.</p>
+        <p>2. Combinators -If.</p>
+        <p>3. Nullable aggregate function adaptor.</p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Aggregation Compilation Example</h2>
+
+        <code style="font-size: 14pt;">SELECT
+    sum(UserID),
+    avg(ClientIP),
+    sum(CounterClass),
+    min(CounterID),
+    max(WatchID)
+FROM default.hits_100m_obfuscated
+GROUP BY WatchID</code>
+
+        <code style="font-size: 14pt; margin-top: 4pt;">SELECT
+    sum_avg_sum_min_max(
+        UserID,
+        ClientIP,
+        CounterClass,
+        CounterID,
+        WatchID)
+FROM default.hits_100m_obfuscated
+GROUP BY WatchID</code>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Aggregation Compilation Results</h2>
+        <code>SELECT
+    sum(UserID),
+    sum(ClientIP),
+    sum(CounterClass),
+    sum(CounterID),
+    sum(WatchID)
+FROM default.hits_100m_obfuscated
+GROUP BY WatchID</code>
+
+        <p style="margin-top: 2em;">&mdash; 0 rows in set. Elapsed: 5.504 sec. Processed 100.00 million rows, 2.50 GB (18.17 million rows/s., 454.21 MB/s.)</p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Aggregation Compilation Results</h2>
+        <code style="margin-top: -1em;">SET compile_aggregate_expression = 1;
+
+SELECT
+    sum(UserID),
+    sum(ClientIP),
+    sum(CounterClass),
+    sum(CounterID),
+    sum(WatchID)
+FROM default.hits_100m_obfuscated
+GROUP BY WatchID</code>
+
+        <p style="margin-top: 2em;">&mdash; 0 rows in set. Elapsed: 4.146 sec. Processed 100.00 million rows, 2.50 GB (24.12 million rows/s., 603.06 MB/s.)<br/>
+        &mdash; <span style="color: green;"><b>+34% performance improvement!</b></span></p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Aggregation Compilation Results</h2>
+        <code style="margin-top: -1em;">WITH (WatchID % 2 == 0) AS predicate
+SELECT
+    minIf(UserID, predicate),
+    minIf(ClientIP, predicate),
+    minIf(CounterClass, predicate),
+    minIf(CounterID, predicate),
+    minIf(WatchID, predicate)
+FROM default.hits_100m_obfuscated
+GROUP BY WatchID</code>
+
+        <p style="margin-top: 2em;">&mdash; 0 rows in set. Elapsed: 6.234 sec. Processed 100.00 million rows, 2.50 GB (16.04 million rows/s., 401.05 MB/s.)</p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Aggregation Compilation Results</h2>
+        <code style="margin-top: -1em;">SET compile_aggregate_expression = 1;
+
+WITH (WatchID % 2 == 0) AS predicate
+SELECT
+    minIf(UserID, predicate),
+    minIf(ClientIP, predicate),
+    minIf(CounterClass, predicate),
+    minIf(CounterID, predicate),
+    minIf(WatchID, predicate)
+FROM default.hits_100m_obfuscated
+GROUP BY WatchID</code>
+
+        <p style="margin-top: 2em;">&mdash; 0 rows in set. Elapsed: 4.146 sec. Processed 100.00 million rows, 2.50 GB (24.12 million rows/s., 603.06 MB/s.)<br/>
+        &mdash; <span style="color: green;"><b>+71% performance improvement!</b></span></p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Performance CPU Cycles</h2>
+
+        <img style="width: 80%" src="pictures/benchmark_jit_aggregation_cpu_cycles.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Performance CPU Cache Misses</h2>
+
+        <img style="width: 80%" src="pictures/benchmark_jit_aggregation_cpu_cache_misses.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Performance CPU Branch Misses</h2>
+
+        <img style="width: 80%" src="pictures/benchmark_jit_aggregation_cpu_branch_misses.png"/>
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">ClickHouse compilation of ORDER BY comparator</h1>
+    </section>
+
+    <section class="slide">
+        <h2>ClickHouse Sorting</h2>
+
+        <code>EXPLAIN PIPELINE SELECT WatchID FROM hits_100m_single
+ORDER BY WatchID, CounterID;</code>
+                    <code style="font-size: 15pt;">┌─explain──────────────────────────────────┐
+│ (Expression)                             │
+│ ExpressionTransform                      │
+│   (Sorting)                              │
+│   <b>MergingSortedTransform</b> 16 → 1          │
+│     <b>MergeSortingTransform</b> × 16           │
+│       LimitsCheckingTransform × 16       │
+│         <b>PartialSortingTransform</b> × 16     │
+│           (Expression)                   │
+│           ExpressionTransform × 16       │
+│             (SettingQuotaAndLimits)      │
+│               (ReadFromMergeTree)        │
+│               MergeTreeThread × 16 0 → 1 │
+└──────────────────────────────────────────┘</code>
+    </section>
+
+    <section class="slide">
+        <h2>ClickHouse Sorting</h2>
+
+        <p><b>PartialSortingTransform</b> &mdash; sort block, apply special optimization for LIMIT if specified.</p>
+        <p><b>MergeSortingTransform</b> &mdash; sort blocks using k-way-merge algorithm, output stream of sorted blocks.</p>
+        <p><b>MergingSortedTransform</b> &mdash; sort streams of sorted blocks using k-way-merge algorithm.</p>
+    </section>
+
+    <section class="slide">
+        <h2>ClickHouse Sorting</h2>
+
+        <img style="width: 85%;" src="pictures/sort_perf.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Comparator Compilation</h2>
+
+        <p>ORDER BY WatchID, CounterID</p>
+
+        <p>We will apply comparator to each row almost N * log(N) * 2 times during our <b>MergeSortingTransform</b>, <b>MergingSortedTransform</b>.</p>
+        <p>We can compile it in single function, to avoid unnecessary indirections.</p>
+        <p>For Nullable columns performance could be even better.</p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Comparator Compilation Results</h2>
+
+        <code>SET compile_sort_description=0;
+
+SELECT WatchID FROM hits_100m_single
+ORDER BY WatchID, CounterID</code>
+
+        <p style="margin-top: 2em;">&mdash; 0 rows in set. Elapsed: 6.408 sec. Processed 100.00 million rows, 1.20 GB (15.60 million rows/s., 187.26 MB/s.)</p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Comparator Compilation Results</h2>
+
+        <code>SET compile_sort_description=1;
+
+SELECT WatchID FROM hits_100m_single
+ORDER BY WatchID, CounterID</code>
+
+        <p style="margin-top: 2em;">&mdash; 0 rows in set. Elapsed: 5.300 sec. Processed 100.00 million rows, 1.20 GB (18.87 million rows/s., 226.40 MB/s.)<br/>
+            &mdash; <span style="color: green;"><b>+20% performance improvement!</b></span></p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Comparator Compilation Results</h2>
+
+        <code>SET compile_sort_description=1;
+
+SELECT * FROM test_nullable_table
+ORDER BY value</code>
+
+        <p style="margin-top: 2em;">&mdash; 0 rows in set. Elapsed: 5.299 sec. Processed 100.00 million rows, 1.70 GB (18.87 million rows/s., 320.81 MB/s.)</p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Comparator Compilation Results</h2>
+
+        <code>SET compile_sort_description=1;
+
+SELECT * FROM test_nullable_table
+ORDER BY value</code>
+
+        <p style="margin-top: 2em;">&mdash; 0 rows in set. Elapsed: 4.131 sec. Processed 100.00 million rows, 1.70 GB (24.21 million rows/s., 411.50 MB/s.)<br/>
+            &mdash; <span style="color: green;"><b>+30% performance improvement!</b></span></p>
+    </section>
+
+    <section class="slide">
+        <h2>Results</h2>
+
+        <p>JIT compilation improves performance of expression evaluation and aggregation.</p>
+        <p>For expression evaluation improve performance in <b>1.5-3 times</b> (for some cases more than 20 times).
+        <p>For aggregation improve performance in <b>1.15-2 times</b>.</p>
+        <p>For order by comparator improve performance in <b>1.15-1.5 times</b></p>
+    </section>
+
+    <section class="slide">
+        <h2>Questions?</h2>
+    </section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
