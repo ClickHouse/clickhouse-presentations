@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>JIT in ClickHouse</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+        code { display: block; white-space: pre; background-color: #EEE; }
+        p.cloud { text-align: center; line-height: 1.5; }
+        p.cloud span { font-size: 13pt; color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+   </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>JIT in ClickHouse</h1>
+    </header>
+
+    <section class="slide" id="cover">
+        <h1 style="margin-top: 150px;">JIT in ClickHouse</h1>
+    </section>
+
+    <section class="slide">
+        <h2>About me</h2>
+        <p>Maksim, developer of ClickHouse.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Plan</h2>
+        <p>1. JIT basics</p>
+        <p>2. LLVM instruments</p>
+        <p>3. ClickHouse compilation of expressions</p>
+        <p>4. ClickHouse compilation of operator GROUP BY</p>
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">JIT basics</h1>
+    </section>
+
+    <section class="slide">
+        <h2>JIT basics</h2>
+        <p>JIT - Just in time compilation</p>
+        <p>Generate machine code and execute in runtime.</p>
+        <p>Examples: JVM Hotspot, V8.</p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT example</h2>
+        <code style="font-size: 10pt;">int64_t sum(int64_t value_1, int64_t value_2)
+{
+    return value_1 + value_2;
+}
+
+int main(int argc, char ** argv)
+{
+    printf("Sum %ld\n", sum(1, 2));
+    return 0;
+}
+        </code>
+
+        <code style="font-size: 14pt; margin-top: 4pt;">$ g++ -O2 jit_example.cpp -o jit_example</code>
+        <code style="font-size: 14pt;">$ objdump -D jit_example | grep sum -A5</code>
+
+        <code style="font-size: 10pt; margin-top: 4pt;">0000000000001180 &lt;_Z3sumll&gt;:
+            1180:	f3 0f 1e fa          	endbr64
+            <b>1184</b>:	<b>48 8d 04 37</b>          	lea    (%rdi,%rsi,1),%rax /// <b>%rax = %rdi * %rsi + 1</b>
+            <b>1188</b>:	<b>c3</b>                   	retq
+            1189:	0f 1f 80 00 00 00 00 	nopl   0x0(%rax)
+        </code>
+
+
+        <p>
+            <a style="font-size: 15px;" href="https://en.wikipedia.org/wiki/X86_calling_conventions#System_V_AMD64_ABI">
+                https://en.wikipedia.org/wiki/X86_calling_conventions#System_V_AMD64_ABI
+            </a>
+        </p>
+    </section>
+
+    <section class="slide">
+        <h2>ELF Program sections</h2>
+        <img style="width: 40%; height: 60%; margin-left: 160px;" src="pictures/elf_program_sections.png"/>
+        <p>
+            <a style="font-size: 15px;" href="https://en.wikipedia.org/wiki/Executable_and_Linkable_Format">
+                https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
+            </a>
+        </p>
+    </section>
+
+    <section class="slide">
+        <h2>ELF sections</h2>
+        <code style="font-size: 14pt;">$ readelf -S jit_example</code>
+        <code style="font-size: 10pt;">There are 31 section headers, starting at offset 0x39a8:
+
+Section Headers:
+
+[16] .text             PROGBITS         0000000000001060  00001060
+00000000000001a5  0000000000000000  <b>AX</b>       0     0     16
+[18] .rodata           PROGBITS         0000000000002000  00002000
+000000000000000d  0000000000000000   <b>A</b>       0     0     4
+[25] .data             PROGBITS         0000000000004000  00003000
+0000000000000010  0000000000000000  <b>WA</b>       0     0     8
+
+Key to Flags:
+  W (write), A (alloc), X (execute), M (merge), S (strings), I (info),
+  L (link order), O (extra OS processing required), G (group), T (TLS),
+  C (compressed), x (unknown), o (OS specific), E (exclude),
+  l (large), p (processor specific)</code>
+
+        <code style="font-size: 10pt; margin-top: 4pt;">printf("Sum %ld\n", sum(1, 2)); </code>
+
+        <code style="font-size: 14pt; margin-top: 4pt;">$ readelf -x .rodata jit_example</code>
+        <code style="font-size: 10pt;">Hex dump of section '.rodata':
+0x00002000 01000200 53756d20 256c640a 00       ....Sum %ld..
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>ELF sections</h2>
+
+        <code style="font-size: 14pt;">$ objdump -D jit_example | grep sum -A5</code>
+
+        <code style="font-size: 10pt; margin-top: 4pt;">0000000000001180 &lt;_Z3sumll&gt;:
+    <b>1180</b>:	<b>f3 0f 1e fa</b>          	endbr64
+    <b>1184</b>:	<b>48 8d 04 37</b>          	lea    (%rdi,%rsi,1),%rax
+    <b>1188</b>:	<b>c3</b>                   	retq
+    <b>1189</b>:	<b>0f 1f 80 00 00 00 00</b> 	nopl   0x0(%rax)
+        </code>
+
+        <code style="font-size: 14pt; margin-top: 4pt;">$ readelf -x .text jit_example</code>
+        <code style="font-size: 10pt;">
+Hex dump of section '.text':
+0x00001060 f30f1efa 4883ec08 ba030000 00bf0100 ....H...........
+...
+<b>0x00001180 f30f1efa 488d0437 c30f1f80 00000000</b> ....H..7........
+0x00001190 f30f1efa 41574c8d 3d1b2c00 00415649 ....AWL.=.,..AVI
+0x000011a0 89d64155 4989f541 544189fc 55488d2d ..AUI..ATA..UH.-
+...
+0x00001200 f30f1efa c3                         ....
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>JIT basics example</h2>
+        <code style="font-size: 10pt;">1144:   <b>48 8d 04 37</b>             <b>lea    (%rdi,%rsi,1),%rax</b>
+1148:   <b>c3</b>                      <b>retq</b></code>
+        <code style="font-size: 10pt; margin-top: 4pt;">int64_t jitSum(int64_t value_1, int64_t value_2)
+{
+    /// <b>Allocate page with READ + WRITE + EXEC permissions</b>
+    char * res = static_cast<char *>(mmap(NULL, 4096, PROT_READ | PROT_WRITE | PROT_EXEC,
+            MAP_PRIVATE | MAP_ANON, -1, 0));
+
+    size_t instruction = 0;
+
+    /// <b>lea (%rdi, %rsi, 1), %rax => rax = rdi + rsi * 1 </b>
+    res[instruction++] = <b>0x48</b>;
+    res[instruction++] = <b>0x8d</b>;
+    res[instruction++] = <b>0x04</b>;
+    res[instruction++] = <b>0x37</b>;
+
+    /// <b>retq</b>
+    res[instruction++] = <b>0xc3</b>;
+
+    using SumFunction = int64_t (*)(int64_t, int64_t);
+    SumFunction func = reinterpret_cast&lt;SumFunction&gt;(res);
+
+    return func(value_1, value_2);
+}
+
+int main(int argc, char ** argv)
+{
+    printf("Sum %ld\n", jitSum(1, 2));
+    return 0;
+}</code>
+    </section>
+
+    <section class="slide">
+        <h2>JIT basics example</h2>
+        <code style="font-size: 14pt;">$ g++ -O2 jit_example.cpp -o jit_example</code>
+        <code style="font-size: 14pt;">$ ./jit_example
+
+$ Sum 3
+</code>
+
+    </section>
+
+    <section class="slide">
+        <h2>JIT basics example</h2>
+        <code style="font-size: 10pt;">void test_function()
+{
+    printf("JIT example\n");
+}
+
+void jitTestFuncCall()
+{
+    /// <b>Allocate page with READ + WRITE + EXEC permissions</b>
+    char * res = static_cast&lt;char *&gt;(mmap(NULL, 4096, PROT_READ | PROT_WRITE | PROT_EXEC,
+        MAP_PRIVATE | MAP_ANON, -1, 0));
+
+    size_t instruction = 0;
+
+    /// <b>movabs [value], %rax</b>
+    res[instruction++] = <b>0x48</b>;
+    res[instruction++] = <b>0xb8</b>;
+
+    ptrdiff_t test_function_raw_ptr = reinterpret_cast<ptrdiff_t>(test_function);
+    memcpy(res + instruction, &test_function_raw_ptr, sizeof(ptrdiff_t));
+    instruction += sizeof(ptrdiff_t);
+
+    /// <b>callq *%rax</b>
+    res[instruction++] = <b>0xff</b>;
+    res[instruction++] = <b>0xd0</b>;
+    /// <b>retq</b>
+    res[instruction++] = <b>0xc3</b>;
+
+    using VoidFunction = void (*)(void);
+    VoidFunction func = reinterpret_cast&lt;VoidFunction&gt;(res);
+    func();
+}
+</code>
+    </section>
+
+    <section class="slide">
+        <h2>JIT basics example</h2>
+        <code style="font-size: 14pt;">$ g++ -O2 jit_example.cpp -o jit_example</code>
+        <code style="font-size: 14pt;">$ ./jit_example
+
+$ JIT example
+</code>
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">LLVM JIT</h1>
+    </section>
+
+    <section class="slide">
+        <h2>LLVM JIT</h2>
+        <p>1. Optimizing compiler (passes can be configured).</p>
+        <p>2. Dynamic Linker. Resolve relocations. Allocate necessary code, data sections.</p>
+        <p>3. Allow to write code in LLVM IR (High level assembler).</p>
+        <p>4. LLVM tooling IRPrinters, AssemblyPrinters. JIT tooling gdb, perf support.</p>
+        <p>5. MCJIT, ORCJIT JIT compilers</p>
+    </section>
+
+    <section class="slide">
+        <h2>LLVM IR</h2>
+        <p>1. Static Single Assignment (SSA). Variable is assigned only once.</p>
+        <p>2. Strongly typed.</p>
+        <p>3. Allows to map high level into low level.</p>
+
+<code style="font-size: 12pt;">/usr/bin/clang-12 -S -emit-llvm jit_example.cpp</code>
+
+<code style="font-size: 10pt; margin-top: 4pt;">; Function Attrs: noinline nounwind optnone uwtable mustprogress
+define dso_local i64 @_Z3sumll(i64 %0, i64 %1) #0 {
+  %3 = alloca i64, align 8 /// alloca - Allocate memory on stack
+  %4 = alloca i64, align 8
+  store i64 %0, i64* %3, align 8 /// store - store value in pointer
+  store i64 %1, i64* %4, align 8
+  %5 = load i64, i64* %3, align 8 /// load - load value from pointer
+  %6 = load i64, i64* %4, align 8
+  %7 = add nsw i64 %5, %6 /// nsw - No Signed Wrap
+  ret i64 %7
+}
+</code>
+
+        <p>
+            <a style="font-size: 15px;" href="https://en.wikipedia.org/wiki/Static_single_assignment_form">
+                https://en.wikipedia.org/wiki/Static_single_assignment_form
+            </a>
+        </p>
+
+    </section>
+
+    <section class="slide">
+        <h2>LLVM high level overview</h2>
+
+        <p class="cloud" style="font-size:40pt;">
+            <span>TargetMachine</span>
+            <span>MCContext</span>
+            <span>LLVMContext</span>
+            <span>IRBuilder</span>
+            <span>Module</span>
+            <span>Function</span>
+            <span>BasicBlock</span>
+            <span>PassManagerBuilder</span>
+            <span>PassManager</span>
+            <span>FunctionPassManager</span>
+            <span>ObjectFile</span>
+            <span>RTDyldMemoryManager</span>
+            <span>JITSymbolResolver</span>
+        </p>
+    </section>
+
+    <section class="slide">
+        <h2>LLVM high level overview</h2>
+
+        <p><b>TargetMachine</b> &mdash; machine target specific information. Allowed CPU instructions, data layout, etc.</p>
+        <p><b>LLVMContext</b> &mdash; context for global data and LLVM types</p>
+        <p><b>IRBuilder</b> &mdash; builder for LLVM IR.</p>
+        <p><b>Module</b> &mdash; container for functions.</p>
+        <p><b>Function</b> &mdash; function container for BasicBlocks.</p>
+        <p><b>BasicBlock</b> &mdash; container for LLVM IR instructions executed sequentially without branches except to exit.</p>
+    </section>
+
+    <section class="slide">
+        <h2>LLVM high level overview</h2>
+        <p><b>PassManagerBuilder</b> &mdash; builder for optimization passes.</p>
+        <p><b>PassManager</b> &mdash; module passes.</p>
+        <p><b>FunctionPassManager</b> &mdash; function passes.</p>
+        <p><b>ObjectFile</b> &mdash; object file.</p>
+        <p><b>RuntimeDyld</b> &mdash; dynamic linker. Takes object file and start dynamic linking, allocate and fill code and data sections. resolve relocations.</p>
+        <p><b>RTDyldMemoryManager</b> &mdash; dynamic linker memory manager. Allocates necessary code, data sections during linking.</p>
+        <p><b>JITSymbolResolver</b> &mdash; resolve external symbols during dynamic linking.</p>
+    </section>
+
+    <section class="slide">
+        <h2>CHJIT compile module flow</h2>
+        <p>1. Create <b>IRModule</b> and fill it with <b>IRFunctions</b>. Apply optimizations using <b>PassManagerBuilder</b>,
+<b>FunctionPassManager</b>, <b>PassManager</b>.</p>
+        <p>2. Setup passes in <b>PassManager</b> to emit <b>ObjectFile</b> using <b>TargetMachine</b> and <b>MCContext</b>.</p>
+        <p>3. Create <b>JITSymbolResolver</b> for resolving external symbols. Example: <b>memset</b>.</p>
+        <p>4. Create <b>RTDyldMemoryManager</b> for dynamic linker.</p>
+        <p>5. Resolve relocations and create necessary code, data sections for <b>ObjectFile</b> using <b>RuntimeDyld</b>.</p>
+        <p>6. Get function symbols from compiled code using <b>RuntimeDyld</b>.</p>
+    </section>
+
+    <section class="slide">
+        <h2>CHJIT interface</h2>
+<code style="font-size:10pt;">class CHJIT
+{
+    struct CompiledModule
+    {
+        <span style="color: green;">/// Size of compiled module code in bytes</span>
+        size_t size;
+
+        <span style="color: green;">/// Module identifier. Should not be changed by client</span>
+        uint64_t identifier;
+
+        <span style="color: green;">/// Map of compiled functions. Should not be changed by client.</span>
+        <span style="color: green;">/// After call to deleteCompiledModule compiled functions from module become invalid.</span>
+        std::unordered_map&lt;std::string, void *&gt; <b>function_name_to_symbol</b>;
+    };
+
+    <span style="color: green;">/// Compile module. Client must fill module with necessary IR code.</span>
+    CompiledModule <b>compileModule</b>(std::function&lt;void (llvm::Module &)&gt; compile_function);
+
+    <span style="color: green;">/// Delete compiled module. Pointers to functions from module become invalid after this call.</span>
+    void deleteCompiledModule(const CompiledModule & module_info);
+
+    <span style="color: green;">/// Register external symbol for CHJIT instance to use, during linking.</span>
+    void registerExternalSymbol(const std::string & symbol_name, void * address);
+
+    <span style="color: green;">/// Total compiled code size for module that are currently valid.</span>
+    inline size_t getCompiledCodeSize() const;
+}
+</code>
+    </section>
+
+    <section class="slide">
+        <h2>CHJIT example</h2>
+    <code style="font-size:10pt;">auto jit = DB::CHJIT();
+
+auto compiled_sum_module = jit.compileModule([](llvm::Module & module)
+{
+    llvm::LLVMContext & context = module.getContext();
+    llvm::IRBuilder&lt;&gt; b(context);
+
+    llvm::Type * int64_type = b.getInt64Ty();
+    std::vector<llvm::Type *> params = {int64_type, int64_type};
+    bool is_var_args = false;
+    llvm::FunctionType * func_type = llvm::FunctionType::get(int64_type, params, is_var_args);
+
+    llvm::Function::LinkageTypes linkage = llvm::Function::ExternalLinkage;
+    llvm::Function * function = llvm::Function::Create(func_type, linkage, "sum", module);
+
+    llvm::Value * first_argument = function->args().begin(); /// <b>Get first argument</b>
+    llvm::Value * second_argument = function->args().begin() + 1; /// <b>Get second argument</b>
+
+    llvm::BasicBlock * entry = llvm::BasicBlock::Create(context, "entry", function);
+    b.SetInsertPoint(entry);
+
+    llvm::Value * sum = b.CreateAdd(first_argument, second_argument); /// <b>Sum arguments</b>
+    b.CreateRet(sum); /// <b>Return sum result</b>
+});
+
+using SumFunc = int64_t (*)(int64_t, int64_t);
+auto sum_func = reinterpret_cast<SumFunc>(compiled_sum_module.function_name_to_symbol["sum"]);
+printf("Sum %ld\n", sum_func(1, 2));
+
+jit.deleteCompiledModule(compiled_sum_module);
+</code>
+    </section>
+
+    <section class="slide">
+        <h2>CHJIT example</h2>
+
+        <code style="font-size:10pt;">llvm::Function * function = llvm::Function::Create(func_type, linkage, "sum", module);
+
+llvm::Value * first_argument = function->args().begin(); /// <b>Get first argument</b>
+llvm::Value * second_argument = function->args().begin() + 1; /// <b>Get second argument</b>
+
+llvm::BasicBlock * entry = llvm::BasicBlock::Create(context, "entry", function);
+b.SetInsertPoint(entry);
+
+llvm::Value * sum = b.CreateAdd(first_argument, second_argument); /// <b>Sum arguments</b>
+b.CreateRet(sum); /// <b>Return sum result</b></code>
+        <p style="font-size: 12pt;">IR: </p>
+        <code style="font-size:10pt; margin-top: -4pt;">define i64 @sum(i64 %0, i64 %1) {
+    entry:
+    %2 = add i64 %0, %1
+    ret i64 %2
+}</code>
+        <p style="font-size: 12pt;">Assembler:</p>
+        <code style="font-size:10pt; margin-top: -4pt;">.text
+	.file	"jit0"
+	.globl	sum                             # -- Begin function sum
+	.p2align	4, 0x90
+	.type	sum,@function
+sum:                                    # @sum
+# %bb.0:                                # %entry
+	leaq	(%rdi,%rsi), %rax
+	retq
+.Lfunc_end0:
+	.size	sum, .Lfunc_end0-sum # -- End function</code>
+    </section>
+
+    <section class="slide">
+        <h2>CHJIT cache</h2>
+        <p>For each function pages must be allocated using <b>mmap</b>, or <b>malloc</b> with page alignment and <b>mprotect</b>.
+In kernel each mapping is stored as separate vma (virtual memory area).</p>
+        <p>Process maximum vma count is controlled by setting <b>max_map_count</b>. During mprotect with different areas permissions,
+area is splitted in 2 areas using <b>split_vma</b>.</p>
+        <p>Areas can also be merged if they are located side by side, using <b>mprotect_fixup</b>.</p>
+        <p>| R + W | | R + E | => | R + W | | R + W | => | R + W | </p>
+
+        <p>
+            <a style="font-size: 15px;" href="https://github.com/torvalds/linux/blob/master/mm/mprotect.c">
+                https://github.com/torvalds/linux/blob/master/mm/mprotect.c
+            </a>
+        </p>
+
+    </section>
+
+    <section class="slide">
+        <h2>CHJIT cache problem</h2>
+        <p>Because of <b>split_vma</b>, default <b>max_map_count</b> can be easily exceeded.</p>
+        <p>Non trivial allocator + maximum cache size is required to support <b>W^X</b> (write xor execute) policy.
+Because we must write data in area with READ + WRITE permissions, then use <b>mprotect</b> with READ + EXEC permissions, that will lead to <b>vma_split</b>.
+        </p>
+
+        <p>
+            <a style="font-size: 15px;" href="https://en.wikipedia.org/wiki/W%5EX">
+                https://en.wikipedia.org/wiki/W%5EX
+            </a>
+        </p>
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">ClickHouse compilation of expressions</h1>
+    </section>
+
+    <section class="slide">
+        <h2>ClickHouse columns</h2>
+        <p>Numeric columns - <b>PODArray</b>. Almost same as <b>std::vector</b>.</p>
+        <p>1. Use our <b>Allocator</b> with support of <b>realloc</b>.</p>
+        <p>2. No additional <b>memset</b> during <b>resize</b>.</p>
+        <p>3. Padding with 15 bytes at the end.</p>
+        <p>Nullable columns contain data column and UInt8 column bitmask is element null.</p>
+        <p>Const column is column with 1 constant value.</p>
+        <p>Non numeric columns does not support JIT compilation.</p>
+    </section>
+
+    <section class="slide">
+        <h2>ClickHouse query processing</h2>
+
+        <p>ClickHouse uses vectorized execution model. Data is processing in blocks. Block contain multiple columns with maxium 65536 rows.
+Each column is stored as a vector of primitive data types or their combination.</p>
+        <p>1. Better utilization for CPU caches and pipeline.</p>
+        <p>2. Data is processed using SIMD instructions.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Query execution plan</h2>
+        <code>EXPLAIN PIPELINE SELECT a + b + c FROM test_table
+┌─explain───────────────────┐
+│ (Expression)              │
+│ ExpressionTransform       │
+│   (SettingQuotaAndLimits) │
+│     (ReadFromStorage)     │
+│     TinyLog 0 → 1         │
+└───────────────────────────┘
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>ExpressionTransform</h2>
+        <p>Expressions are represented in DAG that has input, function, constant nodes.</p>
+        <code>SELECT a + b + c FROM test_table;</code>
+        <img style="width: 60%; margin-left: 150px;" src="pictures/simple_expression_before_compilation.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>ClickHouse function</h2>
+        <p>Takes arguments as columns and returns function result as column.</p>
+
+        <code style="font-size: 10pt;">class IFunction
+{
+
+virtual ~IFunction() = default;
+
+virtual ColumnPtr executeImpl(
+    const ColumnsWithTypeAndName & arguments,
+    const DataTypePtr & result_type,
+    size_t input_rows_count) const = 0;
+
+...
+
+}
+</code>
+        <p>Specializations using templates for different types. Example sum, multiply for different types combinations.</p>
+        <p>Specializations for constant columns. Example sum, multiply with constant column.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Expressions evaluation sroblems</h2>
+        <p>1. During DAG interpretation, data is moving between functions. Operations are not fused.</p>
+        <p>Example <b>plus(plus(a, b), c))</b> first plus on columns a and b is performed and result stored in temporary column.
+Then plus on result of previous plus and column c is performed.</p>
+        <p>2. Code bloat for different function specializations using templates, increase binary size.</p>
+        <p>3. For AVX256, AVX512 instructions need to use runtime instructions specialization using CPUID. Necessary for distributing portable binary.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Expressions DAG without JIT</h2>
+        <code>SELECT a + b + c FROM test_table;</code>
+        <img style="width: 60%; margin-left: 150px;" src="pictures/simple_expression_before_compilation.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Expressions DAG with JIT</h2>
+        <code>SET compile_expressions = 1;
+SELECT a + b + c FROM test_table;</code>
+        <img style="width: 60%; margin-left: 150px; margin-top: 20px;" src="pictures/simple_expression_after_compilation.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>How JIT can help</h2>
+        <p>1. Improve L1, L2 cache usages.</p>
+        <p>2. Less code to execute. It is placed on 1 page. Better usage of CPU branch predictor.</p>
+        <p>3. Eliminate indirections.</p>
+        <p>4. Multiple operations are fused in one function. More optimizations can be performed by compiler.</p>
+        <p>5. Using target CPU intructions.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Why does it matter</h2>
+        <pre style="font-size: 19px;">
+Latency Comparison Numbers
+----------------------------------
+L1 cache reference                           0.5 ns
+Branch mispredict                            5   ns
+L2 cache reference                           7   ns 14x L1 cache
+Mutex lock/unlock                           25   ns
+Main memory reference                      100   ns <b>20x L2 cache, 200x L1 cache</b>
+Compress 1K bytes with Zippy             3,000   ns        3 us
+Send 1K bytes over 1 Gbps network       10,000   ns       10 us
+Read 4K randomly from SSD*             150,000   ns      150 us ~1GB/sec SSD
+Read 1 MB sequentially from memory     250,000   ns      250 us
+Round trip within same datacenter      500,000   ns      500 us
+</pre>
+
+    <p>
+        <a style="font-size: 15px;" href="http://norvig.com/21-days.html#answers">
+            http://norvig.com/21-days.html#answers
+        </a>
+    </p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Function interface</h2>
+        <code style="font-size: 14pt;">class IFunction
+{
+...
+
+    virtual ~IFunction() = default;
+
+
+    bool isCompilable(const DataTypes & arguments) const;
+
+    llvm::Value * compile(
+        llvm::IRBuilderBase &,
+        const DataTypes & arguments,
+        Values values) const;
+...
+
+}
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Function interface</h2>
+        <code style="font-size: 10pt">template &lt;typename A, typename B&gt;
+class FunctionPlusImpl
+{
+    static llvm::Value * compile(
+        llvm::IRBuilder&lt;&gt; & b,
+        llvm::Value * left,
+        llvm::Value * right,
+        bool is_signed)
+    {
+        return left->getType()->isIntegerTy() ? b.CreateAdd(left, right) : b.CreateFAdd(left, right);
+    }
+}</code>
+
+    <code style="font-size: 10pt; margin-top: 4pt;">template &lt;typename A, typename B&gt;
+class FunctionMultiplyImpl
+{
+    static llvm::Value * compile(
+        llvm::IRBuilder&lt;&gt; & b,
+        llvm::Value * left,
+        llvm::Value * right,
+        bool is_signed)
+    {
+        return left->getType()->isIntegerTy() ? b.CreateMul(left, right) : b.CreateFMul(left, right);
+    }
+}</code>
+    </section>
+
+    <section class="slide">
+        <h2>JIT IF Function interface</h2>
+        <code style="font-size: 10pt">llvm::Value * compileImpl(
+            llvm::IRBuilderBase & builder,
+            const DataTypes & types,
+            std::vector&lt;llvm::Value *&gt; values) const override
+{
+    auto & b = static_cast&lt;llvm::IRBuilder&lt;&gt;&gt;(builder);
+    auto return_type = getReturnTypeImpl(types);
+    auto * head = b.GetInsertBlock();
+    auto * context = head->getContext();
+    auto * join = llvm::BasicBlock::Create(context, "join_block", head->getParent());
+    std::vector&lt;std::pair&lt;llvm::BasicBlock *, llvm::Value *&gt;&gt; returns;
+    for (size_t i = 0; i + 1 &lt; types.size(); i += 2)
+    {
+        auto index = std::to_string(i);
+        auto * then = llvm::BasicBlock::Create(context, "then_" + index, head->getParent());
+        auto * next = llvm::BasicBlock::Create(context, "next_" + index, head->getParent());
+        b.CreateCondBr(nativeBoolCast(b, types[i], values[i]), then, next);
+        b.SetInsertPoint(then);
+        auto * value = nativeCast(b, types[i + 1], values[i + 1], return_type);
+        returns.emplace_back(b.GetInsertBlock(), value);
+        b.CreateBr(join);
+        b.SetInsertPoint(next);
+    }
+    returns.emplace_back(b.GetInsertBlock(), nativeCast(b, types.back(), values.back(), return_type));
+    b.CreateBr(join);
+    b.SetInsertPoint(join);
+    auto * phi = b.CreatePHI(toNativeType(b, return_type), returns.size());
+    for (const auto & [block, value] : returns)
+        phi->addIncoming(value, block);
+    return phi;
+}</code>
+    </section>
+
+    <section class="slide">
+        <h2>JIT compilation algorithm</h2>
+        <p>1. For each node in DAG get children_size, compilable_children_size</p>
+        <p>2. Sort nodes in descending order of compilable_children_size, to first compile nodes with most children.</p>
+        <p>3. Check if node can be compiled using heuristics currently we require node to contain at least 1 compilable children, and do not compile its children.</p>
+        <p>4. Compile node functions together into function that takes raw columns data pointers and return expression result.</p>
+        <p>4. Replace node in DAG with special LLVMFunction node. LLVMFunction execute method converts columns into raw data and call compiled function.
+        </p>
+    </section>
+
+    <section class="slide">
+        <h2>Which functions can be compiled</h2>
+        <p>1. Binary operators. Example <b>plus</b>, <b>minus</b>, <b>multiply</b>, <b>xor</b>.</p>
+        <p>2. Unary operators. Example <b>abs</b>.</p>
+        <p>3. Logical functions. Example <b>and</b>, <b>or</b>, <b>not</b>.</p>
+        <p>4. Branch functions. Example <b>if</b>, <b>multiIf</b>.</p>
+        <p>5. Bit shift functions. Example <b>bitShiftLeft</b></p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT expressions compilation example</h2>
+
+        <code style="font-size: 14pt;">SELECT a + b * c + 5 FROM test_jit_merge_tree;</code>
+
+        <code style="font-size: 10pt; margin-top: 4pt;">loop:                                             ; preds = %loop, %entry
+%19 = phi i64 [ 0, %entry ], [ %34, %loop ] /// <b>Get counter phi node. If started from entry it is 0.</b>
+%20 = phi i64* [ %5, %entry ], [ %30, %loop ] /// <b>Argument column phi node</b>
+%21 = phi i64* [ %9, %entry ], [ %31, %loop ] /// <b>Argument column phi node</b>
+%22 = phi i64* [ %13, %entry ], [ %32, %loop ] /// <b>Argument column phi node</b>
+%23 = phi i64* [ %17, %entry ], [ %33, %loop ] /// <b>Result column phi node</b>
+%24 = load i64, i64* %20, align 8 /// <b>Load argument current row</b>
+%25 = load i64, i64* %21, align 8 /// <b>Load argument current row</b>
+%26 = load i64, i64* %22, align 8 /// <b>Load argument current row</b>
+%27 = mul i64 %25, %26 /// <b>Multiply b * c</b>
+%28 = add i64 %24, %27 /// <b>Add a + result of multiply b * c</b>
+%29 = add i64 %28, 5 /// <b>Add with constant 5</b>
+store i64 %29, i64* %23, align 8 /// <b>Store value in result column</b>
+%30 = getelementptr inbounds i64, i64* %20, i64 1 /// <b>Adjust pointer to next element</b>
+%31 = getelementptr inbounds i64, i64* %21, i64 1 /// <b>Adjust pointer to next element</b>
+%32 = getelementptr inbounds i64, i64* %22, i64 1 /// <b>Adjust pointer to next element</b>
+%33 = getelementptr inbounds i64, i64* %23, i64 1 /// <b>Adjust pointer to next element</b>
+%34 = add i64 %19, 1 /// <b>Increase counter</b>
+%35 = icmp eq i64 %34, %0br i1 %35, label %end, label %loop /// <b>Check loop predicate</b></code>
+    </section>
+
+    <section class="slide">
+        <h2>JIT expressions compilation example</h2>
+
+        <code style="font-size: 14pt;">void aPlusBMulitplyCPlusConstant(
+    int64_t * a,
+    int64_t * b,
+    int64_t * c,
+    int64_t constant,
+    int64_t * result,
+    size_t size)
+{
+    for (size_t i = 0; i &lt; size; ++i)
+    {
+        *result = (*a) + (*b) * (*c) + constant;
+
+        ++a;
+        ++b;
+        ++c;
+        ++result;
+    }
+}</code>
+    </section>
+
+    <section class="slide">
+        <h2>JIT expressions compilation example</h2>
+        <code style="font-size: 10pt;">
+.LBB0_8:                                # %vector.body
+    vmovdqu	(%r11,%rax,8), %ymm1
+    vmovdqu	(%r9,%rax,8), %ymm3
+    vmovdqu	32(%r11,%rax,8), %ymm2
+    vmovdqu	32(%r9,%rax,8), %ymm4
+    vpsrlq	$32, %ymm3, %ymm5
+    vpsrlq	$32, %ymm1, %ymm6
+    vpmuludq	%ymm1, %ymm5, %ymm5
+    vpmuludq	%ymm6, %ymm3, %ymm6
+    vpmuludq	%ymm1, %ymm3, %ymm1
+    vpsrlq	$32, %ymm4, %ymm3
+    vpmuludq	%ymm2, %ymm3, %ymm3
+    vpaddq	%ymm5, %ymm6, %ymm5
+    vpsllq	$32, %ymm5, %ymm5
+    vpaddq	%ymm5, %ymm1, %ymm1
+    vpsrlq	$32, %ymm2, %ymm5
+    vpmuludq	%ymm2, %ymm4, %ymm2
+    vpaddq	(%r14,%rax,8), %ymm1, %ymm1
+    vpmuludq	%ymm5, %ymm4, %ymm5
+    vpaddq	%ymm3, %ymm5, %ymm3
+    vpsllq	$32, %ymm3, %ymm3
+    vpaddq	%ymm3, %ymm2, %ymm2
+    vpaddq	32(%r14,%rax,8), %ymm2, %ymm2
+    vpaddq	%ymm0, %ymm1, %ymm1 /// <b>in ymm0 there is constant 5. vpbroadcastq	(%rbp), %ymm0</b>
+    vmovdqu	%ymm1, (%r10,%rax,8)
+    vpaddq	%ymm0, %ymm2, %ymm2
+    vmovdqu	%ymm2, 32(%r10,%rax,8)
+    addq	$8, %rax
+    cmpq	%rax, %r8</code>
+    </section>
+
+    <section class="slide">
+        <h2>JIT compilation costs</h2>
+
+        <p>JIT standard expression compilation time is around 15 ms. Grows linearly with code size.</p>
+        <p>Typical compiled expression use 1 page for code section and 1 page for data section. 4096 * 2 = 8192 bytes on most configurations.</p>
+        <p>Introspection works inside ClickHouse using `CompileExpressionsMicroseconds`, `CompileExpressionsBytes` metrics.</p>
+        <code style="font-size: 10pt; margin-top: -18pt;">SELECT
+    ProfileEvents['CompileExpressionsMicroseconds'] AS compiled_time,
+    ProfileEvents['CompileExpressionsBytes'] AS compiled_bytes
+FROM system.query_log
+WHERE compiled_time > 0;
+
+┌─compiled_time─┬─compiled_bytes─┐
+│         16258 │           8192 │
+│         26792 │           8192 │
+│         15280 │           8192 │
+│         11594 │           8192 │
+│         14989 │           8192 │
+└───────────────┴────────────────┘</code>
+    </section>
+
+    <section class="slide">
+        <h2>JIT expressions compilation results</h2>
+        <code>SELECT count() FROM hits
+WHERE
+     ((EventDate >= '2018-08-01')
+    AND (EventDate &lt;= '2018-08-03')
+    AND (CounterID >= 34))
+OR    ((EventDate >= '2018-08-04')
+    AND (EventDate &lt;= '2018-08-05')
+    AND (CounterID &lt;= 101500))
+</code>
+
+        <p style="margin-top: 2em;">&mdash; 649 533 033 rows per second.</p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT expressions compilation results</h2>
+        <code style="margin-top: -1em;">SET compile_expressions = 1;
+
+SELECT count() FROM hits
+WHERE
+    ((EventDate >= '2018-08-01')
+    AND (EventDate &lt;= '2018-08-03')
+    AND (CounterID >= 34))
+OR    ((EventDate >= '2018-08-04')
+    AND (EventDate &lt;= '2018-08-05')
+    AND (CounterID &lt;= 101500))
+ </code>
+
+        <p style="margin-top: 2em;">&mdash; 865 491 052 rows per second.<br/>
+        &mdash; <span style="color: green;"><b>+33% performance improvement!</b></span></p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT expressions compilation results</h2>
+        <code>SELECT
+    number * 2 +
+    number * 3 +
+    number * 4 +
+    number * 5
+FROM system.numbers
+FORMAT Null
+        </code>
+
+        <p style="margin-top: 2em;">&mdash; 0 rows in set. Elapsed: 0.903 sec. Processed 329.23 million rows, 2.63 GB (364.78 million rows/s., 2.92 GB/s.</p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT expressions compilation results</h2>
+        <code>SET compile_expressions = 1;
+SELECT
+    number * 2 +
+    number * 3 +
+    number * 4 +
+    number * 5
+FROM system.numbers
+FORMAT Null
+        </code>
+
+        <p style="margin-top: 2em;">&mdash; 0 rows in set. Elapsed: 1.602 sec. Processed 1.89 billion rows, 15.15 GB (1.18 billion rows/s., 9.46 GB/s.)<br/>&mdash;
+        <span style="color: green;"><b>+323% performance improvement!</b></span></p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT expressions compilation results</h2>
+        <code>SET compile_expressions = 1;
+
+WITH number AS x, if(x = 1, 1, if(x = 2, 2,
+if(x = 3, 3, if(x = 4, 4, if(x = 5, 5,
+if(x = 6, 6,　if(x = 7, 7, if(x = 8, 8,
+if(x = 9, 9,　if(x = 10, 10,
+if(x = 11, 11, 12))))))))))) AS res
+SELECT sum(res)
+FROM numbers(10000000)
+        </code>
+
+        <p style="margin-top: 2em;">&mdash; 0 rows in set. Elapsed: 0.150 sec. Processed 10.02 million rows, 80.18 MB (66.95 million rows/s., 535.56 MB/s.).</p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT expressions compilation results</h2>
+        <code>SET compile_expressions = 1;
+
+WITH number AS x, if(x = 1, 1, if(x = 2, 2,
+if(x = 3, 3, if(x = 4, 4, if(x = 5, 5,
+if(x = 6, 6,　if(x = 7, 7, if(x = 8, 8,
+if(x = 9, 9,　if(x = 10, 10,
+if(x = 11, 11, 12))))))))))) AS res
+SELECT sum(res)
+FROM numbers(10000000)
+        </code>
+
+        <p style="margin-top: 2em;">&mdash; 0 rows in set. Elapsed: 0.061 sec. Processed 10.02 million rows, 80.18 MB (163.20 million rows/s., 1.31 GB/s.)<br/>&mdash;
+        <span style="color: green;"><b>+244% performance improvement!</b></span></p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT performance CPU cycles</h2>
+
+        <img style="width: 80%" src="pictures/benchmark_jit_expression_cpu_cycles.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>JIT performance CPU cache misses</h2>
+
+        <img style="width: 80%" src="pictures/benchmark_jit_expression_cpu_cache_misses.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>JIT performance CPU branch misses</h2>
+
+        <img style="width: 80%" src="pictures/benchmark_jit_expression_cpu_branch_misses.png"/>
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">ClickHouse compilation of operator GROUP BY</h1>
+    </section>
+
+    <section class="slide">
+        <h2>Aggregation in ClickHouse</h2>
+        <code>EXPLAIN SELECT sum(UserID)
+FROM default.hits_100m_obfuscated GROUP BY WatchID
+
+┌─explain──────────────────────────────────────┐
+│ Expression ((Projection + Before ORDER BY))  │
+│   Aggregating                                │
+│     Expression (Before GROUP BY)             │
+│       SettingQuotaAndLimits                  │
+│         ReadFromMergeTree                    │
+└──────────────────────────────────────────────┘
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Aggregation in ClickHouse</h2>
+
+        <img style="text-align: center; height:60%; margin-left: 150px;" src="pictures/aggregator_architecture.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Aggregate function interface</h2>
+
+        <code style="font-size: 10pt">class IAggregateFunction
+{
+...
+    virtual ~IAggregateFunction() = default;
+
+    <span style="color: green;">/// AggregateDataPtr pointer to aggregate data for unique key during GROUP BY</span>
+
+    <span style="color: green;">/// Create empty data for aggregation with `placement new` at the specified location.</span>
+    virtual void <b>create</b>(AggregateDataPtr place) const = 0;
+
+    <span style="color: green;">/** Adds a value into aggregation data on which place points to.</span>
+    <span style="color: green;">* columns points to columns containing arguments of aggregation function.</span>
+    <span style="color: green;">* row_num is number of row which should be added.</span>
+    <span style="color: green;">*/</span>
+    virtual void <b>add</b>(
+        AggregateDataPtr place,
+        const IColumn ** columns,
+        size_t row_num,
+        Arena * arena) const = 0;
+
+    <span style="color: green;">/// Merges state (on which place points to) with other state of current aggregation function.</span>
+    virtual void <b>merge</b>(AggregateDataPtr place, ConstAggregateDataPtr rhs, Arena * arena) const = 0;
+
+    <span style="color: green;">/// Inserts results into a column. This method might modify the state (e.g.</span>
+    <span style="color: green;">/// sort an array), so must be called once, from single thread.</span>
+    virtual void <b>insertResultInto</b>(AggregateDataPtr place, IColumn & to, Arena * arena) const = 0;
+...
+}
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Aggregator interaction with functions</h2>
+
+        <code style="font-size: 14pt;">SELECT
+    sum(UserID),
+    sum(ClientIP),
+    sum(CounterClass),
+    sum(CounterID),
+    sum(WatchID)
+FROM default.hits_100m_obfuscated
+GROUP BY WatchID</code>
+
+        <p>1. For each unique key create aggregate data for each function.</p>
+        <p>2. For each key add value for aggregate data for each function.</p>
+        <p>3. For each unique key merge aggregate data for each function, in case multiple threads are used.</p>
+        <p>4. For each unique key insert result into final columns for each function.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Problems</h2>
+
+        <p>1. A lot of virtual function calls.</p>
+        <p>2. For Nullable columns we have Nullable wrapper, additional indirection layer.</p>
+        <p>3. Aggregation combinators. -If, -Array, additional indirection layer.</p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT compilation strategy</h2>
+
+        <p>Fuse multiple aggregate functions actions into one.</p>
+        <p>Functions require 4 actions create, add, merge, insert. Fuse them and compile into 4 functions.</p>
+        <p>1. Create function for multiple aggregate functions.</p>
+        <p>2. Add function for multiple aggregate functions.</p>
+        <p>3. Merge function for mutiple aggregate function.</p>
+        <p>4. Insert final result function for multiple aggregate functions.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Which functions can be compiled</h2>
+        <p>1. Most common aggregate functions <b>sum</b>, <b>count</b>, <b>min</b>, <b>max</b>, <b>avg</b>, <b>avgWeighted</b>.</p>
+        <p>2. Combinators -If.</p>
+        <p>3. Nullable aggregate function adaptor.</p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT aggregation compilation example</h2>
+
+        <code style="font-size: 14pt;">SELECT
+    sum(UserID),
+    avg(ClientIP),
+    sum(CounterClass),
+    min(CounterID),
+    max(WatchID)
+FROM default.hits_100m_obfuscated
+GROUP BY WatchID</code>
+
+        <code style="font-size: 14pt; margin-top: 4pt;">SELECT
+    sum_avg_sum_min_max(
+        UserID,
+        ClientIP,
+        CounterClass,
+        CounterID,
+        WatchID)
+FROM default.hits_100m_obfuscated
+GROUP BY WatchID</code>
+    </section>
+
+    <section class="slide">
+        <h2>JIT aggregation compilation results</h2>
+        <code>SELECT
+    sum(UserID),
+    sum(ClientIP),
+    sum(CounterClass),
+    sum(CounterID),
+    sum(WatchID)
+FROM default.hits_100m_obfuscated
+GROUP BY WatchID</code>
+
+        <p style="margin-top: 2em;">&mdash; 0 rows in set. Elapsed: 5.504 sec. Processed 100.00 million rows, 2.50 GB (18.17 million rows/s., 454.21 MB/s.)</p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT aggregation compilation results</h2>
+        <code style="margin-top: -1em;">SET compile_aggregate_expression = 1;
+
+SELECT
+    sum(UserID),
+    sum(ClientIP),
+    sum(CounterClass),
+    sum(CounterID),
+    sum(WatchID)
+FROM default.hits_100m_obfuscated
+GROUP BY WatchID</code>
+
+        <p style="margin-top: 2em;">&mdash; 0 rows in set. Elapsed: 4.146 sec. Processed 100.00 million rows, 2.50 GB (24.12 million rows/s., 603.06 MB/s.)<br/>
+        &mdash; <span style="color: green;"><b>+34% performance improvement!</b></span></p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT aggregation compilation results</h2>
+        <code style="margin-top: -1em;">WITH (WatchID % 2 == 0) AS predicate
+SELECT
+    minIf(UserID, predicate),
+    minIf(ClientIP, predicate),
+    minIf(CounterClass, predicate),
+    minIf(CounterID, predicate),
+    minIf(WatchID, predicate)
+FROM default.hits_100m_obfuscated
+GROUP BY WatchID</code>
+
+        <p style="margin-top: 2em;">&mdash; 0 rows in set. Elapsed: 6.234 sec. Processed 100.00 million rows, 2.50 GB (16.04 million rows/s., 401.05 MB/s.)</p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT aggregation compilation results</h2>
+        <code style="margin-top: -1em;">SET compile_aggregate_expression = 1;
+
+WITH (WatchID % 2 == 0) AS predicate
+SELECT
+    minIf(UserID, predicate),
+    minIf(ClientIP, predicate),
+    minIf(CounterClass, predicate),
+    minIf(CounterID, predicate),
+    minIf(WatchID, predicate)
+FROM default.hits_100m_obfuscated
+GROUP BY WatchID</code>
+
+        <p style="margin-top: 2em;">&mdash; 0 rows in set. Elapsed: 4.146 sec. Processed 100.00 million rows, 2.50 GB (24.12 million rows/s., 603.06 MB/s.)<br/>
+        &mdash; <span style="color: green;"><b>+71% performance improvement!</b></span></p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT performance CPU cycles</h2>
+
+        <img style="width: 80%" src="pictures/benchmark_jit_aggregation_cpu_cycles.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>JIT performance CPU cache misses</h2>
+
+        <img style="width: 80%" src="pictures/benchmark_jit_aggregation_cpu_cache_misses.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>JIT performance CPU branch misses</h2>
+
+        <img style="width: 80%" src="pictures/benchmark_jit_aggregation_cpu_branch_misses.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Results</h2>
+
+        <p>JIT compilation improves performance of expression evaluation and aggregation.</p>
+        <p>For expression evaluation improve performance in <b>1.5-3 times</b> (for some cases more than 20 times).
+        <p>For aggregation improve performance in <b>1.15-2 times</b>.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Questions?</h2>
+    </section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
