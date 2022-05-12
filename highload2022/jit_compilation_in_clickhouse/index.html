@@ -18,8 +18,9 @@
         <h1>JIT compilation of queries in ClickHouse</h1>
     </header>
 
-    <section class="slide" id="cover">
-        <h1 style="margin-top: 150px;">JIT compilation of queries in ClickHouse</h1>
+    <section class="slide" id="cover" style="background: #FFF url('pictures/title.png') no-repeat; background-size: 100%;">
+        <h1 style="margin-top: 250px; font-size: 32pt; color: white;"><b>JIT compilation of queries in ClickHouse</b></h1>
+        <h2 style="font-size: 20pt; color: white;">Maksim Kita, ClickHouse</h2>
     </section>
 
     <section class="slide">
@@ -44,7 +45,7 @@
         <h2>ClickHouse Query Execution</h2>
 
         <p>Column-oriented storage &mdash; data is physically stored by columns. Only necessary columns are read from disk during query.</p>
-        <p>Vectorized query execution &mdash; data is processing in blocks. Block contains multiple columns with <b>max_block_size</b> rows (65536 by default).</p>
+        <p>Vectorized query execution &mdash; data is processed in blocks. Block contains multiple columns with <b>max_block_size</b> rows (65536 by default).</p>
         <p>Each column is stored as a vector of primitive data types or their combination:</p>
         <p>1. Better utilization for CPU caches and pipeline.</p>
         <p>2. Data is processed using SIMD instructions.</p>
@@ -53,7 +54,7 @@
     <section class="slide">
         <h2>ClickHouse Columns</h2>
 
-        <p><b>Numeric</b> columns  &mdash; <b>PODArray</b>. Almost same as <b>std::vector</b>.</p>
+        <p><b>Numeric</b> columns  &mdash; <b>PODArray</b>. Almost the same as <b>std::vector</b>.</p>
         <p>1. Use our <b>Allocator</b> with support of <b>realloc</b>.</p>
         <p>2. No additional <b>memset</b> during <b>resize</b>.</p>
         <p>3. Padding with 15 bytes at the end.</p>
@@ -98,7 +99,7 @@ virtual ColumnPtr executeImpl(
     Int8 Int16 Int32 Int64  ✕  Int8 Int16 Int32 Int64
            Float32 Float64     Float32 Float64</code></p>
         <p>specialization.</p>
-        <p>In addition specialization if one of columns is constant column.</p>
+        <p>In addition specialization if one of the columns is a constant column</p>
         <p>20 x 20 = 400 specializations for single <b>plus</b> function.</p>
     </section>
 
@@ -112,7 +113,7 @@ virtual ColumnPtr executeImpl(
         <p>3. Compiler can generate SIMD instructions.</p>
 
         <p>Disadvantages:</p>
-        <p>1. Heavy templates usage (Templates can be complex).</p>
+        <p>1. Heavy template usage (Templates can be complex).</p>
         <p>2. Binary code bloat.</p>
         <p>3. No way to fuse multiple expressions into one. Example: x * y + 5.</p>
     </section>
@@ -220,7 +221,7 @@ WHERE value > 10 ORDER BY value;</code>
 
         <p>2018 - First implementation for JIT compilation of expressions. Developer Denis Skorobogatov.</p>
         <p>2019 - Improvements in initial implementation. Enable by default in production. Developers Alexey Milovidov, Alexander Sapin.</p>
-        <p>2019 - Disable JIT by default. Available as experimental feature.</p>
+        <p>2019 - Disable JIT by default. Available as an experimental feature.</p>
         <p>2021 - Fix issues with JIT compilation of expressions. Enable JIT compilation by default. Developer Maksim Kita.</p>
         <p>2021 - Implement JIT compilation for GROUP BY operator.</p>
         <p>2022 - Implement JIT compilation for ORDER BY comparator.</p>
@@ -257,17 +258,17 @@ WHERE value > 10 ORDER BY value;</code>
         <h2>ExpressionTransform</h2>
         <code>SELECT a + b + c FROM test_table;</code>
 
-        <p>Expressions are represented in DAG that has input, function, constant nodes. Example:</p>
-        <img style="width: 60%; margin-left: 150px;" src="pictures/simple_expression_before_compilation.png"/>
+        <p>Expressions are represented in DAG that has <b>input</b>, <b>function</b>, <b>constant</b> types of node. Example:</p>
+        <img style="width: 50%; margin-left: 150px;" src="pictures/simple_expression_before_compilation.png"/>
     </section>
 
     <section class="slide">
         <h2>Expressions Evaluation Problems</h2>
 
         <p>1. During DAG interpretation, data is moving between functions. Operations are not fused.</p>
-        <p>Example <b>plus(plus(a, b), c))</b> first plus on columns a and b is performed and result stored in temporary column.
-Then plus with temporary column and column c is performed.</p>
-        <p>2. Code bloat for different function specializations using templates, increase binary size.</p>
+        <p>Example <b>plus(plus(a, b), c))</b> first <b>plus</b> on columns a and b is performed and the result stored in a temporary column..
+Then <b>plus</b> with temporary column and column c is performed.</p>
+        <p>2. Code bloat for different function specializations using templates, increases binary size.</p>
         <p>3. For AVX256, AVX512 instructions need to use runtime instructions specialization using CPUID. Necessary for distributing portable binary.</p>
     </section>
 
@@ -276,9 +277,9 @@ Then plus with temporary column and column c is performed.</p>
 
         <p>1. For each node in <b>ActionsDAG</b> get <b>compilable_children_size</b></p>
         <p>2. Sort nodes in descending order of <b>compilable_children_size</b>, to first compile nodes with most children.</p>
-        <p>3. Check if node can be compiled using heuristics currently we require node to contain at least 1 compilable children.</p>
-        <p>4. Compile node functions together into function that takes raw columns data pointers and return expression result.</p>
-        <p>4. Replace node in DAG with special <b>LLVMFunction</b> node. <b>LLVMFunction</b> execute method converts columns into raw data and call compiled function.</p>
+        <p>3. Check if node can be compiled using heuristics. Currently we require node to contain at least 1 compilable children.</p>
+        <p>4. Compile node functions together into a function that takes raw columns data pointers and returns expression result.</p>
+        <p>4. Replace node in DAG with special <b>LLVMFunction</b> node. <b>LLVMFunction</b> execute method converts columns into raw data and calls compiled function</p>
     </section>
 
     <section class="slide">
@@ -302,19 +303,19 @@ SELECT a + b + c FROM test_table;</code>
         <p>1. Improve L1, L2 cache usages.</p>
         <p>2. Less code to execute. It is placed on 1 page. Better usage of CPU branch predictor.</p>
         <p>3. Eliminate indirections.</p>
-        <p>4. Multiple operations are fused in one function. More optimizations can be performed by compiler.</p>
-        <p>5. Using target CPU intructions (AVX256, AVX512) if necessary.</p>
+        <p>4. Multiple operations are fused in one function. More optimizations can be performed by the compiler.</p>
+        <p>5. Using target CPU instructions (AVX256, AVX512) if necessary.</p>
     </section>
 
     <section class="slide">
         <h2>Which Functions Can Be Compiled</h2>
 
-        <p>Any function potentially can be compiled, but generate IR is inconvenient. Currently supported:</p>
-        <p>1. Binary operators. Example <b>plus</b>, <b>minus</b>, <b>multiply</b>, <b>xor</b>.</p>
-        <p>2. Unary operators. Example <b>abs</b>.</p>
-        <p>3. Logical functions. Example <b>and</b>, <b>or</b>, <b>not</b>.</p>
-        <p>4. Branch functions. Example <b>if</b>, <b>multiIf</b>.</p>
-        <p>5. Bit shift functions. Example <b>bitShiftLeft</b>.</p>
+        <p>Any function potentially can be compiled, but generating IR is inconvenient. Currently supported:</p>
+        <p>1. Binary operators. Example: <b>plus</b>, <b>minus</b>, <b>multiply</b>, <b>xor</b>.</p>
+        <p>2. Unary operators. Example: <b>abs</b>.</p>
+        <p>3. Logical functions. Example: <b>and</b>, <b>or</b>, <b>not</b>.</p>
+        <p>4. Branch functions. Example: <b>if</b>, <b>multiIf</b>.</p>
+        <p>5. Bit shift functions. Example: <b>bitShiftLeft</b>.</p>
     </section>
 
     <section class="slide">
@@ -404,7 +405,7 @@ store i64 %29, i64* %23, align 8 /// <b>Store value in result column</b>
         <h2>JIT Compilation Costs</h2>
 
         <p>JIT standard expression compilation time is around 15 ms. Grows linearly with code size.</p>
-        <p>Typical compiled expression use 1 page for code section and 1 page for data section. 4096 * 2 = 8192 bytes on most configurations.</p>
+        <p>Typical compiled expressions use 1 page for the code section and 1 page for the data section. 4096 * 2 = 8192 bytes on most configurations.</p>
         <p>Introspection works inside ClickHouse using `CompileExpressionsMicroseconds`, `CompileExpressionsBytes` metrics.</p>
         <code style="font-size: 10pt; margin-top: -18pt;">SELECT
     ProfileEvents['CompileExpressionsMicroseconds'] AS compiled_time,
@@ -543,13 +544,12 @@ FROM numbers(10000000)
         <h2>ClickHouse Aggregation</h2>
         <code>EXPLAIN PIPELINE SELECT sum(UserID)
 FROM default.hits_100m_single GROUP BY WatchID;
-
 ┌─explain────────────────────────────────┐
 │ (Expression)                           │
 │ ExpressionTransform                    │
 │   (Aggregating)                        │
 │   Resize 16 → 1                        │
-│     <b>AggregatingTransform</b> × 16          │
+│     <b>AggregatingTransform</b> × 15          │
 │       StrictResize 16 → 16             │
 │         (Expression)                   │
 │         ExpressionTransform × 16       │
@@ -613,7 +613,7 @@ FROM default.hits_100m_obfuscated
 GROUP BY WatchID
 </code>
 
-        <p>1. For each unique key create aggregate state for each function.</p>
+        <p>1. For each unique key, create an aggregate state for each function.</p>
         <p>2. For each key update aggregate state for each.</p>
         <p>3. For each unique key merge aggregate state for each function, in case multiple threads are used.</p>
         <p>4. For each unique key insert result from aggregate state into final columns for each function.</p>
@@ -631,10 +631,10 @@ GROUP BY WatchID
         <h2>JIT Compilation Strategy</h2>
 
         <p>Fuse multiple aggregate functions actions into one.</p>
-        <p>Functions require 4 actions create, add, merge, insert. Fuse them and compile into 4 functions.</p>
+        <p>Functions require 4 actions: <b>create</b>, <b>add</b>, <b>merge</b>, <b>insert</b>. Fuse them and compile them into 4 functions.</p>
         <p>1. Create function for multiple aggregate functions.</p>
         <p>2. Add function for multiple aggregate functions.</p>
-        <p>3. Merge function for mutiple aggregate function.</p>
+        <p>3. Merge function for multiple aggregate functions.</p>
         <p>4. Insert final result function for multiple aggregate functions.</p>
     </section>
 
@@ -795,7 +795,7 @@ ORDER BY WatchID, CounterID;</code>
         <p>ORDER BY WatchID, CounterID</p>
 
         <p>We will apply comparator to each row almost N * log(N) * 2 times during our <b>MergeSortingTransform</b>, <b>MergingSortedTransform</b>.</p>
-        <p>We can compile it in single function, to avoid unnecessary indirections.</p>
+        <p>We can compile it in a single function, to avoid unnecessary indirections.</p>
         <p>For Nullable columns performance could be even better.</p>
     </section>
 
@@ -849,9 +849,9 @@ ORDER BY value</code>
         <h2>Results</h2>
 
         <p>JIT compilation improves performance of expression evaluation and aggregation.</p>
-        <p>For expression evaluation improve performance in <b>1.5-3 times</b> (for some cases more than 20 times).
-        <p>For aggregation improve performance in <b>1.15-2 times</b>.</p>
-        <p>For order by comparator improve performance in <b>1.15-1.5 times</b></p>
+        <p>For expression evaluation JIT compilation improves performance in <b>1.5-3 times</b> (for some cases more than 20 times).
+        <p>For aggregation JIT compilation improves performance in <b>1.15-2 times</b>.</p>
+        <p>For order by comparator JIT compilation improves performance in <b>1.15-1.5 times</b></p>
     </section>
 
     <section class="slide">
