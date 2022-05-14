@@ -8,4 +8,4 @@ Presentation materials about **ClickHouse**, open-source column-oriented databas
 
 [Documentation](https://clickhouse.com/docs/en/)
 
-[Index of presentations](talks_index.md)
+(unsupported, obsolete) [Index of presentations](talks_index.md)
