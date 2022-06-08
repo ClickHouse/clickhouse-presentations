@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse performance optimization practices</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+        code { display: block; white-space: pre; background-color: #EEE; }
+   </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse performance optimization practices</h1>
+    </header>
+
+    <section class="slide" id="cover">
+        <h1 style="margin-top: 150px">ClickHouse performance<br>
+            optimization practices</h1>
+    </section>
+
+    <section class="slide">
+        <h2>About me</h2>
+        <p>Maksim, developer of ClickHouse.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Performance of ClickHouse</h2>
+
+        <p>1. High Level System Architecture.</p>
+        <p>2. CI/CD Pipeline.</p>
+        <P>3. Introspection.</P>
+        <p>4. Abstractions and Algorithms.</p>
+        <p>5. Libraries.</p>
+        <p>6. JIT compilation. Dynamic dispatch.</p>
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">High Level System Architecture</h1>
+    </section>
+
+    <section class="slide">
+        <h2>ClickHouse Architecture</h2>
+
+        <p>Column-oriented storage &mdash; data is physically stored by columns.</p>
+        <p>Only necessary columns are read from disk during query.</p>
+        <p>Better compression because of data locality.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Vectorized Query Execution</h2>
+
+        <p>Vectorized query execution &mdash; data is processed in blocks. Block contains multiple columns with <b>max_block_size</b> rows (65536 by default).</p>
+        <p>Each column is stored as a vector of primitive data types or their combination:</p>
+        <p>1. Better utilization for CPU caches and pipeline.</p>
+        <p>2. Data is processed using SIMD instructions.</p>
+    </section>
+
+    <section class="slide">
+        <h2>ClickHouse Columns</h2>
+
+        <p><b>Numeric</b> columns &mdash; <b>PODArray</b>. Almost the same as <b>std::vector</b>.</p>
+        <p>1. Use our <b>Allocator</b> with support of <b>realloc</b>.</p>
+        <p>2. No additional <b>memset</b> during <b>resize</b>.</p>
+        <p>3. Padding with 15 bytes at the end.</p>
+    </section>
+
+    <section class="slide">
+        <h2>ClickHouse Columns</h2>
+
+        <p><b>Nullable</b> columns contain data column and UInt8 column bitmask is element null.</p>
+        <p><b>Array</b> columns contain data column and UInt64 column with offsets.</p>
+        <p><b>Const</b> column contain 1 constant value.</p>
+    </section>
+
+    <section class="slide">
+        <h2>ClickHouse Columns</h2>
+
+        <p>Main class is <b>IColumn</b>.</p>
+        <p>Polymorphic type that can be part of interfaces.</p>
+        <p>Declares methods that all concrete column types need to support.</p>
+        <p>In most of the functions unwrapped to concrete column type.</p>
+
+        <code style="font-size: 10pt;">class IColumn
+{
+    ...
+
+    [[nodiscard]] virtual Ptr filter(const Filter & filt, ssize_t result_size_hint) const = 0;
+
+    [[nodiscard]] virtual Ptr permute(const Permutation & perm, size_t limit) const = 0;
+
+    virtual void insertFrom(const IColumn & src, size_t n);
+
+    virtual void insertRangeFrom(const IColumn & src, size_t start, size_t length) = 0;
+
+    ...
+}
+</code>
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">CI/CD Pipeline</h1>
+    </section>
+
+    <section class="slide">
+        <h2>CI/CD Pipeline</h2>
+
+        <p>1. Functional, Integration tests.</p>
+        <p>2. Run all tests with sanitizers (ASAN, TSAN, MSAN).</p>
+        <p>3. Fuzzers (data types, compression codecs).</p>
+        <p>4. AST fuzzer.</p>
+        <p>5. Stress tests (Our special TSAN stress)..</p>
+        <p>6. <b>Performance tests</b>.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Performance Tests</h2>
+
+        <p>Part of CI/CD pipeline.</p>
+        <p>Runs for each commit in pull request.</p>
+        <p>Runs for each commit in the master branch.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Performance Tests</h2>
+
+        <p>Write test in special XML configuration.</p>
+
+        <code style="font-size:10pt;">&lt;test&gt;
+    &lt;substitutions&gt;
+        &lt;substitution&gt;
+            &lt;name&gt;func&lt;/name&gt;
+                &lt;values&gt;
+                    <value>bitCount</value>
+                    <value>bitNot</value>
+                    <value>abs</value>
+                    ...
+                &lt;/values&gt;
+        &lt;/substitution&gt;
+
+        &lt;substitution&gt;
+            &lt;name&gt;expr&lt;/name&gt;
+                &lt;values&gt;
+                    &lt;value&gt;number&lt;/value&gt;
+                    &lt;value&gt;toUInt32(number)&lt;/value&gt;
+                    ...
+                &lt;/values&gt;
+        &lt;/substitution&gt;
+    &lt;/substitutions&gt;
+
+    &lt;query&gt;SELECT {func}({expr}) FROM numbers(100000000) FORMAT Null&lt;/query&gt;
+&lt;/test&gt;
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Performance Tests</h2>
+
+        <img style="height: 77%; margin-top: -1em;" src="pictures/report.webp"/>
+    </section>
+
+    <section class="slide">
+        <h2>Performance Tests</h2>
+
+        <p>Collect different statistics during each performance test run. Can be useful for later debugging.</p>
+        <p>Processor metrics (CPU cycles, cache misses same as perf-stat).</p>
+        <p>ClickHouse specific profile events (read bytes from disk, transferred over network, etc).</p>
+    </section>
+
+    <section class="slide">
+        <h2>Performance Tests CPU Cycles</h2>
+
+        <img style="width: 80%" src="pictures/benchmark_jit_expression_cpu_cycles.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Performance Tests CPU Cache Misses</h2>
+
+        <img style="width: 80%" src="pictures/benchmark_jit_expression_cpu_cache_misses.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Performance Tests</h2>
+
+        <p>Helps us find performance regressions.</p>
+        <p>Nice tool that can help to find places where performance can be improved.</p>
+
+        <p>1. Try different allocators, different libraries.</p>
+        <p>2. Try different compiler options (loop unrolling, inline threshold)</p>
+        <p>3. Enable <b>AVX</b>/<b>AVX2</b>/<b>AVX512</b> for build.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Performance Tests</h2>
+
+        <p>Query should not be short, because otherwise it measures nothing.</p>
+        <p>Query should not be very long. Performance of long queries can be more affected by random external factors.</p>
+        <p>It is also important to write a query in a special way to check some function, or feature in isolation.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Performance Tests</h2>
+
+        <p>1. Run two server versions simultaneously on the same machine before commit and after commit.</p>
+        <p>2. Run performance tests against two servers.</p>
+        <p>3. Measure medians for performance tests runs. Also collect all other possible statistics like CPUBranchMisses, CPUCacheMisses.</p>
+        <p>4. Use statistical methods to compute the largest difference in median query run <b>T</b> that we can observe even if nothing has changed.</p>
+        <p>5. Using <b>D</b> difference of medians and <b>T</b> decide if changes in performance are significant.</p>
+
+        <a href="https://clickhouse.com/blog/testing-the-performance-of-click-house/">https://clickhouse.com/blog/testing-the-performance-of-click-house/</a></p>
+    </section>
+
+    <section class="slide">
+        <h2>Unstable Queries</h2>
+
+        <p>If <b>T</b> is greater than 10 percent, the query is unstable.</p>
+        <p>For such a query we cannot detect any changes in performance because even if nothing has changed query time can be affected.</p>
+        <p>Should we just delete tests with <b>unstable</b> queries?</p>
+    </section>
+
+    <section class="slide">
+        <h2>Unstable Queries</h2>
+
+        <p>Several examples why query can be unstable:</p>
+
+        <p>1. Excessive allocations.</p>
+        <p>2. Large copying.</p>
+        <p>3. Bad written query.</p>
+        <p>4. External factors (disks, network, background activities, bugs in kernel).</p>
+
+        <p>We should only delete/rewrite tests with bad written queries. Other cases require deep investigation.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Unstable Queries Example</h2>
+
+        <code style="font-size:14pt;">&lt;test&gt;
+    &lt;query&gt;
+        SELECT detectLanguageUnknown(SearchPhrase)
+        FROM hits_100m_single
+        LIMIT 500000
+        FORMAT Null
+    &lt;/query&gt;
+    &lt;query&gt;
+        SELECT detectCharset(SearchPhrase)
+        FROM hits_100m_single
+        LIMIT 500000
+        FORMAT Null
+    &lt;/query&gt;
+&lt;/test&gt;
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Unstable Queries Example</h2>
+
+        <p>Functions <b>detectCharset</b>, <b>detectLanguageUnknown</b> inner loop: </p>
+        <code style="font-size:12pt;">for (size_t i = 0; i &lt; offsets.size(); ++i)
+{
+    const UInt8 * str = data.data() + offsets[i - 1];
+    const size_t str_len = offsets[i] - offsets[i - 1] - 1;
+
+    <b>HashMap&lt;UInt16, UInt64, DefaultHash&lt;UInt16&gt;, 4&gt;</b> model;
+
+    /// Calculate string ngrams
+    calculateStats(str, str_len, model);
+
+    /// Compare ngrams with known encodings dictionaries and get result value
+    std::string_view result_value = matchEncoding(model, encodings_frequency);
+
+    /// Write result value into column
+    writeResult(result_column, result_value);
+}
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Unstable Queries Example</h2>
+
+        <p>Functions <b>detectCharset</b>, <b>detectLanguageUnknown</b> inner loop: </p>
+        <code style="font-size:12pt;">for (size_t i = 0; i &lt; offsets.size(); ++i)
+{
+    const UInt8 * str = data.data() + offsets[i - 1];
+    const size_t str_len = offsets[i] - offsets[i - 1] - 1;
+
+    <b>HashMapWithStackMemory&lt;UInt16, UInt64, DefaultHash&lt;UInt16&gt;, 4&gt;</b> model;
+
+    /// Calculate string ngrams
+    calculateStats(str, str_len, model);
+
+    /// Compare ngrams with known encodings dictionaries and get result value
+    std::string_view result_value = matchEncoding(model, encodings_frequency);
+
+    /// Write result value into column
+    writeResult(result_column, result_value);
+}
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Unstable Queries Example</h2>
+
+        <img style="width: 100%;" src="pictures/performance_tests_classification.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Unstable Queries Example</h2>
+
+        <code style="font-size:12pt;">&lt;test&gt;
+    &lt;query&gt;
+        SELECT toString(rand()) IN ('41577', '83972', /*big_array*/);
+    &lt;/query&gt;
+    &lt;query&gt;
+        SELECT (rand(), rand()) IN ((17258, 93148), /*big array of tuples*/);
+    &lt;/query&gt;
+&lt;/test&gt;
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Unstable queries example</h2>
+
+        <p>Constant evaluation during query processing analyze part.</p>
+        <code style="font-size:12pt;">std::pair&lt;Field, std::shared_ptr&lt;const IDataType&gt;&gt;
+evaluateConstantExpression(const ASTPtr & node, ContextPtr context)
+{
+    /// Derive AST expression data type and evaluate it into constant Field
+}
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Unstable queries example</h2>
+
+        <p>Constant evaluation during query processing analyze part.</p>
+        <code style="font-size:12pt;">class ASTLiteral : public ASTWithAlias
+{
+public:
+    explicit ASTLiteral(Field value_) : value(std::move(value_)) {}
+
+    Field value;
+
+    ...
+}
+
+std::pair&lt;Field, std::shared_ptr&lt;const IDataType&gt;&gt;
+evaluateConstantExpression(const ASTPtr & node, ContextPtr context)
+{
+    /// Derive AST expression data type and evaluate it into constant Field
+
+    <b>if (ASTLiteral * literal = node->as&lt;ASTLiteral&gt;())</b>
+        <b>return {literal->value, applyVisitor(FieldToDataType(), literal->value)};</b>
+}
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Unstable Queries Example</h2>
+
+        <p>Performance improvements after change:</p>
+        <img style="width: 100%;" src="pictures/performance_tests_set_index.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Unstable Queries Example</h2>
+
+        <p>For other performance tests, which construct big <b>IN</b> sections as part of their internal implementation we also saw improvement.</p>
+        <img style="width: 100%;" src="pictures/performance_tests_direct_dictionary.png"/>
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">Introspection</h1>
+    </section>
+
+    <section class="slide">
+        <h2>Basic Introspection</h2>
+
+        <p>Collect <b>ProfileEvents</b> for each query:</p>
+        <p>RealTimeMicroseconds, UserTimeMicroseconds, SystemTimeMicroseconds, SoftPageFaults, HardPageFaults using <b>getrusage</b> system call.</p>
+
+        <a href="https://man7.org/linux/man-pages/man2/getrusage.2.html">https://man7.org/linux/man-pages/man2/getrusage.2.html</a></p>
+    </section>
+
+    <section class="slide">
+        <h2>Basic Introspection</h2>
+
+        <p>Collect <b>ProfileEvents</b> for each query:</p>
+        <p>Collect <b>:taskstats</b> from procFS.</p>
+
+        <p>OSCPUVirtualTimeMicroseconds, OSCPUWaitMicroseconds (when <b>/proc/thread-self/schedstat</b> is available)</p>
+        <p>OSIOWaitMicroseconds                      (when <b>/proc/thread-self/stat</b> is available)</p>
+        <p>OSReadChars, OSWriteChars, OSReadBytes, OSWriteBytes  (when <b>/proc/thread-self/io</b> is available)</p>
+
+        <p>We also support Netlink interface.</p>
+
+        <p><a href="https://man7.org/linux/man-pages/man5/proc.5.html">https://man7.org/linux/man-pages/man5/proc.5.html</a></p>
+    </section>
+
+    <section class="slide">
+        <h2>Basic Introspection</h2>
+
+        <p>Collect <b>ProfileEvents</b> for each query:</p>
+
+        <p>Hardware specific counters CPU cache misses, CPU branch mispredictions using <b>perf_event_open</b> system call.</p>
+
+        <a href="https://man7.org/linux/man-pages/man2/perf_event_open.2.html">https://man7.org/linux/man-pages/man2/perf_event_open.2.html</a></p>
+    </section>
+
+    <section class="slide">
+        <h2>Basic Introspection</h2>
+
+        <p>Collect <b>ProfileEvents</b> for each query:</p>
+        <p>Different ClickHouse specific metrics FileOpen, DiskReadElapsedMicroseconds, NetworkSendBytes.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Example Basic Introspection</h2>
+
+        <code style="font-size:12pt;">SELECT PE.Names AS ProfileEventName, PE.Values AS ProfileEventValue
+FROM <b>system.query_log</b> ARRAY JOIN ProfileEvents AS PE
+WHERE query_id='344b07d9-9d7a-48f0-a17e-6f5f6f3d61f5'
+AND ProfileEventName LIKE 'Perf%';
+        </code>
+
+        <code style="font-size:12pt;">┌─ProfileEventName─────────────┬─ProfileEventValue─┐
+│ PerfCpuCycles                │       40496995274 │
+│ PerfInstructions             │       57259199973 │
+│ PerfCacheReferences          │        2072274618 │
+│ PerfCacheMisses              │         146570206 │
+│ PerfBranchInstructions       │        8675194991 │
+│ PerfBranchMisses             │         259531879 │
+│ PerfStalledCyclesFrontend    │         813419527 │
+│ PerfStalledCyclesBackend     │       15797162832 │
+│ PerfCpuClock                 │       10587371854 │
+│ PerfTaskClock                │       10587382785 │
+│ PerfContextSwitches          │              3009 │
+│ PerfCpuMigrations            │               113 │
+│ PerfMinEnabledTime           │       10584952104 │
+│ PerfMinEnabledRunningTime    │        4348089512 │
+│ PerfDataTLBReferences        │         465992961 │
+│ PerfDataTLBMisses            │           5149603 │
+│ PerfInstructionTLBReferences │           1344998 │
+│ PerfInstructionTLBMisses     │            181635 │
+└──────────────────────────────┴───────────────────┘
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Stacktraces Collection</h2>
+
+        <p>Periodically collect stack traces from all currently running threads.</p>
+        <p>Binary must be compiled with <b>-fasynchronous-unwind-tables</b>.</p>
+        <p>Send signal and collect traces in the signal handler, then put them in a special system table allowing for introspection.</p>
+
+        <p>1. There can be many edge cases during stack unwinding when <b>.eh_frame</b> section can contain broken unwind instructions (bug in compiler, bug in hand written assembly).
+            <b>LLVM libunwind</b> will crash.</p>
+        <p>2. Unwind library should be signal safe, no allocations during traces collection.</p>
+
+        <p>Currently using a patched fork of <b>LLVM libunwind</b>.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Example Stacktraces Collection</h2>
+
+        <p>Check all threads current stack trace from <b>system.stack_trace</b></p>
+        <code style="font-size:12pt;">WITH arrayMap(x -> demangle(addressToSymbol(x)), trace) AS all
+SELECT thread_name, thread_id, query_id, arrayStringConcat(all, '\n') AS res
+FROM <b>system.stack_trace</b> LIMIT 1 FORMAT Vertical;
+        </code>
+
+        <code style="font-size:12pt;">Row 1:
+──────
+thread_name: clickhouse-serv
+thread_id:   125441
+query_id:
+res:         pthread_cond_wait
+std::__1::condition_variable::wait(std::__1::unique_lock<std::__1::mutex>&)
+BaseDaemon::waitForTerminationRequest()
+DB::Server::main(/*arguments*/)
+Poco::Util::Application::run()
+DB::Server::run()
+Poco::Util::ServerApplication::run(int, char**)
+mainEntryClickHouseServer(int, char**)
+main
+__libc_start_main
+_start
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Example Stacktraces Flame Graph</h2>
+
+        <p>Generate flamegraph of query execution</p>
+
+        <code style="font-size:12pt;">./clickhouse-client --query="SELECT
+arrayStringConcat(
+    arrayMap(x -> concat(
+        splitByChar('/', addressToLine(x))[-1],
+        '#',
+        demangle(addressToSymbol(x))),
+        trace),
+    ';') AS stack,
+count(*) AS samples
+FROM system.trace_log
+WHERE (trace_type = 'Real') AND (query_id = '344b07d9-9d7a-48f0-a17e-6f5f6f3d61f5')
+GROUP BY trace" | flamegraph.pl</code>
+    </section>
+
+    <section class="slide">
+        <h2>Example Stacktraces Flame Graph</h2>
+
+        <img style="width: 65%; margin-left: 150px;" src="pictures/introspection_flame_graph.png"/>
+        <p><a href="https://www.brendangregg.com/flamegraphs.html">https://www.brendangregg.com/flamegraphs.html</a></p>
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">Abstractions and Algorithms</h1>
+    </section>
+
+    <section class="slide">
+        <h2>Abstractions and Algorithms</h2>
+
+        <p>For high performance systems interfaces must be determined by algorithms</p>
+        <p>Top-down approach does not work.</p>
+        <p>High-performance system must be designed concentrating on doing a single task efficiently.</p>
+        <p>Designed from hardware capabilities.</p>
+        <p>ClickHouse was designed to efficiently FILTER and GROUP BY data that fits in RAM.</p>
+
+        <p><a href="https://presentations.clickhouse.com/bdtc_2019">https://presentations.clickhouse.com/bdtc_2019</a></p>
+    </section>
+
+    <section class="slide">
+        <h2>Abstractions and Algorithms</h2>
+
+        <p>There is no silver bullet, or best algorithm for any task.</p>
+        <p>Try to choose the fastest possible algorithm/algorithms for <b>your specific task</b>.</p>
+        <p>Performance must be evaluated on real data.</p>
+        <p>Most of the algorithms are affected by data distribution.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Abstractions and Algorithms</h2>
+
+        <p>Complex task can be viewed as number of small tasks.</p>
+        <p>Such small tasks can also be viewed as special cases that can be optimized.</p>
+        <p>For any task there are dozens of different algorithms that can be combined together (Example Sorting, Aggregation).</p>
+        <p>Each algorithm can be tuned later using different low-level optimizations (Data layout, Specializations, SIMD instructions, JIT compilation).</p>
+    </section>
+
+    <section class="slide">
+        <h2>Example Aggregation</h2>
+
+        <p>High level design desigion &mdash; data must be processed not only by multiple threads, but by multiple servers.</p>
+        <p>Core component is the HashTable framework.</p>
+        <p>Different HashTable for different types of keys (Special StringHashTable for Strings).</p>
+    </section>
+
+    <section class="slide">
+        <h2>Example Aggregation</h2>
+
+        <p>Additional specializations for <b>Nullable</b>, <b>LowCardinality</b></p>
+        <p>Tuned a lot of low-level details, like allocations, structures layout in memory, batch multiple operations to avoid virtual function calls.</p>
+        <p>Added JIT compilation for special cases.</p>
+        <p>Added cache of hash-table sizes.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Abstractions and Algorithms</h2>
+
+        <p>Optimizing performance is about trying different approaches.</p>
+        <p>Most of the time without any results.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Abstractions and Algorithms</h2>
+
+        <p>Each problem can have a lot degrees of freedom. For example Sorting:</p>
+
+        <p>Stable / nonstable?</p>
+        <p>External / in RAM?</p>
+        <p>With limit/without limit?</p>
+        <p>Is the data already almost sorted?</p>
+        <p>What about data distribution? How many unique values?</p>
+        <p>Can we use vectorized sorting algorithms?</p>
+        <p>Can we allocate additional memory?</p>
+    </section>
+
+    <section class="slide">
+        <h2>Example Insert Into MergeTree</h2>
+
+        <p>Insert into ClickHouse main storage engine <b>MergeTree</b></p>
+        <p>Must be very fast.</p>
+        <p>Data ingestion in ClickHouse is one of the main selling points.</p>
+        <p>We just sort a block of data that was inserted in ClickHouse by PRIMARY KEY and then write to disk. That is it.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Example Insert Into MergeTree</h2>
+
+        <code style="font-size:12pt;">void stableGetPermutation(const Block & block, const SortDescription & description,
+    IColumn::Permutation & out_permutation)
+{
+    size_t size = block.rows();
+    out_permutation.resize(size);
+    for (size_t i = 0; i &lt; size; ++i)
+        out_permutation[i] = i;
+
+    auto sort_desc = getColumnsWithSortDescription(block, description);
+    auto cmp = <b>PartialSortingLess</b>(sort_desc);
+    <b>std::stable_sort</b>(out_permutation.begin(), out_permutation.end(), cmp);
+}
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Example Insert Into MergeTree</h2>
+
+        <code style="font-size:12pt;">ALWAYS_INLINE int compare(size_t lhs, size_t rhs) const
+{
+    int res = 0;
+
+    for (const auto & elem : columns)
+    {
+        auto nulls_direction = elem.description.nulls_direction;
+        res = elem.column-&gt;<b>compareAt</b>(lhs, rhs, *elem.column, nulls_direction);
+        res *= elem.description.direction;
+
+        if (res != 0)
+            break;
+    }
+
+    return res;
+}
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Example Insert Into MergeTree</h2>
+
+        <p>Worst thing for column databases is to process elements in rows.</p>
+
+        <code style="font-size:12pt;">class ColumnVector : IColumn
+{
+...
+    int compareAt(size_t n, size_t m,
+        const IColumn & rhs_, int nan_direction_hint) const override
+    {
+        auto rhs_value = assert_cast&lt;const Self &&gt;(rhs_).data[m];
+        return CompareHelper&lt;T&gt;::compare(data[n], rhs_value, nan_direction_hint);
+    }
+...
+};
+</code>
+    </section>
+
+    <section class="slide">
+        <h2>Example Insert Into MergeTree</h2>
+
+        <p>Solution:</p>
+        <p>For a single column it is easy, we can just call <b>getPermutation</b> method directly. We need to <b>change interface</b> to support stable sort.</p>
+        <p>For multiple columns need to <b>change interface</b> of <b>updatePermutation</b> method to also support stable sort.</p>
+        <p>Update permutation method sort data only for equal ranges (initially 1 pair with values 0 and block size), and update equal ranges array. For the next column <b>updatePermutation</b> call will finish sorting only for these equal ranges.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Example Insert Into MergeTree</h2>
+
+        <p>Update <b>IColumn</b> base interface. Also update all subclasses.</p>
+        <p>Additional special cases for <b>Nullable</b>, <b>LowCardinality</b>, <b>Sparse</b> columns.</p>
+
+        <code style="font-size:12pt;">class IColumn {
+...
+
+virtual void getPermutation(PermutationSortDirection direction,
+    <b>PermutationSortStability stability</b>, size_t limit, int nan_direction_hint,
+    Permutation & res) const = 0;
+
+virtual void updatePermutation(PermutationSortDirection direction,
+    <b>PermutationSortStability stability</b>, size_t limit, int nan_direction_hint,
+    Permutation & res, EqualRanges & equal_ranges) const = 0;
+}</code>
+    </section>
+
+    <section class="slide">
+        <h2>Example Insert Into MergeTree</h2>
+
+        <p>Performance results for random data.</p>
+        <img style="width: 100%" src="pictures/performance_tests_merge_tree_insert.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Example Insert Into MergeTree</h2>
+
+        <p>Performance results for production data.</p>
+        <code>INSERT INTO test_hits_insert
+            SELECT UserID, WatchID, CounterID
+            FROM hits_100m_single</code>
+            </p>
+            <p>Was: <b style="color: red;">22.043</b> sec (4.54 million rows/s., 90.73 MB/s.)</p>
+            <p>Now: <b style="color: green;">11.268</b> sec (8.87 million rows/s., 177.50 MB/s.)</p>
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">Libraries</h1>
+    </section>
+
+    <section class="slide">
+        <h2>Libraries</h2>
+
+        <p>If someone on the Internet says my algorithm is fastest we will try it in ClickHouse.</p>
+        <p>Always try to find interesting algorithms, and solutions.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Libraries</h2>
+
+        <code>ClickHouse/contrib$ ls | grep -v "cmake" | wc -l
+95
+</code>
+        <p>1. Different algorithms for parsing floats, json (multiple libraries).</p>
+        <p>2. A lot of integrations.</p>
+        <p>3. Embedded storages.</p>
+        <p>4. LLVM for JIT compilation.</p>
+        <p>5. libcxx (C++ standard library).</p>
+    </section>
+
+    <section class="slide">
+        <h2>Libraries</h2>
+
+        <p>Almost in any library our CI system finds bugs. We report them to maintainers.</p>
+        <p>We also have a lot of library forks with a lot of changes. For example <b>POCO</b>, <b>LLVM libunwind</b>.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Libraries</h2>
+
+        <p>We are not afraid of adding additional contrib. Our CI system will do the job.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Libraries</h2>
+
+        <p>We have high-performance IO Framework, HashTable Framework, Different Data Structures, Vectorized Engine.</p>
+        <p>Should we make ClickHouse a library?</p>
+        <p>Vote for it.</p>
+
+        <p><a href="https://github.com/ClickHouse/ClickHouse/issues/34789">https://github.com/ClickHouse/ClickHouse/issues/34789</a></p>
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">JIT compilation. Dynamic dispatch.</h1>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Compilation</h2>
+
+        <p>JIT compilation can transform dynamic configuration into static configuration.</p>
+        <p>Not all functions can be easily compiled, not all algorithms can be easily compiled.</p>
+        <p>Has its own costs (compilation time, memory, maintenance).</p>
+        <p>But can greatly improve performance in special cases.</p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Compilation</h2>
+
+        <p>Compile evaluation of multiple expressions. Example: SELECT a + b * c + 5 FROM test_table;</p>
+        <p>Compile special cases for <b>GROUP BY</b>. Example: SELECT sum(a), avg(b), count(c) FROM test_table;</p>
+        <p>Compile comparator in <b>ORDER BY</b>. Example: SELECT * FROM test_table ORDER BY a, b, c;</p>
+
+        <p>In all cases we transform dynamic configuration into static.</p>
+        <p>My presentation from CPP Russia 2021 JIT in ClickHouse:</p>
+        <p><a href="https://www.youtube.com/watch?v=H_pUmU-uobI">https://www.youtube.com/watch?v=H_pUmU-uobI</a></p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Compilation Expressions Example</h2>
+
+        <p>Compile evaluation of multiple expressions. Example: SELECT a + b * c + 5 FROM test_table;</p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Compilation Expressions Example</h2>
+
+        <code style="font-size: 14pt;">void aPlusBMulitplyCPlusConstant(
+    int64_t * a,
+    int64_t * b,
+    int64_t * c,
+    int64_t constant,
+    int64_t * result,
+    size_t size)
+{
+    for (size_t i = 0; i &lt; size; ++i)
+    {
+        *result = (*a) + (*b) * (*c) + constant;
+
+        ++a;
+        ++b;
+        ++c;
+        ++result;
+    }
+}</code>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Compilation Expressions Example</h2>
+
+        <code style="font-size: 10pt;">.LBB0_8:                                # %vector.body
+    vmovdqu	(%r11,%rax,8), %ymm1
+    vmovdqu	(%r9,%rax,8), %ymm3
+    vmovdqu	32(%r11,%rax,8), %ymm2
+    vmovdqu	32(%r9,%rax,8), %ymm4
+    vpsrlq	$32, %ymm3, %ymm5
+    vpsrlq	$32, %ymm1, %ymm6
+    vpmuludq	%ymm1, %ymm5, %ymm5
+    vpmuludq	%ymm6, %ymm3, %ymm6
+    vpmuludq	%ymm1, %ymm3, %ymm1
+    vpsrlq	$32, %ymm4, %ymm3
+    vpmuludq	%ymm2, %ymm3, %ymm3
+    vpaddq	%ymm5, %ymm6, %ymm5
+    vpsllq	$32, %ymm5, %ymm5
+    vpaddq	%ymm5, %ymm1, %ymm1
+    vpsrlq	$32, %ymm2, %ymm5
+    vpmuludq	%ymm2, %ymm4, %ymm2
+    vpaddq	(%r14,%rax,8), %ymm1, %ymm1
+    vpmuludq	%ymm5, %ymm4, %ymm5
+    vpaddq	%ymm3, %ymm5, %ymm3
+    vpsllq	$32, %ymm3, %ymm3
+    vpaddq	%ymm3, %ymm2, %ymm2
+    vpaddq	32(%r14,%rax,8), %ymm2, %ymm2
+    vpaddq	%ymm0, %ymm1, %ymm1 /// <b>in ymm0 there is constant 5. vpbroadcastq	(%rbp), %ymm0</b>
+    vmovdqu	%ymm1, (%r10,%rax,8)
+    vpaddq	%ymm0, %ymm2, %ymm2
+    vmovdqu	%ymm2, 32(%r10,%rax,8)
+    addq	$8, %rax
+    cmpq	%rax, %r8</code>
+    </section>
+
+    <section class="slide">
+        <h2>Dynamic Dispatch</h2>
+
+        <p>ClickHouse distributed as portable binary.</p>
+        <p>We use the old instruction set <b>SSE4.2</b>.</p>
+        <p>For <b>AVX</b>, <b>AVX2</b>, <b>AVX512</b> instructions need to use runtime instructions specialization using <b>CPUID</b>.</p>
+        <p>In addition a lot of companies bring us SIMD optimizations (ContentSquare, Intel), before most such optimizations were disabled during compilation time.</p>
+        <p>It is important that compilers can vectorize even complex loops. We can rely on this.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Dynamic Dispatch</h2>
+
+        <p>Main idea apply compiler flags to some functions, to compile it with <b>AVX</b>, <b>AVX2</b>, <b>AVX512</b></p>
+        <p>Then in runtime check <b>CPUID</b> and execute specialized function.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Dynamic Dispatch</h2>
+
+        <p>For example for clang:</p>
+    <code style="font-size: 12pt;">#   define BEGIN_AVX512F_SPECIFIC_CODE \
+_Pragma("clang attribute push(__attribute__((target(\"sse,sse2,sse3,ssse3,sse4,\
+    popcnt,avx,avx2, avx512f\"))), apply_to=function)")
+\
+#   define BEGIN_AVX2_SPECIFIC_CODE \
+_Pragma("clang attribute push(__attribute__((target(\"sse,sse2,sse3,ssse3,sse4,\
+    popcnt, avx,avx2\"))), apply_to=function)") \
+\
+#   define END_TARGET_SPECIFIC_CODE \
+_Pragma("clang attribute pop")
+    </code>
+    </section>
+
+    <section class="slide">
+        <h2>Dynamic Dispatch</h2>
+
+        <p>Usage for standalone functions:</p>
+
+    <code style="font-size: 12pt;"><b>DECLARE_DEFAULT_CODE</b> (
+    int funcImpl() {
+        return 1;
+    }
+) // DECLARE_DEFAULT_CODE
+
+<b>DECLARE_AVX2_SPECIFIC_CODE</b> (
+    int funcImpl() {
+        return 2;
+    }
+) // DECLARE_DEFAULT_CODE
+
+/// Dispatcher function
+int <b>dispatchFunc</b>() {
+#if USE_MULTITARGET_CODE
+    if (isArchSupported(TargetArch::AVX2))
+        return TargetSpecific::AVX2::funcImpl();
+#endif
+    return TargetSpecific::Default::funcImpl();
+}</code>
+        </section>
+
+    <section class="slide">
+        <h2>Dynamic Dispatch</h2>
+
+        <p>Standalone functions are not interesting.</p>
+
+        <code style="font-size: 12pt;">#define AVX512_FUNCTION_SPECIFIC_ATTRIBUTE __attribute__((target("sse,sse2,sse3,\
+            ssse3,sse4,popcnt, avx,avx2,avx512f"))) \
+\
+#define AVX2_FUNCTION_SPECIFIC_ATTRIBUTE __attribute__((target("sse,sse2,sse3,ssse3,\
+    sse4,popcnt, avx,avx2"))) \
+</code>
+    </section>
+
+    <section class="slide">
+        <h2>Dynamic Dispatch</h2>
+
+        <p>Insert specific attribute before function name.</p>
+        <p>We also need to generate functions with different names. Ideally with suffixes like SSE42, AVX2, AVX512.</p>
+    <code style="font-size: 14pt;">int /*<b>Insert specific attribute here</b>*/ testFunctionImpl(int value)
+{
+    return value;
+}
+
+int <b>AVX2_FUNCTION_SPECIFIC_ATTRIBUTE</b> testFunctionImplAVX2(int value)
+{
+    return value;
+}</code>
+    </section>
+
+    <section class="slide">
+        <h2>Dynamic Dispatch</h2>
+
+        <p>Split function into header (<b>MULTITARGET_FUNCTION_HEADER</b>), name and body (<b>MULTITARGET_FUNCTION_BODY</b>) to insert specific attribute before name.</p>
+    <code style="font-size: 14pt;"><b>MULTITARGET_FUNCTION_AVX2_SSE42</b>(
+MULTITARGET_FUNCTION_HEADER(int),
+/*We need to insert specific attribute here*/ <b>testFunctionImpl</b>,
+MULTITARGET_FUNCTION_BODY((int value)
+{
+    return value;
+}))</code>
+    </section>
+
+    <section class="slide">
+        <h2>Dynamic Dispatch Example</h2>
+
+        <p>Our infrastructure is ready.</p>
+        <p>Now how to find places where SIMD optimizations can be applied?</p>
+    </section>
+
+    <section class="slide">
+        <h2>Dynamic Dispatch Example</h2>
+
+        <p>Make build in our performance tests for <b>AVX</b>, <b>AVX2</b>, <b>AVX512</b>.</p>
+        <p>If some performance tests will run much faster, we find place for dynamic dispatch.</p>
+        <p>Wrap such place into our macros.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Dynamic Dispatch Example</h2>
+
+        <p>Find a place using our performance tests.</p>
+        <code style="font-size: 12pt;">template &lt;typename Value&gt;
+void NO_INLINE <b>addManyImpl</b>(const Value * __restrict ptr, size_t start, size_t end)
+{
+    ptr += start;
+    size_t count = end - start;
+    const auto * end_ptr = ptr + count;
+
+    /// <b>Loop</b>
+    T local_sum{};
+    while (ptr &lt; end_ptr)
+    {
+        Impl::add(local_sum, *ptr);
+        ++ptr;
+    }
+    Impl::add(sum, local_sum);
+}</code>
+    </section>
+
+    <section class="slide">
+        <h2>Dynamic Dispatch Example</h2>
+
+        <p>Wrap function in our dynamic dispatch macro.</p>
+        <code style="font-size: 12pt;">MULTITARGET_FUNCTION_AVX2_SSE42(
+MULTITARGET_FUNCTION_HEADER(
+template &lt;typename Value&gt;
+void NO_SANITIZE_UNDEFINED NO_INLINE
+), <b>addManyImpl</b>,
+MULTITARGET_FUNCTION_BODY((const Value * __restrict ptr, size_t start, size_t end)
+{
+    ptr += start;
+    size_t count = end - start;
+    const auto * end_ptr = ptr + count;
+
+    /// <b>Loop</b>
+    T local_sum{};
+    while (ptr &lt end_ptr)
+    {
+        Impl::add(local_sum, *ptr);
+        ++ptr;
+    }
+    Impl::add(sum, local_sum);
+}))
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Dynamic Dispatch Example</h2>
+
+        <p>Dispatch function based on <b>CPUID</b>:</p>
+
+        <code style="font-size: 12pt;">template &lt;typename Value&gt;
+void NO_INLINE addMany(const Value * __restrict ptr, size_t start, size_t end)
+{
+    #if USE_MULTITARGET_CODE
+    if (isArchSupported(TargetArch::AVX2))
+    {
+        addManyImplAVX2(ptr, start, end);
+        return;
+    }
+    else if (isArchSupported(TargetArch::SSE42))
+    {
+        addManyImplSSE42(ptr, start, end);
+        return;
+    }
+    #endif
+
+    addManyImpl(ptr, start, end);
+}</code>
+    </section>
+
+    <section class="slide">
+        <h2>Dynamic Dispatch Example</h2>
+
+        <img style="width: 100%" src="pictures/performance_tests_sum.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Dynamic Dispatch Example</h2>
+
+        <img style="width: 100%" src="pictures/performance_tests_avg.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Dynamic Dispatch Example</h2>
+
+        <p>Loop in unary functions.</p>
+        <code style="font-size: 14pt;">static void vector(const ArrayA & a, ArrayC & c)
+{
+    /// <b>Loop</b> Op::apply is template for operation
+    size_t size = a.size();
+    for (size_t i = 0; i &lt; size; ++i)
+        c[i] = Op::apply(a[i]);
+}
+</code>
+    </section>
+
+    <section class="slide">
+        <h2>Dynamic Dispatch Example</h2>
+
+        <p>Loop in unary functions.</p>
+        <code style="font-size: 14pt;">MULTITARGET_FUNCTION_WRAPPER_AVX2_SSE42(
+MULTITARGET_FH(static void NO_INLINE),
+<b>vectorImpl</b>,
+MULTITARGET_FB((const ArrayA & a, ArrayC & c) /// NOLINT
+{
+    /// <b>Loop</b> Op::apply is template for operation
+    size_t size = a.size();
+    for (size_t i = 0; i &lt; size; ++i)
+        c[i] = Op::apply(a[i]);
+}))</code>
+    </section>
+
+    <section class="slide">
+        <h2>Dynamic Dispatch Example</h2>
+
+        <p><b>roundDuration</b> optimized even better than others using special AVX2 instructions.</p>
+
+        <img style="width: 100%" src="pictures/performance_tests_unary.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Dynamic Dispatch Example</h2>
+
+        <p>For AVX2 we use such optimizations a lot.</p>
+        <p>For AVX512 currently we do not apply a lot of such optimizations. It potentially could decrease performance of other system parts.</p>
+        <p>Latest Intel processors like <b>Rocket Lake</b> and <b>Ice Lake</b> fix this issue. We can detect such processors in runtime and then use optimizations.</p>
+
+        <p><a href="https://stackoverflow.com/questions/56852812/simd-instructions-lowering-cpu-frequency">https://stackoverflow.com/questions/56852812/simd-instructions-lowering-cpu-frequency</a></p>
+    </section>
+
+    <section class="slide">
+        <h2>Dynamic Dispatch Example</h2>
+
+        <p>We have AVX, AVX2, AVX512 pull requests that periodically build ClickHouse to check if there are some places to improve.</p>
+
+        <p><a href="https://github.com/ClickHouse/ClickHouse/pull/34071">https://github.com/ClickHouse/ClickHouse/pull/34071</a></p>
+        <p><a href="https://github.com/ClickHouse/ClickHouse/pull/34070">https://github.com/ClickHouse/ClickHouse/pull/34070</a></p>
+        <p><a href="https://github.com/ClickHouse/ClickHouse/pull/34069">https://github.com/ClickHouse/ClickHouse/pull/34069</a></p>
+    </section>
+
+    <section class="slide">
+        <h2>Conclusion</h2>
+
+        <p>1. CI/CD infrastructure, especially performance tests, must be the core component of a high performance system.</p>
+        <p>2. Without deep introspection it is hard to investigate issues with performance.</p>
+        <p>3. For high performance systems interfaces must be determined by algorithms.</p>
+        <p>4. Add specializations for special cases.</p>
+        <p>5. Tune your performance using low-level techniques (Data layout, JIT compilation, Dynamic Dispatch).</p>
+    </section>
+
+    <section class="slide">
+        <h2>Questions?</h2>
+    </section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
