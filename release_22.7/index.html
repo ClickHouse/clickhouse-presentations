@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 22.7 Webinar</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         table, tr, td { border: 0; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 22.7 Webinar</h1>
+    </header>
+    <section class="slide" id="cover">
+        <img src="https://presentations.clickhouse.com/original_website/logo.svg" style="width: 15%; position: absolute; right: 20px; bottom: 20px;" />
+        <h1 style="margin-top: 80px; line-height: 150%; color: black; font-size: 64pt">ClickHouse<br/>Release 22.7</h1>
+    </section>
+
+<section class="slide">
+<h2>Release 22.7 Webinar</h2>
+<p>1. (45 min) What's new in ClickHouse 22.7.</p>
+<p>2. (15 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: linear-gradient(to bottom, #46CDFD, #FEE269);">
+<div style="float: right; font-size: 500%; line-height: 1.25">🌤</div>
+<h2>Release 22.7</h2>
+<p>ClickHouse "mid-summer" release.</p>
+<p style="margin-top: 2em;">— 24 new features</p>
+<p>— 19 performance optimizations</p>
+</section>
+
+<section class="slide">
+<h2>Window Functions Inside Expressions</h2>
+<code style="font-size: 70%; line-height: 1.25; margin-top: -1.5em;">SELECT
+    y::String || '.'
+        || (y &lt; toYear(today()) - 2000 - 1 ? '*' : m::String) AS Version,
+    (n &lt;= 3 OR (is_lts AND lts_n &lt;= 2)) ? '✔️' : '❌' AS Supported
+FROM (
+    SELECT y, m,
+        <b style="color: green;">count() OVER (ORDER BY y DESC, m DESC) AS n,</b>
+        m IN (3, 8) AS is_lts,
+        <b style="color: green;">countIf(is_lts) OVER (ORDER BY y DESC, m DESC) AS lts_n</b>
+    FROM (
+        WITH extractGroups(version, 'v(\d+)\.(\d+)') AS v,
+             v[1]::INT AS y, v[2]::INT AS m
+        SELECT y, m
+        FROM file('version_date.tsv', TSV, 'version String, date String')
+        ORDER BY y DESC, m DESC
+        LIMIT 1 BY y, m)
+)
+LIMIT 1 BY Version
+FORMAT Markdown</code>
+</section>
+
+<section class="slide">
+<h2>Window Functions Inside Expressions</h2>
+<code style="font-size: 70%; line-height: 1.25; margin-top: -1.5em;">WITH
+    <b style="color: green;">count() OVER (ORDER BY y DESC, m DESC) AS n</b>,
+    m IN (3, 8) AS is_lts,
+    <b style="color: green;">countIf(is_lts) OVER (ORDER BY y DESC, m DESC) AS lts_n</b>
+SELECT
+    y::String || '.'
+        || (y &lt; toYear(today()) - 2000 - 1 ? '*' : m::String) AS Version,
+    (n &lt;= 3 OR (is_lts AND lts_n &lt;= 2)) ? '✔️' : '❌' AS Supported
+FROM (
+    WITH extractGroups(version, 'v(\d+)\.(\d+)') AS v,
+        v[1]::INT AS y, v[2]::INT AS m
+    SELECT y, m
+    FROM file('version_date.tsv', TSV, 'version String, date String')
+    ORDER BY y DESC, m DESC
+    LIMIT 1 BY y, m)
+LIMIT 1 BY Version
+FORMAT Markdown</code>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Dmitriy Novik.</p>
+</section>
+
+
+<section class="slide">
+<h2>SQLInsert Format</h2>
+<p><code style="font-size: 95%; line-height: 1.25;">SELECT * FROM numbers(10) FORMAT SQLInsert
+
+INSERT INTO table (`number`) VALUES (0), (1), (2), (3),
+(4), (5), (6), (7), (8), (9)
+;</code></p>
+
+<p>Controlled by the settings:<br/>
+&mdash; output_format_sql_insert_max_batch_size;<br/>
+&mdash; output_format_sql_insert_table_name;<br/>
+&mdash; output_format_sql_insert_include_column_names;<br/>
+&mdash; output_format_sql_insert_use_replace;<br/>
+&mdash; output_format_sql_insert_quote_names;
+</p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Pavel Kruglov.</p>
+</section>
+
+<section class="slide">
+<h2>MongoDB table function</h2>
+<p><code style="font-size: 95%; line-height: 1.25;">db.hits.aggregate(
+    [
+        { $group: { _id: '$SearchPhrase' } },
+        { $count: 'value' },
+        { $project: { key: null, value: 1, } }
+    ],
+    {allowDiskUse: true});</code></p>
+
+<p><code style="font-size: 95%; line-height: 1.25;">SELECT COUNT(DISTINCT SearchPhrase)
+FROM <b style="color: green">mongodb</b>('localhost:27017', 'test', 'hits',
+    'root', '', structure = 'SearchPhrase String');</code></p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Anastasia Petrenko, Ksenia Sumarokova.</p>
+</section>
+
+<section class="slide">
+<h2>MongoDB table function</h2>
+<p>MongoDB query &mdash; <span style="color: red;">7 min 47 sec</span></p>
+<p>ClickHouse over MongoDB query &mdash; <span style="color: red;">11 min 56 sec</span> :(</p>
+</section>
+
+<section class="slide">
+<h2>MongoDB table function</h2>
+<p>MongoDB query &mdash; <span style="color: red;">7 min 47 sec</span></p>
+<p>ClickHouse over MongoDB query &mdash; <span style="color: red;">11 min 56 sec</span> :(</p>
+<p>ClickHouse query &mdash; <b style="color: green;">10 ms</b></p>
+</section>
+
+<section class="slide">
+<h2>MongoDB table function</h2>
+<p>Bonus:</p>
+<p><code style="font-size: 95%; line-height: 1.25;">INSERT INTO FUNCTION mongodb(...)
+
+CREATE TABLE ... ENGINE = MongoDB(...)</code></p>
+
+<p style="margin-top: 10em; color: gray; font-size: 14pt;">Developer: Anastasia Petrenko, Ksenia Sumarokova.</p>
+</section>
+
+<section class="slide">
+<h2>MeiliSearch integration</h2>
+<p>Create a view on top of MeiliSearch index:</p>
+<p><code style="font-size: 95%; line-height: 1.25;">CREATE TABLE t (id UInt64, data String)
+ENGINE = MeiliSearch('http://meili1:7700', 't', '')</code></p>
+<p>Insert data for indexing:</p>
+<p><code style="font-size: 95%; line-height: 1.25;">INSERT INTO t ...</code></p>
+<p>Query the data with special search conditions:</p>
+<p><code style="font-size: 95%; line-height: 1.25;">SELECT * FROM t WHERE meiliMatch($$ "q" = "abaca" $$)</code></p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Mikhail Artemenko, Ksenia Sumarokova.</p>
+</section>
+
+<section class="slide">
+<h2>MeiliSearch integration</h2>
+<p>You Know, for Search!</p>
+<p>&mdash; <span style="color: green;">integration with MeiliSearch</span>;</p>
+<p>&mdash; simple integration with Quickwit: <a href="https://clickhouse.com/docs/en/guides/developer/full-text-search/">https://clickhouse.com/docs/en/guides/developer/full-text-search/</a></p>
+<p>&mdash; <span style="color: gray;">ElasticSearch? Sphinx? ManticoreSearch?</span><br/>
+&mdash; <span style="color: gray;">Full-text indices inside ClickHouse?</span><br/>
+</p>
+</section>
+
+
+<section class="slide">
+<h2>Streaming import from NATS</h2>
+<p style="margin-top: -1em;">Streaming table engines in ClickHouse:</p>
+<p>&mdash; Kafka<br/>&emsp; (works with RedPanda as well);<br/>
+&mdash; RabbitMQ;<br/>
+&mdash; FileLog;<br/>
+...<br/>
+&mdash; <b style="color: green;">NATS</b>;<br/>
+&mdash; <span style="color: gray;">S3Queue</span>;
+</p>
+<p style="color: gray; font-size: 14pt;">Developer: Pavel Chebarykov, Ksenia Sumarokova.</p>
+<p>What else should we add?<br/>
+SQS? Kinesis? Pulsar? MySQL binlog?</p>
+
+<p>Or maybe add persistent queues inside ClickHouse?</p>
+</section>
+
+
+<section class="slide">
+<h2>New JOIN algorithms</h2>
+<p style="margin-top: -1em;">&mdash; "<b>direct</b>" algorithm:
+<br/>&emsp; to join with key-value tables by direct lookups a.k.a. nested loops.
+<br/>&emsp; Good if the left table is small, but the right table is like a large dictionary.
+<br/>&emsp; Good to use in MATERIALIZED VIEW queries.</p>
+
+<p>&mdash; "<b>parallel_hash</b>" algorithm:
+<br/>&emsp; speed-up if the right hand table is large.</p>
+
+<p>&mdash; "<b>full_sorting_merge</b>" algorithm:
+<br/>&emsp; when right hand side is large<br/>&emsp; and does not fit in memory and does not allow lookups.</p>
+
+<p style="color: gray;">&mdash; "<b>grace_hash</b>" algorithm:
+<br/>&emsp; expected in 22.8.</p>
+
+<p style="color: gray; font-size: 14pt;">Developer: Vladimir Cherkasov, lgbo-ustc.</p>
+</section>
+
+
+<section class="slide">
+<h2>Out Of Band Filters</h2>
+<p><code style="font-size: 90%;">SET additional_result_filter = $$ <b style="color: green;">name = 'Vasya'</b> $$;
+
+SELECT * FROM values('name String', ('Vasya'), ('Petya'))
+┌─name──┐
+│ Vasya │
+└───────┘</code></p>
+
+<p><code style="font-size: 90%;">SET additional_table_filters = {'t': $$ <b style="color: green;">name != 'Petya'</b> $$};
+
+CREATE TEMPORARY TABLE t (name String);
+INSERT INTO t VALUES ('Vasya'), ('Petya');
+SELECT * FROM t;
+┌─name──┐
+│ Vasya │
+└───────┘</code></p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Nikolai Kochetov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Performance Optimizations</h2>
+<p>Improvement of ORDER BY, insert and merge in MergeTree,
+<br/>and window functions.</p>
+<p><code>SELECT WatchID FROM hits_100m_obfuscated ORDER BY Age</code></p>
+<p>Before:<br/>
+Elapsed: <b style="color: red;">4.154</b> sec. (24.07 million rows/s., 216.64 MB/s.)</p>
+<p>After:<br/>
+Elapsed: <b style="color: green;">0.482</b> sec. (207.47 million rows/s., 1.87 GB/s.)</p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Maksim Kita.</p>
+</section>
+
+<section class="slide">
+<h2>Performance Optimizations</h2>
+<p>Speed-up of SELECT with <b>FINAL</b> modifier.</p>
+<p>It "simply" improves performance up to 4 times.</p>
+<p>Especially for complex transforms like Collapsing and Replacing.</p>
+<p style="margin-top: 5em; color: gray; font-size: 14pt;">Developer: Nikita Taranov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Small &amp; Neat Things</h2>
+<p><code>CREATE TABLE ... <b>EMPTY</b> AS SELECT ...</code></p>
+<p><code>SELECT <b>base58Encode</b>('Hello, world'),
+       <b>base58Decode</b>('2NEpo7TZsLFA2wMeK')</code></p>
+<p><code>SELECT <b>translate</b>('Hello, world', ', ', ';\n'),
+       <b>translateUTF8</b>('test', 'tes', 'Тес')</code></p>
+<p><code>SELECT <b>parseTimeDelta</b>('1h 35min 23sec')</code></p>
+<p><code>SET <b>group_by_use_nulls</b> = 1</code></p>
+<p>multiMatch, multiSearch, ... &mdash; support for non-constant needles.</p>
+</section>
+
+
+<section class="slide">
+<h2>Compatibility Setting</h2>
+<p><code>SET compatibility = '21.8'</code></p>
+
+<p>Allows you to upgrade to the latest version<br/>
+but keep all the default behavior unchanged, as in the specified version.</p>
+
+<p style="color: gray;">... it is not going to cover 100% of possible changes.<br/> But should give something.</p>
+
+<p style="color: gray;">Please don't use this feature!</p>
+
+<p style="margin-top: 5em; color: gray; font-size: 14pt;">Developer: Pavel Kruglov.</p>
+</section>
+
+
+
+
+<section class="slide">
+<h2>Drivers and Integrations</h2>
+<p><b>Go driver</b> has HTTP support in addition to Native protocol.<br/>
+<span style="color: gray;">Developer: Artem Iurin.</span></p>
+
+<p><b>Go driver</b> now uses high-performant low-level "<b>ch-go</b>" implementation.<br/>
+<span style="color: gray;">Developer: Aleksandr Razumov, Dale McDiarmid.</span></p>
+
+<p><b>Grafana</b> plugin now has support for <b>JSON</b> data type.<br/>
+<span style="color: gray;">Developer: Dale McDiarmid.</span></p>
+
+<p>Official ClickHouse support in <b>Superset</b>.<br/>
+<span style="color: gray;">Developer: Dale McDiarmid.</span></p>
+
+<p><b>clickhouse-diagnostics</b> tool now packaged with ClickHouse.<br/>
+<span style="color: gray;">Developer: Dale McDiarmid, Mikhail Shiryaev.</span></p>
+</section>
+
+
+<section class="slide">
+<h2>Updated Benchmark</h2>
+<img style="margin-left: -60px; margin-top: -1em; height: 100%" src="pictures/clickbench.png" />
+</section>
+
+<section class="slide">
+<h2>New ClickHouse Website</h2>
+<img style="margin-left: -50px; margin-top: -1em; height: 100%" src="pictures/website.png" />
+</section>
+
+
+<section class="slide">
+<h2>TLDR</h2>
+<p>This is just a fraction of what we've made in a month.</p>
+<p>More interesting stuff is being prepared!</p>
+</section>
+
+
+<section class="slide">
+<h2>Q&amp;A</h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+
