@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: My Favorite Features</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         table, tr, td { border: 0; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: My Favorite Features</h1>
+    </header>
+    <section class="slide" id="cover">
+        <img src="https://presentations.clickhouse.com/original_website/logo.svg" style="width: 15%; position: absolute; right: 20px; bottom: 20px;" />
+        <h1 style="margin-top: 80px; line-height: 150%; color: black; font-size: 64pt">ClickHouse:<br/>My Favorite Features</h1>
+    </section>
+
+<section class="slide">
+<h2>Best Features 2022</h2>
+<p>From the first half of 2022: Jan..Jun</p>
+<p>— my favorite features...</p>
+<p>— your favorite features!</p>
+</section>
+
+<section class="slide">
+<h2>Best Features 2022</h2>
+<p>Try to guess — what's my favorite new feature.</p>
+<p>And win a T-shirt!</p>
+</section>
+
+<!--
+
+Schema inference
+ClickHouse Keeper
+Memory overcommit
+Projections
+Backups
+ARM support
+
+Semistructured Data
+Transactions
+
+Build infrastructure
+New docs
+Interactive mode of clickhouse-local
+Metrics in clickhouse-client
+
+-->
+
+<section class="slide">
+<h2>Schema Inference</h2>
+<p>Now:</p>
+<p>
+<code style="font-size: 14pt;">SELECT * FROM url(
+    'https://datasets.clickhouse.com/github_events_v2.<b style="color: green;">native.xz</b>') LIMIT 10</code>
+</p>
+<p>Read the structure:</p>
+<p>
+<code style="font-size: 14pt;"><b style="color: green;">DESCRIBE</b> url('https://datasets.clickhouse.com/github_events_v2.native.xz')</code>
+</p>
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Pavel Kruglov.</p>
+</section>
+
+<section class="slide">
+<code style="font-size: 12pt; white-space: pre-wrap; margin-left: -4em; margin-right: -4em;">SELECT * FROM url('https://datasets.clickhouse.com/github_events_v2.native.xz', Native,
+$$<span style="color: gray">
+    file_time DateTime, event_type Enum('CommitCommentEvent' = 1, 'CreateEvent' = 2, 'DeleteEvent' = 3, 'ForkEvent' = 4, 'GollumEvent' = 5, 'IssueCommentEvent' = 6, 'IssuesEvent' = 7, 'MemberEvent' = 8, 'PublicEvent' = 9, 'PullRequestEvent' = 10, 'PullRequestReviewCommentEvent' = 11, 'PushEvent' = 12, 'ReleaseEvent' = 13, 'SponsorshipEvent' = 14, 'WatchEvent' = 15, 'GistEvent' = 16, 'FollowEvent' = 17, 'DownloadEvent' = 18, 'PullRequestReviewEvent' = 19, 'ForkApplyEvent' = 20, 'Event' = 21, 'TeamAddEvent' = 22), actor_login LowCardinality(String), repo_name LowCardinality(String), created_at DateTime, updated_at DateTime, action Enum('none' = 0, 'created' = 1, 'added' = 2, 'edited' = 3, 'deleted' = 4, 'opened' = 5, 'closed' = 6, 'reopened' = 7, 'assigned' = 8, 'unassigned' = 9, 'labeled' = 10, 'unlabeled' = 11, 'review_requested' = 12, 'review_request_removed' = 13, 'synchronize' = 14, 'started' = 15, 'published' = 16, 'update' = 17, 'create' = 18, 'fork' = 19, 'merged' = 20), comment_id UInt64, body String, path String, position Int32, line Int32, ref LowCardinality(String), ref_type Enum('none' = 0, 'branch' = 1, 'tag' = 2, 'repository' = 3, 'unknown' = 4), creator_user_login LowCardinality(String), number UInt32, title String, labels Array(LowCardinality(String)), state Enum('none' = 0, 'open' = 1, 'closed' = 2), locked UInt8, assignee LowCardinality(String), assignees Array(LowCardinality(String)), comments UInt32, author_association Enum('NONE' = 0, 'CONTRIBUTOR' = 1, 'OWNER' = 2, 'COLLABORATOR' = 3, 'MEMBER' = 4, 'MANNEQUIN' = 5), closed_at DateTime, merged_at DateTime, merge_commit_sha String, requested_reviewers Array(LowCardinality(String)), requested_teams Array(LowCardinality(String)), head_ref LowCardinality(String), head_sha String, base_ref LowCardinality(String), base_sha String, merged UInt8, mergeable UInt8, rebaseable UInt8, mergeable_state Enum('unknown' = 0, 'dirty' = 1, 'clean' = 2, 'unstable' = 3, 'draft' = 4), merged_by LowCardinality(String), review_comments UInt32, maintainer_can_modify UInt8, commits UInt32, additions UInt32, deletions UInt32, changed_files UInt32, diff_hunk String, original_position UInt32, commit_id String, original_commit_id String, push_size UInt32, push_distinct_size UInt32, member_login LowCardinality(String), release_tag_name String, release_name String, review_state Enum('none' = 0, 'approved' = 1, 'changes_requested' = 2, 'commented' = 3, 'dismissed' = 4, 'pending' = 5)</span>
+$$)
+LIMIT 10
+</code>
+</section>
+
+<section class="slide">
+<h2>Table Structure Autodetection</h2>
+<p>For formats that already contain structure:<br/>
+&mdash; Native, Protobuf, Avro, Parquet, ORC, Arrow.<br/>
+&mdash; CSVWithNamesAndTypes, TSVWithNamesAndTypes.</p>
+<p>Was:</p>
+<code style="font-size: 14pt; white-space: pre-wrap; margin-left: -4em; margin-right: -4em;">SELECT * FROM url('https://datasets.clickhouse.com/github_events_v2.native.xz', Native,
+$$<span style="color: gray">
+    file_time DateTime, event_type Enum('CommitCommentEvent' = 1, 'CreateEvent' = 2, 'DeleteEvent' = 3, 'ForkEvent' = 4, 'GollumEvent' = 5, 'IssueCommentEvent' = 6, 'IssuesEvent' = 7, 'MemberEvent' = 8, 'PublicEvent' = 9, 'PullRequestEvent' = 10, 'PullRequestReviewCommentEvent' = 11, 'PushEvent' = 12, 'ReleaseEvent' = 13, 'SponsorshipEvent' = 14, 'WatchEvent' = 15, 'GistEvent' = 16, 'FollowEvent' = 17, 'DownloadEvent' = 18, 'PullRequestReviewEvent' = 19, 'ForkApplyEvent' = 20, 'Event' = 21, 'TeamAddEvent' = 22), actor_login LowCardinality(String), repo_name LowCardinality(String), created_at DateTime, updated_at DateTime, action Enum('none' = 0, 'created' = 1, 'added' = 2, 'edited' = 3, 'deleted' = 4, 'opened' = 5, 'closed' = 6, 'reopened' = 7, 'assigned' = 8, 'unassigned' = 9, 'labeled' = 10, 'unlabeled' = 11, 'review_requested' = 12, 'review_request_removed' = 13, 'synchronize' = 14, 'started' = 15, 'published' = 16, 'update' = 17, 'create' = 18, 'fork' = 19, 'merged' = 20), comment_id UInt64, body String, path String, position Int32, line Int32, ref LowCardinality(String), ref_type Enum('none' = 0, 'branch' = 1, 'tag' = 2, 'repository' = 3, 'unknown' = 4), creator_user_login LowCardinality(String), number UInt32, title String, labels Array(LowCardinality(String)), state Enum('none' = 0, 'open' = 1, 'closed' = 2), locked UInt8, assignee LowCardinality(String), assignees Array(LowCardinality(String)), comments UInt32, author_association Enum('NONE' = 0, 'CONTRIBUTOR' = 1, 'OWNER' = 2, 'COLLABORATOR' = 3, 'MEMBER' = 4, 'MANNEQUIN' = 5), closed_at DateTime, merged_at DateTime, merge_commit_sha String, requested_reviewers Array(LowCardinality(String)), requested_teams Array(LowCardinality(String)), head_ref LowCardinality(String), head_sha String, base_ref LowCardinality(String), base_sha String, merged UInt8, mergeable UInt8, rebaseable UInt8, mergeable_state Enum('unknown' = 0, 'dirty' = 1, 'clean' = 2, 'unstable' = 3, 'draft' = 4), merged_by LowCardinality(String), review_comments UInt32, maintainer_can_modify UInt8, commits UInt32, additions UInt32, deletions UInt32, changed_files UInt32, diff_hunk String, original_position UInt32, commit_id String, original_commit_id String, push_size UInt32, push_distinct_size UInt32, member_login LowCardinality(String), release_tag_name String, release_name String, review_state Enum('none' = 0, 'approved' = 1, 'changes_requested' = 2, 'commented' = 3, 'dismissed' = 4, 'pending' = 5)</span>
+$$)
+LIMIT 10
+</code>
+</section>
+
+<section class="slide">
+<h2>Schema Inference</h2>
+<p>It works even for semistructured and unstructured formats!<br/>
+&mdash; CSV, TSV, CSVWithNames, TSVWithNames,<br/>
+&emsp; JSONEachRow, Values, Regexp, MsgPack...</p>
+<p>
+<code style="font-size: 14pt; overflow: hidden;">DESCRIBE file('hits.ndjson')
+
+┌─name──────┬─type─────────────┬─default_type─┬─default_expression─┬─comment─┬─codec_expression─┬─ttl_expression─┐
+│ UserID    │ Nullable(String) │              │                    │         │                  │                │
+│ URLDomain │ Nullable(String) │              │                    │         │                  │                │
+└───────────┴──────────────────┴──────────────┴────────────────────┴─────────┴──────────────────┴────────────────┘</code>
+</p>
+<p>
+&mdash; Nullable(String) if data is inside string in JSON.<br/>
+&mdash; Nullable(Float64) if it's number.<br/>
+&mdash; Arrays are also supported. Multidimensional arrays.<br/>
+&mdash; Arrays of non-uniform types are parsed as Tuples.</p>
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Pavel Kruglov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Schema Inference</h2>
+<p>
+<code style="font-size: 14pt; white-space: pre-wrap; margin-right: -3em; margin-top: -2em;">$ echo '<b style="color: green;">{"x":[[123,456]]}</b>' > test.ndjson
+$ clickhouse-local --query "SELECT x, toTypeName(x) FROM file('test.ndjson')"
+
+[[123,456]]     Array(Array(Nullable(Float64)))
+
+$ echo '<b style="color: green;">{"x":[123,"Hello",["World"]]}</b>' > test.ndjson
+$ clickhouse-local --query "SELECT x, toTypeName(x) FROM file('test.ndjson')"
+
+(123,'Hello',['World']) Tuple(Nullable(Float64), Nullable(String), Array(Nullable(String)))
+
+$ echo '<b style="color: green;">{"x":"Hello"} {"y":"World"}</b>' > test.ndjson
+$ clickhouse-local --query "SELECT * FROM file('test.ndjson')"
+
+\N      Hello
+World   \N
+
+$ echo '<b style="color: green;">{"x":[[123,"Hello"]]} {"x":[[123,"Hello",456]]}</b>' > test.ndjson
+$ clickhouse-local --query "SELECT * FROM file('test.ndjson')"
+
+Code: 636. DB::Exception: Cannot extract table structure from JSONEachRow format file. Error: Automatically defined type Array(Tuple(Nullable(Float64), Nullable(String))) for column x in row 1 differs from type defined by previous rows: Array(Tuple(Nullable(Float64), Nullable(String), Nullable(Float64))).
+</code>
+</p>
+</section>
+
+
+<section class="slide">
+<h2>Schema Inference</h2>
+<p style="margin-top: -1em;">
+CSV: String and Float64 types are inferred;<br/>
+TSV: everything as String;<br/>
+Column names: c1, c2, ...;<br/>
+For CSVWithNames, TSVWithNames column names are extracted.
+</p>
+<p>
+<code style="font-size: 14pt; overflow: hidden;">:) DESC file('hits.csv')
+
+c1      Nullable(String)
+c2      Nullable(Float64)
+
+:) DESC file('hits.tsv')
+
+c1      Nullable(String)
+c2      Nullable(String)
+
+:) DESC file('hits2.tsv', TSVWithNames)
+
+URLDomain  Nullable(String)
+UserID     Nullable(String)
+</code>
+</p>
+</section>
+
+
+<section class="slide">
+<h2>Schema Inference</h2>
+<p>We also support schema on demand!</p>
+<p>
+<code style="font-size: 14pt; overflow: hidden; line-height: 1.25;">
+SELECT <b>c1</b> AS domain, uniq(<b>c2</b>), count() AS cnt
+  FROM file('hits.csv')
+  GROUP BY domain ORDER BY cnt DESC LIMIT 10
+
+SELECT <b>c1</b><b style="color: green;">::String</b> AS domain, uniq(<b>c2</b><b style="color: green;">::UInt64</b>), count() AS cnt
+  FROM file('hits.csv')
+  GROUP BY domain ORDER BY cnt DESC LIMIT 10
+
+SELECT URLDomain<b style="color: green;">::String</b> AS domain, uniq(UserID<b style="color: green;">::UInt64</b>), count() AS cnt
+  FROM file('hits.ndjson')
+  GROUP BY domain ORDER BY cnt DESC LIMIT 10
+</code>
+</p>
+</section>
+
+
+<section class="slide">
+<h2>Schema Inference</h2>
+<p>Bonus: usage example of <b>LineAsString</b> and <b>RawBLOB</b> formats:</p>
+<p>
+<code style="font-size: 14pt; overflow: hidden; line-height: 1.25;">:) SELECT extractTextFromHTML(*)
+    FROM url('https://news.ycombinator.com/', LineAsString);
+
+:) SELECT extractTextFromHTML(*)
+    FROM url('https://news.ycombinator.com/', RawBLOB);
+
+:) DESC url('https://news.ycombinator.com/', LineAsString)
+
+line    String
+</code>
+</p>
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Pavel Kruglov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Schema Autodetection</h2>
+<p>Formats with external schema: <b>Protobuf</b> and <b>CapNProto</b>:</p>
+<p>
+<code style="font-size: 14pt; overflow: hidden; line-height: 1.25;">SELECT * FROM file('data.protobuf')
+    SETTINGS format_schema = 'path_to_schema:message_name'
+</code>
+</p>
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Pavel Kruglov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Schema Autodetection</h2>
+<p>Also works for <b>Merge</b>, <b>Distributed</b> and <b>ReplicatedMegreTree</b>!</p>
+<p>Was:
+<code style="font-size: 14pt; white-space: pre-wrap; line-height: 1.25;">CREATE TABLE hits (<span style="color: gray;">WatchID UInt64, JavaEnable UInt8, Title String, GoodEvent Int16, EventTime DateTime, EventDate Date, CounterID UInt32, ClientIP UInt32, ClientIP6 FixedString(16), RegionID UInt32, UserID UInt64, CounterClass Int8, OS UInt8, UserAgent UInt8, URL String, Referer String, URLDomain String, RefererDomain String, Refresh UInt8, IsRobot UInt8, ... ParsedParams.Key4 Array(String), ParsedParams.Key5 Array(String), ParsedParams.ValueDouble Array(Float64), IslandID FixedString(16), RequestNum UInt32, RequestTry UInt8</span>)
+ENGINE = ReplicatedMegreTree('/clickhouse/tables/{uuid}', '{replica}');
+</code>
+</p>
+<p>Now:
+<code style="font-size: 14pt; white-space: pre-wrap; line-height: 1.25;">CREATE TABLE hits
+ENGINE = ReplicatedMegreTree('/clickhouse/tables/{uuid}', '{replica}');
+</code>
+</p>
+</section>
+
+<section class="slide">
+<h2>Format Autodetection</h2>
+<p>For INTO OUTFILE, FROM INFILE:</p>
+<p>Was:
+<code style="font-size: 15pt;">SELECT URLDomain, UserID FROM test.hits
+    INTO OUTFILE 'hits.csv' <b style="color: red">FORMAT CSV</b>
+</code>
+</p>
+<p>Now:
+<code style="font-size: 15pt;">SELECT URLDomain, UserID FROM test.hits INTO OUTFILE 'hits.<b style="color: green">parquet</b>'
+SELECT URLDomain, UserID FROM test.hits INTO OUTFILE 'hits.<b style="color: green">csv</b>'
+SELECT URLDomain, UserID FROM test.hits INTO OUTFILE 'hits.<b style="color: green">ndjson</b>'
+SELECT URLDomain, UserID FROM test.hits INTO OUTFILE 'hits.<b style="color: green">native</b>'
+SELECT URLDomain, UserID FROM test.hits INTO OUTFILE 'hits.csv.<b style="color: green">gz</b>'
+</code>
+</p>
+<p>For table functions and engines:<br/>
+&mdash; file, url, s3, hdfs, s3Cluster, hdfsCluster...</p>
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developers: Pavel Kruglov, ZhongYuanKai.</p>
+</section>
+
+
+<section class="slide">
+<h2>Best Features 2022</h2>
+<p>Try to guess — what's my favorite new feature.</p>
+<p>And win a T-shirt!</p>
+<p>1. Schema Inference.</p>
+<p style="color: gray;">2. ???</p>
+</section>
+
+<section class="slide">
+<h2>ClickHouse Keeper</h2>
+<p>Full compatibility with ZooKeeper 3.5 by protocol and data model.</p>
+<p>Can run embedded in clickhouse-server. Or separately.</p>
+<p>Or replace ZooKeeper in other software stacks.</p>
+<p>Passing Jepsen tests, ClickHouse functional and integration tests.<br/><span style="color: green;">Deployed in production.</span></p>
+<p>Faster than ZooKeeper, consuming less memory.</p>
+<p>Compact logs and snapshots.</p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Alexander Sapin.</p>
+</section>
+
+
+<section class="slide">
+<h2>Best Features 2022</h2>
+<p>Try to guess — what's my favorite new feature.</p>
+<p>And win a T-shirt!</p>
+<p>1. Schema Inference.</p>
+<p>2. ClickHouse Keeper.</p>
+<p style="color: gray;">3. ???</p>
+</section>
+
+
+<section class="slide">
+<h2>Flexible Memory Limits</h2>
+<p>a.k.a. Memory Overcommit</p>
+<p><b>ClickHouse in 2021:</b></p>
+<p>— Memory limit (for query) exceeded: would use 9.39 GiB;
+<br/>— SET max_memory_usage = ...</p>
+
+<p><b>ClickHouse in 2022:</b></p>
+<p>— <span style="color: green;">everything works automatically;</span>
+<br/>— no need to tune any settings.</p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Dmitriy Novik.</p>
+</section>
+
+
+<section class="slide">
+<h2>Best Features 2022</h2>
+<p>Try to guess — what's my favorite new feature.</p>
+<p>And win a T-shirt!</p>
+<p>1. Schema Inference.</p>
+<p>2. ClickHouse Keeper.</p>
+<p>3. Flexible Memory Limits.</p>
+<p style="color: gray;">4. ???</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Projections</h2>
+
+<p>Multiple data representations inside a single table.</p>
+<p>
+&mdash; different data order;<br/>
+&mdash; subset of columns;<br/>
+&mdash; subset of rows;<br/>
+&mdash; aggregation.</p>
+
+<p>Difference to materialized views:
+<p>
+&mdash; projections data is always consistent;<br/>
+&mdash; updated atomically with the table;<br/>
+&mdash; replicated in the same way as the table;<br/>
+&mdash; projection can be automatically used for SELECT query.
+</p>
+
+<p style="font-size: 14pt; color: gray;">Developer &mdash; Amos Bird. <span style="color: green;">Experimental since 21.6. Production since 22.3.</span></p>
+</section>
+
+<section class="slide">
+<code style="font-size: 16pt;">CREATE TABLE wikistat
+(
+    time DateTime,
+    project LowCardinality(String),
+    subproject LowCardinality(String),
+    path String,
+    hits UInt64,
+
+    <span style="color: green;">PROJECTION total
+    (
+        SELECT
+            project,
+            subproject,
+            path,
+            sum(hits),
+            count()
+        GROUP BY
+            project,
+            subproject,
+            path
+    )</span>
+)
+ENGINE = ReplicatedMergeTree
+ORDER BY (path, time)</code>
+</p>
+</section>
+
+
+<section class="slide">
+<h2>Best Features 2022</h2>
+<p>Try to guess — what's my favorite new feature.</p>
+<p>And win a T-shirt!</p>
+<p>1. Schema Inference.</p>
+<p>2. ClickHouse Keeper.</p>
+<p>3. Flexible Memory Limits.</p>
+<p>4. Projections.</p>
+<p style="color: gray;">5. ???</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Backup &amp; Restore</h2>
+<p>&mdash; full and incremental backups;</p>
+<p>&mdash; tables, partitions, databases, all databases;</p>
+<p>&mdash; full or partial restore;</p>
+<p>&mdash; a bunch of files or a single archive;</p>
+<p>&mdash; atomic snapshot for MergeTree,<br/>&emsp; best effort snapshot for multiple tables;</p>
+<p style="font-size: 14pt; color: gray; margin-top: 3em;">Developer &mdash; Vitaliy Baranov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Backup &amp; Restore</h2>
+<code style="line-height: 1.5; font-size: 16pt;">BACKUP TABLE t TO File('backup_20220629');
+
+BACKUP TABLE t TO File('backup_20220629.zip');
+
+BACKUP TABLE t TO File('backup_20220630')
+    SETTINGS base_backup = File('backup_20220629');
+
+BACKUP TABLE system.users, system.grants TO ...
+BACKUP TABLE system.functions TO ...
+</code>
+
+<p style="font-size: 14pt; color: gray; margin-top: 3em;">Developer &mdash; Vitaliy Baranov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Backup &amp; Restore</h2>
+<code style="line-height: 1.5; font-size: 16pt;">BACKUP|RESTORE
+  TABLE [db.]table_name [AS [db.]table_name_in_backup]
+    [PARTITION[S] partition_expr [,...]] |
+  DICTIONARY [db.]dictionary_name [AS [db.]name_in_backup] |
+  DATABASE database_name [AS database_name_in_backup]
+    [EXCEPT TABLES ...] |
+  TEMPORARY TABLE table_name [AS table_name_in_backup] |
+  ALL TEMPORARY TABLES [EXCEPT ...] |
+  ALL DATABASES [EXCEPT ...] } [,...]
+  [ON CLUSTER 'cluster_name']
+  TO|FROM File('path/') | Disk('disk_name', 'path/')
+  [SETTINGS base_backup = File(...) | Disk(...)]</code>
+
+<p style="font-size: 14pt; color: gray; margin-top: 1em;">Developer &mdash; Vitaliy Baranov.</p>
+</section>
+
+<section class="slide">
+<h2>Best Features 2022</h2>
+<p>Try to guess — what's my favorite new feature.</p>
+<p>1. Schema Inference.</p>
+<p>2. ClickHouse Keeper.</p>
+<p>3. Flexible Memory Limits.</p>
+<p>4. Projections.</p>
+<p>5. Backup &amp; Restore.</p>
+<p style="color: gray;">6. I just want to give more T-shirts...</p>
+</section>
+
+<section class="slide">
+<h2>Support for Aarch64</h2>
+<p style="margin-top: -1em;">First ClickHouse builds for Aarch64 (ARM64) &mdash; in <b style="color: green;">Feb 2016</b>.</p>
+<p>ClickHouse builds have been tested on:</p>
+<p>&mdash; APM X-Gene;
+<br/>&mdash; Cavium ThunderX 1, 2;
+<br/>&mdash; Raspberry Pi;
+<br/>&mdash; Pinebook;
+<br/>&mdash; Google Pixel;
+<br/>&mdash; Apple M1;
+<br/>&mdash; Huawei Taishan;
+<br/>&mdash; AWS Graviton 1, 2 and 3;
+<br/>&mdash; Ampere Altra;
+<br/>&mdash; and on secret Google CPUs;
+</p>
+</section>
+
+<section class="slide">
+<h2>Making Aarch64 Production Ready</h2>
+<p>&mdash; automated builds, packages, Docker;</p>
+<p>&mdash; full functional test runs;</p>
+<p>&mdash; automated performance tests;</p>
+<p>&mdash; JIT compilation for queries;</p>
+<p>&mdash; optimizations with ARM NEON;</p>
+<p>&mdash; query profiling and introspection;</p>
+
+<p style="color: gray;">&mdash; Hyperscan, GRPC;</p>
+</section>
+
+<section class="slide">
+<h2>Best Features 2022</h2>
+<p>Some features are <span style="color: green;">still experimental</span>
+<br/>but already available for testing:</p>
+<p>&mdash; Semistructured Data<br/>&emsp; a.k.a. dynamic subcolumns and JSON data type.</p>
+<p>&mdash; Transactions.</p>
+<p style="color: gray;">Do you use these features?</p>
+</section>
+
+<section class="slide">
+<h2>Support For Semistructured Data</h2>
+<p><b>JSON</b> data type:</p>
+<code>CREATE TABLE games (data JSON) ENGINE = MergeTree;</code>
+<p style="margin-top: 1em;">You can insert arbitrary nested JSONs.</p>
+<p>Types are automatically inferred on INSERT and merge.</p>
+<p>Data is stored in columnar format: columns and subcolumns.</p>
+<p>Query nested data naturally.</p>
+</section>
+
+<section class="slide">
+<h2>Support For Semistructured Data</h2>
+<p style="margin-top: -1em;">Example: NBA games dataset</p>
+
+<code>CREATE TABLE games (data String)
+ENGINE = MergeTree ORDER BY tuple();
+
+SELECT <span style="color: red;">JSONExtractString(data, 'teams', 1, 'name')</span>
+FROM games;</code>
+<p style="margin-top: 0.5em; color: red;">&mdash; 0.520 sec.</p>
+
+<code>CREATE TABLE games (data JSON)
+ENGINE = MergeTree;
+
+SELECT <span style="color: green;">data.teams.name[1]</span> FROM games;</code>
+<p style="margin-top: 0.5em; color: green;">&mdash; 0.015 sec.</p>
+</section>
+
+<section class="slide">
+<h2>Support For Semistructured Data</h2>
+<code style="font-size: 12pt; margin-top: -2em;">DESCRIBE TABLE games
+SETTINGS describe_extend_object_types = 1
+
+name: data
+type: Tuple(                                           &lt;-- inferred type
+    `_id.$oid` String,
+    `date.$date` String,
+    `teams.abbreviation` Array(String),
+    `teams.city` Array(String),
+    `teams.home` Array(UInt8),
+    `teams.name` Array(String),
+    `teams.players.ast` Array(Array(Int8)),
+    `teams.players.blk` Array(Array(Int8)),
+    `teams.players.drb` Array(Array(Int8)),
+    `teams.players.fg` Array(Array(Int8)),
+    `teams.players.fg3` Array(Array(Int8)),
+    `teams.players.fg3_pct` Array(Array(String)),
+    `teams.players.fg3a` Array(Array(Int8)),
+    `teams.players.fg_pct` Array(Array(String)),
+    `teams.players.fga` Array(Array(Int8)),
+    `teams.players.ft` Array(Array(Int8)),
+    `teams.players.ft_pct` Array(Array(String)),
+    `teams.players.fta` Array(Array(Int8)),
+    `teams.players.mp` Array(Array(String)),
+    `teams.players.orb` Array(Array(Int8)),
+    `teams.players.pf` Array(Array(Int8)),
+    `teams.players.player` Array(Array(String)),
+    `teams.players.plus_minus` Array(Array(String)),
+    `teams.players.pts` Array(Array(Int8)),
+    `teams.players.stl` Array(Array(Int8)),
+    `teams.players.tov` Array(Array(Int8)),
+    `teams.players.trb` Array(Array(Int8)),
+    `teams.results.ast` Array(Int8),
+    `teams.results.blk` Array(Int8),
+    `teams.results.drb` Array(Int8),
+    `teams.results.fg` Array(Int8),
+    `teams.results.fg3` Array(Int8),
+    `teams.results.fg3_pct` Array(String),
+    `teams.results.fg3a` Array(Int8),
+    `teams.results.fg_pct` Array(String),
+    `teams.results.fga` Array(Int16),
+    `teams.results.ft` Array(Int8),
+    `teams.results.ft_pct` Array(String),
+    `teams.results.fta` Array(Int8),
+    `teams.results.mp` Array(Int16),
+    `teams.results.orb` Array(Int8),
+    `teams.results.pf` Array(Int8),
+    `teams.results.plus_minus` Array(String),
+    `teams.results.pts` Array(Int16),
+    `teams.results.stl` Array(Int8),
+    `teams.results.tov` Array(Int8),
+    `teams.results.trb` Array(Int8),
+    `teams.score` Array(Int16),
+    `teams.won` Array(Int8))</code>
+</section>
+
+<section class="slide">
+<h2>Support For Semistructured Data</h2>
+<p>Flexible schema.</p>
+<p>You can have columns with strict and flexible schema in one table.</p>
+<p>Queries work <span style="color: green;">as fast as</span> with predefined types!</p>
+<p style="color: gray;">Production readiness &mdash; Q4 2022.</p>
+</section>
+
+<section class="slide">
+<h2>Sparse Encoding For Columns</h2>
+<p>If a column contains mostly zeros, we can encode it in sparse format
+<br/>and <b style="color: green;">automatically optimize</b> calculations!</p>
+
+<p><code style="font-size: 18pt; line-height: 1.25;">CREATE TABLE test.hits ...
+ENGINE = MergeTree ORDER BY ...
+SETTINGS <b style="color: green;">ratio_of_defaults_for_sparse_serialization</b> = 0.9
+</code></p>
+
+<p>Special column encoding like <b>LowCardinality</b>
+<br/>but it's completely transparent and automatic.</p>
+
+<p style="margin-top: 2em; color: gray; font-size: 14pt;">Developer: Anton Popov.</p>
+</section>
+
+<section class="slide">
+<h2>Transactions</h2>
+<p>ACID. MVCC. Snapshot Isolation.</p>
+<p>Available <span style="color: gray;">for preview</span> with non-replicated MergeTree tables.</p>
+<p>&mdash; standard <b style="color: green;">BEGIN TRANSACTION</b>, <b style="color: green;">COMMIT</b> and <b style="color: green;">ROLLBACK</b> statements;</p>
+<p>&mdash; atomic INSERTs of huge amounts of data;</p>
+<p>&mdash; atomic INSERTs into multiple tables and materialized views;</p>
+<p>&mdash; multiple consistent and isolated SELECTs from single snapshot;</p>
+<p>&mdash; atomicity and isolation for ALTER DELETE / UPDATE;</p>
+</section>
+
+<section class="slide">
+<h2>Transactions</h2>
+<p>Available <span style="color: gray;">for preview</span> with non-replicated MergeTree tables.</p>
+<p>Next steps: Replicated tables and Distributed queries.</p>
+<p style="color: gray; font-size: 14pt;">We need your feedback.</p>
+<p style="color: gray;">Production readiness &mdash; Q4 2022.</p>
+<p style="margin-top: 5em; color: gray; font-size: 14pt;">Developer: Alexander Tokmakov.</p>
+</section>
+<section class="slide">
+<h2>Bonus: New Documentation</h2>
+<img src="pictures/docs.png" style="width: 85%; margin-top: -1em;"/>
+</section>
+
+<section class="slide">
+<h2>Bonus: New Documentation</h2>
+<img src="pictures/docs.png" style="float: right; width: 50%; margin-right: -50px;"/>
+<p>Advantages:
+<br/>&mdash; many tutorials about integrations;
+<br/>&mdash; it is fast;
+</p>
+<p>Disadvantages:
+<br/>&mdash; just released; still to do: dark theme;
+<br/>&mdash; no pdf version;
+</p>
+<p style="color: gray; font-size: 14pt;">Developer: Rich Raposa.</p>
+</section>
+
+<section class="slide">
+<h2>Updated Benchmark</h2>
+<img style="margin-left: -60px; margin-top: -1em; height: 100%" src="pictures/clickbench.png" />
+</section>
+
+<section class="slide">
+<h2>New ClickHouse Website</h2>
+<img style="margin-left: -50px; margin-top: -1em; height: 100%" src="pictures/website.png" />
+</section>
+
+
+<section class="slide">
+<h2>What's Next?</h2>
+</section>
+
+<section class="slide">
+<h2>What Else?</h2>
+<p>Vote for the most weird feature to implement:</p>
+<p style="line-height: 1.5;">&mdash; Indices for Vector Search;<br/>
+&mdash; Secondary Indices;<br/>
+&mdash; Streaming Queries;<br/>
+&mdash; Batch Jobs Support;<br/>
+&mdash; GPU Offloading;<br/>
+&mdash; Key-Value Data Marts;<br/>
+&mdash; Embedded ClickHouse Engine;<br/>
+&mdash; Text Processing.</p>
+</section>
+
+<section class="slide">
+<h2>Q&amp;A</h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+
