@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse performance optimizations</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+        code { display: block; white-space: pre; background-color: #EEE; }
+        p.cloud { text-align: center; line-height: 1.5; }
+        p.cloud span { font-size: 13pt; color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+   </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse performance optimizations</h1>
+    </header>
+
+    <section class="slide" id="cover">
+        <h1 style="margin-top: 150px">ClickHouse performance optimizations</h1>
+    </section>
+
+    <section class="slide">
+        <h2>About me</h2>
+        <p>Maksim, developer of ClickHouse.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Performance of ClickHouse</h2>
+
+        <p>1. High Level System Architecture.</p>
+        <p>2. CI/CD Pipeline.</p>
+        <P>3. Introspection.</P>
+        <p>4. Abstractions and Algorithms.</p>
+        <p>5. Libraries.</p>
+        <p>6. JIT compilation. Dynamic dispatch.</p>
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">High Level System Architecture</h1>
+    </section>
+
+    <section class="slide">
+        <h2>ClickHouse Architecture</h2>
+
+        <p>Column-oriented storage &mdash; data is physically stored by columns.</p>
+        <p>Only necessary columns are read from disk during query.</p>
+        <p>Better compression because of data locality.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Vectorized Query Execution</h2>
+
+        <p>Vectorized query execution &mdash; data is processed in blocks. Block contains multiple columns with <b>max_block_size</b> rows (65505 by default).</p>
+        <p>Each column is stored as a vector of primitive data types or their combination:</p>
+        <p>1. Better utilization for CPU caches and pipeline.</p>
+        <p>2. Data is processed using SIMD instructions.</p>
+    </section>
+
+    <section class="slide">
+        <h2>ClickHouse Columns</h2>
+
+        <p><b>Numeric</b> columns &mdash; <b>PODArray</b>. Almost the same as <b>std::vector</b>.</p>
+        <p><b>Nullable</b> columns contain data column and UInt8 column bitmask is element null.</p>
+        <p><b>Array</b> columns contain data column and UInt64 column with offsets.</p>
+        <p><b>Const</b> column contain 1 constant value.</p>
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">CI/CD Pipeline</h1>
+    </section>
+
+    <section class="slide">
+        <h2>CI/CD Pipeline</h2>
+
+        <p>1. Functional, Integration tests.</p>
+        <p>2. Run all tests with sanitizers (ASAN, TSAN, MSAN).</p>
+        <p>3. Fuzzers (data types, compression codecs).</p>
+        <p>4. AST fuzzer.</p>
+        <p>5. Stress tests (Our special TSAN stress).</p>
+        <p>6. <b>Performance tests</b>.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Performance Tests</h2>
+
+        <p>Part of CI/CD pipeline.</p>
+        <p>Runs for each commit in pull request.</p>
+        <p>Runs for each commit in the master branch.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Performance Tests</h2>
+
+        <img style="height: 77%; margin-top: -1em;" src="pictures/report.webp"/>
+    </section>
+
+    <section class="slide">
+        <h2>Performance Tests</h2>
+
+        <p>Collect different statistics during each performance test run. Can be useful for later debugging.</p>
+        <p>Processor metrics (CPU cycles, cache misses same as perf-stat).</p>
+        <p>ClickHouse specific profile events (read bytes from disk, transferred over network, etc).</p>
+
+        <a href="https://clickhouse.com/blog/testing-the-performance-of-click-house/">https://clickhouse.com/blog/testing-the-performance-of-click-house/</a></p>
+    </section>
+
+    <section class="slide">
+        <h2>Performance Tests</h2>
+
+        <p>Helps us find performance regressions.</p>
+        <p>Nice tool that can help to find places where performance can be improved.</p>
+
+        <p>1. Try different allocators, different libraries.</p>
+        <p>2. Try different compiler options (loop unrolling, inline threshold)</p>
+        <p>3. Enable <b>AVX</b>/<b>AVX2</b>/<b>AVX512</b> for build.</p>
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">Introspection</h1>
+    </section>
+
+    <section class="slide">
+        <h2>Basic Introspection</h2>
+
+        <p>Collect <b>ProfileEvents</b> for each query:</p>
+        <p>RealTimeMicroseconds, UserTimeMicroseconds, SystemTimeMicroseconds, SoftPageFaults, HardPageFaults using <b>getrusage</b> system call.</p>
+        <p>Collect <b>:taskstats</b> from procFS.</p>
+        <p>OSCPUVirtualTimeMicroseconds, OSCPUWaitMicroseconds (when <b>/proc/thread-self/schedstat</b> is available).
+            OSIOWaitMicroseconds                      (when <b>/proc/thread-self/stat</b> is available).
+            OSReadChars, OSWriteChars, OSReadBytes, OSWriteBytes  (when <b>/proc/thread-self/io</b> is available)</p>
+
+        <p><a href="https://man7.org/linux/man-pages/man2/getrusage.2.html">https://man7.org/linux/man-pages/man2/getrusage.2.html</a></p>
+        <p><a href="https://man7.org/linux/man-pages/man5/proc.5.html">https://man7.org/linux/man-pages/man5/proc.5.html</a></p>
+    </section>
+
+    <section class="slide">
+        <h2>Basic Introspection</h2>
+
+        <p>Collect <b>ProfileEvents</b> for each query:</p>
+
+        <p>Hardware specific counters CPU cache misses, CPU branch mispredictions using <b>perf_event_open</b> system call.</p>
+
+        <a href="https://man7.org/linux/man-pages/man2/perf_event_open.2.html">https://man7.org/linux/man-pages/man2/perf_event_open.2.html</a></p>
+    </section>
+
+    <section class="slide">
+        <h2>Basic Introspection</h2>
+
+        <p>Collect <b>ProfileEvents</b> for each query:</p>
+        <p>Different ClickHouse specific metrics FileOpen, DiskReadElapsedMicroseconds, NetworkSendBytes.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Example Basic Introspection</h2>
+
+        <code style="font-size:12pt;">SELECT PE.Names AS ProfileEventName, PE.Values AS ProfileEventValue
+FROM <b>system.query_log</b> ARRAY JOIN ProfileEvents AS PE
+WHERE query_id='344b07d9-9d7a-48f0-a17e-6f5f6f3d61f5'
+AND ProfileEventName LIKE 'Perf%';
+        </code>
+
+        <code style="font-size:12pt;">┌─ProfileEventName─────────────┬─ProfileEventValue─┐
+│ PerfCpuCycles                │       40496995274 │
+│ PerfInstructions             │       57259199973 │
+│ PerfCacheReferences          │        2072274618 │
+│ PerfCacheMisses              │         146570206 │
+│ PerfBranchInstructions       │        8675194991 │
+│ PerfBranchMisses             │         259531879 │
+│ PerfStalledCyclesFrontend    │         813419527 │
+│ PerfStalledCyclesBackend     │       15797162832 │
+│ PerfCpuClock                 │       10587371854 │
+│ PerfTaskClock                │       10587382785 │
+│ PerfContextSwitches          │              3009 │
+│ PerfCpuMigrations            │               113 │
+│ PerfMinEnabledTime           │       10584952104 │
+│ PerfMinEnabledRunningTime    │        4348089512 │
+│ PerfDataTLBReferences        │         465992961 │
+│ PerfDataTLBMisses            │           5149603 │
+│ PerfInstructionTLBReferences │           1344998 │
+│ PerfInstructionTLBMisses     │            181635 │
+└──────────────────────────────┴───────────────────┘
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Stacktraces Collection</h2>
+
+        <p>Periodically collect stack traces from all currently running threads.</p>
+        <p>Currently using a patched fork of <b>LLVM libunwind</b>.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Example Stacktraces Collection</h2>
+
+        <p>Check all threads current stack trace from <b>system.stack_trace</b></p>
+        <code style="font-size:12pt;">WITH arrayMap(x -> demangle(addressToSymbol(x)), trace) AS all
+SELECT thread_name, thread_id, query_id, arrayStringConcat(all, '\n') AS res
+FROM <b>system.stack_trace</b> LIMIT 1 FORMAT Vertical;
+        </code>
+
+        <code style="font-size:12pt;">Row 1:
+──────
+thread_name: clickhouse-serv
+thread_id:   125441
+query_id:
+res:         pthread_cond_wait
+std::__1::condition_variable::wait(std::__1::unique_lock<std::__1::mutex>&)
+BaseDaemon::waitForTerminationRequest()
+DB::Server::main(/*arguments*/)
+Poco::Util::Application::run()
+DB::Server::run()
+Poco::Util::ServerApplication::run(int, char**)
+mainEntryClickHouseServer(int, char**)
+main
+__libc_start_main
+_start
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Example Stacktraces Flame Graph</h2>
+
+        <p>Generate flamegraph of query execution</p>
+
+        <code style="font-size:12pt;">./clickhouse-client --query="SELECT
+arrayStringConcat(
+    arrayMap(x -> concat(
+        splitByChar('/', addressToLine(x))[-1],
+        '#',
+        demangle(addressToSymbol(x))),
+        trace),
+    ';') AS stack,
+count(*) AS samples
+FROM system.trace_log
+WHERE (trace_type = 'Real') AND (query_id = '344b07d9-9d7a-48f0-a17e-6f5f6f3d61f5')
+GROUP BY trace" | flamegraph.pl</code>
+    </section>
+
+    <section class="slide">
+        <h2>Example Stacktraces Flame Graph</h2>
+
+        <img style="width: 65%; margin-left: 150px;" src="pictures/introspection_flame_graph.png"/>
+        <p><a href="https://www.brendangregg.com/flamegraphs.html">https://www.brendangregg.com/flamegraphs.html</a></p>
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">Abstractions and Algorithms</h1>
+    </section>
+
+
+    <section class="slide">
+        <h2>Abstractions and Algorithms</h2>
+
+        <p>For high performance systems interfaces must be determined by algorithms.</p>
+        <p>Top-down approach does not work.</p>
+        <p>High-performance system must be designed concentrating on doing a single task efficiently.</p>
+        <p>Designed from hardware capabilities.</p>
+        <p>ClickHouse was designed to efficiently FILTER and GROUP BY data that fits in RAM.</p>
+
+        <p><a href="https://presentations.clickhouse.com/bdtc_2019">https://presentations.clickhouse.com/bdtc_2019</a></p>
+    </section>
+
+    <section class="slide">
+        <h2>Abstractions and Algorithms</h2>
+
+        <p>There is no silver bullet, or best algorithm for any task.</p>
+        <p>Try to choose the fastest possible algorithm/algorithms for <b>your specific task</b>.</p>
+        <p>Performance must be evaluated on real data.</p>
+        <p>Most of the algorithms are affected by data distribution.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Abstractions and Algorithms</h2>
+
+        <p>Complex task can be viewed as number of small tasks.</p>
+        <p>Such small tasks can also be viewed as special cases that can be optimized.</p>
+        <p>For any task there are dozens of different algorithms that can be combined together (Example Sorting, Aggregation).</p>
+        <p>Each algorithm can be tuned later using different low-level optimizations (Data layout, Specializations, SIMD instructions, JIT compilation).</p>
+    </section>
+
+    <section class="slide">
+        <h2>Example Aggregation</h2>
+
+        <p>High level design desigion &mdash; data must be processed not only by multiple threads, but by multiple servers.</p>
+        <p>Core component is the HashTable framework.</p>
+        <p>Different HashTable for different types of keys (Special StringHashTable for Strings).</p>
+    </section>
+
+    <section class="slide">
+        <h2>Example Aggregation</h2>
+
+        <p>Additional specializations for <b>Nullable</b>, <b>LowCardinality</b></p>
+        <p>Tuned a lot of low-level details, like allocations, structures layout in memory, batch multiple operations to avoid virtual function calls.</p>
+        <p>Added JIT compilation for special cases.</p>
+        <p>Added cache of hash-table sizes.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Abstractions and Algorithms</h2>
+
+        <p>Optimizing performance is about trying different approaches.</p>
+        <p>Most of the time without any results.</p>
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">Libraries</h1>
+    </section>
+
+    <section class="slide">
+        <h2>Libraries</h2>
+
+        <p>If someone on the Internet says my algorithm is fastest we will try it in ClickHouse.</p>
+        <p>Always try to find interesting algorithms, and solutions.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Libraries</h2>
+
+        <code>ClickHouse/contrib$ ls | grep -v "cmake" | wc -l
+95
+</code>
+        <p>1. Different algorithms for parsing floats, json (multiple libraries).</p>
+        <p>2. A lot of integrations.</p>
+        <p>3. Embedded storages.</p>
+        <p>4. LLVM for JIT compilation.</p>
+        <p>5. libcxx (C++ standard library).</p>
+    </section>
+
+    <section class="slide">
+        <h2>Libraries</h2>
+
+        <p>Almost in any library our CI system finds bugs. We report them to maintainers.</p>
+        <p>We also have a lot of library forks with a lot of changes. For example <b>POCO</b>, <b>LLVM libunwind</b>.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Libraries</h2>
+
+        <p>We are not afraid of adding additional contrib. Our CI system will do the job.</p>
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">JIT compilation. Dynamic dispatch.</h1>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Compilation</h2>
+
+        <p>JIT compilation can transform dynamic configuration into static configuration.</p>
+        <p>Not all functions can be easily compiled, not all algorithms can be easily compiled.</p>
+        <p>Has its own costs (compilation time, memory, maintenance).</p>
+        <p>But can greatly improve performance in special cases.</p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Compilation</h2>
+
+        <p>Compile evaluation of multiple expressions. Example: SELECT a + b * c + 5 FROM test_table;</p>
+        <p>Compile special cases for <b>GROUP BY</b>. Example: SELECT sum(a), avg(b), count(c) FROM test_table;</p>
+        <p>Compile comparator in <b>ORDER BY</b>. Example: SELECT * FROM test_table ORDER BY a, b, c;</p>
+
+        <p>In all cases we transform dynamic configuration into static.</p>
+        <p>My presentation from CPP Russia 2021 JIT in ClickHouse:</p>
+        <p><a href="https://www.youtube.com/watch?v=H_pUmU-uobI">https://www.youtube.com/watch?v=H_pUmU-uobI</a></p>
+    </section>
+
+    <section class="slide">
+        <h2>Dynamic Dispatch</h2>
+
+        <p>ClickHouse distributed as portable binary.</p>
+        <p>We use the old instruction set <b>SSE4.2</b>.</p>
+        <p>For <b>AVX</b>, <b>AVX2</b>, <b>AVX512</b> instructions need to use runtime instructions specialization using <b>CPUID</b>.</p>
+        <p>In addition a lot of companies bring us SIMD optimizations (ContentSquare, Intel), before most such optimizations were disabled during compilation time.</p>
+        <p>It is important that compilers can vectorize even complex loops. We can rely on this.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Dynamic Dispatch</h2>
+
+        <p>Main idea apply compiler flags to some functions, to compile it with <b>AVX</b>, <b>AVX2</b>, <b>AVX512</b></p>
+        <p>Then in runtime check <b>CPUID</b> and execute specialized function.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Dynamic Dispatch Example</h2>
+
+        <p>1. Improved performance of unary functions in 1.15 - 7 times.</p>
+        <p>2. Improved performance of <b>sum</b>, <b>avg</b> aggregate functions when there are no expressions in GROUP BY in 1.2 - 1.8 times.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Dynamic Dispatch Example</h2>
+
+        <p>For AVX2 we use such optimizations a lot.</p>
+        <p>For AVX512 currently we do not apply a lot of such optimizations. It potentially could decrease performance of other system parts.</p>
+        <p>Latest Intel processors like <b>Rocket Lake</b> and <b>Ice Lake</b> fix this issue. We can detect such processors in runtime and then use optimizations.</p>
+
+        <p><a href="https://stackoverflow.com/questions/56852812/simd-instructions-lowering-cpu-frequency">https://stackoverflow.com/questions/56852812/simd-instructions-lowering-cpu-frequency</a></p>
+    </section>
+
+    <section class="slide">
+        <h2>Conclusion</h2>
+
+        <p>1. CI/CD infrastructure, especially performance tests, must be the core component of a high performance system.</p>
+        <p>2. Without deep introspection it is hard to investigate issues with performance.</p>
+        <p>3. For high performance systems interfaces must be determined by algorithms.</p>
+        <p>4. Add specializations for special cases.</p>
+        <p>5. Tune your performance using low-level techniques (Data layout, JIT compilation, Dynamic Dispatch).</p>
+    </section>
+
+    <section class="slide">
+        <h2>Questions?</h2>
+    </section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
