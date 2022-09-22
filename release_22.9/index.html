@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 22.9 Webinar</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         table, tr, td { border: 0; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 22.9 Webinar</h1>
+    </header>
+    <section class="slide" id="cover">
+        <img src="https://presentations.clickhouse.com/original_website/logo.svg" style="width: 15%; position: absolute; right: 20px; bottom: 20px;" />
+        <h1 style="margin-top: 80px; line-height: 150%; color: black; font-size: 64pt">ClickHouse<br/>Release 22.9</h1>
+    </section>
+
+<section class="slide">
+<h2>Release 22.9 Webinar</h2>
+<p>1. (55 min) What's new in ClickHouse 22.9.</p>
+<p>2. (5 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: linear-gradient(to bottom, #46DDFF, #338844);">
+<div style="float: right; font-size: 400%; line-height: 1.25">🌤</div>
+<h2>Release 22.9</h2>
+<p>ClickHouse September release.</p>
+<p style="margin-top: 2em;">— 12 new features</p>
+<p>— 18 performance optimizations</p>
+<p>— 82 bug fixes 🔥</p>
+</section>
+
+<!--
+
+How to make ClickHouse slow
+Asynchronous loading of marks
+Compressed marks
+Set up composable cache
+
+Prefetch in aggregation
+
+insert_quorum = 'auto'
+changeable_in_readonly
+INTERSECT DISTINCT and EXCEPT DISTINCT
+JSON format improvements
+recording errors to specified file
+Async loading of Replicated tables
+
+ANN
+KeeperMap
+
+
+Node.JS driver
+Dashboards
+Release MacOS binaries.
+
+-->
+
+<section class="slide">
+<h2>Warm Up</h2>
+
+<p><code style="line-height: 1.5"><span style="color: gray">UNION DISTINCT</span>
+INTERSECT DISTINCT
+EXCEPT DISTINCT
+</code></p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Duc Canh Le.</p>
+</section>
+
+<section class="slide">
+<h2>Warm Up</h2>
+<p><code>SET insert_quorum = <b>'auto'</b></code></p>
+<p>Wait for insertion on <b>majority</b> of replicas.</p>
+<p style="margin-top: 3em; color: gray; font-size: 14pt;">Developers: Sachin, Vladimir Cherkasov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Settings Changeable For Readonly Users</h2>
+<p>users.d/user_name.xml:</p>
+<p style="font-size: 14pt;">
+<code>&lt;profiles>
+  &lt;user_name>
+    &lt;constraints>
+      &lt;max_threads>
+        &lt;min>10&lt;/min>
+        &lt;max>20&lt;/max>
+        <b style="color: green;">&lt;changeable_in_readonly/></b>
+      &lt;/max_threads>
+    &lt;/constraints>
+  &lt;/user_name>
+&lt;/profiles>
+</code></p>
+
+<p>SQL:</p>
+<p style="font-size: 14pt;">
+<code>ALTER ROLE role SETTINGS max_threads = 16
+    MIN 10 MAX 20 <b style="color: green;">CHANGEABLE_IN_READONLY</b></code></p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Sergei Trifonov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Settings Changeable For Readonly Users</h2>
+<p>Examples:</p>
+<p>&mdash; Allow readonly user to lower the number of threads;</p>
+<p>&mdash; <b>additional_table_filters</b>;</p>
+<p>&mdash; <b>additional_result_filter settings</b>;</p>
+<p>&mdash; <b>offset</b> and <b>limit</b> settings.</p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Sergei Trifonov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Saving Parsing Errors</h2>
+<p>Examples:</p>
+<p><code style="font-size: 16pt; line-height: 1.1;">clickhouse-client \
+  --input_format_allow_errors_num 1000 \
+  <b style="color: green;">--input_format_record_errors_file_path /tmp/parse_errors</b> \
+  --errors_output_format CSV ... &lt; data.tsv</code></p>
+
+<p><code style="font-size: 16pt; line-height: 1.1;">curl https://clickhouse.cloud/\
+?input_format_allow_errors_num=1000\
+&amp;<b style="color: green;">input_format_record_errors_file_path=parse_errors</b>\
+&amp;query=INSERT...
+  --data-binary @data.tsv</code></p>
+
+<p><code style="font-size: 16pt; line-height: 1.1;">SET input_format_record_errors_file_path = 'parse_errors';</code></p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developers: Zjial, Pavel Kruglov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Saving Parsing Errors</h2>
+<p>&mdash; works both on client side and on server side;</p>
+<p>&mdash; saved to <b>user_files</b> directory on server-side;</p>
+<p>&mdash; data is saved in structured format:
+<br/>&emsp; &mdash; time;
+<br/>&emsp; &mdash; database;
+<br/>&emsp; &mdash; table;
+<br/>&emsp; &mdash; error description;
+<br/>&emsp; &mdash; offset;
+<br/>&emsp; &mdash; raw data;</p>
+<p>&mdash; data can be further analyzed with the <b>file</b> table function;</p>
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developers: Zjial, Pavel Kruglov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Asynchronous Initialization Of Tables</h2>
+<p style="line-height: 1.5">If ZooKeeper is <span style="color: red;">unavailable</span> at server startup,
+<br/>the <b>ReplicatedMergeTree</b> tables will start in <span style="color: green;">read-only</span> mode
+<br/>and <span style="color: green;">initialize asynchronously</span> in background
+<br/>as soon as ZooKeeper will be available.
+</p>
+
+<p>&mdash; the same applicable for ClickHouse Keeper as well;</p>
+<p>&mdash; especially useful for embedded ClickHouse Keeper;</p>
+<p style="margin-top: 3em; color: gray; font-size: 14pt;">Developers: Antonio Andelic.</p>
+</section>
+
+<section class="slide">
+<h2>New And Improved JSON Formats</h2>
+<p>Data import from <b>JSON</b>, <b>JSONCompact</b>, <b>JSONColumnsWithMetadata</b>;</p>
+<p>New controls:
+<br/>&mdash; input_format_json_read_numbers_as_strings;
+<br/>&mdash; output_format_json_quote_decimals;
+<br/>&mdash; input_format_json_validate_utf8;
+<br/>&mdash; input_format_json_validate_types_from_metadata;</p>
+<p>A new <b style="color: green;">JSONObjectEachRow</b> format;</p>
+<p style="margin-top: 3em; color: gray; font-size: 14pt;">Developer: Pavel Kruglov.</p>
+</section>
+
+<section class="slide">
+<h2>New And Improved JSON Formats</h2>
+<p>Demo</p>
+</section>
+
+<section class="slide">
+<h2>How To Make ClickHouse Slow?</h2>
+<p>???</p>
+</section>
+
+<section class="slide">
+<h2>How To Make ClickHouse Slow?</h2>
+<p>Use Virtual Filesystems!</p>
+<p>And host readonly table on HTTP server with disk <b style="green">web</b>!</p>
+<code style="font-size: 14pt;">SELECT data_paths FROM system.tables
+  WHERE name = 'github_events' AND database = 'default'
+
+sudo -u <b style="color: green;">clickhouse clickhouse static-files-disk-uploader</b> \
+  --metadata-path \
+  /var/lib/clickhouse/store/127/127f4241-4a9b-4ecd-8a84-846b88069cb5/ \
+  --link --output-dir github_events_web
+
+find web -not -type d | xargs -P10 -I{} \
+  aws s3 cp {} s3://clickhouse-public-datasets/{}
+</code>
+</section>
+
+<section class="slide">
+<h2>How To Make ClickHouse Slow?</h2>
+<p>Demo</p>
+</section>
+
+<!--
+
+m5dn.24xlarge
+
+ssh -i ~/.ssh/aws_eu_central_1.pem ubuntu@3.74.230.134
+
+sudo mdadm --create --verbose /dev/md0 --level=0 --raid-devices=4 /dev/nvme1n1 /dev/nvme2n1 /dev/nvme3n1 /dev/nvme4n1
+sudo mkfs -t ext4 /dev/md0
+
+sudo mkdir -p /mnt/raid
+sudo mount /dev/md0 /mnt/raid
+
+sudo mkdir /mnt/raid/clickhouse
+sudo ln -s /mnt/raid/clickhouse /var/lib/clickhouse
+
+curl https://clickhouse.com/ | sh
+sudo ./clickhouse install
+
+sudo bash -c 'cat > /etc/clickhouse-server/config.d/web.yaml'
+
+storage_configuration:
+    disks:
+        web:
+            type: web
+            endpoint: 'http://clickhouse-public-datasets.s3.amazonaws.com/web/'
+    policies:
+        web:
+            volumes:
+                main:
+                    disk: web
+
+sudo chown clickhouse /etc/clickhouse-server/config.d/web.yaml
+
+sudo clickhouse start
+clickhouse-client
+
+ATTACH TABLE github_events UUID '127f4241-4a9b-4ecd-8a84-846b88069cb5'
+(
+    `file_time` DateTime,
+    `event_type` Enum8('CommitCommentEvent' = 1, 'CreateEvent' = 2, 'DeleteEvent' = 3, 'ForkEvent' = 4, 'GollumEvent' = 5, 'IssueCommentEvent' = 6, 'IssuesEvent' = 7, 'MemberEvent' = 8, 'PublicEvent' = 9, 'PullRequestEvent' = 10, 'PullRequestReviewCommentEvent' = 11, 'PushEvent' = 12, 'ReleaseEvent' = 13, 'SponsorshipEvent' = 14, 'WatchEvent' = 15, 'GistEvent' = 16, 'FollowEvent' = 17, 'DownloadEvent' = 18, 'PullRequestReviewEvent' = 19, 'ForkApplyEvent' = 20, 'Event' = 21, 'TeamAddEvent' = 22),
+    `actor_login` LowCardinality(String),
+    `repo_name` LowCardinality(String),
+    `created_at` DateTime,
+    `updated_at` DateTime,
+    `action` Enum8('none' = 0, 'created' = 1, 'added' = 2, 'edited' = 3, 'deleted' = 4, 'opened' = 5, 'closed' = 6, 'reopened' = 7, 'assigned' = 8, 'unassigned' = 9, 'labeled' = 10, 'unlabeled' = 11, 'review_requested' = 12, 'review_request_removed' = 13, 'synchronize' = 14, 'started' = 15, 'published' = 16, 'update' = 17, 'create' = 18, 'fork' = 19, 'merged' = 20),
+    `comment_id` UInt64,
+    `body` String,
+    `path` String,
+    `position` Int32,
+    `line` Int32,
+    `ref` LowCardinality(String),
+    `ref_type` Enum8('none' = 0, 'branch' = 1, 'tag' = 2, 'repository' = 3, 'unknown' = 4),
+    `creator_user_login` LowCardinality(String),
+    `number` UInt32,
+    `title` String,
+    `labels` Array(LowCardinality(String)),
+    `state` Enum8('none' = 0, 'open' = 1, 'closed' = 2),
+    `locked` UInt8,
+    `assignee` LowCardinality(String),
+    `assignees` Array(LowCardinality(String)),
+    `comments` UInt32,
+    `author_association` Enum8('NONE' = 0, 'CONTRIBUTOR' = 1, 'OWNER' = 2, 'COLLABORATOR' = 3, 'MEMBER' = 4, 'MANNEQUIN' = 5),
+    `closed_at` DateTime,
+    `merged_at` DateTime,
+    `merge_commit_sha` String,
+    `requested_reviewers` Array(LowCardinality(String)),
+    `requested_teams` Array(LowCardinality(String)),
+    `head_ref` LowCardinality(String),
+    `head_sha` String,
+    `base_ref` LowCardinality(String),
+    `base_sha` String,
+    `merged` UInt8,
+    `mergeable` UInt8,
+    `rebaseable` UInt8,
+    `mergeable_state` Enum8('unknown' = 0, 'dirty' = 1, 'clean' = 2, 'unstable' = 3, 'draft' = 4),
+    `merged_by` LowCardinality(String),
+    `review_comments` UInt32,
+    `maintainer_can_modify` UInt8,
+    `commits` UInt32,
+    `additions` UInt32,
+    `deletions` UInt32,
+    `changed_files` UInt32,
+    `diff_hunk` String,
+    `original_position` UInt32,
+    `commit_id` String,
+    `original_commit_id` String,
+    `push_size` UInt32,
+    `push_distinct_size` UInt32,
+    `member_login` LowCardinality(String),
+    `release_tag_name` String,
+    `release_name` String,
+    `review_state` Enum8('none' = 0, 'approved' = 1, 'changes_requested' = 2, 'commented' = 3, 'dismissed' = 4, 'pending' = 5)
+)
+ENGINE = MergeTree
+ORDER BY (event_type, repo_name, created_at)
+SETTINGS storage_policy = 'web'
+
+SELECT count() FROM github_events WHERE repo_name = 'ClickHouse/ClickHouse'
+
+SELECT * FROM github_events LIMIT 1
+SELECT * FROM github_events LIMIT 1
+
+SYSTEM DROP MARK CACHE
+SET load_marks_asynchronously = 1
+
+
+SELECT body FROM github_events WHERE actor_login = 'alexey-milovidov' AND event_type = 'IssueCommentEvent' LIMIT 10
+SELECT body FROM github_events WHERE actor_login = 'alexey-milovidov' AND event_type = 'IssueCommentEvent' LIMIT 10
+
+SET load_marks_asynchronously = 1
+
+SELECT body FROM github_events WHERE actor_login = 'alexey-milovidov' AND event_type = 'IssueCommentEvent' LIMIT 10
+
+
+CREATE TABLE github_events_local AS github_events ENGINE = MergeTree ORDER BY (event_type, repo_name, created_at)
+
+SET max_insert_threads = 96
+INSERT INTO github_events_local SELECT * FROM github_events
+
+
+CREATE TABLE github_events_local_compressed AS github_events ENGINE = MergeTree ORDER BY (event_type, repo_name, created_at) SETTINGS compress_marks = 1, compress_primary_key = 1
+
+INSERT INTO github_events_local_compressed SELECT * FROM github_events_local
+
+SELECT sum(marks_bytes) FROM system.parts WHERE table = 'github_events_local'
+SELECT sum(marks_bytes) FROM system.parts WHERE table = 'github_events_local_compressed'
+
+
+sudo mkdir /mnt/raid/cache
+sudo chown clickhouse /mnt/raid/cache
+
+sudo bash -c 'cat > /etc/clickhouse-server/config.d/web_cache.yaml'
+
+storage_configuration:
+    disks:
+        cache:
+            type: cache
+            disk: web
+            path: /mnt/raid/cache/
+            max_size: 1000000000000
+    policies:
+        cache:
+            volumes:
+                main:
+                    disk: cache
+
+sudo chown clickhouse /etc/clickhouse-server/config.d/web_cache.yaml
+
+-->
+
+<section class="slide">
+<h2>Performance Improvements</h2>
+<p>&mdash; Asynchronous loading of marks.</p>
+<p style="color: gray; font-size: 14pt;">Developer: Kseniia Sumarokova.</p>
+
+<p>&mdash; Compressed marks and primary key.</p>
+<p style="color: gray; font-size: 14pt;">Developer: Zhong Yuan Kai.</p>
+
+<p>&mdash; Composable cache.</p>
+<p style="color: gray; font-size: 14pt;">Developer: Kseniia Sumarokova.</p>
+</section>
+
+
+<section class="slide">
+<h2>Performance Improvements</h2>
+<p>&mdash; Speed up GROUP BY with CPU prefetcher:</p>
+<p>&mdash; Speed up GROUP BY with better block sizes.</p>
+
+<p>Demo</p>
+
+<!--
+
+SET max_threads = 1;
+SET enable_software_prefetch_in_aggregation = 0;
+SELECT UserID FROM hits GROUP BY UserID ORDER BY count() DESC LIMIT 20
+
+-->
+
+<p style="margin-top: 5em; color: gray; font-size: 14pt;">Developer: Nikita Taranov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Experimental Features</h2>
+<p>Approximate Nearest Neighbor Indices
+<br/>for <b>Vector Search</b> queries.</p>
+
+<p>ClickHouse is not a vector search database... but why not?</p>
+
+<p>We tried to integrate Faiss, HNSW, ANNoy, DiskANN, ScaNN...
+<br/>... most of the attempts failed.</p>
+
+<p><code>INDEX idx_name embedding_column
+    TYPE annoy(100) GRANULARITY 1</code></p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developers: Arthur Filatenkov, Vladimir Makarov, Danila Mishin,
+<br/>Nikita Vasilenko, Alexander Piachonkin, Nikita Evsiukov, Hakob Sagatelyan.</p>
+</section>
+
+<section class="slide">
+<h2>Experimental Features</h2>
+<p>Approximate Nearest Neighbor Indices
+<br/>for <b>Vector Search</b> queries.</p>
+
+<p><code>INDEX idx_name embedding_column
+    TYPE annoy(100) GRANULARITY 1</code></p>
+
+<p>Speeds up:</p>
+
+<p><code style="font-size: 16pt;">WHERE L2Distance(embedding_column, const) &lt; threshold LIMIT n;</code></p>
+
+<p><code style="font-size: 16pt;">ORDER BY L2Distance(embedding_column, const) LIMIT n;</code></p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developers: Arthur Filatenkov, Vladimir Makarov, Danila Mishin,
+<br/>Nikita Vasilenko, Alexander Piachonkin, Nikita Evsiukov, Hakob Sagatelyan.</p>
+</section>
+
+<section class="slide" style="background: #888;">
+<video style="width: 100%;"><source src="video/ann.mov" type="video/mp4"></video>
+</section>
+
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">KeeperMap Table Engine</h2>
+<p><code style="font-size: 15pt; line-height: 1.5">&lt;clickhouse>
+  &lt;keeper_map_path_prefix>/test_keeper_map&lt;/keeper_map_path_prefix>
+&lt;/clickhouse></code></p>
+<p><code style="line-height: 1.5">CREATE TABLE map (key String, value UInt32)
+ENGINE = KeeperMap('/path/in/zk') PRIMARY KEY (key);</code></p>
+
+<p>Key-value table for small volumes of data.</p>
+<p>Prefers ClickHouse Keeper but can use ZooKeeper as well.</p>
+<p style="margin-top: 3em; color: gray; font-size: 14pt;">Developers: Antonio Andelic.</p>
+</section>
+
+
+<section class="slide">
+<h2>Integrations</h2>
+<p><b>Official ClickHouse driver for Node.JS:</b></p>
+<p><a href="https://github.com/ClickHouse/clickhouse-js">https://github.com/ClickHouse/clickhouse-js</a></p>
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Sergei Klochkov.</p>
+<p style="margin-top: 2em;"><b>Grafana Plugin 2.0:</b></p>
+<p><a href="https://github.com/ClickHouse/clickhouse-js">https://clickhouse.com/blog/clickhouse-grafana-plugin-2.0</a></p>
+<p>Support for HTTP protocol.<br/>Semistructured data support.<br/>ClickHouse native filters and variables.</p>
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Dale McDiarmid, Ryadh Dahimene.</p>
+</section>
+
+<section class="slide">
+<h2>Bonus</h2>
+<p>There are a ton of integrations for data visualization and exploration.</p>
+<p>Dashboards: <b>Grafana</b>, <b>Superset</b>, <b>Metabase</b>, <b>Redash</b>.</p>
+<p>Notebooks: <b>Jupyter</b>, <b>Observable</b>, <b>Deepnote</b>, <b>HEX</b>.</p>
+<p style="margin-top: 2em;">What about... building my own dashboard tool in a weekend? 🤔</p>
+</section>
+
+<section class="slide">
+<h2>Embedded Dashboards</h2>
+<p>Demo</p>
+<p><a href="https://pastila.nl/?00399939/04b0fc80fdaaa2dbbc1783f98f4614a6.html">https://pastila.nl/?00399939/04b0fc80fdaaa2dbbc1783f98f4614a6.html</a></p>
+<p><a href="https://pastila.nl/?00399939/ee598c63b98acfe4939898c686b64df5.html">https://pastila.nl/?00399939/ee598c63b98acfe4939898c686b64df5.html</a></p>
+<!-- ssh -i ~/.ssh/aws_eu_central_1.pem -L localhost:8123:3.74.230.134:8123 ubuntu@3.74.230.134 -->
+</section>
+
+<section class="slide">
+<h2>Q&amp;A</h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+
