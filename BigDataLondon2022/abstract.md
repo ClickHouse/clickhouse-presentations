@@ -1,0 +1,3 @@
+ClickHouse is known for being fast. Fast at ingesting data. Fast at querying data. But how do we achieve this? Is a slower release a major regression? Or just something to be concerned about? How does the ClickHouse engineering team think about performance?
+
+In this talk Ryadh and Dale will introduce you to ClickHouse, it's vision, and a bit of the internals. We will share our approach to benchmarking and, of course, provide a live demonstration. You will learn how to apply ClickHouse to your data problems at scale but, also, glean insight into your own engineering projects from our company and project commitment to performance.
