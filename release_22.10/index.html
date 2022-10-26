@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 22.10 Webinar</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         table, tr, td { border: 0; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 22.10 Webinar</h1>
+    </header>
+    <section class="slide" id="cover">
+        <img src="https://presentations.clickhouse.com/original_website/logo.svg" style="width: 15%; position: absolute; right: 20px; bottom: 20px;" />
+        <h1 style="margin-top: 80px; line-height: 150%; color: black; font-size: 64pt">ClickHouse<br/>Release 22.10</h1>
+    </section>
+
+<section class="slide">
+<h2>Release 22.10 Webinar</h2>
+<p>1. (55 min) What's new in ClickHouse 22.10.</p>
+<p>2. (5 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: linear-gradient(to bottom, #46DDFF, #338844);">
+<div style="float: right; font-size: 400%; line-height: 1.25">🌤</div>
+<h2>Release 22.10</h2>
+<p>ClickHouse October release.</p>
+<p style="margin-top: 2em;">— 12 new features</p>
+<p>— 11 performance optimizations</p>
+<p>— 40 bug fixes 🔥</p>
+</section>
+
+<section class="slide">
+<h2>Control Over Merging</h2>
+
+<p>Always merging old parts:</p>
+<code>ALTER TABLE t MODIFY SETTING min_age_to_force_merge_seconds = 8640000 -- 100 days</code>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Antonio Andelic, PengJian fastio.</p>
+
+<p>Relaxing too many parts threshold:</p>
+<p>Allow large number of parts if they are large in average.</p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Resetting The Settings</h2>
+
+<code>SET max_block_size = <b>DEFAULT</b>;</code>
+<p>Reset to the global default value.</p>
+<p>It will appear in the <b>system.settings</b> as not changed.</p>
+
+<code>SELECT getSetting('max_block_size');</code>
+<code>SELECT * FROM system.settings WHERE changed;</code>
+
+<p>The main motivation &mdash; compatibility with MySQL protocol.</p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Arthur Filatenkov.</p>
+</section>
+
+<section class="slide">
+<h2>Fuzzy History Search</h2>
+
+<p>in <b>clickhouse-client</b> and <b>clickhouse-local</b>:</p>
+<p>if you have <b>skim</b> or <b>fzf</b> installed:</p>
+
+<p><a href="https://github.com/lotabout/skim">https://github.com/lotabout/skim</a></p>
+
+<p><code style="line-height: 1.5; font-size: 16pt;">git clone --depth 1 git@github.com:lotabout/skim.git ~/.skim
+~/.skim/install</code></p>
+
+<p>Demo</p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Azat Khuzhin.</p>
+</section>
+
+<section class="slide">
+<h2>Faster Reconnection to Keeper</h2>
+
+<p style="color: red;">Table is in readonly mode 😠</p>
+<p>Was: around one minute for reconnection, for no reason.</p>
+<p>Now: <span style="color: green;">milliseconds</span> 🥲</p>
+
+<p style="margin-top: 10em; color: gray; font-size: 14pt;">Developer: Raul Marin.</p>
+</section>
+
+<section class="slide">
+<h2>Keeper Snapshots in S3</h2>
+
+<p>Send all snapshots to S3 for extra safety.</p>
+
+<p><code>s3_snapshot:
+  endpoint: http://minio1:9001/snapshots/
+  access_key_id: minio
+  secret_access_key: minio123
+</code></p>
+
+<p>All snapshots are <b>zstd</b> compressed.</p>
+<p>Note: these snapshots are not automatically used for restore,<br/>but can be easily downloaded and restored.</p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Antonio Andelic.</p>
+</section>
+
+<section class="slide">
+<h2>BACKUP TO S3</h2>
+
+<p><code style="font-size: 16pt; line-height: 1.5;">BACKUP TABLE data <b>TO S3</b>(
+  'https://mars-doc-test.s3.amazonaws.com/backup-S3/my_backup',
+  'ABC123', 'Abc+123')</code></p>
+
+<p>If the table is already on S3, it will use server-side copy!</p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Vitaly Baranov, Azat Khuzhin.</p>
+</section>
+
+<section class="slide">
+<h2>S3 WORM Disks</h2>
+<p>Write once read many.</p>
+
+<p>Export a MergeTree table to S3 <b>as is</b>: by copying the directory structure.</p>
+<p style="color: gray;">Attach a readonly table in zero time!</p>
+<p style="color: gray;">Ideal for example datasets. See also: <b>web</b> disks.</p>
+
+<p style="color: gray; font-size: 14pt;">Scheduled for 22.11.</p>
+</section>
+
+<section class="slide">
+<h2>Composable Protocols</h2>
+<p>So, ClickHouse supports a lot of protocols:</p>
+<p>&mdash; HTTP
+<br/>&mdash; HTTPs
+<br/>&mdash; Native TCP
+<br/>&mdash; Native TCP wrapped in PROXYv1
+<br/>&mdash; Native TCP with TLS
+<br/>&mdash; MySQL (with TLS support)
+<br/>&mdash; PostgreSQL (with TLS support)
+<br/>&mdash; GRPC (with TLS)
+<br/>&mdash; Replication protocol over HTTP
+<br/>&mdash; Replication protocol over HTTPs
+<br/>&mdash; Keeper client-server protocol;
+<br/>&mdash; Keeper consensus protocol;
+<br/>&mdash; ...
+</p>
+</section>
+
+<section class="slide">
+<h2>Composable Protocols</h2>
+<p>So, ClickHouse supports a lot of protocols.</p>
+<p>How to configure all of them? What if:</p>
+<p>&mdash; server has multiple network interfaces?
+<br/>&mdash; enable one protocol on multiple ports?
+<br/>&mdash; I want native TCP for localhost only and HTTPs from everywhere?
+<br/>&mdash; I want different TLS certificates for different protocols?
+<br/>&mdash; I want to wrap one protocol in another?</p>
+</section>
+
+<section class="slide">
+<code style="font-size: 16pt;">&lt;protocols>
+  &lt;tcp>
+    &lt;type>tcp&lt;/type>
+    &lt;host>::&lt;/host>
+    &lt;port>9000&lt;/port>
+    &lt;description>native protocol&lt;/description>
+  &lt;/tcp>
+  &lt;tcp_secure>
+    &lt;type><b>tls</b>&lt;/type>
+    &lt;impl><b>tcp</b>&lt;/impl>
+    &lt;port>9440&lt;/port>
+    &lt;description>secure native protocol&lt;/description>
+  &lt;/tcp_secure>
+  &lt;tcp_endpoint>
+    &lt;impl>tcp&lt;/impl>
+    &lt;host>0.0.0.0&lt;/host>
+    &lt;port>9001&lt;/port>
+    &lt;description>native protocol, another&lt;/description>
+  &lt;/tcp_endpoint>
+  &lt;tcp_proxy>
+    &lt;type>proxy1&lt;/type>
+    &lt;impl>tcp&lt;/impl>
+    &lt;port>9100&lt;/port>
+    &lt;description>native protocol with PROXYv1&lt;/description>
+  &lt;/tcp_proxy>
+</code>
+</section>
+
+<section class="slide">
+<h2>Composable Protocols</h2>
+<p><b>The case</b>: ClickHouse under proxy:</p>
+<p>Envoy Proxy / HAProxy / CloudFlare.</p>
+<p>ClickHouse server will receive connections from the proxy.</p>
+<p>But it needs to know the source IP address for quotas, ACL and logging.</p>
+<p><b>Solution</b>: enable PROXYv1 protocol in the proxy<br/>and configure it as a protocol wrapper in ClickHouse.</p>
+<p>ClickHouse will read the header and unwrap the network packets.</p>
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Yakov Olkhovskiy.</p>
+</section>
+
+<section class="slide">
+<h2>Composable Protocols</h2>
+<p>The new configuration is fully compatible with the old one.</p>
+<p>They can be used together, and the old configuration<br/>represents the defaults.</p>
+
+<p>What else?</p>
+<p style="color: gray;">&mdash; routing based on the protocol, domain name, URL and IP address?
+<br/>&emsp; setting the default user or default database.</p>
+
+<p style="color: gray;">&mdash; ClickHouse server as a proxy for ClickHouse :)</p>
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Yakov Olkhovskiy.</p>
+</section>
+
+<section class="slide">
+<h2>A Log For Asynchronous Inserts</h2>
+<p style="margin-top: -1em;"><b>system.asynchronous_insert_log</b></p>
+<p>Records individual INSERT queries,<br/>and how they were collected into larger INSERT batches.</p>
+
+<p><code style="font-size: 12pt;">┌─name────────────────────┬─type──────────────────────────────────────────────────┐
+│ event_date              │ Date                                                  │
+│ event_time              │ DateTime                                              │
+│ event_time_microseconds │ DateTime64(6)                                         │
+│ query                   │ String                                                │
+│ database                │ LowCardinality(String)                                │
+│ table                   │ LowCardinality(String)                                │
+│ format                  │ LowCardinality(String)                                │
+│ query_id                │ String                                                │
+│ bytes                   │ UInt64                                                │
+│ exception               │ String                                                │
+│ status                  │ Enum8('Ok' = 0, 'ParsingError' = 1, 'FlushError' = 2) │
+│ flush_time              │ DateTime                                              │
+│ flush_time_microseconds │ DateTime64(6)                                         │
+│ flush_query_id          │ String                                                │
+└─────────────────────────┴───────────────────────────────────────────────────────┘
+</code></p>
+<p style="margin-top: -1em; color: gray; font-size: 14pt;">Developer: Anton Popov.</p>
+</section>
+
+<section class="slide">
+<h2>More Accept-Encodings for HTTP</h2>
+<p>Was: gzip, deflate, br, zst.</p>
+<p style="color: green;">Now: lz4, snappy, bz2.</p>
+
+<p>Note: these are <b>non-standard</b> extensions to HTTP.</p>
+<p style="font-size: 12pt; color: gray;">But neither we care.</p>
+
+<p style="margin-top: 10em; color: gray; font-size: 14pt;">Developer: Nikolay Degterinsky.</p>
+</section>
+
+<section class="slide">
+<h2>Morton Curve</h2>
+<p><code>SELECT <b>mortonEncode</b>(x, y)</code></p>
+<p><code>SELECT <b>mortonDecode</b>(2, z)</code></p>
+<p>&mdash; Space-filling curve.</p>
+<p>&mdash; Binary space partitioning.</p>
+<p>&mdash; Locality-preserving encoding.</p>
+<p>Demo.</p>
+<!--
+SELECT 0b11111111 As x, 0b10000000 AS y, bin(x), bin(y), mortonEncode(x, y) AS z, bin(z) AS bits, mortonDecode(2, z) AS original
+
+(echo "P2"; echo "1024 1024 255"; clickhouse-local --query "SELECT z DIV 4096 FROM (SELECT number DIV 1024 AS y, number MOD 1024 AS x, mortonEncode(x, y) AS z FROM numbers(1048576))") | pnmtopng > image.png
+
+(echo "P5"; echo "16384 16384 255"; clickhouse-local --progress --format RowBinary --query "SELECT * FROM (SELECT * FROM file('/usr/bin/clickhouse', RowBinary, 'v UInt8') LIMIT 16384*16384) ORDER BY mortonDecode(2, rowNumberInAllBlocks())") | pnmtopng | pv > binary.png
+-->
+<p style="margin-top: 3em; color: gray; font-size: 14pt;">Developers: Constantine Peresypkin, Bakey, Olga Khvostikova, Andrey Chulkov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Random Number Generation</h2>
+<p>randUniform<br/>randNormal<br/>randLogNormal<br/>randExponential<br/>randChiSquared<br/>randStudentT<br/>randFisherF<br/>randBernoulli<br/> randBinomial<br/>randNegativeBinomial<br/>randPoisson</p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Nikita Mikhailov.</p>
+</section>
+
+<!--
+
+SELECT floor(randUniform(1, 10)) AS k, count() AS c, bar(c, 0, 1000000, 100) FROM numbers_mt(1000000) GROUP BY k ORDER BY k
+SELECT floor(randNormal(10, 5)) AS k, count() AS c, bar(c, 0, 1000000, 100) FROM numbers_mt(1000000) GROUP BY k ORDER BY k
+SELECT randExponential(1 / 10) DIV 5 AS k, count() AS c, bar(c, 0, 1000000, 100) FROM numbers_mt(1000000) GROUP BY k ORDER BY k
+
+clickhouse-local --query "SELECT repeat('\0', randExponential(1 / 1000)::UInt32) || '\xFF' FROM system.numbers" --format RowBinary | aplay
+clickhouse-local --query "SELECT repeat('\0', (greatest(0, randNormal(1000, 500)))::UInt32) || '\xFF' FROM system.numbers" --format RowBinary | aplay
+
+-->
+
+
+<section class="slide">
+<h2>What Else?</h2>
+<p>ClickHouse Sink for Kafka Connect</p>
+
+<p>Comparing to the Kafka table engine:</p>
+<p>&mdash; <b>Push model</b> instead of Pull</p>
+<p>&mdash; <b>Exactly-once</b> semantics</p>
+<p style="color: green;">Alpha stage, welcome for evaluation and experiments!</p>
+
+<p><a href="https://github.com/ClickHouse/clickhouse-kafka-connect">https://github.com/ClickHouse/clickhouse-kafka-connect</a></p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Mark Zitnik.</p>
+</section>
+
+
+<section class="slide">
+<img style="width: 100%;" src="pictures/cloud.png"/>
+</section>
+
+<section class="slide">
+<svg style="float: right; margin-right: -70px; width: 300px; height: 300px;" version="1.0" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+	 viewBox="0 0 100 100" enable-background="new 0 0 100 100" xml:space="preserve">
+
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="100" height="100" viewBox="0 0 2000 2000" x="0" y="0" shape-rendering="crispEdges"><defs/><rect x="0" y="0" width="2000" height="2000" fill="#ffffff"/><rect x="776" y="200" width="64" height="64" fill="#000000"/><rect x="1096" y="200" width="64" height="64" fill="#000000"/><rect x="1224" y="200" width="64" height="64" fill="#000000"/><rect x="712" y="264" width="64" height="64" fill="#000000"/><rect x="776" y="264" width="64" height="64" fill="#000000"/><rect x="904" y="264" width="64" height="64" fill="#000000"/><rect x="968" y="264" width="64" height="64" fill="#000000"/><rect x="1032" y="264" width="64" height="64" fill="#000000"/><rect x="1096" y="264" width="64" height="64" fill="#000000"/><rect x="776" y="328" width="64" height="64" fill="#000000"/><rect x="840" y="328" width="64" height="64" fill="#000000"/><rect x="904" y="328" width="64" height="64" fill="#000000"/><rect x="712" y="392" width="64" height="64" fill="#000000"/><rect x="776" y="392" width="64" height="64" fill="#000000"/><rect x="904" y="392" width="64" height="64" fill="#000000"/><rect x="1032" y="392" width="64" height="64" fill="#000000"/><rect x="1160" y="392" width="64" height="64" fill="#000000"/><rect x="1224" y="392" width="64" height="64" fill="#000000"/><rect x="840" y="456" width="64" height="64" fill="#000000"/><rect x="968" y="456" width="64" height="64" fill="#000000"/><rect x="1160" y="456" width="64" height="64" fill="#000000"/><rect x="1224" y="456" width="64" height="64" fill="#000000"/><rect x="712" y="520" width="64" height="64" fill="#000000"/><rect x="840" y="520" width="64" height="64" fill="#000000"/><rect x="1032" y="520" width="64" height="64" fill="#000000"/><rect x="1096" y="520" width="64" height="64" fill="#000000"/><rect x="1160" y="520" width="64" height="64" fill="#000000"/><rect x="712" y="584" width="64" height="64" fill="#000000"/><rect x="840" y="584" width="64" height="64" fill="#000000"/><rect x="968" y="584" width="64" height="64" fill="#000000"/><rect x="1096" y="584" width="64" height="64" fill="#000000"/><rect x="1224" y="584" width="64" height="64" fill="#000000"/><rect x="968" y="648" width="64" height="64" fill="#000000"/><rect x="1224" y="648" width="64" height="64" fill="#000000"/><rect x="200" y="712" width="64" height="64" fill="#000000"/><rect x="264" y="712" width="64" height="64" fill="#000000"/><rect x="328" y="712" width="64" height="64" fill="#000000"/><rect x="392" y="712" width="64" height="64" fill="#000000"/><rect x="456" y="712" width="64" height="64" fill="#000000"/><rect x="584" y="712" width="64" height="64" fill="#000000"/><rect x="648" y="712" width="64" height="64" fill="#000000"/><rect x="712" y="712" width="64" height="64" fill="#000000"/><rect x="776" y="712" width="64" height="64" fill="#000000"/><rect x="840" y="712" width="64" height="64" fill="#000000"/><rect x="968" y="712" width="64" height="64" fill="#000000"/><rect x="1096" y="712" width="64" height="64" fill="#000000"/><rect x="1160" y="712" width="64" height="64" fill="#000000"/><rect x="1288" y="712" width="64" height="64" fill="#000000"/><rect x="1416" y="712" width="64" height="64" fill="#000000"/><rect x="1544" y="712" width="64" height="64" fill="#000000"/><rect x="1672" y="712" width="64" height="64" fill="#000000"/><rect x="200" y="776" width="64" height="64" fill="#000000"/><rect x="328" y="776" width="64" height="64" fill="#000000"/><rect x="520" y="776" width="64" height="64" fill="#000000"/><rect x="712" y="776" width="64" height="64" fill="#000000"/><rect x="776" y="776" width="64" height="64" fill="#000000"/><rect x="1160" y="776" width="64" height="64" fill="#000000"/><rect x="1224" y="776" width="64" height="64" fill="#000000"/><rect x="1288" y="776" width="64" height="64" fill="#000000"/><rect x="1416" y="776" width="64" height="64" fill="#000000"/><rect x="1480" y="776" width="64" height="64" fill="#000000"/><rect x="1736" y="776" width="64" height="64" fill="#000000"/><rect x="392" y="840" width="64" height="64" fill="#000000"/><rect x="520" y="840" width="64" height="64" fill="#000000"/><rect x="584" y="840" width="64" height="64" fill="#000000"/><rect x="648" y="840" width="64" height="64" fill="#000000"/><rect x="776" y="840" width="64" height="64" fill="#000000"/><rect x="904" y="840" width="64" height="64" fill="#000000"/><rect x="968" y="840" width="64" height="64" fill="#000000"/><rect x="1096" y="840" width="64" height="64" fill="#000000"/><rect x="1160" y="840" width="64" height="64" fill="#000000"/><rect x="1288" y="840" width="64" height="64" fill="#000000"/><rect x="1352" y="840" width="64" height="64" fill="#000000"/><rect x="1480" y="840" width="64" height="64" fill="#000000"/><rect x="1608" y="840" width="64" height="64" fill="#000000"/><rect x="520" y="904" width="64" height="64" fill="#000000"/><rect x="648" y="904" width="64" height="64" fill="#000000"/><rect x="712" y="904" width="64" height="64" fill="#000000"/><rect x="776" y="904" width="64" height="64" fill="#000000"/><rect x="840" y="904" width="64" height="64" fill="#000000"/><rect x="904" y="904" width="64" height="64" fill="#000000"/><rect x="1096" y="904" width="64" height="64" fill="#000000"/><rect x="1224" y="904" width="64" height="64" fill="#000000"/><rect x="1288" y="904" width="64" height="64" fill="#000000"/><rect x="520" y="968" width="64" height="64" fill="#000000"/><rect x="584" y="968" width="64" height="64" fill="#000000"/><rect x="712" y="968" width="64" height="64" fill="#000000"/><rect x="776" y="968" width="64" height="64" fill="#000000"/><rect x="904" y="968" width="64" height="64" fill="#000000"/><rect x="1032" y="968" width="64" height="64" fill="#000000"/><rect x="1160" y="968" width="64" height="64" fill="#000000"/><rect x="1352" y="968" width="64" height="64" fill="#000000"/><rect x="1416" y="968" width="64" height="64" fill="#000000"/><rect x="1480" y="968" width="64" height="64" fill="#000000"/><rect x="1544" y="968" width="64" height="64" fill="#000000"/><rect x="1672" y="968" width="64" height="64" fill="#000000"/><rect x="1736" y="968" width="64" height="64" fill="#000000"/><rect x="200" y="1032" width="64" height="64" fill="#000000"/><rect x="328" y="1032" width="64" height="64" fill="#000000"/><rect x="392" y="1032" width="64" height="64" fill="#000000"/><rect x="520" y="1032" width="64" height="64" fill="#000000"/><rect x="712" y="1032" width="64" height="64" fill="#000000"/><rect x="840" y="1032" width="64" height="64" fill="#000000"/><rect x="968" y="1032" width="64" height="64" fill="#000000"/><rect x="1224" y="1032" width="64" height="64" fill="#000000"/><rect x="1288" y="1032" width="64" height="64" fill="#000000"/><rect x="1352" y="1032" width="64" height="64" fill="#000000"/><rect x="1416" y="1032" width="64" height="64" fill="#000000"/><rect x="1480" y="1032" width="64" height="64" fill="#000000"/><rect x="200" y="1096" width="64" height="64" fill="#000000"/><rect x="328" y="1096" width="64" height="64" fill="#000000"/><rect x="456" y="1096" width="64" height="64" fill="#000000"/><rect x="584" y="1096" width="64" height="64" fill="#000000"/><rect x="648" y="1096" width="64" height="64" fill="#000000"/><rect x="712" y="1096" width="64" height="64" fill="#000000"/><rect x="1032" y="1096" width="64" height="64" fill="#000000"/><rect x="1096" y="1096" width="64" height="64" fill="#000000"/><rect x="1288" y="1096" width="64" height="64" fill="#000000"/><rect x="1352" y="1096" width="64" height="64" fill="#000000"/><rect x="1480" y="1096" width="64" height="64" fill="#000000"/><rect x="1608" y="1096" width="64" height="64" fill="#000000"/><rect x="1672" y="1096" width="64" height="64" fill="#000000"/><rect x="1736" y="1096" width="64" height="64" fill="#000000"/><rect x="200" y="1160" width="64" height="64" fill="#000000"/><rect x="392" y="1160" width="64" height="64" fill="#000000"/><rect x="456" y="1160" width="64" height="64" fill="#000000"/><rect x="520" y="1160" width="64" height="64" fill="#000000"/><rect x="648" y="1160" width="64" height="64" fill="#000000"/><rect x="712" y="1160" width="64" height="64" fill="#000000"/><rect x="968" y="1160" width="64" height="64" fill="#000000"/><rect x="1032" y="1160" width="64" height="64" fill="#000000"/><rect x="1288" y="1160" width="64" height="64" fill="#000000"/><rect x="1672" y="1160" width="64" height="64" fill="#000000"/><rect x="1736" y="1160" width="64" height="64" fill="#000000"/><rect x="200" y="1224" width="64" height="64" fill="#000000"/><rect x="328" y="1224" width="64" height="64" fill="#000000"/><rect x="584" y="1224" width="64" height="64" fill="#000000"/><rect x="648" y="1224" width="64" height="64" fill="#000000"/><rect x="712" y="1224" width="64" height="64" fill="#000000"/><rect x="840" y="1224" width="64" height="64" fill="#000000"/><rect x="968" y="1224" width="64" height="64" fill="#000000"/><rect x="1160" y="1224" width="64" height="64" fill="#000000"/><rect x="1224" y="1224" width="64" height="64" fill="#000000"/><rect x="1288" y="1224" width="64" height="64" fill="#000000"/><rect x="1352" y="1224" width="64" height="64" fill="#000000"/><rect x="1416" y="1224" width="64" height="64" fill="#000000"/><rect x="1480" y="1224" width="64" height="64" fill="#000000"/><rect x="1544" y="1224" width="64" height="64" fill="#000000"/><rect x="1736" y="1224" width="64" height="64" fill="#000000"/><rect x="712" y="1288" width="64" height="64" fill="#000000"/><rect x="776" y="1288" width="64" height="64" fill="#000000"/><rect x="1096" y="1288" width="64" height="64" fill="#000000"/><rect x="1224" y="1288" width="64" height="64" fill="#000000"/><rect x="1480" y="1288" width="64" height="64" fill="#000000"/><rect x="1736" y="1288" width="64" height="64" fill="#000000"/><rect x="712" y="1352" width="64" height="64" fill="#000000"/><rect x="776" y="1352" width="64" height="64" fill="#000000"/><rect x="904" y="1352" width="64" height="64" fill="#000000"/><rect x="968" y="1352" width="64" height="64" fill="#000000"/><rect x="1096" y="1352" width="64" height="64" fill="#000000"/><rect x="1224" y="1352" width="64" height="64" fill="#000000"/><rect x="1352" y="1352" width="64" height="64" fill="#000000"/><rect x="1480" y="1352" width="64" height="64" fill="#000000"/><rect x="1608" y="1352" width="64" height="64" fill="#000000"/><rect x="1672" y="1352" width="64" height="64" fill="#000000"/><rect x="1736" y="1352" width="64" height="64" fill="#000000"/><rect x="776" y="1416" width="64" height="64" fill="#000000"/><rect x="840" y="1416" width="64" height="64" fill="#000000"/><rect x="904" y="1416" width="64" height="64" fill="#000000"/><rect x="1032" y="1416" width="64" height="64" fill="#000000"/><rect x="1224" y="1416" width="64" height="64" fill="#000000"/><rect x="1480" y="1416" width="64" height="64" fill="#000000"/><rect x="1544" y="1416" width="64" height="64" fill="#000000"/><rect x="712" y="1480" width="64" height="64" fill="#000000"/><rect x="904" y="1480" width="64" height="64" fill="#000000"/><rect x="968" y="1480" width="64" height="64" fill="#000000"/><rect x="1096" y="1480" width="64" height="64" fill="#000000"/><rect x="1224" y="1480" width="64" height="64" fill="#000000"/><rect x="1288" y="1480" width="64" height="64" fill="#000000"/><rect x="1352" y="1480" width="64" height="64" fill="#000000"/><rect x="1416" y="1480" width="64" height="64" fill="#000000"/><rect x="1480" y="1480" width="64" height="64" fill="#000000"/><rect x="1544" y="1480" width="64" height="64" fill="#000000"/><rect x="712" y="1544" width="64" height="64" fill="#000000"/><rect x="776" y="1544" width="64" height="64" fill="#000000"/><rect x="840" y="1544" width="64" height="64" fill="#000000"/><rect x="968" y="1544" width="64" height="64" fill="#000000"/><rect x="1160" y="1544" width="64" height="64" fill="#000000"/><rect x="1224" y="1544" width="64" height="64" fill="#000000"/><rect x="1352" y="1544" width="64" height="64" fill="#000000"/><rect x="1480" y="1544" width="64" height="64" fill="#000000"/><rect x="1672" y="1544" width="64" height="64" fill="#000000"/><rect x="1736" y="1544" width="64" height="64" fill="#000000"/><rect x="712" y="1608" width="64" height="64" fill="#000000"/><rect x="968" y="1608" width="64" height="64" fill="#000000"/><rect x="1032" y="1608" width="64" height="64" fill="#000000"/><rect x="1096" y="1608" width="64" height="64" fill="#000000"/><rect x="1480" y="1608" width="64" height="64" fill="#000000"/><rect x="1608" y="1608" width="64" height="64" fill="#000000"/><rect x="1736" y="1608" width="64" height="64" fill="#000000"/><rect x="712" y="1672" width="64" height="64" fill="#000000"/><rect x="776" y="1672" width="64" height="64" fill="#000000"/><rect x="840" y="1672" width="64" height="64" fill="#000000"/><rect x="968" y="1672" width="64" height="64" fill="#000000"/><rect x="1032" y="1672" width="64" height="64" fill="#000000"/><rect x="1224" y="1672" width="64" height="64" fill="#000000"/><rect x="1288" y="1672" width="64" height="64" fill="#000000"/><rect x="1352" y="1672" width="64" height="64" fill="#000000"/><rect x="1416" y="1672" width="64" height="64" fill="#000000"/><rect x="1480" y="1672" width="64" height="64" fill="#000000"/><rect x="1544" y="1672" width="64" height="64" fill="#000000"/><rect x="1672" y="1672" width="64" height="64" fill="#000000"/><rect x="712" y="1736" width="64" height="64" fill="#000000"/><rect x="1160" y="1736" width="64" height="64" fill="#000000"/><rect x="1608" y="1736" width="64" height="64" fill="#000000"/><rect x="1672" y="1736" width="64" height="64" fill="#000000"/><rect x="1736" y="1736" width="64" height="64" fill="#000000"/><svg version="1.1" id="Ebene_1" x="200" y="200" viewBox="0 0 700 700" style="enable-background:new 0 0 700 700;" xml:space="preserve" width="448" height="448" shape-rendering="auto">
+
+<path fill="#000000" d="M21.2-0.1C9.5-0.1-0.1,9.5-0.1,21.2v78.8v100v100v100v100v100v78.8c0,11.7,9.5,21.3,21.3,21.3h657.6  c11.7,0,21.3-9.5,21.3-21.3V600V500V400V300V200v-100V21.2c0-11.7-9.5-21.3-21.3-21.3H21.2z M600,200v100v100v100v87.8  c0,6.8-5.5,12.2-12.2,12.2H112.2c-6.8,0-12.2-5.5-12.2-12.2V500V400V300V200v-87.8c0-6.8,5.5-12.2,12.2-12.2h475.6  c6.8,0,12.2,5.5,12.2,12.2V200z"/>
+</svg>
+<svg version="1.1" id="Ebene_1" x="200" y="200" viewBox="0 0 700 700" style="enable-background:new 0 0 700 700;" xml:space="preserve" width="448" height="448" shape-rendering="auto">
+
+<path fill="#000000" d="M500,400V300v-78.8c0-11.7-9.5-21.3-21.3-21.3H221.2c-11.7,0-21.3,9.5-21.3,21.3V300v100v78.8    c0,11.7,9.5,21.3,21.3,21.3h257.5c11.7,0,21.3-9.5,21.3-21.3V400z"/>
+</svg>
+<svg version="1.1" id="Ebene_1" x="1352" y="200" viewBox="0 0 700 700" style="enable-background:new 0 0 700 700;" xml:space="preserve" width="448" height="448" shape-rendering="auto">
+
+<path fill="#000000" d="M21.2-0.1C9.5-0.1-0.1,9.5-0.1,21.2v78.8v100v100v100v100v100v78.8c0,11.7,9.5,21.3,21.3,21.3h657.6  c11.7,0,21.3-9.5,21.3-21.3V600V500V400V300V200v-100V21.2c0-11.7-9.5-21.3-21.3-21.3H21.2z M600,200v100v100v100v87.8  c0,6.8-5.5,12.2-12.2,12.2H112.2c-6.8,0-12.2-5.5-12.2-12.2V500V400V300V200v-87.8c0-6.8,5.5-12.2,12.2-12.2h475.6  c6.8,0,12.2,5.5,12.2,12.2V200z"/>
+</svg>
+<svg version="1.1" id="Ebene_1" x="1352" y="200" viewBox="0 0 700 700" style="enable-background:new 0 0 700 700;" xml:space="preserve" width="448" height="448" shape-rendering="auto">
+
+<path fill="#000000" d="M500,400V300v-78.8c0-11.7-9.5-21.3-21.3-21.3H221.2c-11.7,0-21.3,9.5-21.3,21.3V300v100v78.8    c0,11.7,9.5,21.3,21.3,21.3h257.5c11.7,0,21.3-9.5,21.3-21.3V400z"/>
+</svg>
+<svg version="1.1" id="Ebene_1" x="200" y="1352" viewBox="0 0 700 700" style="enable-background:new 0 0 700 700;" xml:space="preserve" width="448" height="448" shape-rendering="auto">
+
+<path fill="#000000" d="M21.2-0.1C9.5-0.1-0.1,9.5-0.1,21.2v78.8v100v100v100v100v100v78.8c0,11.7,9.5,21.3,21.3,21.3h657.6  c11.7,0,21.3-9.5,21.3-21.3V600V500V400V300V200v-100V21.2c0-11.7-9.5-21.3-21.3-21.3H21.2z M600,200v100v100v100v87.8  c0,6.8-5.5,12.2-12.2,12.2H112.2c-6.8,0-12.2-5.5-12.2-12.2V500V400V300V200v-87.8c0-6.8,5.5-12.2,12.2-12.2h475.6  c6.8,0,12.2,5.5,12.2,12.2V200z"/>
+</svg>
+<svg version="1.1" id="Ebene_1" x="200" y="1352" viewBox="0 0 700 700" style="enable-background:new 0 0 700 700;" xml:space="preserve" width="448" height="448" shape-rendering="auto">
+
+<path fill="#000000" d="M500,400V300v-78.8c0-11.7-9.5-21.3-21.3-21.3H221.2c-11.7,0-21.3,9.5-21.3,21.3V300v100v78.8    c0,11.7,9.5,21.3,21.3,21.3h257.5c11.7,0,21.3-9.5,21.3-21.3V400z"/>
+</svg>
+</svg>
+
+</svg>
+
+<h2>ClickHouse Cloud Beta</h2>
+
+<p>&mdash; available since Oct 4th;</p>
+<p>&mdash; free 14-day trial up to 10 TB of data;</p>
+<p>Try it! <a href="https://clickhouse.cloud/">https://clickhouse.cloud/</a>.
+
+<p style="margin-top: 2em;"><b>Introducing ClickHouse Cloud</b> Webinar</p>
+<p>Tomorrow, Oct 27, 9:00 AM (PST) 6:00 PM (CEST)
+<br/><a href="https://clickhouse.com/company/events/cloud-beta">https://clickhouse.com/company/events/cloud-beta</a></p>
+</section>
+
+<section class="slide">
+<h2>What Else?</h2>
+<img src="pictures/100k.png"/>
+<img src="pictures/100kth_commit.png"/>
+<!--
+git log --oneline --reverse | head -n100000 | tail -n1
+-->
+</section>
+
+<section class="slide">
+<h2>Q&amp;A</h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+
