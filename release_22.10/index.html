@@ -56,12 +56,12 @@
 <section class="slide">
 <h2>Resetting The Settings</h2>
 
-<code>SET max_block_size = <b>DEFAULT</b>;</code>
+<p><code>SET max_block_size = <b>DEFAULT</b>;</code></p>
 <p>Reset to the global default value.</p>
 <p>It will appear in the <b>system.settings</b> as not changed.</p>
 
-<code>SELECT getSetting('max_block_size');</code>
-<code>SELECT * FROM system.settings WHERE changed;</code>
+<p><code>SELECT getSetting('max_block_size');</code>
+<code>SELECT * FROM system.settings WHERE changed;</code></p>
 
 <p>The main motivation &mdash; compatibility with MySQL protocol.</p>
 
