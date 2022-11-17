@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 22.11 Webinar</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         table, tr, td { border: 0; }
+         .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 22.11 Webinar</h1>
+    </header>
+    <section class="slide" id="cover">
+        <img src="https://presentations.clickhouse.com/original_website/logo.svg" style="width: 15%; position: absolute; right: 20px; bottom: 20px;" />
+        <h1 style="margin-top: 80px; line-height: 150%; color: black; font-size: 64pt">ClickHouse<br/>Release 22.11</h1>
+    </section>
+
+<section class="slide">
+<h2>Release 22.11 Webinar</h2>
+<p>1. (50 min) What's new in ClickHouse 22.11.</p>
+<p>2. (10 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/november.jpg); background-size: cover;">
+<div style="float: right; font-size: 400%; line-height: 1.25">🌤</div>
+<h2><span class="hilite">Release 22.11</span></h2>
+<p><span class="hilite">ClickHouse November release.</span></p>
+<p style="margin-top: 2em;"><span class="hilite">— 15 new features</span></p>
+<p><span class="hilite">— 5 performance optimizations</span></p>
+<p><span class="hilite">— 32 bug fixes 🔥</span></p>
+</section>
+
+
+<section class="slide">
+<h2>Composite Time Intervals</h2>
+
+<p>Examples:</p>
+<p><code><span style="color: gray;">SELECT now() + INTERVAL 1 MONTH;
+SELECT now() + INTERVAL '1 MONTH';
+SELECT now() + INTERVAL 1 MONTH - INTERVAL 2 DAY;</span>
+
+SELECT now() + INTERVAL <b>'1 MONTH -2 DAY'</b>;
+SELECT now() + (INTERVAL 1 MONTH - INTERVAL 2 DAY);
+
+SELECT INTERVAL '1 MONTH -2 DAY';
+SELECT (INTERVAL 1 MONTH - INTERVAL 2 DAY);
+
+SELECT INTERVAL '1 MONTH 1 MONTH';
+</code></p>
+
+<!--
+
+SELECT toTypeName(INTERVAL '1 MONTH' + INTERVAL '1 MONTH');
+SELECT toTypeName(INTERVAL '1 MONTH' + INTERVAL '1 DAY' + INTERVAL '1 MONTH');
+
+-->
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Nikolai Degterinsky.</p>
+</section>
+
+<section class="slide">
+<h2>Support For <span style="font-family: Dejavu Sans Mono, monospace;">**</span> Glob</h2>
+
+<p>Recursive directory traversal:</p>
+<p><code>SELECT * FROM
+    s3('https://mybucket.s3.amazonaws.com/<b>**</b>/*.tsv')</code></p>
+
+<p>Now we support: <b>*</b>, <b>**</b>, <b>?</b>, <b>{abc,def}</b>, <b>{1..10}</b>, <b>{01..10}</b>.</p>
+
+<p>Demo</p>
+
+<!--
+
+SELECT count(), formatReadableSize(sum(length(line))) FROM file('**/*.{h,cpp}', LineAsString);
+SELECT line, count() FROM file('**/*.{h,cpp}', LineAsString) GROUP BY line ORDER BY count() DESC LIMIT 20;
+SELECT line, count() FROM file('**/*.{h,cpp}', LineAsString) WHERE _path NOT LIKE '%generated%' GROUP BY line ORDER BY count() DESC LIMIT 10;
+
+-->
+
+<p style="margin-top: 3em; color: gray; font-size: 14pt;">Developer: Smita Kulkarni.</p>
+</section>
+
+<section class="slide">
+<h2>Functions For Spark Compatibility</h2>
+
+<p>&mdash; pmod (positiveModulo);
+<br/>&mdash; ascii;
+<br/>&mdash; randCanonical;</p>
+
+<p><code>SELECT modulo(-3, 10), -3 % 10;
+-3, -3
+
+SELECT pmod(-3, 10), positiveModulo(-3, 10);
+7, 7
+</code></p>
+
+<p style="margin-top: 3em; color: gray; font-size: 14pt;">Developer: TaiYang Li.</p>
+</section>
+
+<section class="slide">
+<h2>Functions For Convenience</h2>
+
+<p style="margin-top: -1em;"><code>SELECT filesystemCapacity() AS size,
+       formatReadableSize(size) AS bin,
+       <b style="color: green;">formatReadableDecimalSize(size)</b> AS dec
+
+size: 1967317549056
+bin:  1.79 TiB
+dec:  1.97 TB</code></p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Alejandro.</p>
+
+<p><code>milovidov-desktop :) SELECT <b style="color: green;">displayName</b>()
+
+┌─displayName()─────┐
+│ milovidov-desktop │
+└───────────────────┘</code></p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: HongBin.</p>
+</section>
+
+<section class="slide">
+<h2>Retries On INSERT</h2>
+
+<p style="color: red;">Session expired. Table is in readonly mode 😠</p>
+<p>Never again:</p>
+
+<p><code>SET insert_keeper_max_retries = 10;</code></p>
+
+<p>INSERT will survive restarts of ClickHouse Keeper or ZooKeeper<br/>and reconnections.</p>
+<p style="margin-top: 2em; color: gray; font-size: 14pt;">Developer: Igor Nikonov.</p>
+<p style="color: gray; font-size: 14pt;">And reconnections performed as quickly as possible, thanks to Raul Marin, see 22.10.</p>
+</section>
+
+
+<section class="slide">
+<h2>Data Lakes</h2>
+<p style="margin-top: -1em;">ClickHouse can work <b>as a server</b> (clickhouse-server)
+<br/>or <b>as a tool</b> without installation (clickhouse-local).</p>
+<p>ClickHouse can <b>store the data</b>
+<br/>or process externally stored data <b>on the fly</b>.</p>
+
+<p>External data:
+<br/>&mdash; remote databases: MySQL, PostgreSQL, MongoDB, ODBC, JDBC...
+<br/>&mdash; object storages: S3, HDFS, Azure, COSN, OSS...
+<br/>&mdash; from URL and local files;
+</p>
+
+<p>All possible data formats:
+<br/>&mdash; text: CSV, TSV, JSON, Values, MySQLDump, Regexp...
+<br/>&mdash; binary: Parquet, Arrow, ORC, Avro, Protobuf, MsgPack...
+<br/>&mdash; schemaful and schemaless;
+</p>
+</section>
+
+<section class="slide">
+<h2>Data Lakes</h2>
+<p><code style="font-size: 12pt; line-height: 1.1; overflow-x: scroll; margin-top: -1em;">SELECT count() AS c FROM s3(
+'https://clickhouse-public-datasets.s3.amazonaws.com/hits/native/*.native.zst')
+  WHERE URL LIKE '%google%';
+<span style="color: gray;">-- 5.924 sec.</span>
+
+SELECT count() AS c FROM s3Cluster('default',
+'https://clickhouse-public-datasets.s3.amazonaws.com/hits/native/*.native.zst')
+  WHERE URL LIKE '%google%';
+<span style="color: gray;">-- 2.560 sec.</span>
+
+SELECT count() AS c FROM s3(
+'https://clickhouse-public-datasets.s3.amazonaws.com/hits_compatible/athena_partitioned/hits_*.parquet')
+  WHERE URL LIKE '%google%';
+<span style="color: gray;">-- 5.887 sec.</span>
+
+SELECT count() AS c FROM s3Cluster('default',
+'https://clickhouse-public-datasets.s3.amazonaws.com/hits_compatible/athena_partitioned/hits_*.parquet')
+  WHERE URL LIKE '%google%'
+<span style="color: gray;">-- 2.935 sec.</span>
+
+SELECT count() AS c FROM hits WHERE URL LIKE '%google%';
+<span style="color: green;">-- 0.913 sec.</span>
+</code></p>
+</section>
+
+<section class="slide">
+<h2>Data Lakes</h2>
+<p>Now ClickHouse supports <b style="color: green;">Apache Hudi</b> and <b style="color: green;">Delta Lake</b>
+<br/>for SELECT queries.</p>
+<p style="color: gray; font-size: 14pt;">TODO: Apache Iceberg.</p>
+<p>Advantages:
+<br/>&mdash; these formats are somewhat resembling <b>MergeTree</b>
+<br/>&emsp; allowing incremental data insertion,
+<br/>&emsp; approaching to ClickHouse data formats;</p>
+
+<p>Disadvantages:
+<br/>&mdash; alien data formats from <span style="color: red;">Apache/Hadoop/Java</span> world;
+<br/>&mdash; nothing works out of the box
+<br/>&emsp; unless you really know how to deal with it;</p>
+</section>
+
+<section class="slide">
+<h2>Data Lakes</h2>
+<p style="margin-top: -1em;">How to prepare data for Delta Lake?</p>
+<p><code style="font-size: 12pt; overflow-x: scroll; overflow-y: hidden; line-height: 1.1;">wget https://dlcdn.apache.org/spark/spark-3.3.1/spark-3.3.1-bin-hadoop3.tgz
+mkdir -p ~/hadoop/spark-3.3.1/
+tar -xzf spark-3.3.1-bin-hadoop3.tgz  -C ~/hadoop/spark-3.3.1/ --strip 1
+export SPARK_HOME=~/hadoop/spark-3.3.1
+echo "spark.driver.host	localhost" > $SPARK_HOME/conf/spark-defaults.conf
+
+cd $SPARK_HOME
+bin/spark-shell \
+ --packages io.delta:delta-core_2.12:2.1.1,org.apache.hadoop:hadoop-aws:3.3.1
+
+spark.read.load("/var/lib/clickhouse/user_files/hits.parquet").write.format("delta")
+  .mode("overwrite").save("file:///home/ubuntu/spark_result_hits")
+
+22/11/17 00:25:07 ERROR SparkUncaughtExceptionHandler: [Container in shutdown]
+Uncaught exception in thread Thread[Executor task launch worker for task 32.0 in stage 2.0 (TID 34),5,main]
+java.lang.<b style="color: red;">OutOfMemoryError: Java heap space</b>
+22/11/17 00:25:07 ERROR Utils: Aborting task
+</code></p>
+<p style="color: gray; font-size: 14pt;">Hint: specify --driver-memory 100g for spark-shell.</p>
+<!--
+bin/spark-shell  --packages io.delta:delta-core_2.12:2.1.1,org.apache.hadoop:hadoop-aws:3.3.1 --driver-memory 100g
+spark.read.load("/var/lib/clickhouse/user_files/hits.parquet").write.format("delta").mode("overwrite").save("file:///var/lib/clickhouse/user_files/spark_result_hits")
+-->
+</section>
+
+<section class="slide">
+<h2>Data Lakes</h2>
+<p>Now ClickHouse supports <b style="color: green;">Apache Hudi</b> and <b style="color: green;">Delta Lake</b>
+<br/>for SELECT queries.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">SELECT count() FROM deltaLake(
+  'https://clickhouse-public-datasets.s3.amazonaws.com/delta_lake/hits/')
+  WHERE URL LIKE '%google%'
+
+-- 4.396 sec.
+</code></p>
+
+<p style="margin-top: 3em; color: gray; font-size: 14pt;">Developers: Daniil Rubin, Ksenia Sumarokova, Flynn ucasfl.</p>
+</section>
+
+<section class="slide">
+<h2>S3 Readonly Disk</h2>
+<p style="margin-top: -1em;">Attach tables directly from s3. No local state.</p>
+<p>A new disk type &mdash; <b>s3_plain</b>.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">$ cat /etc/clickhouse-server/config.d/s3_plain.yaml
+
+storage_configuration:
+  disks:
+    s3_plain:
+      type: <b>s3_plain</b>
+        endpoint: 'http://clickhouse-public-datasets.s3.amazonaws.com/s3_plain/'
+  policies:
+    s3_plain:
+      volumes:
+        main:
+          disk: s3_plain
+</code></p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developers: Azat Khuzhin.</p>
+</section>
+
+<section class="slide">
+<h2>S3 Readonly Disk</h2>
+<p style="margin-top: -1em;"><code style="font-size: 14pt; overflow-y: scroll; height: 22em;">ATTACH TABLE hits_worm UUID '5eb0149e-d250-4ec4-bfc7-a90ce167690f'
+(
+    `WatchID` UInt64,
+    `JavaEnable` UInt8,
+    `Title` String,
+    `GoodEvent` Int16,
+    `EventTime` DateTime,
+    `EventDate` Date,
+    `CounterID` UInt32,
+    `ClientIP` UInt32,
+    `RegionID` UInt32,
+    `UserID` UInt64,
+    `CounterClass` Int8,
+    `OS` UInt8,
+    `UserAgent` UInt8,
+    `URL` String,
+    `Referer` String,
+    `Refresh` UInt8,
+    `RefererCategoryID` UInt16,
+    `RefererRegionID` UInt32,
+    `URLCategoryID` UInt16,
+    `URLRegionID` UInt32,
+    `ResolutionWidth` UInt16,
+    `ResolutionHeight` UInt16,
+    `ResolutionDepth` UInt8,
+    `FlashMajor` UInt8,
+    `FlashMinor` UInt8,
+    `FlashMinor2` String,
+    `NetMajor` UInt8,
+    `NetMinor` UInt8,
+    `UserAgentMajor` UInt16,
+    `UserAgentMinor` FixedString(2),
+    `CookieEnable` UInt8,
+    `JavascriptEnable` UInt8,
+    `IsMobile` UInt8,
+    `MobilePhone` UInt8,
+    `MobilePhoneModel` String,
+    `Params` String,
+    `IPNetworkID` UInt32,
+    `TraficSourceID` Int8,
+    `SearchEngineID` UInt16,
+    `SearchPhrase` String,
+    `AdvEngineID` UInt8,
+    `IsArtifical` UInt8,
+    `WindowClientWidth` UInt16,
+    `WindowClientHeight` UInt16,
+    `ClientTimeZone` Int16,
+    `ClientEventTime` DateTime,
+    `SilverlightVersion1` UInt8,
+    `SilverlightVersion2` UInt8,
+    `SilverlightVersion3` UInt32,
+    `SilverlightVersion4` UInt16,
+    `PageCharset` String,
+    `CodeVersion` UInt32,
+    `IsLink` UInt8,
+    `IsDownload` UInt8,
+    `IsNotBounce` UInt8,
+    `FUniqID` UInt64,
+    `OriginalURL` String,
+    `HID` UInt32,
+    `IsOldCounter` UInt8,
+    `IsEvent` UInt8,
+    `IsParameter` UInt8,
+    `DontCountHits` UInt8,
+    `WithHash` UInt8,
+    `HitColor` FixedString(1),
+    `LocalEventTime` DateTime,
+    `Age` UInt8,
+    `Sex` UInt8,
+    `Income` UInt8,
+    `Interests` UInt16,
+    `Robotness` UInt8,
+    `RemoteIP` UInt32,
+    `WindowName` Int32,
+    `OpenerName` Int32,
+    `HistoryLength` Int16,
+    `BrowserLanguage` FixedString(2),
+    `BrowserCountry` FixedString(2),
+    `SocialNetwork` String,
+    `SocialAction` String,
+    `HTTPError` UInt16,
+    `SendTiming` UInt32,
+    `DNSTiming` UInt32,
+    `ConnectTiming` UInt32,
+    `ResponseStartTiming` UInt32,
+    `ResponseEndTiming` UInt32,
+    `FetchTiming` UInt32,
+    `SocialSourceNetworkID` UInt8,
+    `SocialSourcePage` String,
+    `ParamPrice` Int64,
+    `ParamOrderID` String,
+    `ParamCurrency` FixedString(3),
+    `ParamCurrencyID` UInt16,
+    `OpenstatServiceName` String,
+    `OpenstatCampaignID` String,
+    `OpenstatAdID` String,
+    `OpenstatSourceID` String,
+    `UTMSource` String,
+    `UTMMedium` String,
+    `UTMCampaign` String,
+    `UTMContent` String,
+    `UTMTerm` String,
+    `FromTag` String,
+    `HasGCLID` UInt8,
+    `RefererHash` UInt64,
+    `URLHash` UInt64,
+    `CLID` UInt32
+)
+ENGINE = MergeTree
+PARTITION BY toYYYYMM(EventDate)
+ORDER BY (CounterID, EventDate, intHash32(UserID), EventTime)
+SETTINGS storage_policy = 's3_plain'
+</p></code>
+</section>
+
+<section class="slide">
+<h2>S3 Readonly Disk</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">SELECT count() FROM hits_worm WHERE URL LIKE '%google%'
+
+-- 2.533 sec.
+</code></p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developers: Azat Khuzhin.</p>
+</section>
+
+<section class="slide">
+<h2>S3 Readonly Disk</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">storage_configuration:
+  disks:
+    s3_plain_cache:
+      type: <b style="color: green;">cache</b>
+      disk: s3_plain
+      path: /var/lib/clickhouse/cache/
+      max_size: 1000000000000
+  policies:
+    s3_plain_cache:
+      volumes:
+        main:
+          disk: s3_plain_cache
+
+SELECT count() FROM hits_worm WHERE URL LIKE '%google%'
+
+<b style="color: green;">-- 0.719 sec.</b>
+</code></p>
+</section>
+
+
+<section class="slide">
+<h2>Bonus</h2>
+<p>Allow subset of table functions in <b>readonly</b> mode:</p>
+<p><code style="font-size: 14pt;">:) SELECT name FROM system.table_functions
+   WHERE allow_readonly ORDER BY name
+
+┌─name───────────────┐
+│ cluster            │
+│ clusterAllReplicas │
+│ generateRandom     │
+│ null               │
+│ numbers            │
+│ numbers_mt         │
+│ values             │
+│ view               │
+│ viewIfPermitted    │
+└────────────────────┘
+</code></p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Smita Kulkarni.</p>
+</section>
+
+<section class="slide">
+<h2>Bonus</h2>
+<p>Query parameters for INSERT VALUES:</p>
+<p><code style="font-size: 14pt;">INSERT INTO test VALUES (123, <b>{name:String}</b>)</code></p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Nikolai Degterinsky.</p>
+
+<p>Documentation for <b>system.asynchronous_metrics</b>:</p>
+
+<p><code style="font-size: 14pt; white-space: pre-wrap;">SELECT * FROM system.asynchronous_metrics WHERE metric = 'Jitter'
+
+metric:      Jitter
+value:       0.000084
+description: <span style="color: green;">The difference in time the thread for calculation of the asynchronous metrics was scheduled to wake up and the time it was in fact, woken up. A proxy-indicator of overall system latency and responsiveness.</span>
+</code></p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Integrations</h2>
+<p><b>dbt-clickhouse</b>: supports for DBT v1.3;</p>
+<p><b>Python client</b>:
+<br/>&mdash; python v3.11 support;
+<br/>&mdash; improved insert performance;
+<br/>&mdash; better Pandas dataframe compatibility<br/>&emsp; and performance for date, time, null types;
+<br/>&mdash; extended Numpy with big int support;</p>
+<p><b>clickhouse-go</b>: fix DateTime and Int64 support;</p>
+<p><b>clickhouse-js</b>: supports mutual SSL authentication;</p>
+<p><b>clickhouse-kafka-connect</b>: support for Array and Map types;</p>
+</section>
+
+<section class="slide" style="background: url(pictures/cloud.jpg); background-size: cover;">
+<h2><span class="hilite">ClickHouse Cloud Beta</span></h2>
+
+<p><span class="hilite">&mdash; available since Oct 4th;</span></p>
+<p><span class="hilite">&mdash; free 14-day trial up to 10 TB of data;</span></p>
+<p><span class="hilite">Try it! <a href="https://clickhouse.cloud/">https://clickhouse.cloud/</a>.</span></p>
+</section>
+
+<section class="slide" style="background: url(pictures/november2.jpg); background-size: cover;">
+<h2><span class="hilite">Q&amp;A</a></h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+
