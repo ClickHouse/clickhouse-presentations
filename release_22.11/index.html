@@ -420,6 +420,26 @@ SELECT count() FROM hits_worm WHERE URL LIKE '%google%'
 </code></p>
 </section>
 
+<section class="slide">
+<h2>Performance Improvements</h2>
+
+<p style="margin-top: -1em;"><code style="font-size: 12pt;">SELECT path, sum(hits) FROM wikistat WHERE match(path, '^ClickH')
+GROUP BY path ORDER BY path
+
+┌─path─────────────────┬─sum(hits)─┐
+│ ClickHealthy         │        13 │
+│ ClickHelp            │        68 │
+│ ClickHere            │         1 │
+│ ClickHole            │    402127 │
+│ ClickHome            │       895 │
+│ ClickHome_(software) │      1337 │
+│ ClickHouse           │    361848 │
+└──────────────────────┴───────────┘</code></p>
+<p style="font-size: 14pt;">Was: Elapsed: <b style="color: red;">415.423</b> sec. Processed 404.20 billion rows, 12.19 TB<br/>(972.99 million rows/s., 29.35 GB/s.)</p>
+<p style="font-size: 14pt;">Now: Elapsed: <b style="color: green;">  0.019</b> sec. Processed 303.10 thousand rows, 8.07 MB<br/>(15.70 million rows/s., 418.05 MB/s.)</p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Clark CaoLiu.</p>
+</section>
 
 <section class="slide">
 <h2>Bonus</h2>
