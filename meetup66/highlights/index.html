@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Top Highlights H2 2022</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         table, tr, td { border: 0; }
+         .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Top Highlights H2 2022</h1>
+    </header>
+    <section class="slide" id="cover">
+        <img src="https://presentations.clickhouse.com/original_website/logo.svg" style="width: 15%; position: absolute; right: 20px; bottom: 20px;" />
+        <h1 style="margin-top: 80px; line-height: 150%; color: black; font-size: 64pt">ClickHouse<br/>Top Highlights<br/>H2 2022</h1>
+    </section>
+
+<!--
+
+Reliability
+ init without keeper
+ retries on inserts
+ quick reconnections
+ relax too many parts
+ memory management
+SQL compatibility
+ window functions in expressions
+ grouping sets and grouping function
+ intersect, except distinct
+ non constant LIKE and match
+ delete query
+ extended datetime
+Performance
+ cache vfs
+ compressed marks and indices
+ count distinct speed up
+ clickbench
+Integrations
+Usability
+Operations
+
+Platforms
+ ARM, RISC-V, Power
+Documentation
+Trust Center
+Cloud
+
+-->
+
+<section class="slide">
+<h2>Reliability</h2>
+<p>ClickHouse should always work.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Asynchronous Initialization Of Tables</h2>
+<p style="line-height: 1.5">If ZooKeeper is <span style="color: red;">unavailable</span> at server startup,
+<br/>the <b>ReplicatedMergeTree</b> tables will start in <span style="color: green;">read-only</span> mode
+<br/>and <span style="color: green;">initialize asynchronously</span> in background
+<br/>as soon as ZooKeeper will be available.
+</p>
+<p>&mdash; the same applicable for ClickHouse Keeper as well;</p>
+<p>&mdash; especially useful for embedded ClickHouse Keeper;</p>
+<p style="margin-top: 3em; color: green; font-size: 14pt;">Developers: Antonio Andelic. Since 22.9.</p>
+</section>
+
+<section class="slide">
+<h2>Retries On INSERT</h2>
+<p style="color: red;">Session expired. Table is in readonly mode 😠</p>
+<p>Never again:</p>
+<p><code>SET insert_keeper_max_retries = 10;</code></p>
+<p>INSERT will survive restarts of ClickHouse Keeper or ZooKeeper<br/>and reconnections.</p>
+<p style="margin-top: 2em; color: green; font-size: 14pt;">Developer: Igor Nikonov. Since 22.11.</p>
+</section>
+
+<section class="slide">
+<h2>Faster Reconnection to Keeper</h2>
+<p style="color: red;">Table is in readonly mode 😠</p>
+<p>Was: around one minute for reconnection, for no reason.</p>
+<p>Now: <span style="color: green;">milliseconds</span> 🥲</p>
+<p style="margin-top: 10em; color: green; font-size: 14pt;">Developer: Raul Marin. Since 22.10.</p>
+</section>
+
+<section class="slide">
+<h2>No More "Too many parts"</h2>
+<p style="color: red;">DB::Exception: Too many parts (300). Merges are processing significantly slower than inserts 😠</p>
+<p>Now: relaxing the "too many parts" threshold:</p>
+<p>Allow large number of parts if they are large in average.</p>
+<p style="margin-top: 1em; color: green; font-size: 14pt;">Developer: Alexey Milovidov. Since 22.10.</p>
+</section>
+
+<section class="slide">
+<h2>Flexible Memory Limits</h2>
+<p>Was: strict per-query limit, <b>max_memory_usage</b> = 10 GB by default.</p>
+<p>Now: query can use the memory if it's available;<br/>in case of memory shortage, the most "overcommitted" query is terminated with exception.</p>
+<p style="margin-top: 1em; color: green; font-size: 14pt;">Developer: Dmitry Novik.</p>
+</section>
+
+<section class="slide">
+<h2>ClickHouse Keeper</h2>
+<p>No need to use ZooKeeper anymore!</p>
+<p>Always use ClickHouse Keeper instead of ZooKeeper.</p>
+<p style="margin-top: 1em; color: green; font-size: 14pt;">Developer: Alexander Sapin, Antonio Andelic.</p>
+</section>
+
+<section class="slide">
+<h2>SQL Compatibility</h2>
+<p>ClickHouse should support everything you expect.</p>
+</section>
+
+<section class="slide">
+<h2>Window Functions Inside Expressions</h2>
+<code style="font-size: 70%; line-height: 1.25; margin-top: -1.5em;">SELECT
+    y::String || '.'
+        || (y &lt; toYear(today()) - 2000 - 1 ? '*' : m::String) AS Version,
+    (n &lt;= 3 OR (is_lts AND lts_n &lt;= 2)) ? '✔️' : '❌' AS Supported
+FROM (
+    SELECT y, m,
+        <b style="color: green;">count() OVER (ORDER BY y DESC, m DESC) AS n,</b>
+        m IN (3, 8) AS is_lts,
+        <b style="color: green;">countIf(is_lts) OVER (ORDER BY y DESC, m DESC) AS lts_n</b>
+    FROM (
+        WITH extractGroups(version, 'v(\d+)\.(\d+)') AS v,
+             v[1]::INT AS y, v[2]::INT AS m
+        SELECT y, m
+        FROM file('version_date.tsv', TSV, 'version String, date String')
+        ORDER BY y DESC, m DESC
+        LIMIT 1 BY y, m)
+)
+LIMIT 1 BY Version
+FORMAT Markdown</code>
+</section>
+
+<section class="slide">
+<h2>Extended Range For Date&amp;Time</h2>
+<p>Supported range for <b>DateTime64</b> and <b>Date32</b> data types:</p>
+<p>Was: <b style="color: red;">1925&ndash;2283.</b></p>
+<p>Now: <b style="color: green;">1900&ndash;2300.</b></p>
+<p>Uses proleptic Gregorian calendar.</p>
+<p>Motivation: store dates of birth of the customers.</p>
+<p style="margin-top: 3em; color: green; font-size: 14pt;">Developer: Roman Vasin. Since 22.8.</p>
+</section>
+
+<section class="slide">
+<h2>DELETE Query</h2>
+<p><code>SET mutations_sync = 1;
+<b style="color: red;">ALTER</b> TABLE hits
+DELETE WHERE Title LIKE '%Mongo%';</code></p>
+<p>&mdash; 205 sec (for a table with 100 million records).</p>
+<p><code><b style="color: green;">DELETE</b> FROM hits
+WHERE Title LIKE '%Mongo%';</code></p>
+<p>&mdash; ??? sec.</p>
+<p style="margin-top: 2em; color: green; font-size: 14pt;">Developers: Alexander Gololobov, Jianmei Zhang.</p>
+</section>
+
+<section class="slide">
+<h2>GROUPING Function</h2>
+<p>Used with ROLLUP, CUBE or GROUPING SETS.</p>
+<p>To distinguish different sets.</p>
+<p style="font-size: 95%;"><code>SELECT k, <b>GROUPING(k)</b> FROM table GROUP BY k <b>WITH ROLLUP</b></code></p>
+<p style="margin-top: 5em; color: green; font-size: 14pt;">Developer: Dmitriy Novik.</p>
+</section>
+
+<section class="slide">
+<h2>Non-Constant LIKE and match</h2>
+<pre style="font-size: 16pt; line-height: 1.5">SELECT DISTINCT repo_name, title
+FROM github_events
+WHERE title ILIKE (
+  repo_name LIKE '%ClickHouse%' ? '%fast%' : '%slow%')
+AND repo_name IN ('ClickHouse/ClickHouse', 'elastic/elasticsearch')</pre>
+<p style="margin-top: 2em; color: green; font-size: 14pt;">Now I can put LIKE inside LIKE and looks like you're going to like it.</p>
+<p style="margin-top: 5em; color: green; font-size: 14pt;">Developer: Robert Schulze. Since 22.6.</p>
+</section>
+
+<section class="slide">
+<h2>Composite Time Intervals</h2>
+
+<p>Examples:</p>
+<p><code><span style="color: gray;">SELECT now() + INTERVAL 1 MONTH;
+SELECT now() + INTERVAL '1 MONTH';
+SELECT now() + INTERVAL 1 MONTH - INTERVAL 2 DAY;</span>
+
+SELECT now() + INTERVAL <b>'1 MONTH -2 DAY'</b>;
+SELECT now() + (INTERVAL 1 MONTH - INTERVAL 2 DAY);
+
+SELECT INTERVAL '1 MONTH -2 DAY';
+SELECT (INTERVAL 1 MONTH - INTERVAL 2 DAY);
+
+SELECT INTERVAL '1 MONTH 1 MONTH';
+</code></p>
+
+<p style="margin-top: 1em; color: green; font-size: 14pt;">Developer: Nikolai Degterinsky. Since 22.11.</p>
+</section>
+
+<section class="slide">
+<h2>Performance</h2>
+<p>ClickHouse never slows down!</p>
+</section>
+
+<section class="slide">
+<h2>Performance Optimizations</h2>
+<p>Improvement of ORDER BY, insert and merge in MergeTree,
+<br/>and window functions.</p>
+<p><code>SELECT WatchID FROM hits_100m_obfuscated ORDER BY Age</code></p>
+<p>Before:<br/>
+Elapsed: <b style="color: red;">4.154</b> sec. (24.07 million rows/s., 216.64 MB/s.)</p>
+<p>After:<br/>
+Elapsed: <b style="color: green;">0.482</b> sec. (207.47 million rows/s., 1.87 GB/s.)</p>
+<p style="margin-top: 1em; color: green; font-size: 14pt;">Developer: Maksim Kita.</p>
+</section>
+
+<section class="slide">
+<h2>Performance Optimizations</h2>
+<p>Speed-up of SELECT with <b>FINAL</b> modifier.</p>
+<p>It "simply" improves performance up to 4 times.</p>
+<p>Especially for complex transforms like Collapsing and Replacing.</p>
+<p style="margin-top: 5em; color: green; font-size: 14pt;">Developer: Nikita Taranov.</p>
+</section>
+
+<section class="slide">
+<h2>Performance Performance</h2>
+<p>Optimize <b>ORDER BY with LIMIT</b>.</p>
+<p>Optimize <b>ORDER BY</b> with single column.</p>
+<p>Optimize <b>INSERT</b> into MergeTree with composite ORDER key.</p>
+<p>Optimize <b>dictGetChildren</b>, <b>dictGetDescendants</b>.</p>
+<p>Optimize cleanup stage of queries with large <b>GROUP BY</b>.</p>
+<p>Optimize <b>background CPU usage</b> of large number of tables.</p>
+<p style="color: green; margin-top: 3em; font-size: 14pt;">Developer: Maksim Kita, Nikita Taranov.</p>
+</section>
+
+<section class="slide">
+<h2>More Performance</h2>
+<p>Optimize <b>COUNT(DISTINCT ...)</b> for low number of GROUP BY keys.</p>
+<p>Optimize <b>GROUP BY</b> with CPU prefetcher.</p>
+<p>Optimize <b>GROUP BY</b> with better block sizes.</p>
+<p style="color: green; margin-top: 3em; font-size: 14pt;">Developer: Nikita Taranov.</p>
+</section>
+
+<section class="slide">
+<h2>New JOIN algorithms</h2>
+<p style="margin-top: -1em;">&mdash; "<b>direct</b>" algorithm:
+<br/>&emsp; to join with key-value tables by direct lookups a.k.a. nested loops.
+<br/>&emsp; Good if the left table is small, but the right table is like a large dictionary.
+<br/>&emsp; Good to use in MATERIALIZED VIEW queries.</p>
+
+<p>&mdash; "<b>parallel_hash</b>" algorithm:
+<br/>&emsp; speed-up if the right hand table is large.</p>
+
+<p>&mdash; "<b>full_sorting_merge</b>" algorithm:
+<br/>&emsp; when right hand side is large<br/>&emsp; and does not fit in memory and does not allow lookups.</p>
+
+<p style="color: gray;">&mdash; "<b>grace_hash</b>" algorithm:
+<br/>&emsp; since in 22.12.</p>
+
+<p style="color: green; font-size: 14pt;">Developer: Vladimir Cherkasov, lgbo-ustc.</p>
+</section>
+
+<section class="slide">
+<h2>More Performance</h2>
+<p>... and we are reading from object storage 100 times faster.</p>
+<p style="color: green; margin-top: 3em; font-size: 14pt;">Developer: Ksenia Sumarokova.</p>
+</section>
+
+<section class="slide">
+<h2>Updated Benchmark</h2>
+<img style="margin-left: -60px; margin-top: -1em; height: 100%" src="pictures/clickbench.png" />
+</section>
+
+<section class="slide">
+<h2>Integrations</h2>
+<p>ClickHouse integrates with everything!</p>
+</section>
+
+<section class="slide">
+<h2>Integrations</h2>
+<p style="margin-top: -1em;">ClickHouse can work <b>as a server</b> (clickhouse-server)
+<br/>or <b>as a tool</b> without installation (clickhouse-local).</p>
+<p>ClickHouse can <b>store the data</b>
+<br/>or process externally stored data <b>on the fly</b>.</p>
+
+<p>External data:
+<br/>&mdash; remote databases: MySQL, PostgreSQL, MongoDB, ODBC, JDBC...
+<br/>&mdash; object storages: S3, HDFS, Azure, COSN, OSS...
+<br/>&mdash; from URL and local files;
+</p>
+
+<p>All possible data formats:
+<br/>&mdash; text: CSV, TSV, JSON, Values, MySQLDump, Regexp...
+<br/>&mdash; binary: Parquet, Arrow, ORC, Avro, Protobuf, MsgPack...
+<br/>&mdash; schemaful and schemaless;
+</p>
+</section>
+
+<section class="slide">
+<h2>Data Lakes</h2>
+<p>Now ClickHouse supports <b style="color: green;">Apache Hudi</b> and <b style="color: green;">Delta Lake</b>
+<br/>for SELECT queries.</p>
+<p style="color: gray; font-size: 14pt;">TODO: Apache Iceberg.</p>
+<p>Advantages:
+<br/>&mdash; these formats are somewhat resembling <b>MergeTree</b>
+<br/>&emsp; allowing incremental data insertion,
+<br/>&emsp; approaching to ClickHouse data formats;</p>
+
+<p>Disadvantages:
+<br/>&mdash; alien data formats from <span style="color: red;">Apache/Hadoop/Java</span> world;
+<br/>&mdash; nothing works out of the box
+<br/>&emsp; unless you really know how to deal with it;</p>
+</section>
+
+<section class="slide">
+<h2>Data Lakes</h2>
+<p>Now ClickHouse supports <b style="color: green;">Apache Hudi</b> and <b style="color: green;">Delta Lake</b>
+<br/>for SELECT queries.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">SELECT count() FROM deltaLake(
+  'https://clickhouse-public-datasets.s3.amazonaws.com/delta_lake/hits/')
+  WHERE URL LIKE '%google%'
+
+-- 4.396 sec.
+</code></p>
+
+<p style="margin-top: 3em; color: green; font-size: 14pt;">Developers: Daniil Rubin, Ksenia Sumarokova, Flynn ucasfl. Since 22.11.</p>
+</section>
+
+<section class="slide">
+<h2>Integrations</h2>
+<p>&mdash; Querying MongoDB and Meilisearch with table functions.</p>
+<p>&mdash; Streaming data consumption from NATS.</p>
+<p style="margin-top: 1em; color: green; font-size: 14pt;">Developer: Anastasia Petrenko, Ksenia Sumarokova. Since 22.7.</p>
+</section>
+
+<section class="slide">
+<h2>Integrations</h2>
+<p>Visualizations:
+<br/>&mdash; official ClickHouse plugin for <b>Grafana</b>;
+<br/>&mdash; official support for <b>Superset</b>;
+<br/>&mdash; <b>HEX</b> and <b>Deepnote</b> support.
+<p>Data ingestion and processing:
+<br/>&mdash; <b>Kafka Connect</b> integration;
+<br/>&mdash; <b>Airflow</b>, <b>dbt</b> support.</p>
+<p>Language drivers:
+<br/>&mdash; official <b>Node.JS</b> driver;
+<br/>&mdash; optimized <b>Go</b> driver;
+<br/>&mdash; a new <b>Python</b> client.</p>
+</section>
+
+
+<section class="slide">
+<h2>Operations</h2>
+<p>ClickHouse is easy to configure for your needs.</p>
+</section>
+
+<section class="slide">
+<h2>Self-Extracting Executable</h2>
+<p>The most simple way to install ClickHouse:</p>
+
+<p><code>curl https://clickhouse.com/ | sh</code></p>
+
+<p><b style="color: green;">Single binary package</b>. Installs the latest version. Includes debug info.</p>
+<p>Works on every <b>Linux</b> (x86_64, aarch64, powerpc64le),<br/><b>macOS</b> (x86_64, M1), <b>FreeBSD</b> and <b>Windows</b> (WSL2).</p>
+<p>Was: <b style="color: red;">2.1 GB</b>.</p>
+<p>Now: <b style="color: green;">446 MB</b>, takes ~5 seconds to decompress on first run.</p>
+<p style="margin-top: 1em; color: green; font-size: 14pt;">Developer: Arthur Filatenkov, Yakov Olkhovskiy.</p>
+</section>
+
+<section class="slide">
+<h2>Composable Protocols</h2>
+<p>So, ClickHouse supports a lot of protocols:</p>
+<p>&mdash; HTTP
+<br/>&mdash; HTTPs
+<br/>&mdash; Native TCP
+<br/>&mdash; Native TCP wrapped in PROXYv1
+<br/>&mdash; Native TCP with TLS
+<br/>&mdash; MySQL (with TLS support)
+<br/>&mdash; PostgreSQL (with TLS support)
+<br/>&mdash; GRPC (with TLS)
+<br/>&mdash; Replication protocol over HTTP
+<br/>&mdash; Replication protocol over HTTPs
+<br/>&mdash; Keeper client-server protocol;
+<br/>&mdash; Keeper consensus protocol;
+<br/>&mdash; ...
+</p>
+</section>
+
+<section class="slide">
+<h2>Composable Protocols</h2>
+<p>So, ClickHouse supports a lot of protocols.</p>
+<p>How to configure all of them? What if:</p>
+<p>&mdash; server has multiple network interfaces?
+<br/>&mdash; enable one protocol on multiple ports?
+<br/>&mdash; I want native TCP for localhost only and HTTPs from everywhere?
+<br/>&mdash; I want different TLS certificates for different protocols?
+<br/>&mdash; I want to wrap one protocol in another?</p>
+</section>
+
+<section class="slide">
+<code style="font-size: 16pt;">&lt;protocols>
+  &lt;tcp>
+    &lt;type>tcp&lt;/type>
+    &lt;host>::&lt;/host>
+    &lt;port>9000&lt;/port>
+    &lt;description>native protocol&lt;/description>
+  &lt;/tcp>
+  &lt;tcp_secure>
+    &lt;type><b>tls</b>&lt;/type>
+    &lt;impl><b>tcp</b>&lt;/impl>
+    &lt;port>9440&lt;/port>
+    &lt;description>secure native protocol&lt;/description>
+  &lt;/tcp_secure>
+  &lt;tcp_endpoint>
+    &lt;impl>tcp&lt;/impl>
+    &lt;host>0.0.0.0&lt;/host>
+    &lt;port>9001&lt;/port>
+    &lt;description>native protocol, another&lt;/description>
+  &lt;/tcp_endpoint>
+  &lt;tcp_proxy>
+    &lt;type>proxy1&lt;/type>
+    &lt;impl>tcp&lt;/impl>
+    &lt;port>9100&lt;/port>
+    &lt;description>native protocol with PROXYv1&lt;/description>
+  &lt;/tcp_proxy>
+</code>
+</section>
+
+<section class="slide">
+<h2>Composable Protocols</h2>
+<p><b>The case</b>: ClickHouse under proxy:</p>
+<p>Envoy Proxy / HAProxy / CloudFlare.</p>
+<p>ClickHouse server will receive connections from the proxy.</p>
+<p>But it needs to know the source IP address for quotas, ACL and logging.</p>
+<p><b>Solution</b>: enable PROXYv1 protocol in the proxy<br/>and configure it as a protocol wrapper in ClickHouse.</p>
+<p>ClickHouse will read the header and unwrap the network packets.</p>
+<p style="margin-top: 1em; color: green; font-size: 14pt;">Developer: Yakov Olkhovskiy. Since 22.10.</p>
+</section>
+
+<section class="slide">
+<p><img style="width: 90%;" src="pictures/compliance.png"/></p>
+<p><a href="https://trust.clickhouse.com/">https://trust.clickhouse.com/</a></p>
+<p>+ penetration testing, bug bounty program, audit reports...</p>
+</section>
+
+<section class="slide" style="background: url(pictures/cloud.jpg); background-size: cover;">
+<h2><span class="hilite">ClickHouse Cloud Beta</span></h2>
+
+<p><span class="hilite">&mdash; available since Oct 4th;</span></p>
+<p><span class="hilite">&mdash; free 14-day trial up to 10 TB of data;</span></p>
+<p><span class="hilite">Try it! <a href="https://clickhouse.cloud/">https://clickhouse.cloud/</a>.</span></p>
+</section>
+
+<section class="slide" style="background: url(pictures/november2.jpg); background-size: cover;">
+<h2><span class="hilite">Q&amp;A</a></h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+
