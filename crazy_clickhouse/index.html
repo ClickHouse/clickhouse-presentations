@@ -450,7 +450,7 @@ LIMIT 1 BY prev_author LIMIT 100
 0.811s
 $ time <b>rg</b> -c --text Warning server.log
 0.289s
-$ time <b>clickhouse-local</b> --input-format LineAsString --query "
+$ time <b>clickhouse-local</b> --progress --input-format LineAsString --query "
   SELECT count() FROM table WHERE line LIKE '%Warning%'" &lt; server.log
 1.234s :(
 
@@ -510,7 +510,7 @@ pnmtopng | pv > binary.png</code></p>
 
 <p style="color: gray;">Linux only. Not recommended to listen!</p>
 <!--
-clickhouse-local --query "WITH 0x7FFF AS volume, 44100 AS base_hz, base_hz * 0 AS start, base_hz * 5 AS end, base_hz * 0.25 AS window, 200 AS hz, pow(abs(sin(number / base_hz * (hz + number / 200))), number / 50000) AS tone, number BETWEEN start AND end AS active, exponentialMovingAverage(window)(active, number) OVER (ORDER BY number) AS amp, amp * tone AS res, round(res * volume)::Int16 AS out SELECT out FROM numbers(300000)" --format RowBinary | aplay -f cd
+
 -->
 </section>
 
@@ -590,6 +590,8 @@ FROM minicrawl WHERE text ILIKE '%clickhouse%';</code></p>
 </section>
 
 <section class="slide">
+<h2>ClickHouse 22.12 Release Webinar</h2>
+<p>Tomorrow: <a href="https://clickhouse.com/company/events/v22-12-release-webinar">https://clickhouse.com/company/events/v22-12-release-webinar</a></p>
 <h2>Q&amp;A</h2>
 </section>
 
