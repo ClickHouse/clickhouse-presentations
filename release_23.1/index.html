@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 23.1 Webinar</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         table, tr, td { border: 0; }
+         .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 23.1 Webinar</h1>
+    </header>
+    <section class="slide" id="cover">
+        <img src="https://presentations.clickhouse.com/original_website/logo.svg" style="width: 15%; position: absolute; right: 20px; bottom: 20px;" />
+        <h1 style="margin-top: 80px; line-height: 150%; color: black; font-size: 64pt">ClickHouse<br/> Release 23.1</h1>
+    </section>
+
+<section class="slide">
+<h2>Release 23.1 Webinar</h2>
+<p>1. (50 min) What's new in ClickHouse 23.1.</p>
+<p>2. (10 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/winter1.jpg); background-size: cover; text-shadow: black 0 0 5px;">
+<h2 style="color: white;">Release 23.1</h2>
+<p><span style="color: white;">ClickHouse New Year release.</span></p>
+<p style="margin-top: 2em;"><span style="color: white;">— 17 new features</span></p>
+<p><span style="color: white;">— 17 performance optimizations</span></p>
+<p><span style="color: white;">— 78 bug fixes</span></p>
+</section>
+
+<!--
+
+Minor:
+array join with map
+age
+hex and binary literals
+Streaming engines and formats improvements
+
+Performance:
+parquet/orc struct reading
+part loading
+s3 optimization
+mmap for StorageFile
+
+Major:
+parameterized views
+regexp dictionaries
+query cache
+inverted indices
+
+Integrations
+Cloud
+
+-->
+
+<section class="slide">
+<h2>SQL Language Features</h2>
+</section>
+
+<section class="slide">
+<h2>ARRAY JOIN with Map</h2>
+
+<p><code style="font-size: 12pt; margin-top: -1em;">:) SELECT * FROM VALUES('map Map(String, UInt8)',
+    ('{\'Hello\':1,\'World\':2}'))
+
+┌─map───────────────────┐
+│ {'Hello':1,'World':2} │
+└───────────────────────┘
+
+:) SELECT map FROM VALUES('map Map(String, UInt8)',
+    ('{\'Hello\':1,\'World\':2}')) <b style="color: green;">ARRAY JOIN map</b>
+
+┌─map─────────┐
+│ ('Hello',1) │
+│ ('World',2) │
+└─────────────┘
+
+:) SELECT untuple(<b style="color: green;">arrayJoin(map)</b>) FROM VALUES('map Map(String, UInt8)',
+    ('{\'Hello\':1,\'World\':2}'))
+
+┌─tupleElement(arrayJoin(map), 1)─┬─tupleElement(arrayJoin(map), 2)─┐
+│ Hello                           │                               1 │
+│ World                           │                               2 │
+└─────────────────────────────────┴─────────────────────────────────┘
+</code></p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: TaiYang Li.</p>
+</section>
+
+
+<section class="slide">
+<h2>`age` function</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">:) SELECT dateDiff('month',
+    '2022-11-30'::Date,
+    '2023-01-25'::Date) AS diff
+
+┌─diff─┐
+│    2 │
+└──────┘
+
+:) SELECT <b style="color: green;">age</b>('month',
+    '2022-11-30'::Date,
+    '2023-01-25'::Date) AS diff
+
+┌─diff─┐
+│    1 │
+└──────┘
+</code></p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Roman Vasin.</p>
+</section>
+
+<section class="slide">
+<h2>SQL Standard Hex And Binary Literals</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.1; margin-top: -1em;">:) SELECT 0xBAADC0DE, 0b00101010
+
+┌─3131949278─┬─42─┐
+│ 3131949278 │ 42 │
+└────────────┴────┘
+
+:) SELECT <b style="color: green;">x'436C69636B486F757365'</b>, <b style="color: green;">b'00101010'</b>
+
+┌─'ClickHouse'─┬─'*'─┐
+│ ClickHouse   │ *   │
+└──────────────┴─────┘
+
+:) SELECT unhex('436C69636B486F757365') AS x, unbin('00101010') AS y
+
+┌─x──────────┬─y─┐
+│ ClickHouse │ * │
+└────────────┴───┘</code></p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Mo Xuan.</p>
+</section>
+
+<section class="slide">
+<h2>Extended Formats For Streaming</h2>
+
+<p><b>Kafka</b>, <b>RabbitMQ</b>, <b>NATS</b> and <b>FileLog</b> now support <b style="color: green;">all data formats</b>
+<br/>for INSERTs, including block based formats such as <b>Native</b> and <b>Parquet</b>.</p>
+
+<p>Allow to control the block size for insertion into Kafka and other queues.</p>
+<p>&mdash; for block based formats it produces a block per message;</p>
+<p>&mdash; for row-based formats it produces multiple formatted rows per message.</p>
+
+<p style="margin-top: 5em; color: gray; font-size: 14pt;">Developer: Pavel Kruglov.</p>
+</section>
+
+<section class="slide">
+<h2>Autodetect Headers Of TSV/CSV</h2>
+
+<p>No need to choose between <b>CSV</b>, <b style="color: gray">CSVWithNames</b>, <b style="color: gray">CSVWithNamesAndTypes</b><br/>for data import.</p>
+
+<p>Just write <b>CSV</b>, and it will find the headers if there are any.</p>
+
+<p style="color: green;">Everything detected automatically whenever possible!</p>
+
+<p style="margin-top: 5em; color: gray; font-size: 14pt;">Developer: Pavel Kruglov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Performance Improvements</h2>
+</section>
+
+<section class="slide">
+<h2>Reading Structs From Parquet/ORC</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-top: -1em;">SELECT sum(event.time) FROM demo
+
+┌─────sum(event.time)─┐
+│ 8868419195034535628 │
+└─────────────────────┘
+
+Before:
+
+Elapsed: <b style="color: red;">7.810</b> sec. Processed 5.31 million rows, 206.93 MB
+(679.37 thousand rows/s., 26.50 MB/s.)
+
+After:
+
+Elapsed: <b style="color: green;">0.872</b> sec. Processed 5.31 million rows, 206.93 MB
+(6.09 million rows/s., 237.34 MB/s.)</code></p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Lgbo-ustc.</p>
+</section>
+
+<section class="slide">
+<h2>Reading From S3</h2>
+
+<p style="margin-top: -1em;">How long does it take to read <b>7000</b> files?</p>
+
+<p style="margin-top: 2em;"><code style="font-size: 14pt; line-height: 1.25; margin-top: -1em;">SELECT count(), uniq(_file)
+    FROM s3('https://s3.eu-west-1.amazonaws.com/.../*', 'CSV')
+
+┌─count()─┬─uniq(_file)─┐
+│    7343 │        7343 │
+└─────────┴─────────────┘
+
+Before:
+Median timing: <b style="color: red;">12.682</b> sec.
+
+After:
+Median timing: <b style="color: green;">3.291</b> sec.</code></p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Anton Popov.</p>
+</section>
+
+<section class="slide">
+<h2>Data Parts Loading</h2>
+
+<p>What if the server is starting up very slowly<br/>due to a large number of data parts?</p>
+<p>Sometimes there is a large number of <b>inactive</b> data parts,<br/>to be deleted immediately after loading.</p>
+<p style="color: green; margin-top: 2em;">We don't load them anymore!</p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Anton Popov.</p>
+<p style="color: gray; margin-top: 2em;">What's next? Lazy loading of data parts? Lazy loading of tables?</p>
+</section>
+
+<section class="slide">
+<h2>MMap For File Engine</h2>
+
+<p>Demo</p>
+
+<!--
+
+clickhouse-local --time --query "SELECT line FROM file('/home/milovidov/Downloads/clickhouse-server.log', LineAsString) WHERE line LIKE '%02521\_analyzer%'" --storage_file_read_method pread
+
+-->
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Artem Brustovetskii.</p>
+</section>
+
+<section class="slide">
+<h2>Something Interesting</h2>
+</section>
+
+<section class="slide">
+<h2>Parameterized Views</h2>
+
+<!--
+
+SELECT toStartOfMonth(time), sum(hits) AS h, bar(h, 0, max(h) OVER (), 100) FROM wikistat WHERE path = 'ClickHouse' GROUP BY 1 ORDER BY 1
+CREATE VIEW wiki AS SELECT toStartOfMonth(time), sum(hits) AS h, bar(h, 0, max(h) OVER (), 100) FROM wikistat WHERE path = {page:String} GROUP BY 1 ORDER BY 1
+SELECT * FROM wiki
+SELECT * FROM wiki(page = 'ClickHouse')
+SELECT * FROM wiki(page = 'Hadoop')
+SELECT * FROM default.wiki(page = 'Hadoop')
+
+-->
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-top: -1em;">CREATE VIEW wiki
+AS SELECT toStartOfMonth(time),
+          sum(hits) AS h,
+          bar(h, 0, max(h) OVER (), 100)
+    FROM wikistat
+    WHERE path = <b style="color: green;">{page:String}</b>
+    GROUP BY 1
+    ORDER BY 1;
+
+SELECT * FROM <b style="color: green;">wiki(page = 'ClickHouse')</b>;
+</code></p>
+
+<p>Demo</p>
+
+<p style="margin-top: 3em; color: gray; font-size: 14pt;">Developer: Smita Kulkarni.</p>
+</section>
+
+<section class="slide">
+<h2>Regexp Tree Dictionaries</h2>
+
+<p><code style="line-height: 1.5">CREATE DICTIONARY user_agent
+(
+    regexp String,
+    name String,
+    version UInt16
+)
+PRIMARY KEY(regexp)
+SOURCE(<b>YAMLRegExpTree</b>(PATH '/<span style="color: gray;">.../</span>regexp_tree.yaml'))
+LAYOUT(<b>regexp_tree</b>)</code></p>
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developers: Vage Ogannisian, Han Fei.</p>
+</section>
+
+<section class="slide">
+<h2>Regexp Tree Dictionaries</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25">- regexp: 'Linux/(\d+[\.\d]*).+tlinux'
+  name: 'TencentOS'
+  version: '\1'
+
+- regexp: '\d+/tclwebkit(?:\d+[\.\d]*)'
+  name: 'Andriod'
+  versions:
+    - regexp: '33/tclwebkit'
+      version: 13
+    - regexp: '3[12]/tclwebkit'
+      version: 12
+    - regexp: '30/tclwebkit'
+      version: 11
+    - regexp: '29/tclwebkit'
+      version: 10</code></p>
+</section>
+
+<section class="slide">
+<h2>Regexp Tree Dictionaries</h2>
+<p><code style="line-height: 1.5; font-size: 16pt;">SELECT dictGet('user_agent', ('name', 'version'), UserAgent);</code></p>
+<p>&mdash; Traverses the tree, and determines the values of the attributes.</p>
+<p>&mdash; The tree can be arbitrarily deep, <br/>&emsp; and each nested level can override the values.</p>
+<p><code style="line-height: 1.5; font-size: 16pt;">Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36
+(KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36</code></p>
+<p>&mdash; All regular expressions are checked in a single pass for performance!</p>
+<p>&mdash; Can be loaded from YAML file or from a table in any source.</p>
+</section>
+
+<section class="slide">
+<h2>Query Result Cache</h2>
+
+<p><code style="line-height: 1.5">$ cat /etc/clickhouse-server/config.d/query_cache.yaml
+query_result_cache:
+    size: 1073741824
+    max_entries: 1024
+    max_entry_size: 104857600
+    max_entry_records: 30000000
+</code></p>
+<p><code style="line-height: 1.5">SET enable_experimental_query_result_cache = 1;</code></p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developers: Mikhail Stetsyuk, Robert Schultze.</p>
+</section>
+
+<section class="slide">
+<h2>Query Result Cache</h2>
+
+<p>Allows to control on per-query basis:</p>
+<p style="line-height: 1.25;">&mdash; min query runs to cache the result;<br/>
+&mdash; min query runtime to cache the result;<br/>
+&mdash; max result size to put into cache;<br/>
+&mdash; max staleness to use the cached entry;<br/>
+&mdash; passive usage of the existing entries in cache;<br/>
+&mdash; caching of queries with non-deterministic functions;<br/>
+&mdash; sharing the cache between users;</p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developers: Mikhail Stetsyuk, Robert Schultze.</p>
+<p style="color: gray;">Next steps: compressed cache; on disk cache; cache of intermediate data.</p>
+</section>
+
+<section class="slide">
+<h2>Inverted Full Text Indices</h2>
+
+<p><code style="font-size: 18pt;">ALTER TABLE hackernews_indexed
+  ADD INDEX inv_idx(text) TYPE <b style="color: green;">inverted</b>;
+
+ALTER TABLE hackernews_indexed MATERIALIZE INDEX inv_idx;
+</code></p>
+
+<p>Supports tokens and n-grams.</p>
+<p>Optimizes <b>hasToken</b>, <b>multiSearchAny</b>, equality comparison...</p>
+
+<p style="margin-top: 3em; color: gray; font-size: 14pt;">Developer: Larry Luo.</p>
+</section>
+
+<section class="slide">
+<h2>Inverted Full Text Indices</h2>
+
+<p><code style="font-size: 14pt; margin-right: -50px;">:) SELECT count() FROM hackernews WHERE hasToken(text, 'ClickHouse')
+
+┌─count()─┐
+│     948 │
+└─────────┘
+
+1 row in set. Elapsed: <b style="color: red;">0.579</b> sec. Processed 33.95 million rows,
+11.61 GB (58.63 million rows/s., 20.05 GB/s.)
+
+:) SELECT count() FROM <b style="color: green;">hackernews_indexed</b> WHERE hasToken(text, 'ClickHouse')
+
+┌─count()─┐
+│     948 │
+└─────────┘
+
+1 row in set. Elapsed: <b style="color: green;">0.206</b> sec. Processed 3.71 million rows,
+1.32 GB (18.00 million rows/s., 6.43 GB/s.)
+</code></p>
+
+<p style="margin-top: 3em; color: gray; font-size: 14pt;">Developer: Larry Luo.</p>
+</section>
+
+
+<section class="slide">
+<h2>Integrations</h2>
+</section>
+
+<section class="slide">
+<h2>Integrations</h2>
+<p>Metabase:</p>
+<p>&mdash; now official in the ClickHouse organization;<br/>
+&mdash; changed the license from AGPL to Apache 2.0;</p>
+<p>Java:</p>
+<p>&mdash; added R2DBC support in addition to JDBC;<br/>
+&mdash; support for file upload/download;</p>
+<p>Python:</p>
+<p>&mdash; server-side parameters binding;<br/>
+&mdash; support for file insert;<br/>
+&mdash; performance improvement with streaming;</p>
+<p>DBT: multithreading, CTE, incremental strategy;</p>
+<p>Apache Beam: update</p>
+</section>
+
+<section class="slide" style="background: url(pictures/cloud.jpg); background-size: cover;">
+<h2><span class="hilite">ClickHouse Cloud</span></h2>
+
+<p><span class="hilite">&mdash; free 30-day trial up to 10 TB of data;</span></p>
+<p><span class="hilite">&mdash; affordable clusters for developers with full HA &lt; $100/month</span></p>
+<p><span class="hilite">Try it! <a href="https://clickhouse.cloud/">https://clickhouse.cloud/</a>.</span></p>
+</section>
+
+<section class="slide" style="background: url(pictures/winter2.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
+<h2 style="color: white;">Q&amp;A</a></h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+
