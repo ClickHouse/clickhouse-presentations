@@ -338,9 +338,10 @@ WHERE length(values) >= 3
 
 <section class="slide">
 <h2>Now I Have My Data</h2>
-<p>It took half a day to load. The table size on disk is 720 GB <span style="color: gray;">(original 3.5 TB)</span>.</p>
-<p>The speed degraded to <b style="color: green;">15 million rows/second</b> over time.</p>
-<p><code style="font-size: 14pt;">:) SELECT count() FROM wikistat
+<p>It took 8 hours to load. The table size on disk is 720 GB <span style="color: gray;">(original 3.5 TB)</span>.</p>
+<p>The speed degraded to <b style="color: green;">14 million rows/second</b> over time.</p>
+<p><code style="font-size: 14pt;">
+:) SELECT count() FROM wikistat
 
 ┌──────count()─┐
 │ 380325960756 │
@@ -351,9 +352,6 @@ WHERE length(values) >= 3
 ┌─────sum(hits)─┐
 │ 1340877721420 │
 └───────────────┘
-
-1 row in set. Elapsed: 1.831 sec.
-Processed 3.74 billion rows, 79.49 GB (2.04 billion rows/s., 43.40 GB/s.)
 </code></p>
 </section>
 
