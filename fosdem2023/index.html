@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse at FOSDEM 2023</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 2; font-size: 20pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         table, tr, td { border: 0; }
+         .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse at FOSDEM 2023</h1>
+    </header>
+    <section class="slide" id="cover">
+        <img src="https://presentations.clickhouse.com/original_website/logo.svg" style="width: 15%; position: absolute; right: 20px; bottom: 20px;" />
+        <h1 style="margin-top: 80px; line-height: 150%; color: black; font-size: 42pt">Building Analytical Applications<br/> With ClickHouse</h1>
+    </section>
+
+<section class="slide">
+<h2>How To Build an Analytical App?</h2>
+<p>&mdash; data collection;</p>
+<p>&mdash; data preparation;</p>
+<p>&mdash; data loading;</p>
+<p>&mdash; data visualization;</p>
+</section>
+
+<section class="slide">
+<h2>How To Build an Analytical App?</h2>
+<p class="cloud">
+<span>Apache Flink</span>
+<span>Apache Beam</span>
+<span>Apache Kafka</span>
+<span>Apache Pulsar</span>
+<span>Apache Spark</span>
+<span>Debezium</span>
+<span>Decodable</span>
+<span>Airflow</span>
+<span>Airbyte</span>
+<span>dbt</span>
+<span>Grafana</span>
+<span>Apache Superset</span>
+<span>Metabase</span>
+<span>AWS Lambda</span>
+<span>Prometheus</span>
+<span>Apache Iceberg</span>
+<span>Databricks</span>
+<span>Datacracks</span>
+<span>Kubernetes</span>
+<span>Envoy</span>
+<span>Istio</span>
+<span>Node.js</span>
+<span>Deno</span>
+<span>React</span>
+<span>Typescript</span>
+<span>Webpack</span>
+</p>
+</section>
+
+<section class="slide">
+<h2>What We Will Do?</h2>
+<p>&mdash; I have <b style="color: red;">no idea</b> what I want to get...</p>
+<p>&mdash; let's take some interesting dataset,
+<br/>&emsp; and we will find something!</p>
+<p>Logs, Metrics, Time-Series, Events, Clicks, Posts...</p>
+<p>... we want to <b style="color: green;">analyze everything</b>!</p>
+</section>
+
+<section class="slide">
+<h2>Finding the Data</h2>
+<p>A plenty of good, public, updateable datasets exist:</p>
+<p style="line-height: 1.5;">&mdash; Internet Archive
+<br/>&mdash; Zenodo.org
+<br/>&mdash; Common Crawl, HTTP Archive
+<br/>&mdash; Wikipedia
+<br/>&mdash; GitHub Archive
+<br/>&mdash; Blockchains
+<br/>&mdash; Network scans</p>
+</section>
+
+<section class="slide">
+<h2>Example 1: Time Series</h2>
+<p>Wikimedia Downloads:<br/>
+<a href="https://dumps.wikimedia.org/">https://dumps.wikimedia.org/</a></p>
+<p>&mdash; wiki dumps;</p>
+<p>&mdash; edits history;</p>
+<p>&mdash; <b style="color: green;">pageview statistics</b>;</p>
+</section>
+
+<section class="slide">
+<h2>Wikipedia Pageviews</h2>
+<p><a href="https://dumps.wikimedia.org/other/pageviews/">https://dumps.wikimedia.org/other/pageviews/</a></p>
+<p>&mdash; public domain!</p>
+<p>&mdash; hourly updated.</p>
+<p>&mdash; ~70 000 files, 3.5 TB gzip.</p>
+<p style="color: green;">Let's download it.</p>
+</section>
+
+<section class="slide">
+<img src="pictures/pageviews_list.png"/>
+</section>
+
+<section class="slide">
+<h2>Wikipedia Pageviews</h2>
+<p style="margin-top: -1em;">Get the list of links:</p>
+<p><code style="line-height: 1.5; font-size: 14pt;">for i in {2015..2023}; do
+  for j in {01..12}; do
+    echo "${i}-${j}" >&amp;2
+    curl -sSL "https://dumps.wikimedia.org/other/pageviews/$i/$i-$j/" \
+      | grep -oE 'pageviews-[0-9]+-[0-9]+\.gz'
+  done
+done | sort | uniq | tee links.txt
+</code></p>
+<p>Download them (rate limited, max 3 connections):</p>
+<p><code style="line-height: 1.5; font-size: 14pt;">sed -r 's!pageviews-([0-9]{4})([0-9]{2})[0-9]{2}-[0-9]+\.gz!
+          https://dumps.wikimedia.org/other/pageviews/\1/\1-\2/\0!' \
+  links.txt | xargs -P3 wget --continue
+</code></p>
+</section>
+
+<section class="slide">
+<h2>Wikipedia Pageviews</h2>
+<p style="margin-top: -1em;">Preview the data:</p>
+<p><code style="line-height: 1.5; font-size: 14pt;">en.m FORU_Oceania_Cup 1 0
+en.m FORscene 1 0
+en.m FOSB 1 0
+en.m FOSDEM 1 0
+en.m FOSD_metamodels 1 0
+<span style="color: gray;">|   \           \     \
+lang.subproject Title Pageviews unused</span>
+</code></p>
+<p>What is the data format and how to process it?</p>
+<p>Not CSV, not TSV, not JSON... whitespace-separated.<br/>
+How to load it? <span style="color: gray;">I don't want to use sed, awk, perl.</span></p>
+</section>
+
+<section class="slide">
+<h2>Previewing the Data</h2>
+<p style="margin-top: -1em;">With <b style="color: green;">clickhouse-local</b>
+<br/>&mdash; a small tool for data analytics on local and remote datasets.</p>
+
+<p>ClickHouse can work <b>as a server</b> (clickhouse-server)
+<br/>or <b>as a tool</b> without installation (clickhouse-local).</p>
+
+<p><b>All possible data formats:</b>
+<br/>&mdash; text: CSV, TSV, JSON, Values, MySQLDump, Regexp...
+<br/>&mdash; binary: Parquet, Arrow, ORC, Avro, BSON, Protobuf, MsgPack...
+<br/>&mdash; schemaful and schemaless;
+</p>
+
+<p><b>External data:</b>
+<br/>&mdash; remote databases: MySQL, PostgreSQL, MongoDB, ODBC, JDBC...
+<br/>&mdash; object storages: S3, HDFS, Azure...
+<br/>&mdash; external tables: Hudi, Delta Lake...
+<br/>&mdash; from URL and local files; from SQLite.
+</p>
+</section>
+
+<section class="slide">
+<h2>Previewing the Data</h2>
+<p style="margin-top: -1em;">With <b style="color: green;">clickhouse-local</b>
+<br/>&mdash; a small tool for data analytics on local and remote datasets.</p>
+<p>Similar tools: <span style="color: gray;">textql, octosql, dsq, duckdb, trdsql, q, datafusion-cli, spyql</span>.</p>
+
+<p>Install it:</p>
+<p><code>curl https://clickhouse.com/ | sh
+
+./clickhouse local</code></p>
+</section>
+
+<section class="slide">
+<p><code style="line-height: 1.1; font-size: 12pt; overflow-x: scroll; overflow-y: hidden;">$ clickhouse-local
+ClickHouse local version 23.2.1.726 (official build).
+
+:) SELECT * FROM <b>url</b>(
+  'https://dumps.wikimedia.org/<span style="color: gray;">...</span>/pageviews-20230203-<b>{00..23}</b>0000.gz',
+  <b>LineAsString</b>)
+LIMIT 10
+
+┌─line───────────────────────────────┐
+│ aa Category:Top_Level 1 0          │
+│ aa File:Bilgine-sor.jpg 6 0        │
+│ aa Main_Page 26 0                  │
+│ aa Main_page 2 0                   │
+│ aa Special:UserLogin 2 0           │
+│ aa Talk:Main_Page 1 0              │
+│ aa User:127.0.0.1 1 0              │
+│ aa User:Afar_god 2 0               │
+│ aa Wikipedia:Community_Portal 1 0  │
+│ aa.b File:Incubator-notext.svg 1 0 │
+└────────────────────────────────────┘
+
+:) SELECT <b>_file</b>, * FROM <b>file</b>('*.gz', <b>LineAsString</b>) WHERE line LIKE '%FOSDEM%'
+
+┌─_file────────────────────────┬─line──────────────────────────────────────────────────────────────┐
+│ pageviews-20150501-030000.gz │ commons.m File:FOSDEM2007Logo.png 1 0                             │
+│ pageviews-20150501-030000.gz │ commons.m Image:Dries_Buytaert_at_FOSDEM_2008_by_Wikinews.jpg 1 0 │
+└──────────────────────────────┴───────────────────────────────────────────────────────────────────┘
+</code></p>
+</section>
+
+<section class="slide">
+<p>Data cleaning, preparation, conversion:</p>
+<p><code style="margin: 0 -3em; line-height: 1.1; font-size: 12pt; overflow-x: scroll; overflow-y: hidden;">WITH
+    parseDateTimeBestEffort(extract(_file, '^pageviews-([\\d\\-]+)\\.gz$')) AS time,
+    splitByChar(' ', line) AS values,
+    splitByChar('.', values[1]) AS projects
+SELECT
+    time,
+    projects[1] AS project,
+    projects[2] AS subproject,
+    decodeURLComponent(values[2]) AS path,
+    CAST(values[3], 'UInt64') AS hits
+FROM file('pageviews*.gz', LineAsString)
+WHERE length(values) >= 3
+LIMIT 10
+
+┌────────────────time─┬─project─┬─subproject─┬─path────────────────────────────┬─hits─┐
+│ 2015-07-03 12:00:00 │ aa      │            │ Main_Page                       │    2 │
+│ 2015-07-03 12:00:00 │ aa      │            │ Talk:Main_Page                  │    1 │
+│ 2015-07-03 12:00:00 │ aa      │ m          │ Main_Page                       │    1 │
+│ 2015-07-03 12:00:00 │ ab      │            │ 2005                            │    1 │
+│ 2015-07-03 12:00:00 │ ab      │            │ 2017                            │    1 │
+│ 2015-07-03 12:00:00 │ ab      │            │ Акатегориа:Имереҭи              │    1 │
+│ 2015-07-03 12:00:00 │ ab      │            │ Акатегориа:Польша               │    1 │
+│ 2015-07-03 12:00:00 │ ab      │            │ Алахәыла:Everton_da_Costa_Neves │    1 │
+│ 2015-07-03 12:00:00 │ ab      │            │ Алахәыла:Vikipedisssttt         │    1 │
+│ 2015-07-03 12:00:00 │ ab      │            │ Алахәыла:WikiDreamer_Bot        │    1 │
+└─────────────────────┴─────────┴────────────┴─────────────────────────────────┴──────┘
+
+10 rows in set. Elapsed: 0.138 sec.
+</code></p>
+</section>
+
+<section class="slide">
+<p>Data cleaning, preparation, conversion:</p>
+<p><code style="margin: 0 -3em; line-height: 1.1; font-size: 12pt; overflow-x: scroll; overflow-y: hidden;">WITH
+    parseDateTimeBestEffort(extract(_file, '^pageviews-([\\d\\-]+)\\.gz$')) AS time,
+    splitByChar(' ', line) AS values,
+    splitByChar('.', values[1]) AS projects
+SELECT
+    time,
+    projects[1] AS project,
+    projects[2] AS subproject,
+    decodeURLComponent(values[2]) AS path,
+    CAST(values[3], 'UInt64') AS hits
+FROM <b style="color: green;">s3(
+    'https://clickhouse-public-datasets.s3.amazonaws.com/wikistat/original/pageviews*.gz',
+    LineAsString)</b>
+WHERE length(values) >= 3
+LIMIT 10
+
+┌────────────────time─┬─project─┬─subproject─┬─path────────────────────────────┬─hits─┐
+│ 2015-07-03 12:00:00 │ aa      │            │ Main_Page                       │    2 │
+│ 2015-07-03 12:00:00 │ aa      │            │ Talk:Main_Page                  │    1 │
+│ 2015-07-03 12:00:00 │ aa      │ m          │ Main_Page                       │    1 │
+│ 2015-07-03 12:00:00 │ ab      │            │ 2005                            │    1 │
+│ 2015-07-03 12:00:00 │ ab      │            │ 2017                            │    1 │
+│ 2015-07-03 12:00:00 │ ab      │            │ Акатегориа:Имереҭи              │    1 │
+│ 2015-07-03 12:00:00 │ ab      │            │ Акатегориа:Польша               │    1 │
+│ 2015-07-03 12:00:00 │ ab      │            │ Алахәыла:Everton_da_Costa_Neves │    1 │
+│ 2015-07-03 12:00:00 │ ab      │            │ Алахәыла:Vikipedisssttt         │    1 │
+│ 2015-07-03 12:00:00 │ ab      │            │ Алахәыла:WikiDreamer_Bot        │    1 │
+└─────────────────────┴─────────┴────────────┴─────────────────────────────────┴──────┘
+
+10 rows in set. Elapsed: 0.138 sec.
+</code></p>
+</section>
+
+<section class="slide">
+<h2>Data Loading</h2>
+<p>Install a real ClickHouse server instead of clickhouse-local.</p>
+<p>&mdash; but <b>clickhouse-server</b>, <b>clickhouse-local</b>, and <b>clickhouse-client</b>
+<br/>&emsp; are actually the same single binary!</p>
+<p><code style="font-size: 14pt; line-height: 1.5;">./clickhouse server    <span style="color: gray;"># run server in the current directory</span>
+./clickhouse install   <span style="color: gray;"># install ClickHouse with configs, logs, etc</span>
+
+sudo clickhouse start  <span style="color: gray;"># run the installed server</span>
+clickhouse-client      <span style="color: gray;"># connect the client</span>
+</code></p>
+</section>
+
+<section class="slide">
+<h2>Data Loading</h2>
+<p><code style="font-size: 14pt; line-height: 1.5;">CREATE TABLE wikistat
+(
+    time DateTime CODEC(Delta, ZSTD(3)),
+    project LowCardinality(String),
+    subproject LowCardinality(String),
+    path String CODEC(ZSTD(3)),
+    hits UInt64 CODEC(ZSTD(3))
+)
+ENGINE = MergeTree
+ORDER BY (path, time);
+</code></p>
+<p style="color: gray;">Kafka, Pulsar, Airbyte, dbt...?</p>
+</section>
+
+<section class="slide">
+<h2>Data Loading</h2>
+<p style="color: green; margin-top: -1em;"><b>INSERT SELECT ... FROM s3!</b></p>
+
+<p><code style="margin: 0 -3em; line-height: 1.5; font-size: 12pt; overflow-x: scroll; overflow-y: hidden;">INSERT INTO wikistat WITH
+    parseDateTimeBestEffort(extract(_file, '^pageviews-([\\d\\-]+)\\.gz$')) AS time,
+    splitByChar(' ', line) AS values,
+    splitByChar('.', values[1]) AS projects
+SELECT
+    time,
+    projects[1] AS project,
+    projects[2] AS subproject,
+    decodeURLComponent(values[2]) AS path,
+    CAST(values[3], 'UInt64') AS hits
+FROM s3(
+    'https://clickhouse-public-datasets.s3.amazonaws.com/wikistat/original/pageviews*.gz',
+    LineAsString)
+WHERE length(values) >= 3
+</code></p>
+</section>
+
+<section class="slide">
+    <video style="width: 100%;"><source src="video/insert.ogv" type="video/ogg"></video>
+</section>
+
+<section class="slide">
+    <video style="width: 100%;"><source src="video/dstat.ogv" type="video/ogg"></video>
+</section>
+
+<section class="slide">
+    <video style="width: 100%;"><source src="video/perf.ogv" type="video/ogg"></video>
+</section>
+
+<section class="slide">
+<h2>Now I Have My Data</h2>
+<p>It took half a day to load. The table size on disk is 720 GB <span style="color: gray;">(original 3.5 TB)</span>.</p>
+<p>The speed degraded to <b style="color: green;">15 million rows/second</b> over time.</p>
+<p><code style="font-size: 14pt;">:) SELECT count() FROM wikistat
+
+┌──────count()─┐
+│ 380325960756 │
+└──────────────┘
+
+:) SELECT sum(hits) FROM wikistat
+
+┌─────sum(hits)─┐
+│ 1340877721420 │
+└───────────────┘
+
+1 row in set. Elapsed: 1.831 sec.
+Processed 3.74 billion rows, 79.49 GB (2.04 billion rows/s., 43.40 GB/s.)
+</code></p>
+</section>
+
+<section class="slide">
+<h2>Now I Have My Data</h2>
+<p><code style="font-size: 14pt; margin-top: -1em; line-height: 1.1;">:) SELECT total_bytes / total_rows FROM system.tables
+WHERE name = 'wikistat' AND database = 'default'
+
+┌─divide(total_bytes, total_rows)─┐
+│               2.032924892694963 │
+└─────────────────────────────────┘
+
+:) SELECT name,
+    formatReadableSize(data_compressed_bytes) AS compr,
+    formatReadableSize(data_uncompressed_bytes) AS orig,
+    round(data_uncompressed_bytes / data_compressed_bytes, 2) AS ratio
+FROM system.columns WHERE table = 'wikistat' AND database = 'default'
+ORDER BY data_compressed_bytes DESC
+
+┌─name───────┬─compr──────┬─orig───────┬──ratio─┐
+│ time       │ 258.32 GiB │ 1.38 TiB   │   5.48 │
+│ subproject │ 170.14 GiB │ 452.88 GiB │   2.66 │
+│ hits       │ 114.95 GiB │ 2.77 TiB   │  24.65 │
+│ project    │ 84.25 GiB  │ 709.66 GiB │   8.42 │
+│ path       │ 29.00 GiB  │ 7.67 TiB   │ 270.85 │
+└────────────┴────────────┴────────────┴────────┘
+</code></p>
+</section>
+
+<section class="slide">
+<h2>Now I Have My Data, So What?</h2>
+<p>I still have no idea why do I need these<br/>hundreds of billions of records of something...</p>
+<p style="color: green;">&mdash; let's make realtime dashboards!</p>
+</section>
+
+<section class="slide">
+<h2>Dashboards</h2>
+<p style="color: gray;">Grafana? Superset? Metabase? Tableau? Observable?</p>
+<p>&mdash; why use Grafana if we can <b style="color: green;">write our own Grafana</b> in a day!</p>
+
+<p style="color: gray;">What JS framework to use? React? Vue? Svelte?
+<br/>Should I use Typescript? npm?</p>
+<p>&mdash; no, we will use <b style="color: green;">modern JavaScript</b>
+<br/><span style="color: gray;">and a random library for charts.</span></p>
+</section>
+
+<section class="slide" style="color: white; background: linear-gradient(to bottom, #00CCFF, #00D0D0);">
+<h2 style="background-image: linear-gradient(90deg, #F80, #FF0); background-size: 100%;
+    background-repeat: repeat;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    -moz-text-fill-color: transparent;
+    -webkit-background-clip: text;
+    -moz-background-clip: text;
+    text-shadow: white 0 0 5px;">Modern JavaScript</h2>
+<p>You write everything is a single static <a style="color: #FF0;" href="https://github.com/ClickHouse/ClickHouse/blob/master/programs/server/dashboard.html">.html</a> file.</p>
+<p>No frameworks. No build systems. <span style="color: gray;">No friends.</span></p>
+<p style="margin-top: 2em;">What charting library to use?</p>
+<p>&mdash; <a href="https://github.com/leeoniya/uPlot/" style="color: #FF0;">https://github.com/leeoniya/uPlot/</a></p>
+<p style="border-left: 5px solid gray; padding-left: 0.5em;">μPlot is a <b style="color: #FF0;">fast, memory-efficient</b> library... for plotting time series</p>
+<p style="color: black;">&mdash; sold.</p>
+</section>
+
+<section class="slide" style="color: white; background: linear-gradient(to bottom, #00CCFF, #00D0D0);">
+<h2 style="background-image: linear-gradient(90deg, #F80, #FF0); background-size: 100%;
+    background-repeat: repeat;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    -moz-text-fill-color: transparent;
+    -webkit-background-clip: text;
+    -moz-background-clip: text;
+    text-shadow: white 0 0 5px;">Modern JavaScript</h2>
+<p>How to query the database?</p>
+<p style="margin-top: -0.5em; margin-bottom: 1.5em;">&mdash; directly from web browser, with REST API.</p>
+<p><code style="padding: 0.5em; background: rgba(255, 255, 255, 1); color: #033; box-shadow: 0 0 1rem rgba(0,0,0,25%);">async function load() {
+
+    const response = await fetch(
+        clickhouse_url,
+        { method: "POST", body: `
+            <b style="color: green;">SELECT ...
+            FROM wikistat
+            FORMAT JSON</b>` });
+    ...
+}</code></p>
+</section>
+
+<section class="slide">
+<h2>ClickHouse REST API</h2>
+<p>&mdash; authentication and access control;</p>
+<p>&mdash; quotas, rate limiting, query complexity limiting;</p>
+<p>&mdash; parameterized queries and views;</p>
+<p>&mdash; configurable URL handlers;</p>
+<p>&mdash; CORS configuration;</p>
+
+<p>Open ClickHouse to the Internet and get away with that.</p>
+</section>
+
+<section class="slide">
+<h2>Wiki Trends</h2>
+<p><code style="line-height: 1.5;">SELECT toMonday(time), sum(hits)
+FROM wikistat WHERE path = {path:String}
+GROUP BY 1 ORDER BY 1</code></p>
+</section>
+
+<section class="slide">
+    <video style="width: 100%;"><source src="video/query.ogv" type="video/ogg"></video>
+</section>
+
+<section class="slide">
+<h2>Wiki Trends</h2>
+<p><a href="https://pastila.nl/?0160574b/cec44b20f21da275fcbd8c1d2f3708d9.link">https://pastila.nl/?0160574b/cec44b20f21da275fcbd8c1d2f3708d9.link</a></p>
+</section>
+
+<section class="slide">
+    <video style="width: 100%;"><source src="video/dashboards.ogv" type="video/ogg"></video>
+</section>
+
+<section class="slide">
+<h2>Q&amp;A</a></h2>
+
+<p>ClickHouse Playground: <a href="https://play.clickhouse.com/play?user=play">https://play.clickhouse.com/play?user=play</a></p>
+<p>ClickHouse CI status: <a href="https://aretestsgreenyet.com/">https://aretestsgreenyet.com/</a></p>
+<p>Pastila.nl: <a href="https://pastila.nl/">https://pastila.nl/</a></p>
+<p>Dashboards source code: <a href="https://github.com/ClickHouse/ClickHouse/blob/master/programs/server/dashboard.html">https://github.com/ClickHouse/ClickHouse/blob/master/programs/server/dashboard.html</a></p>
+
+<p style="color: gray; font-size: 12pt;">* Alternative services do exist. Example: <a href="https://www.wikishark.com/">https://www.wikishark.com/</a><br/>
+It is using a hand-crafted data structure instead of ClickHouse,<br/>
+the implementation is non-trivial, and it is less space and time efficient.</p>
+
+<p style="color: gray; font-size: 12pt;">* All the tools, e.g. Grafana, Superset, Metabase, dbt, Airbyte
+<br/>&mdash; work perfectly with ClickHouse, and their usages are preferred.</p>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+
