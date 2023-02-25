@@ -617,7 +617,7 @@ SETTINGS <b style="color: green;">disk = disk(
 )
 ENGINE = MergeTree
 ORDER BY (event_type, repo_name, created_at)
-SETTINGS disk = disk(type = 'web', endpoint = 'http://clickhouse-public-datasets.s3.amazonaws.com/web/');
+SETTINGS disk = disk(type = 'web', endpoint = 'https://clickhouse-public-datasets.s3.amazonaws.com/web/');
 
 SELECT body FROM github_events WHERE actor_login = 'alexey-milovidov' AND event_type = 'IssueCommentEvent' LIMIT 10;
 </p></code>
