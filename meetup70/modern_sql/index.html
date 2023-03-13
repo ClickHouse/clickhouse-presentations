@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Modern SQL</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+        code { display: block; white-space: pre; background-color: #EEE; }
+   </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>Modern SQL</h1>
+    </header>
+
+    <section class="slide" id="cover">
+        <h1 style="margin-top: 150px">Modern SQL</h1>
+    </section>
+
+    <section class="slide">
+        <h2>About me</h2>
+        <p>Maksim, developer of ClickHouse.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Modern SQL</h2>
+
+        <p>1. Introduction.</p>
+        <p>2. ClickHouse SQL.</p>
+        <p>3. High Level architecture.</p>
+        <p>4. Analyzer.</p>
+        <P>5. Planner.</P>
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">Introduction</h1>
+    </section>
+
+    <section class="slide">
+        <h2>Problems</h2>
+
+        <p>We have a lot of powerful SQL features. But when we combine them together, query analysis
+            becomes extremely complex.</p>
+        <p>In old infrastructure there is complex internal logic based on AST rewriting.</p>
+        <p>No natural support for scoping, aliases, lambdas.</p>
+        <p>There is no specification for ClickHouse SQL extensions.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Problems</h2>
+
+        <p>No clean separation between query Analysis and Planning.</p>
+        <p>Support for JOINs is not ideal, some features are not supported because we do not have
+            enought semantic information (Indexes, PREWHERE).</p>
+    </section>
+
+    <section class="slide">
+        <h2>Solution</h2>
+
+        <p>Redesign and reimplement query analysis and planning stage.</p>
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">ClickHouse SQL</h1>
+    </section>
+
+    <section class="slide">
+        <h2>ClickHouse SQL</h2>
+
+        <p>Extension of standard SQL.</p>
+        <p>Support almost all standard SQL features. Example: Scalar/Non-scalar subqueries, JOINs, CTEs.</p>
+        <p>Support a lot of specific and useful ordinary and aggregate functions.</p>
+    </section>
+
+    <section class="slide">
+        <h2>ClickHouse SQL</h2>
+
+        <p>The most important features:</p>
+        <p>1. Aliases.</p>
+        <p>2. Arrays, ARRAY JOIN, lambdas.</p>
+        <p>3. Composite types and compound expressions.</p>
+        <p>4. Matchers.</p>
+        <p>5. Column transformers.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Aliases</h2>
+
+        <p>Standard SQL does not allow to reuse aliases in query.</p>
+        <p>In our extension aliases can be defined and reused in any part of the query.</p>
+        <p>This can lead to huge query simplification for complex queries with a lot of expressions.</p>
+
+        <code style="font-size: 18pt;">SELECT 1 AS a, a;</code>
+        <code style="font-size: 14pt;">┌─a─┬─a─┐
+│ 1 │ 1 │
+└───┴───┘
+</code>
+        <code style="font-size: 18pt;">SELECT a, 1 AS a;</code>
+        <code style="font-size: 14pt;">┌─a─┬─a─┐
+│ 1 │ 1 │
+└───┴───┘
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Example</h2>
+
+        <p>Assume that you want to compute some complex expressions <b>expr_1</b>, <b>expr_2</b>, and use them in query:</p>
+        <code style="font-size: 18pt;">SELECT expr_1, expr_2, expr_1 / expr_2 FROM test_table
+WHERE expr_1 > 0
+ORDER BY expr_2;</code>
+    </section>
+
+    <section class="slide">
+        <h2>Example</h2>
+
+        <p>The only portable solution in standard SQL is to move expressions to subquery:</p>
+        <code style="font-size: 18pt;">SELECT expr_1, expr_2, expr_1 / expr_2 FROM
+    (SELECT expr_1, expr_2 FROM test_table)
+WHERE expr_1 > 0
+ORDER BY expr_2;
+</code>
+    </section>
+
+    <section class="slide">
+        <h2>Example</h2>
+
+        <p>Readability can be additionally improved using CTE:</p>
+        <code style="font-size: 16pt;">WITH test_table_updated AS
+    (SELECT expr_1, expr_2 FROM test_table)
+SELECT expr_1, expr_2, expr_1 / expr_2 FROM test_table_updated
+WHERE expr_1 > 0
+ORDER BY expr_2;</code>
+    </section>
+
+    <section class="slide">
+        <h2>Example</h2>
+
+        <p>In ClickHouse we can just use aliases:</p>
+        <code style="font-size: 18pt;">SELECT expr_1 <b>AS a</b>, expr_2 <b>AS b</b>, a / b FROM test_table
+WHERE a > 0
+ORDER BY b;</code>
+    </section>
+
+    <section class="slide">
+        <h2>Example</h2>
+
+        <p>Aliases will work with any expressions:</p>
+        <code style="font-size: 16pt;">SELECT 1 AS a, 2 AS b, a / b FROM numbers(1);</code>
+        <code style="font-size: 16pt;">┌─a─┬─b─┬─divide(a, b)─┐
+│ 1 │ 2 │          0.5 │
+└───┴───┴──────────────┘
+        </code>
+        <code style="font-size: 16pt;">SELECT (1 + 1) AS a, 2 AS b, a / b FROM numbers(1);</code>
+
+        <code style="font-size: 16pt;">┌─a─┬─b─┬─divide(a, b)─┐
+│ 2 │ 2 │            1 │
+└───┴───┴──────────────┘
+        </code>
+
+        <code style="font-size: 16pt;">SELECT (SELECT 1) AS a, (SELECT 2) AS b, a / b FROM numbers(1);</code>
+
+        <code style="font-size: 16pt;">┌─a─┬─b─┬─divide(a, b)─┐
+│ 1 │ 2 │          0.5 │
+└───┴───┴──────────────┘
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Reuse expressions</h2>
+
+        <p>Asssume we have some complex expression <b>expr</b>, and we have <b>func_1</b> and <b>func_2</b>.
+            And we want to reuse <b>expr</b>, to simplify query:</p>
+        <code style="font-size: 16pt;">SELECT func_1(expr) / func_2(expr) FROM test_table;</code>
+    </section>
+
+    <section class="slide">
+        <h2>Reuse expressions</h2>
+
+        <p>Give it alias, because they can be defined in any place of the query:</p>
+        <code style="font-size: 16pt;">SELECT func_1(expr_1 AS value) / func_2(value) FROM test_table;</code>
+        <br>
+        <p>Or we can reuse common expressions in WITH statement:</p>
+        <code style="font-size: 16pt;">WITH expr_1 AS value
+SELECT func_1(value) / func_2(value) FROM test_table;</code>
+    </section>
+
+    <section class="slide">
+        <h2>Reuse expressions</h2>
+
+        <p>ClickHouse SQL is extension on top of standard SQL. Reusing expressions in WITH does not break standard SQL CTEs:</p>
+        <code style="font-size: 16pt;">WITH updated_test_table AS (SELECT id FROM test_table),
+    expr_1 AS value,
+SELECT func_1(value) / func_2(value) FROM updated_test_table;</code>
+    </section>
+
+    <section class="slide">
+        <h2>Expressions</h2>
+
+        <p>Expressions can be used in any part of the query:</p>
+
+        <code style="font-size: 16pt;">SELECT number FROM numbers(10) LIMIT (SELECT 1) + (SELECT 1);
+        </code>
+        <code style="font-size: 16pt;">┌─number─┐
+│      0 │
+│      1 │
+└────────┘
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Arrays</h2>
+
+        <p>A lot of features to help work with arrays:</p>
+        <p>1. ARRAY JOIN.</p>
+        <p>2. Special functions to work with arrays.</p>
+        <p>3. Special <b>arrayJoin</b> function.</p>
+
+        <code style="font-size: 16pt;">SELECT [1, 2, 3] AS array, arrayReduce('sum', array);
+        </code>
+
+        <code style="font-size: 16pt;">┌─array───┬─arrayReduce('sum', array)─┐
+│ [1,2,3] │                         6 │
+└─────────┴───────────────────────────┘
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>ARRAY JOIN</h2>
+
+        <code style="font-size: 16pt;">SELECT number, array_element FROM numbers(2)
+    ARRAY JOIN [1,2,3] AS array_element;
+        </code>
+
+        <code style="font-size: 16pt;">┌─number─┬─array_element─┐
+│      0 │             1 │
+│      0 │             2 │
+│      0 │             3 │
+│      1 │             1 │
+│      1 │             2 │
+│      1 │             3 │
+└────────┴───────────────┘
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>ARRAY JOIN</h2>
+
+        <p>Extract Perf metrics for specific query from query log:</p>
+        <code style="font-size:12pt;">SELECT PE.Names AS ProfileEventName, PE.Values AS ProfileEventValue
+FROM <b>system.query_log</b> ARRAY JOIN ProfileEvents AS PE
+WHERE query_id='344b07d9-9d7a-48f0-a17e-6f5f6f3d61f5'
+AND ProfileEventName LIKE 'Perf%';
+        </code>
+
+        <code style="font-size:12pt;">┌─ProfileEventName─────────────┬─ProfileEventValue─┐
+│ PerfCpuCycles                │       40496995274 │
+│ PerfInstructions             │       57259199973 │
+│ PerfCacheReferences          │        2072274618 │
+│ PerfCacheMisses              │         146570206 │
+│ PerfBranchInstructions       │        8675194991 │
+│ PerfBranchMisses             │         259531879 │
+│ PerfStalledCyclesFrontend    │         813419527 │
+│ PerfStalledCyclesBackend     │       15797162832 │
+│ PerfCpuClock                 │       10587371854 │
+│ PerfTaskClock                │       10587382785 │
+│ PerfContextSwitches          │              3009 │
+...
+│ PerfInstructionTLBReferences │           1344998 │
+│ PerfInstructionTLBMisses     │            181635 │
+└──────────────────────────────┴───────────────────┘
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Lambdas</h2>
+
+        <p>Can be arguments to high-order functions:</p>
+        <code style="font-size:16pt;">SELECT arrayMap(x -> x + 1, [1, 2, 3]) AS array_map;</code>
+
+        <code style="font-size:16pt;">┌─array_map─┐
+│ [2,3,4]   │
+└───────────┘
+        </code>
+
+        <p>Can capture columns from outside scope:</p>
+        <code style="font-size:16pt;">SELECT number, arrayMap(x -> x + number, [1, 2, 3]) AS array_map
+    FROM numbers(3);</code>
+
+        <code style="font-size:16pt;">┌─number─┬─array_map─┐
+│      0 │ [1,2,3]   │
+│      1 │ [2,3,4]   │
+│      2 │ [3,4,5]   │
+└────────┴───────────┘
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Compound expressions</h2>
+
+        <p>ClickHouse supports composite types <b>Tuple</b>, <b>JSON</b>:</p>
+
+        <code style="font-size:14pt;">CREATE TABLE points (point Tuple(x UInt64, y UInt64))
+ENGINE=MergeTree ORDER BY point;
+
+INSERT INTO points VALUES ((0, 0)), ((1, 1)), ((2, 2));
+
+SELECT point.x, point.y FROM points;
+</code>
+
+        <code style="font-size:14pt;">
+┌─point.x─┬─point.y─┐
+│       0 │       0 │
+│       1 │       1 │
+│       2 │       2 │
+└─────────┴─────────┘
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Compound expressions</h2>
+
+        <p>Functions can return composite types.</p>
+        <p>Function <b>simpleLinearRegression</b> returns coefficients <b>k</b> and <b>b</b>, of the resulting line y = k * x + b:</p>
+
+        <code style="font-size:14pt;">SELECT simpleLinearRegression(point.x, point.y) FROM points;
+        </code>
+
+        <code style="font-size:14pt;">┌─simpleLinearRegression(point.x, point.y)─┐
+│ (1,0)                                    │
+└──────────────────────────────────────────┘</code>
+    </section>
+
+    <section class="slide">
+        <h2>Matchers</h2>
+
+        <p>Select all columns:</p>
+        <code style="font-size:18pt;">SELECT * FROM hits;</code>
+
+        <br>
+        <p>Select only specific subset of columns:</p>
+        <code style="font-size:18pt;">SELECT COLUMNS('ParsedParams.*') FROM hits;</code>
+        <code style="font-size:18pt;">SELECT COLUMNS(WatchID, UserID) FROM hits;</code>
+    </section>
+
+    <section class="slide">
+        <h2>Column transformers</h2>
+
+        <p>Apply transformations for selected columns, or remove some columns from selection:</p>
+
+        <code style="font-size:16pt;">SELECT * APPLY toString FROM hits;</code>
+        <code style="font-size:16pt;">SELECT * APPLY x -> toString(x) FROM hits;</code>
+        <code style="font-size:16pt;">SELECT * EXCEPT UserID FROM hits;</code>
+        <code style="font-size:16pt;">SELECT * REPLACE toString(UserID) AS UserID FROM hits;</code>
+        <code style="font-size:16pt;">SELECT COLUMNS('ParsedParams.*') APPLY toString FROM hits;</code>
+        <code style="font-size:16pt;">SELECT COLUMNS(WatchID) APPLY x -> toString(x) FROM hits;</code>
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">High Level architecture</h1>
+    </section>
+
+    <section class="slide">
+        <h2>Problems</h2>
+
+        <p>Query analysis for our non standard SQL is extremely complex.</p>
+        <p>When so many flexible features start to work together, there are non trivial ways how you can combine them:</p>
+
+        <code style="font-size:14pt;">SELECT value_3, value AS value_2, 1 AS value_1, value_2 AS value_3;
+        </code>
+        <code style="font-size:14pt;">SELECT point AS point_alias, point_alias.x FROM points;
+        </code>
+        <code style="font-size:14pt;">SELECT point.x FROM (SELECT point FROM points);
+        </code>
+        <code style="font-size:14pt;">SELECT point.* APPLY toString FROM points;
+        </code>
+        <code style="font-size:14pt;">SELECT untuple(point) AS value_untuple, value_untuple FROM points;
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Problems</h2>
+
+        <p>Support of some features for JOINs was not ideal:</p>
+
+        <p>1. Multiple JOINs are rewritten into subqueries. These lead to name clashing, missing aliases, and a lot of missing optimizations.</p>
+        <p>2. Indexes does not work for JOINs (KeyCondition, Skipping Indexes).</p>
+        <p>3. PREWHERE does not work for JOINs.</p>
+        <p>4. FINAL, SAMPLE BY does not work for JOINs.</p>
+    </section>
+
+    <section class="slide">
+        <h2>High Level Architecture</h2>
+
+        <p>1. Analysis infrastructure is responsible for query analysis stage. Input is AST output is QueryTree.</p>
+        <p>2. Planner is responsible for query planning. Input is QueryTree output is QueryPlan.</p>
+        <p>3. Most optimizations are done on query plan level. Input is QueryPlan output is QueryPipeline.</p>
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">Analyzer</h1>
+    </section>
+
+    <section class="slide">
+        <h2>Query Analysis</h2>
+
+        <p>Query Tree data structure:</p>
+        <p>1. Contains all semantic information that is necessary to execute query.</p>
+        <p>2. Interface between Analyzer and Planner.</p>
+        <p>3. Build from AST.</p>
+        <p>4. Can be converted back to valid AST.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Query Analysis</h2>
+
+        <p>Query Tree has following nodes:</p>
+        <p>1. Identifier.</p>
+        <p>2. Matchers (Asterisk, COLUMNS). Column transformers.</p>
+        <p>3. Constants.</p>
+        <p>4. Functions. Lambdas.</p>
+        <p>5. Table Expressions (Query, Union, Table, Table Function, JOIN, ARRAY JOIN).</p>
+        <p>6. Columns. Each column contain pointer its source (Lambda, Table expression).</p>
+    </section>
+
+    <section class="slide">
+        <h2>Query Analysis</h2>
+
+        <p>Infrastructure is build around passes (IQueryTreePass). Inspired by LLVM.</p>
+        <p>QueryAnalysis is first and the most important pass.</p>
+        <p>We should create new passes only if optimization or feature is impossible or inconvenient to implement on top of query plan.</p>
+        <p>Example of good passes are predicate rewrite, some aggregate functions optimizations.</p>
+        <p>Introspection is done with <b>EXPLAIN QUERY TREE</b> system query.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Query Analysis Pass</h2>
+
+        <p>Query analysis pass is responsible for query analysis and validation.</p>
+        <p>All identifier and matcher nodes are resolved.</p>
+        <p>All functions, lambdas are resolved. Constant folding is performed.</p>
+        <p>All subqueries are resolved. Constant folding is performed if needed.</p>
+        <p>Projection columns are calculated for Query node.</p>
+        <p>Query is validated.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Example Query Analysis Pass</h2>
+
+        <p>EXPLAIN QUERY TREE run_passes = 0 SELECT id, value FROM test_table;</p>
+
+        <code style="font-size: 12pt;">┌─explain──────────────────────────────────────┐
+│ QUERY id: 0                                  │
+│   PROJECTION                                 │
+│     LIST id: 1, nodes: 2                     │
+│       IDENTIFIER id: 2, identifier: id       │
+│       IDENTIFIER id: 3, identifier: value    │
+│   JOIN TREE                                  │
+│     IDENTIFIER id: 4, identifier: test_table │
+└──────────────────────────────────────────────┘
+    </code>
+    </section>
+
+    <section class="slide">
+        <h2>Example Query Analysis Pass</h2>
+        <p>EXPLAIN QUERY TREE run_passes = 1 SELECT id, value FROM test_table;</p>
+
+        <code style="font-size: 12pt;">┌─explain───────────────────────────────────────────────────────────────────┐
+│ QUERY id: 0                                                               │
+│   PROJECTION COLUMNS                                                      │
+│     id UInt64                                                             │
+│     value String                                                          │
+│   PROJECTION                                                              │
+│     LIST id: 1, nodes: 2                                                  │
+│       COLUMN id: 2, column_name: id, result_type: UInt64, <b>source_id: 3</b>    │
+│       COLUMN id: 4, column_name: value, result_type: String, <b>source_id: 3</b> │
+│   JOIN TREE                                                               │
+│     TABLE <b>id: 3</b>, table_name: default.test_table                           │
+└───────────────────────────────────────────────────────────────────────────┘
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Example Query Analysis Pass</h2>
+        <p>EXPLAIN QUERY TREE <b>dump_ast = 1</b> SELECT id, value FROM test_table;</p>
+
+    <code style="font-size: 12pt;">┌─explain───────────────────────────────────────────────────────────────────┐
+│ QUERY id: 0                                                               │
+│   PROJECTION COLUMNS                                                      │
+│     id UInt64                                                             │
+│     value String                                                          │
+│   PROJECTION                                                              │
+│     LIST id: 1, nodes: 2                                                  │
+│       COLUMN id: 2, column_name: id, result_type: UInt64, source_id: 3    │
+│       COLUMN id: 4, column_name: value, result_type: String, source_id: 3 │
+│   JOIN TREE                                                               │
+│     TABLE id: 3, table_name: default.test_table                           │
+│                                                                           │
+│ SELECT                                                                    │
+│     default.test_table.id AS id,                                          │
+│     default.test_table.value AS value                                     │
+│ FROM default.test_table                                                   │
+└───────────────────────────────────────────────────────────────────────────┘
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Example Query Analysis Pass</h2>
+
+        <p>EXPLAIN QUERY TREE SELECT arrayMap(x -> x, [1]) FROM test_table;</p>
+
+        <code style="font-size: 10pt;">┌─explain───────────────────────────────────────────────────────────────────────────────────────────┐
+│ QUERY id: 0                                                                                       │
+│   PROJECTION COLUMNS                                                                              │
+│     arrayMap(lambda(tuple(x), x), [1]) Array(UInt8)                                               │
+│   PROJECTION                                                                                      │
+│     LIST id: 1, nodes: 1                                                                          │
+│       FUNCTION id: 2, function_name: arrayMap, function_type: ordinary, result_type: Array(UInt8) │
+│         ARGUMENTS                                                                                 │
+│           LIST id: 3, nodes: 2                                                                    │
+│             <b>LAMBDA id: 4</b>                                                                          │
+│               ARGUMENTS                                                                           │
+│                 LIST id: 5, nodes: 1                                                              │
+│                   COLUMN id: 6, column_name: x, result_type: UInt8, source_id: 4                  │
+│               EXPRESSION                                                                          │
+│                 COLUMN id: 6, column_name: x, result_type: UInt8, <b>source_id: 4</b>                    │
+│             CONSTANT id: 7, constant_value: Array_[UInt64_1], constant_value_type: Array(UInt8)   │
+│   JOIN TREE                                                                                       │
+│     TABLE id: 8, table_name: default.test_table                                                   │
+└───────────────────────────────────────────────────────────────────────────────────────────────────┘
+    </code>
+    </section>
+
+    <section class="slide">
+        <h2>Example Query Analysis Pass</h2>
+        <p>EXPLAIN QUERY TREE <b>dump_passes = 1</b> SELECT id, value FROM test_table;</p>
+        <code style="font-size: 10pt;">
+┌─explain───────────────────────────────────────────────────────────────────┐
+│ Pass 1 QueryAnalysis - Resolve type for each query expression. ...        │
+│ Pass 2 FunctionToSubcolumns - Rewrite function to subcolumns, ...         │
+│ Pass 3 CountDistinct - Optimize single countDistinct into ...             │
+│ Pass 4 RewriteAggregateFunctionWithIf - Rewrite aggregate ...             │
+│ Pass 5 SumIfToCountIf - Rewrite sum(if) and sumIf into countIf ...        │
+│ ...                                                                       │
+│ Pass 20 ConvertOrLikeChain - Replaces all the 'or's with ...              │
+│ Pass 21 LogicalExpressionOptimizer - Transform equality chain ...         │
+│ Pass 22 GroupingFunctionsResolvePass - Resolve GROUPING ...               │
+│ Pass 23 AutoFinalOnQueryPass - Automatically applies final ...            │
+│ Pass 24 CrossToInnerJoin - Replace CROSS JOIN with INNER JOIN ...         │
+│ Pass 25 ShardNumColumnToFunctionPass - Rewrite _shard_num ...             │
+│ QUERY id: 0                                                               │
+│   PROJECTION COLUMNS                                                      │
+│     id UInt64                                                             │
+│     value String                                                          │
+│   PROJECTION                                                              │
+│     LIST id: 1, nodes: 2                                                  │
+│       COLUMN id: 2, column_name: id, result_type: UInt64, source_id: 3    │
+│       COLUMN id: 4, column_name: value, result_type: String, source_id: 3 │
+│   JOIN TREE                                                               │
+│     TABLE id: 3, table_name: default.test_table                           │
+└───────────────────────────────────────────────────────────────────────────┘
+</code>
+    </section>
+
+    <section class="slide">
+        <h2>Analyzer</h2>
+
+        <p>Additionally new query analysis infrastructure brings a lot of new features.</p>
+        <p>Lambdas, compound expressions, matchers, column transformers are now natural part of the language.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Standalone lambdas</h2>
+
+        <p>Similar how aliases can help you reuse expressions, standalone lambdas can help you reuse functions:</p>
+        <code style="font-size: 18pt;">WITH (x -> x + 1) AS plusOne SELECT plusOne(1)
+        </code>
+
+        <code style="font-size: 18pt;">┌─plusOne(1)─┐
+│          2 │
+└────────────┘</code>
+
+    </section>
+
+    <section class="slide">
+        <h2>Standalone lambdas</h2>
+
+        <p>Additionally lambdas can:</p>
+        <p>1. Take other lambdas as argument.</p>
+        <p>2. Call other lambdas.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Standalone lambdas</h2>
+
+        <code style="font-size: 14pt;">WITH ((inner_function, argument) -> inner_function(argument)) AS evaluate
+SELECT evaluate(x -> x + 1, 1) AS function_call;
+</code>
+
+        <code style="font-size: 14pt;">┌─function_call─┐
+│             2 │
+└───────────────┘
+        </code>
+
+        <br>
+
+<code style="font-size: 14pt;">WITH ((inner_function, argument) -> inner_function(argument)) AS evaluate,
+(x -> x + 1) AS plusOne
+SELECT evaluate(plusOne, 1) AS function_call;</code>
+
+        <code style="font-size: 14pt;">┌─function_call─┐
+│             2 │
+└───────────────┘
+            </code>
+    </section>
+
+    <section class="slide">
+        <h2>Compound expressions</h2>
+
+        <p>Compound expressions can be aliased and reused as any ordinary expression:</p>
+
+        <code style="font-size:14pt;">WITH simpleLinearRegression(point.x, point.y) AS coefficients
+SELECT coefficients.k, coefficients.b FROM points;
+        </code>
+
+        <code style="font-size:14pt;">┌─coefficients.k─┬─coefficients.b─┐
+│              1 │              0 │
+└────────────────┴────────────────┘
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Compound expressions</h2>
+
+        <p>Matchers and column transformers can be combined with compound expressions.</p>
+        <p>Extemely helpful for working with multiple nested layers, JSON type, compound expressions.</p>
+
+        <code style="font-size:14pt;">WITH cast(tuple(1, 1), 'Tuple(x UInt64, y UInt64)') AS point
+SELECT point.*, point.* APPLY toString;
+        </code>
+
+        <code style="font-size:14pt;">┌─point.x─┬─point.y─┬─toString(point.x)─┬─toString(point.y)─┐
+│       1 │       1 │ 1                 │ 1                 │
+└─────────┴─────────┴───────────────────┴───────────────────┘
+        </code>
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">Planner</h1>
+    </section>
+
+    <section class="slide">
+        <h2>Planner</h2>
+
+        <p>Our old infrastructure for query analysis and planning, was too tight together. That lead to development slowdown, obscure bugs.</p>
+        <p>We decided to redesign and reimplement our query planning layer that will work with query tree.</p>
+        <p>Main goal is separation of query analysis and planning.</p>
+        <p>Because of separation of query analysis and planning. New planner is much easier to understand, because it does only one thing,
+            make initial query plan.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Query Planning</h2>
+
+        <p>Planning steps:</p>
+        <p>1. Collect table expression data. For each table expression information about columns that must be read,
+            and mapping from column to unique identifier is performed.</p>
+        <p>2. Prepare sets for special <b>IN</b> function and its variations.</p>
+        <p>3. Build query plan for <b>JOIN TREE</b> part of query.</p>
+        <p>4. Build expression actions chain, and finalize it. This steps allows to not recompute already evaluated expressions.</p>
+        <p>5. Build other steps of query plan. (Sorting, Aggregation, Window functions).</p>
+    </section>
+
+    <section class="slide">
+        <h2>Query Planning</h2>
+
+        <p>All stages are fully documented.</p>
+        <p>Multiple ARRAY JOINS are supported.</p>
+        <p>Multiple JOINS are supported without rewriting them to subqueries.</p>
+        <p>SAMPLE BY, FINAL, indexes, PREWHERE are supported for JOINS.</p>
+        <p>Improved distributed JOINs support.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Multiple ARRAY JOINS</h2>
+
+        <p>This allows to work with nested arrays hiearchies:</p>
+
+        <code style="font-size:16pt;">SELECT number, nested_array, nested_array_element FROM numbers(1)
+ARRAY JOIN [[1,2,3], [4, 5]] AS nested_array
+ARRAY JOIN nested_array AS nested_array_element;
+</code>
+
+        <code style="font-size:16pt;">
+┌─number─┬─nested_array─┬─nested_array_element─┐
+│      0 │ [1,2,3]      │                    1 │
+│      0 │ [1,2,3]      │                    2 │
+│      0 │ [1,2,3]      │                    3 │
+│      0 │ [4,5]        │                    4 │
+│      0 │ [4,5]        │                    5 │
+└────────┴──────────────┴──────────────────────┘
+</code>
+    </section>
+
+    <section class="slide">
+        <h2>JOINs with SAMPLE BY, FINAL</h2>
+
+        <p>SAMPLE can be specified for any table expression in JOIN TREE:</p>
+        <code style="font-size:14pt;">SELECT t1.id, t2.id
+FROM test_table_join_1 AS t1 <b>SAMPLE 1/2</b>
+INNER JOIN test_table_join_2 AS t2 <b>SAMPLE 1/2</b> ON t1.id = t2.id;</code>
+        <br>
+
+        <p>FINAL by now can be specified for any table expression in JOIN TREE:</p>
+
+        <code style="font-size:14pt;">SELECT t1.id, t2.id, t1.value, t2.value
+FROM test_table_join_1 AS t1 <b>FINAL</b>
+INNER JOIN test_table_join_2 AS t2 <b>FINAL</b> ON t1.id = t2.id;</code>
+    </section>
+
+    <section class="slide">
+        <h2>Distributed JOINS</h2>
+
+        <p>Without JOINs rewriting to subqueries, now we can build better plan for distributed JOINs.</p>
+        <p>Distributed JOINs with multiple distributed tables and <b>distributed_product_mode = local</b> can be directly processed on shards.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Query Planning</h2>
+
+        <p>On low-level expressions are represented in DAG that has <b>input</b>, <b>function</b>, <b>constant</b>, <b>alias</b> types of node. Example:</p>
+        <img style="width: 50%; margin-left: 150px;" src="pictures/actions_dag.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Query Planning</h2>
+
+        <p>DAG is used as internal data structure.</p>
+        <p>DAG creation from query tree is simple and fast.</p>
+        <p>DAG is compact, lightweight, and it is easy to use it for indexes and low-level optimizations (Constants and prepared sets are part of DAG).</p>
+    </section>
+
+    <section class="slide">
+        <h2>Query Planning Index Analysis</h2>
+
+        <p>Reimplement all index analysis to ActionsDAG.</p>
+        <p>ActionsDAG is used for all indexes analysis (Key Condition, Skipping Indexes). Interfaces are refactored.</p>
+        <p>Index analysis component has interface where INPUT is predicate expression dag, key expression dag, OUTPUT is stack of RPN elements.</p>
+        <p>Key Condition, Skiping Indexes work for JOINs almost without any modifications.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Performance improvements</h2>
+
+        <p>For big queries or queries with a lot of JOINs there are significant performance improvements from 1.15 to 5 times.</p>
+        <img style="width: 100%; " src="pictures/query_interpretation_long.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Further opportunities</h2>
+
+        <p>In new infrastructure, now it is possible to:</p>
+        <p>1. Implement features that we could not do on top of old infrastructure: JOINs CBO reordering, correlated subqueries.</p>
+        <p>2. Provide better standard SQL support or compatibility with other DBMSs. Example: UNNEST, TABLESAMPLE, QUALIFY, Recursive CTE.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Acknowledgements</h2>
+
+        <p>Thanks to Dmitry Novik, Vladimir Cherkasov, Igor Nikonov, Yakov Olkhovskiy, Smita Kulkarni, Nikolai Kochetov.</p>
+
+        <code style="font-size:18pt;">SET allow_experimental_analyzer = 1;</code>
+    </section>
+
+    <section class="slide">
+        <h2>Conclusion</h2>
+
+        <p>1. Separate of query analysis and planning, gives us ability to scale development and develop new features much faster.</p>
+        <p>2. Significant performance improvements for huge queries, or queries with multiple JOINs.</p>
+        <p>3. Improved JOINs support.</p>
+        <p>4. A lot of new features.</p>
+        <p>5. Fixed a ton of bugs, related to identifiers resolution, query planning, JOINs rewriting.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Questions?</h2>
+    </section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
