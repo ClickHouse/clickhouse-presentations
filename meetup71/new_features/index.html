@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Features That I Like</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         table, tr, td { border: 0; }
+         .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Features That I Like</h1>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/title.jpg); background-size: cover;">
+        <img src="https://presentations.clickhouse.com/original_website/logo.svg" style="width: 15%; position: absolute; right: 20px; bottom: 20px;" />
+        <h1 style="margin-top: 80px; line-height: 150%; color: white; font-size: 42pt; text-shadow: -2px 0 black, 0 2px black, 2px 0 black, 0 -2px black;">ClickHouse Features That I Like</h1>
+    </section>
+
+<section class="slide">
+<h2 style="margin-top: 2em;">&mdash; My favorite features</h2>
+<h2>&mdash; Late 2022 and early 2023</h2>
+</section>
+
+<section class="slide">
+<h2>Parameterized Views</h2>
+
+<!--
+
+SELECT toStartOfMonth(time), sum(hits) AS h, bar(h, 0, max(h) OVER (), 100) FROM wikistat WHERE path = 'ClickHouse' GROUP BY 1 ORDER BY 1
+CREATE VIEW wiki AS SELECT toStartOfMonth(time), sum(hits) AS h, bar(h, 0, max(h) OVER (), 100) FROM wikistat WHERE path = {page:String} GROUP BY 1 ORDER BY 1
+SELECT * FROM wiki
+SELECT * FROM wiki(page = 'ClickHouse')
+SELECT * FROM wiki(page = 'Hadoop')
+SELECT * FROM default.wiki(page = 'Hadoop')
+
+-->
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-top: -1em;">CREATE VIEW wiki
+AS SELECT toStartOfMonth(time),
+          sum(hits) AS h,
+          bar(h, 0, max(h) OVER (), 100)
+    FROM wikistat
+    WHERE path = <b style="color: green;">{page:String}</b>
+    GROUP BY 1
+    ORDER BY 1;
+
+SELECT * FROM <b style="color: green;">wiki(page = 'ClickHouse')</b>;
+</code></p>
+
+<p style="margin-top: 3em; color: gray; font-size: 14pt;">Developer: Smita Kulkarni.</p>
+</section>
+
+<section class="slide">
+<h2>Regexp Tree Dictionaries</h2>
+
+<p><code style="line-height: 1.5">CREATE DICTIONARY user_agent
+(
+    regexp String,
+    name String,
+    version UInt16
+)
+PRIMARY KEY(regexp)
+SOURCE(<b>YAMLRegExpTree</b>(PATH '/<span style="color: gray;">.../</span>regexp_tree.yaml'))
+LAYOUT(<b>regexp_tree</b>)</code></p>
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developers: Vage Ogannisian, Han Fei.</p>
+</section>
+
+<section class="slide">
+<h2>Regexp Tree Dictionaries</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25">- regexp: 'Linux/(\d+[\.\d]*).+tlinux'
+  name: 'TencentOS'
+  version: '\1'
+
+- regexp: '\d+/tclwebkit(?:\d+[\.\d]*)'
+  name: 'Andriod'
+  versions:
+    - regexp: '33/tclwebkit'
+      version: 13
+    - regexp: '3[12]/tclwebkit'
+      version: 12
+    - regexp: '30/tclwebkit'
+      version: 11
+    - regexp: '29/tclwebkit'
+      version: 10</code></p>
+</section>
+
+<section class="slide">
+<h2>Regexp Tree Dictionaries</h2>
+<p><code style="line-height: 1.5; font-size: 16pt;">SELECT dictGet('user_agent', ('name', 'version'), UserAgent);</code></p>
+<p>&mdash; Traverses the tree, and determines the values of the attributes.</p>
+<p>&mdash; The tree can be arbitrarily deep, <br/>&emsp; and each nested level can override the values.</p>
+<p><code style="line-height: 1.5; font-size: 16pt;">Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36
+(KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36</code></p>
+<p>&mdash; All regular expressions are checked in a single pass for performance!</p>
+<p>&mdash; Can be loaded from YAML file or from a table in any source.</p>
+</section>
+
+<section class="slide">
+<h2>Query Result Cache</h2>
+
+<p><code style="line-height: 1.5">$ cat /etc/clickhouse-server/config.d/query_cache.yaml
+query_result_cache:
+    size: 1073741824
+    max_entries: 1024
+    max_entry_size: 104857600
+    max_entry_records: 30000000
+</code></p>
+<p><code style="line-height: 1.5">SET enable_experimental_query_result_cache = 1;</code></p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developers: Mikhail Stetsyuk, Robert Schulze.</p>
+</section>
+
+<section class="slide">
+<h2>Query Result Cache</h2>
+
+<p>Allows to control on per-query basis:</p>
+<p style="line-height: 1.25;">&mdash; min query runs to cache the result;<br/>
+&mdash; min query runtime to cache the result;<br/>
+&mdash; max result size to put into cache;<br/>
+&mdash; max staleness to use the cached entry;<br/>
+&mdash; passive usage of the existing entries in cache;<br/>
+&mdash; caching of queries with non-deterministic functions;<br/>
+&mdash; sharing the cache between users;</p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developers: Mikhail Stetsyuk, Robert Schulze.</p>
+<p style="color: gray;">Next steps: compressed cache; on disk cache; cache of intermediate data.</p>
+</section>
+
+<section class="slide">
+<h2>Inverted Full Text Indices</h2>
+
+<p><code style="font-size: 18pt;">ALTER TABLE hackernews_indexed
+  ADD INDEX inv_idx(text) TYPE <b style="color: green;">inverted</b>;
+
+ALTER TABLE hackernews_indexed MATERIALIZE INDEX inv_idx;
+</code></p>
+
+<p>Supports tokens and n-grams.</p>
+<p>Optimizes <b>hasToken</b>, <b>multiSearchAny</b>, equality comparison...</p>
+
+<p style="margin-top: 3em; color: gray; font-size: 14pt;">Developer: Larry Luo, Harry Lee, Robert Schulze.</p>
+</section>
+
+<section class="slide">
+<h2>Inverted Full Text Indices</h2>
+
+<p><code style="font-size: 14pt; margin-right: -50px;">:) SELECT count() FROM hackernews WHERE hasToken(text, 'ClickHouse')
+
+┌─count()─┐
+│     948 │
+└─────────┘
+
+1 row in set. Elapsed: <b style="color: red;">0.579</b> sec. Processed 33.95 million rows,
+11.61 GB (58.63 million rows/s., 20.05 GB/s.)
+
+:) SELECT count() FROM <b style="color: green;">hackernews_indexed</b> WHERE hasToken(text, 'ClickHouse')
+
+┌─count()─┐
+│     948 │
+└─────────┘
+
+1 row in set. Elapsed: <b style="color: green;">0.206</b> sec. Processed 3.71 million rows,
+1.32 GB (18.00 million rows/s., 6.43 GB/s.)
+</code></p>
+
+<p style="margin-top: 3em; color: gray; font-size: 14pt;">Developer: Larry Luo, Harry Lee.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Backup &amp; Restore</h2>
+<p>&mdash; full and incremental backups;</p>
+<p>&mdash; tables, partitions, databases, all databases;</p>
+<p>&mdash; full or partial restore;</p>
+<p>&mdash; a bunch of files or a single archive;</p>
+<p>&mdash; atomic snapshot for MergeTree,<br/>&emsp; best effort snapshot for multiple tables;</p>
+<p style="font-size: 14pt; color: gray; margin-top: 3em;">Developer &mdash; Vitaliy Baranov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Backup &amp; Restore</h2>
+<code style="line-height: 1.5; font-size: 16pt;">BACKUP TABLE t TO File('backup_20220629');
+
+BACKUP TABLE t TO File('backup_20220629.zip');
+
+BACKUP TABLE t TO File('backup_20220630')
+    SETTINGS base_backup = File('backup_20220629');
+
+BACKUP TABLE system.users, system.grants TO ...
+BACKUP TABLE system.functions TO ...
+</code>
+
+<p style="font-size: 14pt; color: gray; margin-top: 3em;">Developer &mdash; Vitaliy Baranov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Backup &amp; Restore</h2>
+<code style="line-height: 1.5; font-size: 16pt;">BACKUP|RESTORE
+  TABLE [db.]table_name [AS [db.]table_name_in_backup]
+    [PARTITION[S] partition_expr [,...]] |
+  DICTIONARY [db.]dictionary_name [AS [db.]name_in_backup] |
+  DATABASE database_name [AS database_name_in_backup]
+    [EXCEPT TABLES ...] |
+  TEMPORARY TABLE table_name [AS table_name_in_backup] |
+  ALL TEMPORARY TABLES [EXCEPT ...] |
+  ALL DATABASES [EXCEPT ...] } [,...]
+  [ON CLUSTER 'cluster_name']
+  TO|FROM File('path/') | Disk('disk_name', 'path/') | S3(...)
+  [SETTINGS base_backup = File(...) | Disk(...)]</code>
+
+<p style="font-size: 14pt; color: gray; margin-top: 1em;">Developer &mdash; Vitaliy Baranov.</p>
+</section>
+
+<section class="slide">
+<h2>Reliability</h2>
+<p>ClickHouse should always work.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Asynchronous Initialization Of Tables</h2>
+<p style="line-height: 1.5">If ZooKeeper is <span style="color: red;">unavailable</span> at server startup,
+<br/>the <b>ReplicatedMergeTree</b> tables will start in <span style="color: green;">read-only</span> mode
+<br/>and <span style="color: green;">initialize asynchronously</span> in background
+<br/>as soon as ZooKeeper will be available.
+</p>
+<p>&mdash; the same applicable for ClickHouse Keeper as well;</p>
+<p>&mdash; especially useful for embedded ClickHouse Keeper;</p>
+<p style="margin-top: 3em; color: green; font-size: 14pt;">Developers: Antonio Andelic. Since 22.9.</p>
+</section>
+
+<section class="slide">
+<h2>Retries On INSERT</h2>
+<p style="color: red;">Session expired. Table is in readonly mode 😠</p>
+<p>Never again:</p>
+<p><code>SET insert_keeper_max_retries = 10;</code></p>
+<p>INSERT will survive restarts of ClickHouse Keeper or ZooKeeper<br/>and reconnections.</p>
+<p style="margin-top: 2em; color: green; font-size: 14pt;">Developer: Igor Nikonov. Since 22.11.</p>
+</section>
+
+<section class="slide">
+<h2>Faster Reconnection to Keeper</h2>
+<p style="color: red;">Table is in readonly mode 😠</p>
+<p>Was: around one minute for reconnection, for no reason.</p>
+<p>Now: <span style="color: green;">milliseconds</span> 🥲</p>
+<p style="margin-top: 10em; color: green; font-size: 14pt;">Developer: Raul Marin. Since 22.10.</p>
+</section>
+
+<section class="slide">
+<h2>Flexible Memory Limits</h2>
+<p>Was: strict per-query limit, <b>max_memory_usage</b> = 10 GB by default.</p>
+<p>Now: query can use the memory if it's available;<br/>in case of memory shortage, the most "overcommitted" query is terminated with exception.</p>
+<p style="margin-top: 1em; color: green; font-size: 14pt;">Developer: Dmitry Novik.</p>
+</section>
+
+<section class="slide">
+<h2>SQL Compatibility</h2>
+<p>ClickHouse should support everything you expect.</p>
+</section>
+
+<section class="slide">
+<h2>Analyzer</h2>
+<p><code style="font-size: 70%; line-height: 1.25; margin-top: -1.5em;">WITH example AS (
+    <b>SELECT</b> '2021-01-01' AS date,
+        1 AS node, 1 AS user)
+<b>SELECT</b> extra_data <b>FROM</b> (
+    <b>SELECT</b> join1.*
+    <b>FROM</b> example
+    <b>LEFT JOIN</b> (
+        <b>SELECT</b> '2021-01-01' AS date,
+            1 AS extra_data) AS join1
+    <b>ON</b> example.date = join1.date
+    <b>LEFT JOIN</b> (
+        <b>SELECT</b> '2021-01-01' AS date) AS join2
+    <b>ON</b> example.date = join2.date)
+</code></p>
+<p><span style="color: red;">Was:</span> <span style="color: gray;">Missing columns: 'extra_data' while processing query...</span></p>
+<p><span style="color: green;">Now:</span> <b>SET allow_experimental_analyzer = 1;</b>
+<br/>- works perfectly.</p>
+</section>
+
+<section class="slide">
+<h2>Analyzer</h2>
+<code style="font-size: 9pt; line-height: 1.25; margin-top: -3em; white-space: pre-wrap;">SELECT * <b>FROM</b> (SELECT SUM(COALESCE(SEQ_VONR_MO_CALL_CONN_FAIL_TIMES_C, 0)) AS VONR_MO_CALL_CONN_FAIL_TIMES, MT.`102520001` AS `102520001`, MT.`181361814368` AS `181361814368`, MT.`102520102` AS `102520102`, MT.`102520101` AS `102520101`, MT.`102520104` AS `102520104`, MT.`183111861371` AS `183111861371`, MT.`102530101` AS `102530101`, MT.`102540101` AS `102540101`, MT.`102520103` AS `102520103`, MT.`102510101` AS `102510101` <b>FROM</b> ( SELECT COALESCE(SUM(VONR_MO_CALL_CONN_FAIL_TIMES), 0) AS SEQ_VONR_MO_CALL_CONN_FAIL_TIMES_C, COM_FAIL_CAUSE AS `102520001`, NULL AS `102520102`, COM_FAIL_CAUSE AS `102510101`, NULL AS `102520101`, D183111570684_H101.`183111861371` AS `183111861371`, NULL AS `102520104`, NULL AS `102520103`, H_COMPREHENSIVE_FAILURE_CAUSE.`102540101` AS `102540101`, H_COMPREHENSIVE_FAILURE_CAUSE.`102530101` AS `102530101`, concat('14', '-', '255', '-', '255', '-', SIP_RELEASE_CODE) AS `181361814368` <b>FROM</b> TEST_DATABASE.SDR_TEST LEFT <b>JOIN</b> ( SELECT concat(PROTOCOL_ID, '-', FIRFAILMSG_ID, '-', PD_ID, '-', CAUSE_ID) AS `102510101`, UNIFIED_CAUSE_ID AS `183111861371`, concat(FAILCAUSE, '(', PD, ')') AS NAME_102510101 <b>FROM</b> TEST_DATABASE.DIM_TEST GROUP BY concat(PROTOCOL_ID, '-', FIRFAILMSG_ID, '-', PD_ID, '-', CAUSE_ID), UNIFIED_CAUSE_ID, concat(FAILCAUSE, '(', PD, ')') ) AS D183111570684_H101 ON COM_FAIL_CAUSE = D183111570684_H101.`102510101` LEFT <b>JOIN</b> ( SELECT concat(PROTOCOL_ID, '-', FIRFAILMSG_ID, '-', PD_ID, '-', CAUSE_ID) AS `102520001`, SCENE_ID AS `102540101`, CLASS_ID AS `102530101`, SCENE_NAME AS NAME_102540101 <b>FROM</b> TEST_DATABASE.DIM_TEST GROUP BY concat(PROTOCOL_ID, '-', FIRFAILMSG_ID, '-', PD_ID, '-', CAUSE_ID), SCENE_ID, CLASS_ID, SCENE_NAME ) AS H_COMPREHENSIVE_FAILURE_CAUSE ON COM_FAIL_CAUSE = H_COMPREHENSIVE_FAILURE_CAUSE.`102520001` LEFT <b>JOIN</b> ( SELECT concat(PROTOCOL_ID, '-', FIRFAILMSG_ID, '-', PD_ID, '-', CAUSE_ID) AS `181361814368`, CAUSE AS NAME_181361814368 <b>FROM</b> TEST_DATABASE.DIM_TEST GROUP BY concat(PROTOCOL_ID, '-', FIRFAILMSG_ID, '-', PD_ID, '-', CAUSE_ID), CAUSE ) AS DIM_FAILCAUSE_ALL_181361814368 ON concat('14', '-', '255', '-', '255', '-', SIP_RELEASE_CODE) = DIM_FAILCAUSE_ALL_181361814368.`181361814368` WHERE (H_COMPREHENSIVE_FAILURE_CAUSE.NAME_102540101 IS NOT NULL) AND (D183111570684_H101.NAME_102510101 IS NOT NULL) AND (DIM_FAILCAUSE_ALL_181361814368.NAME_181361814368 IS NOT NULL) GROUP BY `102520001`, `102520102`, `102510101`, `102520101`, D183111570684_H101.`183111861371`, `102520104`, `102520103`, H_COMPREHENSIVE_FAILURE_CAUSE.`102540101`, H_COMPREHENSIVE_FAILURE_CAUSE.`102530101`, `181361814368` ) AS MT GROUP BY MT.`102520001`, MT.`181361814368`, MT.`102520102`, MT.`102520101`, MT.`102520104`, MT.`183111861371`, MT.`102530101`, MT.`102540101`, MT.`102520103`, MT.`102510101` ) AS ST WHERE ST.VONR_MO_CALL_CONN_FAIL_TIMES > 0 ORDER BY VONR_MO_CALL_CONN_FAIL_TIMES DESC LIMIT 0, 5000
+</code>
+</section>
+
+<section class="slide">
+<h2>Window Functions Inside Expressions</h2>
+<code style="font-size: 70%; line-height: 1.25; margin-top: -1.5em;">SELECT
+    y::String || '.'
+        || (y &lt; toYear(today()) - 2000 - 1 ? '*' : m::String) AS Version,
+    (n &lt;= 3 OR (is_lts AND lts_n &lt;= 2)) ? '✔️' : '❌' AS Supported
+FROM (
+    SELECT y, m,
+        <b style="color: green;">count() OVER (ORDER BY y DESC, m DESC) AS n,</b>
+        m IN (3, 8) AS is_lts,
+        <b style="color: green;">countIf(is_lts) OVER (ORDER BY y DESC, m DESC) AS lts_n</b>
+    FROM (
+        WITH extractGroups(version, 'v(\d+)\.(\d+)') AS v,
+             v[1]::INT AS y, v[2]::INT AS m
+        SELECT y, m
+        FROM file('version_date.tsv', TSV, 'version String, date String')
+        ORDER BY y DESC, m DESC
+        LIMIT 1 BY y, m)
+)
+LIMIT 1 BY Version
+FORMAT Markdown</code>
+</section>
+
+<section class="slide">
+<h2>DELETE Query</h2>
+<p><code>SET mutations_sync = 1;
+<b style="color: red;">ALTER</b> TABLE hits
+DELETE WHERE Title LIKE '%Mongo%';</code></p>
+<p>&mdash; 205 sec (for a table with 100 million records).</p>
+<p><code><b style="color: green;">DELETE</b> FROM hits
+WHERE Title LIKE '%Mongo%';</code></p>
+<p>&mdash; ??? sec.</p>
+<p style="margin-top: 2em; color: green; font-size: 14pt;">Developers: Alexander Gololobov, Jianmei Zhang.</p>
+</section>
+
+<section class="slide">
+<h2>Non-Constant LIKE and match</h2>
+<pre style="font-size: 16pt; line-height: 1.5">SELECT DISTINCT repo_name, title
+FROM github_events
+WHERE title ILIKE (
+  repo_name LIKE '%ClickHouse%' ? '%fast%' : '%slow%')
+AND repo_name IN ('ClickHouse/ClickHouse', 'elastic/elasticsearch')</pre>
+<p style="margin-top: 2em; color: green; font-size: 14pt;">Now I can put LIKE inside LIKE and looks like you're going to like it.</p>
+<p style="margin-top: 5em; color: green; font-size: 14pt;">Developer: Robert Schulze. Since 22.6.</p>
+</section>
+
+
+<section class="slide">
+<h2>Performance</h2>
+<p>ClickHouse never slows down!</p>
+</section>
+
+<section class="slide">
+<h2>Performance Optimizations</h2>
+<p>Speed-up of SELECT with <b>FINAL</b> modifier.</p>
+<p>It "simply" improves performance up to 4 times.</p>
+<p>Especially for complex transforms like Collapsing and Replacing.</p>
+<p style="margin-top: 5em; color: green; font-size: 14pt;">Developer: Nikita Taranov.</p>
+</section>
+
+<section class="slide">
+<h2>More Performance</h2>
+<p>Optimize <b>COUNT(DISTINCT ...)</b> for low number of GROUP BY keys.</p>
+<p>Optimize <b>GROUP BY</b> with CPU prefetcher.</p>
+<p>Optimize <b>GROUP BY</b> with better block sizes.</p>
+<p style="color: green; margin-top: 3em; font-size: 14pt;">Developer: Nikita Taranov.</p>
+</section>
+
+<section class="slide">
+<h2>New JOIN algorithms</h2>
+<p style="margin-top: -1em;">&mdash; "<b>direct</b>" algorithm:
+<br/>&emsp; to join with key-value tables by direct lookups a.k.a. nested loops.
+<br/>&emsp; Good if the left table is small, but the right table is like a large dictionary.
+<br/>&emsp; Good to use in MATERIALIZED VIEW queries.</p>
+
+<p>&mdash; "<b>parallel_hash</b>" algorithm:
+<br/>&emsp; speed-up if the right hand table is large.</p>
+
+<p>&mdash; "<b>full_sorting_merge</b>" algorithm:
+<br/>&emsp; when right hand side is large<br/>&emsp; and does not fit in memory and does not allow lookups.</p>
+
+<p>&mdash; "<b>grace_hash</b>" algorithm:
+<br/>&emsp; since in 22.12.</p>
+
+<p style="color: green; font-size: 14pt;">Developer: Vladimir Cherkasov, lgbo-ustc.</p>
+</section>
+
+<section class="slide">
+<h2>Updated Benchmark</h2>
+<img style="margin-left: -60px; margin-top: -1em; height: 100%" src="pictures/clickbench.png" />
+</section>
+
+
+<section class="slide">
+<h2>Integrations</h2>
+<p style="margin-top: -1em;">ClickHouse can work <b>as a server</b> (clickhouse-server)
+<br/>or <b>as a tool</b> without installation (clickhouse-local).</p>
+<p>ClickHouse can <b>store the data</b>
+<br/>or process externally stored data <b>on the fly</b>.</p>
+
+<p>External data:
+<br/>&mdash; remote databases: MySQL, PostgreSQL, MongoDB, ODBC, JDBC...
+<br/>&mdash; object storages: S3, HDFS, Azure, COSN, OSS...
+<br/>&mdash; from URL and local files;
+</p>
+
+<p>All possible data formats:
+<br/>&mdash; text: CSV, TSV, JSON, Values, MySQLDump, Regexp...
+<br/>&mdash; binary: Parquet, Arrow, ORC, Avro, Protobuf, MsgPack...
+<br/>&mdash; schemaful and schemaless;
+</p>
+</section>
+
+<section class="slide">
+<h2>Data Lakes</h2>
+<p>Now ClickHouse supports <b style="color: green;">Apache Hudi</b>, <b style="color: green;">Delta Lake</b>, and <b style="color: green;">Iceberg</b>
+<br/>for SELECT queries.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">SELECT count() FROM deltaLake(
+  'https://clickhouse-public-datasets.s3.amazonaws.com/delta_lake/hits/')
+  WHERE URL LIKE '%google%'
+
+-- 4.396 sec.
+</code></p>
+
+<p style="margin-top: 3em; color: green; font-size: 14pt;">Developers: Daniil Rubin, Ksenia Sumarokova, Flynn ucasfl. Since 22.11.</p>
+</section>
+
+
+<section class="slide">
+<h2>Integrations</h2>
+<p>Visualizations:
+<br/>&mdash; official ClickHouse plugin for <b>Grafana</b>;
+<br/>&mdash; official support for <b>Superset</b>;
+<br/>&mdash; <b>HEX</b> and <b>Deepnote</b> support.
+<p>Data ingestion and processing:
+<br/>&mdash; <b>Kafka Connect</b> integration;
+<br/>&mdash; <b>Airflow</b>, <b>dbt</b> support.</p>
+<p>Language drivers:
+<br/>&mdash; official <b>Node.JS</b> driver;
+<br/>&mdash; optimized <b>Go</b> driver;
+<br/>&mdash; a new <b>Python</b> client.</p>
+</section>
+
+<section class="slide">
+<h2>Embedded Dashboards</h2>
+<p><a href="https://play.clickhouse.com/dashboard">https://play.clickhouse.com/dashboard</a></p>
+</section>
+
+
+<section class="slide">
+<h2>Operations</h2>
+<p>ClickHouse is easy to configure for your needs.</p>
+</section>
+
+<section class="slide">
+<h2>Dynamic Disks</h2>
+
+<p>Was:</p>
+<p><code style="font-size: 14pt; line-height: 1.25;">storage_configuration:
+  disks:
+    web:
+      type: web
+      endpoint: 'https://clickhouse-public-datasets.s3.amazonaws.com/web/'
+  policies:
+    web:
+      volumes:
+        main:
+          disk: web</code></p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">ATTACH TABLE hits ...
+ENGINE = MergeTree ORDER BY CounterID
+SETTINGS <b>storage_policy = 'web'</b></code></p>
+</section>
+
+<section class="slide">
+<h2>Dynamic Disks</h2>
+
+<p>Slightly better:</p>
+<p><code style="font-size: 14pt; line-height: 1.25;">storage_configuration:
+  disks:
+    web:
+      type: web
+      endpoint: 'https://clickhouse-public-datasets.s3.amazonaws.com/web/'
+</code></p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">ATTACH TABLE hits ...
+ENGINE = MergeTree ORDER BY CounterID
+SETTINGS <b>disk = 'web'</b></code></p>
+
+<p>No need for "storage policy" in simple cases.</p>
+</section>
+
+
+<section class="slide">
+<h2>Dynamic Disks</h2>
+
+<p>Much better:</p>
+<p><code style="font-size: 14pt; line-height: 1.25;">ATTACH TABLE hits ...
+ENGINE = MergeTree ORDER BY CounterID
+SETTINGS <b style="color: green;">disk = disk(
+  type = 'web',
+  endpoint = 'https://clickhouse-public-datasets.s3.amazonaws.com/web/')</b></code></p>
+
+<p>100% dynamic configuration, no need to touch the configuration files.</p>
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developers: Ksenia Sumarokova.</p>
+</section>
+
+<section class="slide">
+<h2>Composable Protocols</h2>
+<p>So, ClickHouse supports a lot of protocols:</p>
+<p>&mdash; HTTP
+<br/>&mdash; HTTPs
+<br/>&mdash; Native TCP
+<br/>&mdash; Native TCP wrapped in PROXYv1
+<br/>&mdash; Native TCP with TLS
+<br/>&mdash; MySQL (with TLS support)
+<br/>&mdash; PostgreSQL (with TLS support)
+<br/>&mdash; GRPC (with TLS)
+<br/>&mdash; Replication protocol over HTTP
+<br/>&mdash; Replication protocol over HTTPs
+<br/>&mdash; Keeper client-server protocol;
+<br/>&mdash; Keeper consensus protocol;
+<br/>&mdash; ...
+</p>
+</section>
+
+<section class="slide">
+<h2>Composable Protocols</h2>
+<p>So, ClickHouse supports a lot of protocols.</p>
+<p>How to configure all of them? What if:</p>
+<p>&mdash; server has multiple network interfaces?
+<br/>&mdash; enable one protocol on multiple ports?
+<br/>&mdash; I want native TCP for localhost only and HTTPs from everywhere?
+<br/>&mdash; I want different TLS certificates for different protocols?
+<br/>&mdash; I want to wrap one protocol in another?</p>
+<p style="margin-top: 1em; color: green; font-size: 14pt;">Developer: Yakov Olkhovskiy. Since 22.10.</p>
+</section>
+
+<section class="slide">
+<code style="font-size: 16pt;">&lt;protocols>
+  &lt;tcp>
+    &lt;type>tcp&lt;/type>
+    &lt;host>::&lt;/host>
+    &lt;port>9000&lt;/port>
+    &lt;description>native protocol&lt;/description>
+  &lt;/tcp>
+  &lt;tcp_secure>
+    &lt;type><b>tls</b>&lt;/type>
+    &lt;impl><b>tcp</b>&lt;/impl>
+    &lt;port>9440&lt;/port>
+    &lt;description>secure native protocol&lt;/description>
+  &lt;/tcp_secure>
+  &lt;tcp_endpoint>
+    &lt;impl>tcp&lt;/impl>
+    &lt;host>0.0.0.0&lt;/host>
+    &lt;port>9001&lt;/port>
+    &lt;description>native protocol, another&lt;/description>
+  &lt;/tcp_endpoint>
+  &lt;tcp_proxy>
+    &lt;type>proxy1&lt;/type>
+    &lt;impl>tcp&lt;/impl>
+    &lt;port>9100&lt;/port>
+    &lt;description>native protocol with PROXYv1&lt;/description>
+  &lt;/tcp_proxy>
+</code>
+</section>
+
+<section class="slide" style="background: url(pictures/final.jpg); background-size: cover;">
+<h2><span class="hilite">Q&amp;A</a></h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+
