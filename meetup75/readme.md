@@ -13,12 +13,12 @@ So mark your calendars, spread the word, and get ready for an unforgettable Clic
 If you are interested in speaking at this, or a future, meetup please email: tyler@clickhouse.com
 
 Agenda
-18:00 Doors Open - Networking & Snacks
-18:30 Welcome
-18:35 - "ClickHouse and Baselime", Boris Tane, Founder & CEO (Baselime) - 30 mins
-19:05 - "Using ClickHouse as a Vector Database", Dale McDiarmid, Product Engineer (ClickHouse)- 30 mins
-19:35 - "How Synq powers both user-facing applications and internal analytics from ClickHouse", Petr Janda, Founder (Synq) - 30 mins
-20:05 - "How PostHog serves 5 million analytics queries a month with Clickhouse", Tim Glaser, CTO/Co-Founder (PostHog) - 30 mins
-20:35 - Food & Drinks
-21:15 Event Ends
+* 18:00 Doors Open - Networking & Snacks
+* 18:30 Welcome
+* 18:35 - "ClickHouse and Baselime", Boris Tane, Founder & CEO (Baselime) - 30 mins
+* 19:05 - "Using ClickHouse as a Vector Database", Dale McDiarmid, Product Engineer (ClickHouse)- 30 mins
+* 19:35 - "How Synq powers both user-facing applications and internal analytics from ClickHouse", Petr Janda, Founder (Synq) - 30 mins
+* 20:05 - "How PostHog serves 5 million analytics queries a month with Clickhouse", Tim Glaser, CTO/Co-Founder (PostHog) - 30 mins
+* 20:35 - Food & Drinks
+* 21:15 Event Ends
 
