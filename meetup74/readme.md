@@ -12,15 +12,14 @@ And, of course, there will be plenty of time for food/drink and conversation wit
 
 So mark your calendars, spread the word, and get ready for an unforgettable ClickHouse Meetup. We can't wait to see you there!
 
-Agenda
-
-18:00 - Doors Open🍹
-18:20 - Meetup Kickoff, eDreams ODIGEO presentation
-18:30 - One Database, Many Solutions: Uzum’s Journey with Clickhouse - Yuri Gavrilin, CDO @ Uzum Bank, Uzum Market
-19:00 - A Story of Open-source GitHub Activity using ClickHouse + Grafana - Ryadh Dahimene
-19:30 - Grafana update: Adaptive Metrics - Imma Valls
-19:45 - Tales from ClickHouse Support - Melvyn Peignon
-20:15 - ClickHouse for AI - Alexey Milovidov
-20:45 - 21:15 - Networking with 🍕 and 🍻
+**Agenda**
+* 18:00 - Doors Open🍹
+* 18:20 - Meetup Kickoff, eDreams ODIGEO presentation
+* 18:30 - One Database, Many Solutions: Uzum’s Journey with Clickhouse - Yuri Gavrilin, CDO @ Uzum Bank, Uzum Market
+* 19:00 - A Story of Open-source GitHub Activity using ClickHouse + Grafana - Ryadh Dahimene
+* 19:30 - Grafana update: Adaptive Metrics - Imma Valls
+* 19:45 - Tales from ClickHouse Support - Melvyn Peignon
+* 20:15 - ClickHouse for AI - Alexey Milovidov
+* 20:45 - 21:15 - Networking with 🍕 and 🍻
 
 If you are interested in speaking at this, or a future, meetup please email: tyler@clickhouse.com
