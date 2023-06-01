@@ -1,0 +1,1476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse performance optimization techniques</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+        code { display: block; white-space: pre; background-color: #EEE; }
+   </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse performance optimization techniques</h1>
+    </header>
+
+    <section class="slide" id="cover">
+        <h1 style="margin-top: 150px">ClickHouse performance<br>
+            optimization techniques</h1>
+    </section>
+
+    <section class="slide">
+        <h2>About me</h2>
+        <p>Maksim, database management systems developer.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Performance optimization techniques</h2>
+
+        <p>1. Performance optimization basics.</p>
+        <p>2. Low-level optimizations.</p>
+        <p>3. Abstractions and Algorithms.</p>
+        <P>4. Tools.</P>
+        <p>5. Examples.</p>
+        <p>6. Sorting.</p>
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">Performance optimization basics</h1>
+    </section>
+
+    <section class="slide">
+        <h2>Performance optimization basics</h2>
+
+        <p>CI/CD Pipeline.</p>
+        <p>Performance Tests.</p>
+        <p>Introspection.</p>
+        <p>Libraries.</p>
+        <p>Latency numbers.</p>
+
+        <p>My presentation from CPP Russia 2022 ClickHouse performance optimization practices:</p>
+        <p><a href="https://www.youtube.com/watch?v=KedCUDZE9N4">https://www.youtube.com/watch?v=KedCUDZE9N4</a></p>
+    </section>
+
+    <section class="slide">
+        <h2>CI/CD Pipeline</h2>
+
+        <p>CI/CD Pipeline is required.</p>
+        <p>The more checks the better.</p>
+        <p>Functional, Integration tests. Fuzzers.</p>
+        <p>Performance tests.</p>
+        <p>Run all tests with all available sanitizers (ASAN, MSAN, UBSAN, TSAN).</p>
+        <p>Project specific tests. Example: custom stress tests, Jepsen tests.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Performance Tests</h2>
+
+        <p>Must be able to report about performance changes (improvement or regression).</p>
+        <p>Collect different statistics during each performance test run. Can be useful for later debugging:</p>
+        <p>1. Processor metrics (CPU cycles, cache misses same as perf-stat).</p>
+        <p>2. Project specific profile events (read bytes from disk, transferred bytes over network, etc).</p>
+    </section>
+
+    <section class="slide">
+        <h2>Performance Tests ClickHouse</h2>
+
+        <p>Write test in special XML configuration.</p>
+
+        <code style="font-size:10pt;">&lt;test&gt;
+    &lt;substitutions&gt;
+        &lt;substitution&gt;
+            &lt;name&gt;func&lt;/name&gt;
+                &lt;values&gt;
+                    <value>bitCount</value>
+                    <value>bitNot</value>
+                    <value>abs</value>
+                    ...
+                &lt;/values&gt;
+        &lt;/substitution&gt;
+
+        &lt;substitution&gt;
+            &lt;name&gt;expr&lt;/name&gt;
+                &lt;values&gt;
+                    &lt;value&gt;number&lt;/value&gt;
+                    &lt;value&gt;toUInt32(number)&lt;/value&gt;
+                    ...
+                &lt;/values&gt;
+        &lt;/substitution&gt;
+    &lt;/substitutions&gt;
+
+    &lt;query&gt;SELECT {func}({expr}) FROM numbers(100000000) FORMAT Null&lt;/query&gt;
+&lt;/test&gt;
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Performance Tests ClickHouse</h2>
+
+        <img style="height: 77%; margin-top: -1em;" src="pictures/report.webp"/>
+    </section>
+
+    <section class="slide">
+        <h2>Performance Tests ClickHouse</h2>
+
+        <p>It is not trivial to implement infrastructure for performance testing.</p>
+        </p>
+        <p><a href="https://clickhouse.com/blog/testing-the-performance-of-click-house/">https://clickhouse.com/blog/testing-the-performance-of-click-house/</a></p>
+    </section>
+
+    <section class="slide">
+        <h2>Performance Tests</h2>
+
+        <p>Helps find performance regressions.</p>
+        <p>Tool that can help to find places where performance can be improved:</p>
+
+        <p>1. Try different allocators, different libraries.</p>
+        <p>2. Try different compiler options (loop unrolling, inline threshold)</p>
+        <p>3. Enable <b>AVX</b>/<b>AVX2</b>/<b>AVX512</b> for build.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Introspection</h2>
+
+        <p>Ideally collect as much information as possible in user space.</p>
+        <p>Important to check if something is improved because of your change, or to understand why there is some degradation.</p>
+        <p>Can be used as additional statistics that are collected during performance tests.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Introspection</h2>
+
+        <p>RealTimeMicroseconds, UserTimeMicroseconds, SystemTimeMicroseconds, SoftPageFaults, HardPageFaults using <b>getrusage</b> system call.</p>
+        <p>Collect <b>:taskstats</b> from procFS (Also support Netlink interface).</p>
+        <p>OSCPUVirtualTimeMicroseconds, OSCPUWaitMicroseconds (when <b>/proc/thread-self/schedstat</b> is available).
+            OSIOWaitMicroseconds                      (when <b>/proc/thread-self/stat</b> is available).
+            OSReadChars, OSWriteChars, OSReadBytes, OSWriteBytes  (when <b>/proc/thread-self/io</b> is available)</p>
+
+        <p><a href="https://man7.org/linux/man-pages/man2/getrusage.2.html">https://man7.org/linux/man-pages/man2/getrusage.2.html</a></p>
+        <p><a href="https://man7.org/linux/man-pages/man5/proc.5.html">https://man7.org/linux/man-pages/man5/proc.5.html</a></p>
+    </section>
+
+    <section class="slide">
+        <h2>Introspection</h2>
+
+        <p>Project specific profile events (read bytes from disk, transferred bytes over network, etc).</p>
+
+    </section>
+
+    <section class="slide">
+        <h2>Introspection ClickHouse Perf</h2>
+
+        <code style="font-size:12pt;">SELECT PE.Names AS ProfileEventName, PE.Values AS ProfileEventValue
+            FROM <b>system.query_log</b> ARRAY JOIN ProfileEvents AS PE
+            WHERE query_id='344b07d9-9d7a-48f0-a17e-6f5f6f3d61f5'
+            AND ProfileEventName LIKE 'Perf%';
+        </code>
+
+        <code style="font-size:12pt;">┌─ProfileEventName─────────────┬─ProfileEventValue─┐
+│ PerfCpuCycles                │       40496995274 │
+│ PerfInstructions             │       57259199973 │
+│ PerfCacheReferences          │        2072274618 │
+│ PerfCacheMisses              │         146570206 │
+│ PerfBranchInstructions       │        8675194991 │
+│ PerfBranchMisses             │         259531879 │
+│ PerfStalledCyclesFrontend    │         813419527 │
+│ PerfStalledCyclesBackend     │       15797162832 │
+│ PerfCpuClock                 │       10587371854 │
+│ PerfTaskClock                │       10587382785 │
+│ PerfContextSwitches          │              3009 │
+│ PerfCpuMigrations            │               113 │
+│ PerfMinEnabledTime           │       10584952104 │
+│ PerfMinEnabledRunningTime    │        4348089512 │
+│ PerfDataTLBReferences        │         465992961 │
+│ PerfDataTLBMisses            │           5149603 │
+│ PerfInstructionTLBReferences │           1344998 │
+│ PerfInstructionTLBMisses     │            181635 │
+└──────────────────────────────┴───────────────────┘
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Libraries</h2>
+
+        <p>Reusing existing libraries can significantly improve overall performance. In ClickHouse there are external libraries for:</p>
+        <p>1. Different algorithms for parsing floats, json (multiple libraries).</p>
+        <p>2. A lot of integrations.</p>
+        <p>3. Embedded storages.</p>
+        <p>4. LLVM for JIT compilation.</p>
+        <p>5. libcxx (C++ standard library).</p>
+    </section>
+
+    <section class="slide">
+        <h2>Libraries</h2>
+
+        <p>One of the easiest method to try to improve something is to reuse generic components with components from highly optimized library:</p>
+
+        <p>1. Abseil. Example: Replace <b>std::unordered_map</b> with <b>absl::flat_hash_map</b> if you do not need pointer stability.</p>
+        <p>2. Folly.</p>
+        <p>3. Boost.</p>
+
+        <p>Do not use outdated libraries.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Latency Comparison Numbers</h2>
+        <pre style="font-size: 19px;">
+Latency Comparison Numbers
+----------------------------------
+L1 cache reference                           0.5 ns
+Branch mispredict                            5   ns
+L2 cache reference                           7   ns 14x L1 cache
+Mutex lock/unlock                           25   ns
+Main memory reference                      100   ns <b>20x L2 cache, 200x L1 cache</b>
+Compress 1K bytes with Zippy             3,000   ns        3 us
+Send 1K bytes over 1 Gbps network       10,000   ns       10 us
+Read 4K randomly from SSD*             150,000   ns      150 us ~1GB/sec SSD
+Read 1 MB sequentially from memory     250,000   ns      250 us
+Round trip within same datacenter      500,000   ns      500 us
+</pre>
+
+    <p>
+        <a style="font-size: 15px;" href="http://norvig.com/21-days.html#answers">
+            http://norvig.com/21-days.html#answers
+        </a>
+    </p>
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">Low-level optimizations</h1>
+    </section>
+
+    <section class="slide">
+        <h2>Autovectorization</h2>
+
+        <code style="font-size: 12pt;">void plus(int64_t * __restrict a,
+    int64_t * __restrict b,
+    int64_t * __restrict c,
+    size_t size)
+{
+   for (size_t i = 0; i &lt; size; ++i) {
+       c[i] = b[i] + a[i];
+   }
+}</code>
+        </p>
+        <p>If there is no <b>__restrict</b> modifier specified for pointers, the compiler may not vectorize the loop.</p>
+        <p>Or it will vectorize the loop but put a couple of runtime checks at the beginning of the function to make sure that the arrays do not overlap.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Autovectorization</h2>
+
+        <p>Compile program with AVX2 instruction set and <b>-fno-unroll-loops</b>.</p>
+        <code style="font-size: 12pt;">$ /usr/bin/clang++-15 -mavx2 -fno-unroll-loops -O3 -S vectorization_example.cpp</code>
+    </section>
+
+    <section class="slide">
+        <h2>Autovectorization</h2>
+
+        <p>In the final assembly, there are two loops. Vectorized loop that processes 4 elements at a time:</p>
+
+        <code style="font-size: 12pt;">.LBB0_4:                                # =>This Inner Loop Header: Depth=1
+	vmovdqu	(%rdi,%rax,8), %ymm0
+	vpaddq	(%rsi,%rax,8), %ymm0, %ymm0
+	vmovdqu	%ymm0, (%rdx,%rax,8)
+	addq	$4, %rax
+	cmpq	%rax, %r8
+	jne	.LBB0_4
+        </code>
+
+        <p>Scalar loop:</p>
+
+        <code style="font-size: 12pt;">LBB0_6:                                # =>This Inner Loop Header: Depth=1
+	movq	(%rdi,%r8,8), %rax
+	addq	(%rsi,%r8,8), %rax
+	movq	%rax, (%rdx,%r8,8)
+	incq	%r8
+	cmpq	%r8, %rcx
+	jne	.LBB0_6
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Autovectorization</h2>
+
+        <p>Additionally, if we compile this example without <b>-fno-unroll-loops</b> and look at the generated loop, we will see that compiler unrolled
+            vectorized loop, which now processes 16 elements at a time.</p>
+
+            <code style="font-size: 12pt;">.LBB0_4:                                # =>This Inner Loop Header: Depth=1
+	vmovdqu	(%rdi,%rax,8), %ymm0
+	vmovdqu	32(%rdi,%rax,8), %ymm1
+	vmovdqu	64(%rdi,%rax,8), %ymm2
+	vmovdqu	96(%rdi,%rax,8), %ymm3
+	vpaddq	(%rsi,%rax,8), %ymm0, %ymm0
+	vpaddq	32(%rsi,%rax,8), %ymm1, %ymm1
+	vpaddq	64(%rsi,%rax,8), %ymm2, %ymm2
+	vpaddq	96(%rsi,%rax,8), %ymm3, %ymm3
+	vmovdqu	%ymm0, (%rdx,%rax,8)
+	vmovdqu	%ymm1, 32(%rdx,%rax,8)
+	vmovdqu	%ymm2, 64(%rdx,%rax,8)
+	vmovdqu	%ymm3, 96(%rdx,%rax,8)
+	addq	$16, %rax
+	cmpq	%rax, %r8
+	jne	.LBB0_4
+</code>
+    </section>
+
+    <section class="slide">
+        <h2>Autovectorization</h2>
+
+        <p>There is a very useful tool that can help you identify places where the compiler does or does not perform vectorization to avoid assembly checking.</p>
+        <p>You can add <b>-Rpass=loop-vectorize</b>, <b>-Rpass-missed=loop-vectorize</b> and <b>-Rpass-analysis=loop-vectorize</b> options to clang.
+            There are similar options for gcc.</p>
+
+        <code style="font-size: 12pt;">$ /usr/bin/clang++-15 -mavx2 -Rpass=loop-vectorize -Rpass-missed=loop-vectorize
+        -Rpass-analysis=loop-vectorize -O3
+
+vectorization_example.cpp:7:5: remark: vectorized loop (vectorization width: 4,
+    interleaved count: 4) [-Rpass=loop-vectorize]
+    for (size_t i = 0; i &lt; size; ++i) {
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Autovectorization</h2>
+
+        <code style="font-size: 12pt;">class SumFunction
+{
+public:
+    void sumIf(int64_t * values, int8_t * filter, size_t size);
+
+    int64_t sum = 0;
+};
+
+void SumFunction::sumIf(int64_t * values, int8_t * filter, size_t size)
+{
+    for (size_t i = 0; i &lt; size; ++i) {
+        sum += filter[i] ? 0 : values[i];
+    }
+}</code>
+    </section>
+
+    <section class="slide">
+        <h2>Autovectorization</h2>
+
+        <code style="font-size: 12pt;">/usr/bin/clang++-15 -mavx2 -O3 -Rpass-analysis=loop-vectorize -Rpass=loop-vectorize
+    -Rpass-missed=loop-vectorize -c vectorization_example.cpp
+
+vectorization_example.cpp:31:13: remark: loop not vectorized: unsafe dependent
+memory operations in loop. Use #pragma loop distribute(enable) to allow loop
+distribution to attempt to isolate the offending operations into a separate loop
+Unknown data dependence. Memory location is the same as accessed at
+vectorization_example.cpp:31:13 [-Rpass-analysis=loop-vectorize]
+        sum += filter[i] ? 0 : values[i];
+
+        vectorization_example.cpp:28:9: remark: loop not vectorized
+[-Rpass-missed=loop-vectorize]
+        for (size_t i = 0; i &lt; size; ++i) {</code>
+    </section>
+
+
+    <section class="slide">
+        <h2>Autovectorization</h2>
+
+        <p>Make local sum inside <b>sumIf</b> function:</p>
+        <code style="font-size: 12pt;">class SumFunction
+{
+public:
+    void sumIf(int64_t * values, int8_t * filter, size_t size);
+
+    int64_t sum = 0;
+};
+
+void SumFunction::sumIf(int64_t * values, int8_t * filter, size_t size)
+{
+    int64_t <b>local_sum</b> = 0;
+
+    for (size_t i = 0; i &lt; size; ++i) {
+        local_sum += filter[i] ? 0 : values[i];
+    }
+
+    sum += local_sum;
+}</code>
+    </section>
+
+    <section class="slide">
+        <h2>Autovectorization</h2>
+
+        <code style="font-size: 12pt;">/usr/bin/clang++-15 -mavx2 -O3 -Rpass-analysis=loop-vectorize -Rpass=loop-vectorize
+-Rpass-missed=loop-vectorize -c vectorization_example.cpp
+
+vectorization_example.cpp:31:5: remark: vectorized loop (vectorization width: 4,
+    interleaved count: 4) [-Rpass=loop-vectorize]
+    for (size_t i = 0; i &lt; size; ++i) {</code>
+    </section>
+
+<section class="slide">
+        <h2>Autovectorization</h2>
+
+        <code style="font-size: 12pt;">.LBB0_5:                                # =>This Inner Loop Header: Depth=1
+	vmovd	(%rdx,%rax), %xmm5              # xmm5 = mem[0],zero,zero,zero
+	vmovd	4(%rdx,%rax), %xmm6             # xmm6 = mem[0],zero,zero,zero
+	vmovd	8(%rdx,%rax), %xmm7             # xmm7 = mem[0],zero,zero,zero
+	vmovd	12(%rdx,%rax), %xmm1            # xmm1 = mem[0],zero,zero,zero
+	vpcmpeqb	%xmm5, %xmm8, %xmm5
+	vpmovsxbq	%xmm5, %ymm5
+	vpcmpeqb	%xmm6, %xmm8, %xmm6
+	vpmovsxbq	%xmm6, %ymm6
+	vpcmpeqb	%xmm7, %xmm8, %xmm7
+	vpmovsxbq	%xmm7, %ymm7
+	vpcmpeqb	%xmm1, %xmm8, %xmm1
+	vpmaskmovq	-96(%r8,%rax,8), %ymm5, %ymm5
+	vpmovsxbq	%xmm1, %ymm1
+	vpmaskmovq	-64(%r8,%rax,8), %ymm6, %ymm6
+	vpaddq	%ymm0, %ymm5, %ymm0
+	vpmaskmovq	-32(%r8,%rax,8), %ymm7, %ymm5
+	vpaddq	%ymm2, %ymm6, %ymm2
+	vpmaskmovq	(%r8,%rax,8), %ymm1, %ymm1
+	vpaddq	%ymm3, %ymm5, %ymm3
+	vpaddq	%ymm4, %ymm1, %ymm4
+	addq	$16, %rax
+	cmpq	%rax, %r9
+	jne	.LBB0_5
+</code>
+    </section>
+
+    <section class="slide">
+        <h2>Low-level optimizations</h2>
+
+        <p>Each algorithm and data structure can be tuned using different low-level optimizations:</p>
+        <p>1. Remove unnecessary copying.</p>
+        <p>2. Decrease amount of virtual function calls.</p>
+        <p>3. Tune data layout.</p>
+        <p>4. Specializations for special cases.</p>
+        <p>5. CPU dispatch.</p>
+        <p>6. JIT compilation.</p>
+    </section>
+
+    <section class="slide">
+        <h2>CPU Dispatch</h2>
+
+        <p>For example your binary distributed only with old instruction set <b>SSE4.2</b>.</p>
+        <p>For <b>AVX</b>, <b>AVX2</b>, <b>AVX512</b> instructions need to use runtime instructions specialization using <b>CPUID</b>.</p>
+        <p>It is important that compilers can vectorize even complex loops. We can rely on this.</p>
+
+        <p>Blog post about CPU dispatch:</p>
+        <p><a href="https://maksimkita.com/blog/jit_in_clickhouse.html">https://maksimkita.com/blog/jit_in_clickhouse.html</a></p>
+    </section>
+
+    <section class="slide">
+        <h2>JIT Compilation</h2>
+
+        <p>JIT compilation can transform dynamic configuration into static configuration.</p>
+        <p>Not all functions can be easily compiled, not all algorithms can be easily compiled.</p>
+        <p>Has its own costs (compilation time, memory, maintenance).</p>
+        <p>But can greatly improve performance in special cases.</p>
+
+        <p>Blog post about JIT in ClickHouse:</p>
+        <p><a href="https://maksimkita.com/blog/jit_in_clickhouse.html">https://maksimkita.com/blog/jit_in_clickhouse.html</a></p>
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">Abstractions and Algorithms</h1>
+    </section>
+
+    <section class="slide">
+        <h2>Abstractions and Algorithms</h2>
+
+        <p>For high performance systems interfaces must be determined by data structures and algorithms.</p>
+        <p>Top-down approach does not work.</p>
+        <p>High-performance system must be designed concentrating on doing at least a single task efficiently.</p>
+        <p>Designed from hardware capabilities.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Abstractions and Algorithms</h2>
+
+        <p>There is no silver bullet, or best algorithm for any task.</p>
+        <p>Try to choose the fastest possible algorithm/algorithms for <b>your specific task</b>.</p>
+        <p>Performance must be evaluated on real data.</p>
+        <p>Most of the algorithms are affected by data distribution.</p>
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">Tools</h1>
+    </section>
+
+    <section class="slide">
+        <h2>Tools</h2>
+
+        <p>Real time system and per-process resource (CPU, Memory) utilization - <b>top</b>, <b>htop</b>.</p>
+        <p>CPU per-process-function - <b>perf top</b>.
+        <p>Performance counter statistics - <b>perf stat</b>.</p>
+        <p>CPU Profile - FlameGraphs, <b>perf record</b>.</p>
+        <p>Preparing and analyzing data - <b>clickhouse-local</b>.</p>
+        <p>IO/Network - <b>iostat</b>, <b>dstat</b>, <b>sar</b>.</p>
+    </section>
+
+    <section class="slide">
+        <h2>htop</h2>
+
+        <img style="width: 105%;" src="pictures/htop.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>htop during benchmark</h2>
+
+        <img style="width: 105%;" src="pictures/htop_during_benchmark.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>htop during benchmark</h2>
+
+        <p>High CPU utilization does not mean your program is fast. There can be several reasons:</p>
+        <p>1. Program is Memory/IO bound.</p>
+        <p>2. Inneficient algorithms, data structures.</p>
+        <p>3. Excessive copying.</p>
+    </section>
+
+    <section class="slide">
+        <h2>perf top</h2>
+
+        <img style="width: 50%;" src="pictures/perf_top.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>perf top during benchmark</h2>
+
+        <img style="width: 105%;" src="pictures/perf_top_during_benchmark.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>perf top during benchmark</h2>
+
+        <p>perf top gives high level view of what program is doing during benchmark, and which functions cost most of the CPU.</p>
+        <p>Useful to check underlying assembly and try to figure out where the problem is.</p>
+        <p>But need to be aware that CPU can just wait memory.</p>
+    </section>
+
+    <section class="slide">
+        <h2>perf top during benchmark</h2>
+
+        <p>In aggregation benchmark if we check the hottest function assembly we will see:</p>
+        <img style="width: 105%;" src="pictures/perf_top_memory_bound.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>perf top during benchmark</h2>
+
+        <p>Underlying code:</p>
+        <code style="font-size: 12pt;">namespace ZeroTraits
+{
+template &lt;typename T&gt;
+bool check(const T x) { return x == T{}; } <b>/// test %rax, %rax</b>
+}
+
+static bool isZero(const Key & key, const State & /*state*/)
+{
+    return ZeroTraits::check(key);
+}
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>perf top during benchmark</h2>
+
+        <p>Program is memory bound.</p>
+    </section>
+
+    <section class="slide">
+        <h2>perf stat</h2>
+
+        <p>Useful tool to check something in isolation.</p>
+        <p>Assume you want to improve performance of some critical data structure like hash table or algorithm like sorting.</p>
+        <p>Best way to do this, is to isolate this into separate small program and benchmark it.</p>
+    </section>
+
+    <section class="slide">
+        <h2>perf stat</h2>
+
+        <p>Lets take a look of integer hash table benchmark.</p>
+
+        <code style="font-size: 10pt;">perf stat integer_hash_tables_benchmark ch_hash_map UInt64 WatchID.bin 8873898
+CH HashMap:
+Elapsed: 0.604 (14688324.619 elem/sec.), map size: 8871741
+
+ Performance counter stats for 'integer_hash_tables_benchmark ch_hash_map UInt64 WatchID.bin 8873898':
+
+            683.90 msec task-clock                #    0.968 CPUs utilized
+               124      context-switches          #  181.313 /sec
+                 0      cpu-migrations            #    0.000 /sec
+           252,549      page-faults               #  369.277 K/sec
+     2,948,142,592      cycles                    #    4.311 GHz                      (83.10%)
+       286,182,948      stalled-cycles-frontend   #    9.71% frontend cycles idle     (83.07%)
+     1,276,430,369      stalled-cycles-backend    #   43.30% backend cycles idle      (83.35%)
+     2,025,692,416      instructions              #    <b>0.69  insn per cycle</b>
+                                                  #    0.63  stalled cycles per insn  (83.64%)
+       356,845,237      branches                  #  521.779 M/sec                    (83.65%)
+        21,268,813      branch-misses             #    5.96% of all branches          (83.20%)
+
+       0.706636444 seconds time elapsed
+
+       0.479112000 seconds user
+       0.203622000 seconds sys
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>perf stat</h2>
+
+        <p>Lets take a look of integer hash table benchmark.</p>
+
+        <code style="font-size: 10pt;">perf stat integer_hash_tables_benchmark std_unordered_map UInt64 WatchID.bin 8873898
+std::unordered_map:
+Elapsed: 2.473 (3588276.141 elem/sec.), map size: 8871741
+
+ Performance counter stats for 'integer_hash_tables_benchmark std_unordered_map UInt64 WatchID.bin
+ 8873898':
+
+          3,262.13 msec task-clock                #    0.999 CPUs utilized
+               317      context-switches          #   97.176 /sec
+                 1      cpu-migrations            #    0.307 /sec
+           142,567      page-faults               #   43.704 K/sec
+    14,343,682,708      cycles                    #    4.397 GHz                      (83.33%)
+       258,005,531      stalled-cycles-frontend   #    1.80% frontend cycles idle     (83.33%)
+    12,555,340,086      stalled-cycles-backend    #   87.53% backend cycles idle      (83.34%)
+     4,104,335,191      instructions              #    <b>0.29  insn per cycle</b>
+                                                  #    3.06  stalled cycles per insn  (83.33%)
+       735,241,554      branches                  #  225.387 M/sec                    (83.33%)
+        10,749,318      branch-misses             #    1.46% of all branches          (83.33%)
+
+       3.264492212 seconds time elapsed
+
+       3.060895000 seconds user
+       0.199797000 seconds sys
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>perf stat</h2>
+
+        <p>We see that standard hash map is much slower. Lets check cache misses and cache references.</p>
+
+        <code style="font-size: 10pt;">perf stat -e cache-misses,cache-references integer_hash_tables_benchmark std_unordered_map
+UInt64 WatchID.bin 8873898
+std::unordered_map:
+Elapsed: 2.484 (3572510.427 elem/sec.), map size: 8871741
+
+ Performance counter stats for 'integer_hash_tables_benchmark std_unordered_map UInt64 WatchID.bin
+ 8873898':
+
+       124,089,032      cache-misses              #   35.893 % of all cache refs
+       345,719,343      cache-references
+
+       3.296088157 seconds time elapsed
+
+       3.117693000 seconds user
+       0.175644000 seconds sys
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>perf stat</h2>
+
+        <code style="font-size: 10pt;">perf stat -e cache-misses,cache-references integer_hash_tables_benchmark ch_hash_map
+UInt64 WatchID.bin 8873898
+CH HashMap:
+Elapsed: 0.580 (15306059.985 elem/sec.), map size: 8871741
+
+ Performance counter stats for 'integer_hash_tables_benchmark ch_hash_map UInt64 WatchID.bin
+ 8873898':
+
+        32,774,660      cache-misses              #   28.599 % of all cache refs
+       114,602,476      cache-references
+
+       0.654290201 seconds time elapsed
+
+       0.452424000 seconds user
+       0.200187000 seconds sys
+       </code>
+    </section>
+
+    <section class="slide">
+        <h2>perf stat</h2>
+
+        <p>ClickHouse Hash Table performs 3.8 times less cache misses.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Benchmarking tips</h2>
+
+        <p>There are a lot of additional things that you can tune to reduce perf variations. Example:</p>
+        <p>1. Bind program to specific CPUs.</p>
+        <p>2. Use tmpfs.</p>
+
+        <p><a href="https://llvm.org/docs/Benchmarking.html">https://llvm.org/docs/Benchmarking.html</a></p>
+    </section>
+
+    <section class="slide">
+        <h2>Flame Graph</h2>
+
+        <img style="width: 90%;" src="pictures/flamegraph_dwarf.png"/>
+
+        <p>Can be build for CPU, Memory.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Flame Graph</h2>
+
+        Commands:
+        <code style="font-size: 14pt;">git clone https://github.com/brendangregg/FlameGraph
+
+cd FlameGraph
+
+perf record -F 99 -a -g or perf record -F 99 -a -g -p <b>process_pid</b>
+
+perf script | ./stackcollapse-perf.pl > out.perf-folded
+
+./flamegraph.pl out.perf-folded > perf.svg</code>
+        <br>
+        <p><a href="https://www.brendangregg.com/flamegraphs.html">https://www.brendangregg.com/flamegraphs.html</a></p>
+    </section>
+
+    <section class="slide">
+        <h2>Flame Graph</h2>
+
+        <p>By default perf uses frame-pointer stack unwinding, so to see all traces your program must be
+            compiled with <b>-fno-omit-frame-pointer</b>.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Flame Graph</h2>
+
+        <p>Example of broken Flame Graph:</p>
+        <img style="width: 85%;" src="pictures/flamegraph_benchmark.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Flame Graph</h2>
+
+        <p>Use DWARF stack unwinding:</p>
+        <code style="font-size: 16pt;">perf record -F 99 -a -g -p 32238 -g --call-graph=dwarf</code>
+    </section>
+
+    <section class="slide">
+        <h2>Flame Graph</h2>
+        <img style="width: 85%;" src="pictures/flamegraph_dwarf.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>clickhouse-local</h2>
+
+        <p>I use <b>clickhouse-local</b> almost every day:</p>
+
+        <p>1. Preprocess data for benchmarks.</p>
+        <p>2. Analyze data for benchmarks.</p>
+        <p>3. Analyze benchmark results.</p>
+        <p>4. Analyze output of different tools.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Analyze output of different tools</h2>
+
+        <p>Amount of non vectorized loops in ClickHouse AggregateFunctions, after compile with <b>-Rpass=loop-vectorize</b>, <b>-Rpass-missed=loop-vectorize</b>
+        and <b>-Rpass-analysis=loop-vectorize</b>.</p>
+
+        <code style="font-size: 12pt">SELECT count() FROM (SELECT splitByChar(' ', line)[1] AS file_with_line
+    FROM file("out.txt", LineAsString)
+    WHERE line LIKE '%loop not vectorized%'
+    AND line LIKE '%ClickHouseClang/src/AggregateFunctions/%'
+    GROUP BY file_with_line
+);
+
+┌─count()─┐
+│     403 │
+└─────────┘
+    </code>
+
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">Examples</h1>
+    </section>
+
+    <section class="slide">
+        <h2>High CPU usage issue</h2>
+
+        <img style="width: 100%" src="pictures/background_pool_before.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>High CPU usage issue</h2>
+
+        <p>Background pool produce a lot of calls to wait with timeout for <b>Poco::NotificationQueue</b>.</p>
+        <p>Such calls are also visible on flame graphs and for some benchmarks can take 15-20% of CPU time.</p>
+    </section>
+
+    <section class="slide">
+        <h2>High CPU usage issue</h2>
+
+        <p>This timeout was added long time ago to avoid rare deadlock with <b>Poco::NotificationQueue</b>.</p>
+        <p>Solution was to replace <b>Poco::NotificationQueue</b> to conditional variable and queue.</p>
+
+        <p><a href="https://github.com/ClickHouse/ClickHouse/pull/38028">https://github.com/ClickHouse/ClickHouse/pull/38028</a></p>
+    </section>
+
+    <section class="slide">
+        <h2>High CPU usage issue</h2>
+
+        <img style="width: 80%" src="pictures/flamegraph_dwarf.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Standard containers</h2>
+
+        <code style="font-size: 12pt">INSERT INTO FUNCTION file('test_file_{_partition_id}', 'TSV',
+    'partition_id UInt64, value1 UInt64, value2 UInt64, value3 UInt64,
+        value4 UInt64, value5 UInt64') <b>PARTITION BY partition_id</b>
+SELECT
+    number % 5 AS partition_id,
+    number,
+    number,
+    number,
+    number,
+    number
+FROM numbers(100000000);
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Standard containers</h2>
+
+        <p>Split chunk into multiple chunks.</p>
+        <code style="font-size: 12pt">void PartitionedSink::consume(Chunk chunk)
+{
+    ...
+
+    <b>std::unordered_map&lt;String, size_t&gt;</b> partition_id_to_chunk_index;
+    IColumn::Selector chunk_row_index_to_partition_index;
+
+    for (size_t row = 0; row &lt; chunk.getNumRows(); ++row)
+    {
+        auto value = column->getDataAt(row);
+        auto [it, inserted] = partition_id_to_chunk_index.emplace(value,
+            partition_id_to_chunk_index.size());
+        chunk_row_index_to_partition_index.push_back(it->second);
+    }
+
+    ...
+}
+</code>
+    </section>
+
+    <section class="slide">
+        <h2>Standard containers</h2>
+
+        <p>Use <b>HashMapWithSavedHash&lt;StringRef, size_t&gt;</b> instead of <b>std::unordered_map&lt;String, size_t&gt;</b>.</p>
+        <p>Store hash table and arena as class member, to reuse them between <b>consume</b> calls.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Standard containers</h2>
+        <code style="font-size: 12pt">void PartitionedSink::consume(Chunk chunk)
+{
+    ...
+
+    size_t chunk_rows = chunk.getNumRows();
+    chunk_row_index_to_partition_index.resize(chunk_rows);
+    partition_id_to_chunk_index.clear();
+
+    for (size_t row = 0; row &lt; chunk_rows; ++row)
+    {
+        auto partition_key = partition_by_result_column->getDataAt(row);
+        auto [it, inserted] = partition_id_to_chunk_index.insert(
+            makePairNoInit(partition_key, partition_id_to_chunk_index.size()));
+        if (inserted)
+            it->value.first = copyStringInArena(partition_keys_arena, partition_key);
+
+        chunk_row_index_to_partition_index[row] = it->getMapped();
+    }
+
+    ...
+}
+    </code>
+    </section>
+
+    <section class="slide">
+        <h2>Standard containers</h2>
+
+        <code style="font-size: 12pt">INSERT INTO FUNCTION file('test_file_{_partition_id}', 'TSV',
+            'partition_id UInt64, value1 UInt64, value2 UInt64, value3 UInt64,
+                value4 UInt64, value5 UInt64') <b>PARTITION BY partition_id</b>
+        SELECT
+            number % 5 AS partition_id,
+            number,
+            number,
+            number,
+            number,
+            number
+        FROM numbers(100000000);
+</code>
+        </p>
+        <p>Was: <b style="color: red;">9.714</b> sec (10.36 million rows/s., 82.90 MB/s.)</p>
+        <p>Now: <b style="color: green;">2.868</b> sec (35.10 million rows/s., 280.76 MB/s.)</p>
+    </section>
+
+    <section class="slide">
+        <h2>Avoid virtual function calls</h2>
+
+        <p>Assume that we have interface that provide some generic methods for working with object. For example
+            in ClickHouse there is <b>IColumn</b> interface that provide a lot of methods for working with columns (filter, getPermutation, compareAt).</p>
+        <p>Sometimes we need to write complex logic that is implemented on top of such interface.</p>
+        <p>The problem is that if this logic will be implemented in terms of small virtual methods like <b>compareAt</b> there will be a lot of virtual
+            function calls.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Avoid virtual function calls</h2>
+
+        <p>In most of the cases we use CRTP (The Curiously Reccuring Template Pattern).</p>
+        <p>Also we can use just standalone template function.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Aggregate function CRTP</h2>
+
+        <code style="font-size: 10pt">class IAggregateFunction
+{
+    ...
+
+    virtual ~IAggregateFunction() = default;
+
+    virtual void <b>add</b>(
+        AggregateDataPtr place,
+        const IColumn ** columns,
+        size_t row_num,
+        Arena * arena) const = 0;
+
+    virtual void <b>addBatch</b>(
+        size_t row_begin,
+        size_t row_end,
+        AggregateDataPtr * places,
+        size_t place_offset,
+        const IColumn ** columns,
+        Arena * arena,
+        ssize_t if_argument_pos = -1) const = 0;
+    ...
+}
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Aggregate function CRTP</h2>
+
+        <code style="font-size: 10pt">template &lt;typename Derived&gt;
+class IAggregateFunctionHelper : public IAggregateFunction
+{
+    void <b>addBatch</b>(size_t row_begin, size_t row_end, AggregateDataPtr * places,
+        size_t place_offset, const IColumn ** columns, Arena * arena,
+        ssize_t if_argument_pos = -1) const override
+    {
+        if (if_argument_pos >= 0)
+        {
+            auto * column = columns[if_argument_pos];
+            const auto & flags = assert_cast&lt;const ColumnUInt8 &&gt;(*column).getData();
+            for (size_t i = row_begin; i &lt; row_end; ++i)
+            {
+                if (flags[i] && places[i])
+                    <b>static_cast&lt;const Derived *&gt;(this)->add</b>(places[i] + place_offset,
+                        columns, i, arena);
+            }
+        }
+        {
+            for (size_t i = row_begin; i &lt; row_end; ++i)
+                if (places[i])
+                    <b>static_cast&lt;const Derived *&gt;(this)->add</b>(places[i] + place_offset,
+                        columns, i, arena);
+        }
+    }
+
+}</code>
+    </section>
+
+    <section class="slide">
+        <h2>Aggregate function CRTP</h2>
+
+<code style="font-size: 10pt">template &lt;typename T, typename Derived&gt;
+class IAggregateFunctionDataHelper : public IAggregateFunctionHelper&lt;Derived&gt;
+{
+    ...
+}
+
+class AggregateFunctionCount <b>final</b> : public IAggregateFunctionDataHelper&lt;AggregateFunctionCountData,
+    AggregateFunctionCount&gt;
+{
+    void <b>add</b>(AggregateDataPtr __restrict place, const IColumn **, size_t, Arena *) const override
+    {
+        ++data(place).count;
+    }
+}
+</code>
+    </section>
+
+    <section class="slide">
+        <h2>IColumn virtual function calls</h2>
+
+        <code style="font-size: 12pt">class IColumn
+{
+    ...
+
+    virtual int <b>compareAt</b>(size_t n, size_t m, const IColumn & rhs,
+        int nan_direction_hint) const = 0;
+
+    virtual void <b>compareColumn</b>(const IColumn & rhs, size_t rhs_row_num,
+                            PaddedPODArray&lt;UInt64&gt; * row_indexes,
+                            PaddedPODArray&lt;Int8&gt; & compare_results,
+                            int direction, int nan_direction_hint) const = 0;
+
+    ...
+
+}
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>IColumn virtual function calls</h2>
+
+        <code style="font-size: 12pt">class IColumn
+{
+    ...
+
+protected:
+    template &lt;typename <b>Derived</b>, bool reversed, bool use_indexes&gt;
+    void compareImpl(const Derived & rhs, size_t rhs_row_num,
+                     PaddedPODArray&lt;UInt64&gt; * row_indexes,
+                     PaddedPODArray&lt;Int8&gt; & compare_results,
+                     int nan_direction_hint) const;
+
+    template &lt;typename <b>Derived</b>&gt;
+    void doCompareColumn(const Derived & rhs, size_t rhs_row_num,
+                         PaddedPODArray&lt;UInt64&gt; * row_indexes,
+                         PaddedPODArray&lt;Int8&gt; & compare_results,
+                         int direction, int nan_direction_hint) const;
+
+    ...
+}
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>IColumn virtual function calls</h2>
+
+        <code style="font-size: 12pt">template &lt;is_decimal T&gt;
+void ColumnDecimal&lt;T&gt;::compareColumn(const IColumn & rhs, size_t rhs_row_num,
+                                     PaddedPODArray&lt;UInt64&gt; * row_indexes,
+                                     PaddedPODArray&lt;Int8&gt; & compare_results,
+                                     int direction, int nan_direction_hint) const
+{
+    return this->template doCompareColumn&lt;ColumnDecimal&lt;T&gt;&gt;(
+        <b>static_cast&lt;const Self &&gt;</b>(rhs),
+        rhs_row_num,
+        row_indexes,
+        compare_results,
+        direction,
+        nan_direction_hint);
+}</code>
+    </section>
+
+    <section class="slide">
+        <h2>IColumn virtual function calls</h2>
+
+        <p>Compile time dispatch:</p>
+<code style="font-size: 10pt">template &lt;typename Derived&gt;
+void IColumn::doCompareColumn(const Derived & rhs, size_t rhs_row_num,
+                                PaddedPODArray&lt;UInt64&gt; * row_indexes,
+                                PaddedPODArray&lt;Int8&gt; & compare_results,
+                                int direction, int nan_direction_hint) const
+{
+    if (direction &lt; 0)
+    {
+        if (row_indexes)
+            <b>compareImpl&lt;Derived, true, true&gt;</b>(rhs, rhs_row_num, row_indexes,
+                    compare_results, nan_direction_hint);
+        else
+            <b>compareImpl&lt;Derived, true, false&gt;</b>(rhs, rhs_row_num, row_indexes,
+            compare_results, nan_direction_hint);
+        }
+    else
+    {
+        if (row_indexes)
+            <b>compareImpl&lt;Derived, false, true&gt;</b>(rhs, rhs_row_num, row_indexes,
+                    compare_results, nan_direction_hint);
+        else
+            <b>compareImpl&lt;Derived, false, false&gt;</b>(rhs, rhs_row_num, row_indexes,
+                compare_results, nan_direction_hint);
+    }
+}
+    </code>
+    </section>
+
+    <section class="slide">
+        <h2>IColumn virtual function calls</h2>
+
+        <code style="font-size: 10pt">template &lt;typename Derived, bool <b>reversed</b>, bool <b>use_indexes</b>&gt;
+void IColumn::compareImpl(const Derived & rhs, size_t rhs_row_num,
+                          PaddedPODArray&lt;UInt64&gt; * row_indexes [[maybe_unused]],
+                          PaddedPODArray&lt;Int8&gt; & compare_results,
+                          int nan_direction_hint) const
+{
+    for (size_t i = 0; i &lt; num_indexes; ++i)
+    {
+        UInt64 row = i;
+
+        if constexpr (use_indexes)
+            row = indexes[i];
+
+        int res = <b>compareAt</b>(row, rhs_row_num, rhs, nan_direction_hint);
+        assert(res == 1 || res == -1 || res == 0);
+        compare_results[row] = static_cast&lt;Int8&lt;(res);
+
+        if constexpr (reversed)
+            compare_results[row] = -compare_results[row];
+
+        if constexpr (use_indexes)
+        {
+            if (compare_results[row] == 0)
+            {
+                *next_index = row;
+                ++next_index;
+            }
+        }
+    }
+}
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>IColumn virtual function calls</h2>
+
+        <code style="font-size: 10pt">template &lt;typename Derived, bool <b>reversed</b>, bool <b>use_indexes</b>&gt;
+void IColumn::compareImpl(const Derived & rhs, size_t rhs_row_num,
+                          PaddedPODArray&lt;UInt64&gt; * row_indexes [[maybe_unused]],
+                          PaddedPODArray&lt;Int8&gt; & compare_results,
+                          int nan_direction_hint) const
+{
+    for (size_t i = 0; i &lt; num_indexes; ++i)
+    {
+        UInt64 row = i;
+
+        if constexpr (use_indexes)
+            row = indexes[i];
+
+        int res = <b>static_cast&lt;const Derived *&gt;(this)->compareAt</b>(row, rhs_row_num, rhs,
+            nan_direction_hint);
+        assert(res == 1 || res == -1 || res == 0);
+        compare_results[row] = static_cast&lt;Int8&lt;(res);
+
+        if constexpr (reversed)
+            compare_results[row] = -compare_results[row];
+
+        if constexpr (use_indexes)
+        {
+            if (compare_results[row] == 0)
+            {
+                *next_index = row;
+                ++next_index;
+            }
+        }
+    }
+}
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>IColumn virtual function calls</h2>
+
+        <p>Result performance improvements:</p>
+        <img style="width: 100%" src="pictures/avoid_virtual_function_call.png"/>
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">Sorting</h1>
+    </section>
+
+    <section class="slide">
+        <h2>Sorting</h2>
+
+        <p>How Sorting in ClickHouse works. Let first take a look at pipeline:</p>
+
+        <code style="font-size: 14pt">EXPLAIN PIPELINE SELECT WatchID FROM hits_100m_single
+ORDER BY WatchID, CounterID;
+
+┌─explain──────────────────────────────────┐
+│ (Expression)                             │
+│ ExpressionTransform                      │
+│   (Sorting)                              │
+│   <b>MergingSortedTransform</b> 16 → 1          │
+│     <b>MergeSortingTransform</b> × 16           │
+│       LimitsCheckingTransform × 16       │
+│         <b>PartialSortingTransform</b> × 16     │
+│           (Expression)                   │
+│           ExpressionTransform × 16       │
+│             (SettingQuotaAndLimits)      │
+│               (ReadFromMergeTree)        │
+│               MergeTreeThread × 16 0 → 1 │
+└──────────────────────────────────────────┘
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Sorting</h2>
+
+        <p>In physical query plan we have multiple transform that work together to perform sorting:</p>
+
+        <p>PartialSortingTransform — sort single block, apply special optimization if LIMIT is specified.</p>
+        <p>MergeSortingTransform — sort multiple blocks using k-way-merge algorithm, output of this transform is a stream of sorted blocks.</p>
+        <p>MergingSortedTransform — sort multiple streams of sorted blocks using k-way-merge algorithm.</p>
+
+        <p><a href="https://en.wikipedia.org/wiki/K-way_merge_algorithm">K-way merge algorithm</a></p>
+    </section>
+
+    <section class="slide">
+        <h2>Sorting</h2>
+
+        <p>Sort of single block in PartialSortingTransform, can be performed in batch, without indirections. There is <b>getPermutation</b>,
+            <b>updatePermutaion</b> methods in <b>IColumn</b> that returns or update permutation.</p>
+        <p>This permutation can later be applied efficiently to any column using <b>permute</b> method.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Sorting</h2>
+
+        <p>The problem is with MergeSortingTransform and MergingSortedTransform. They must perform k-way-merge algorithm, and this algorithm operates on single rows
+            instead of columns.</p>
+        <p>In the worst case, we will apply ORDER BY WatchID, CounterID comparator to each row N * log(N) * 2 times during our
+            MergeSortingTransform, MergingSortedTransform.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Sorting</h2>
+
+        <code>SELECT WatchID FROM hits_100m_obfuscated
+ORDER BY WatchID FORMAT Null;</code>
+
+        </p>
+
+        <img style="width: 100%" src="pictures/sorting_single_column_no_specialization_perf_top.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Sorting</h2>
+
+        <code style="font-size: 12pt">struct SortCursor : SortCursorHelper&lt;SortCursor&gt;
+{
+   using SortCursorHelper&lt;SortCursor&gt;::SortCursorHelper;
+
+   /// The specified row of this cursor is greater than the specified
+   /// row of another cursor.
+   bool greaterAt(const SortCursor & rhs, size_t lhs_pos, size_t rhs_pos) const
+   {
+       for (size_t i = 0; i &lt; <b>impl->sort_columns_size</b>; ++i)
+       {
+           const auto & sort_description = impl->desc[i];
+           int direction = sort_description.direction;
+           int nulls_direction = sort_description.nulls_direction;
+           int res = direction * <b>impl->sort_columns[i]->compareAt</b>(lhs_pos, rhs_pos,
+               *(rhs.impl->sort_columns[i]), nulls_direction);
+
+           if (res &gt; 0)
+               return true;
+           if (res &lt; 0)
+               return false;
+       }
+
+       return impl->order > rhs.impl->order;
+   }
+};</code>
+    </section>
+
+
+
+    <section class="slide">
+        <h2>Sorting</h2>
+
+        <p>Worst thing for column DBMS is to process elements in rows.</p>
+        <p>The biggest problem here is that for each column specified in the ORDER BY comparator, we call <b>compareAt</b> method N * log(N) * 2 times.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Sorting Single Column Specialization</h2>
+
+        <p>The most common case of sorting in databases is sorting by single column.</p>
+        <code>SELECT WatchID FROM hits_100m_obfuscated
+ORDER BY WatchID FORMAT Null;</code>
+        </p>
+        <p>Lets write specialization.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Sorting Single Column Specialization</h2>
+
+        <code style="font-size: 12pt">template &lt;typename ColumnType&gt;
+struct SpecializedSingleColumnSortCursor : SortCursorHelper&lt;
+    SpecializedSingleColumnSortCursor&lt;ColumnType&gt;&gt;
+{
+    bool ALWAYS_INLINE greaterAt(
+        const SortCursorHelper&lt;SpecializedSingleColumnSortCursor&gt; & rhs,
+        size_t lhs_pos, size_t rhs_pos) const
+    {
+        auto & lhs_columns = this->impl->sort_columns;
+        auto & rhs_columns = rhs.impl->sort_columns;
+        const auto & lhs_column = <b>assert_cast&lt;const ColumnType &&gt;(*lhs_columns[0]);</b>
+        const auto & rhs_column = <b>assert_cast&lt;const ColumnType &&gt;(*rhs_columns[0]);</b>
+
+        const auto & desc = this->impl->desc[0];
+
+        int res = desc.direction * lhs_column.compareAt(lhs_pos, rhs_pos,
+            rhs_column, desc.nulls_direction);
+        if (res &gt; 0)
+            return true;
+        if (res &lt; 0)
+            return false;
+
+        return this->impl->order > rhs.impl->order;
+    }
+};</code>
+    </section>
+
+    <section class="slide">
+        <h2>Sorting Single Column Specialization</h2>
+
+        <code>SELECT WatchID FROM hits_100m_obfuscated
+ORDER BY WatchID FORMAT Null;</code>
+        </p>
+        <p>Was: <b style="color: red;">5.401</b> sec (18.51 million rows/s., 148.11 MB/s)</p>
+        <p>Now: <b style="color: green;">4.363</b> sec (22.92 million rows/s., 183.35 MB/s.)</p>
+    </section>
+
+    <section class="slide">
+        <h2>Sorting Multiple Columns JIT</h2>
+
+        <p>For multiple columns in comparator we applied JIT compilation.</p>
+        <p>We fused multiple <b>compareAt</b> methods in a single function to avoid unnecessary indirections and decrease the number of
+            virtual function calls if multiple columns are specified in the comparator.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Sorting Multiple Columns JIT</h2>
+
+        <code>SELECT WatchID FROM hits_100m_single
+ORDER BY WatchID, CounterID
+SETTINGS compile_sort_description=0;</code>
+        <p style="margin-top: 0.5em;">&mdash; 0 rows in set. Elapsed: 6.408 sec. Processed 100.00 million rows, 1.20 GB (15.60 million rows/s., 187.26 MB/s.)</p>
+
+        <code>SELECT WatchID FROM hits_100m_single
+ORDER BY WatchID, CounterID
+SETTINGS compile_sort_description=1;</code>
+        <p style="margin-top: 0.5em;">&mdash; 0 rows in set. Elapsed: 5.300 sec. Processed 100.00 million rows, 1.20 GB (18.87 million rows/s., 226.40 MB/s.)<br/>
+            &mdash; <span style="color: green;"><b>+20% performance improvement!</b></span></p>
+    </section>
+
+    <section class="slide">
+        <h2>Sorting K-Way Merge</h2>
+
+        <p>Another problem with MergeSortingTransform and MergingSortedTransform and k-way-merge algorithm, is that during merge we insert only single row into our
+            result.</p>
+        <p>During row insertion we need to perform <b>number_of_columns</b> virtual calls.</p>
+        <p>Maybe we can choose data structure that performs minimum amount of comparisons and can help to minimize amount of virtual calls during row insertion ?</p>
+    </section>
+
+    <section class="slide">
+        <h2>Sorting K-Way Merge Heap</h2>
+
+        <img style="height: 70%; margin-left: 200px;" src="pictures/heap.svg"/>
+    </section>
+
+    <section class="slide">
+        <h2>Sorting K-Way Merge Winner Tree</h2>
+
+        <img style="height: 90%;" src="pictures/tournament_tree.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Sorting K-Way Merge</h2>
+
+        <p><b>K</b> - number of cursors that we want to merge.</p>
+        <p><b>N</b> - total number of elements that are in all cursors.</p>
+
+        <p>There are 3 data structures that can be used:</p>
+        <p>1. Heap. Performs around N * log(K) * 1.5 comparisons in worst case.</p>
+        <p>2. Self balansing BST (AVL, Red-Black). Performs around N * log(K) * constant_factor comparisons.</p>
+        <p>3. Tournament Tree. Performs N * log(K) comparisons in worst case.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Sorting Batch Heap</h2>
+
+        <p>The biggest issue with tournament tree is that this data structure always performs N * log(N) comparisons, even for low cardinality data,
+            because all tournament must be replayed.</p>
+        <p>Theoretically tournament tree should make less comparisons for data with high cardinality. But on real data heap can avoid a lot of comparisons
+            because next minimum cursor is still greater than current minimum cursor.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Sorting Batch Heap</h2>
+
+        <p>We can choose between heap and tournament tree in runtime using for example bandits approach similar to lz4 optimization, or using
+            statistics to understand if column has high cardinality or low cardinality.</p>
+        <p>Also there are tournament tree modifications that can allow to store minimum cursor and next minimum cursor.</p>
+        <p>But for now we decided to use heap property, but improve it with batch interface.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Sorting Batch Heap</h2>
+        <p>The idea is simple, if current minimum cursor in heap is less than next minimum cursor, we compare them,
+            until next mininum cursor is greater, each time we increase batch size.</p>
+        <p>That way we can insert multiple rows into result, if we sort data that does not have high cardinality (contains duplicates).</p>
+    </section>
+
+    <section class="slide">
+        <h2>Sorting Batch Heap</h2>
+
+        <p>On real data we can see 2x-10x performance improvement, after replacing heap with batch heap.</p>
+
+        <code style="font-size:12pt;">SELECT DISTINCT Age FROM hits_100m_obfuscated;
+┌─Age─┐
+│   0 │
+│  50 │
+│  31 │
+│  55 │
+│  22 │
+│  28 │
+└─────</code>
+
+        <code style="font-size:12pt;">SELECT WatchID FROM hits_100m_obfuscated ORDER BY Age FORMAT Null;</code>
+        </p>
+        <p>Was: <b style="color: red;">4.154</b> sec (24.07 million rows/s., 216.64 MB/s.)</p>
+        <p>Now: <b style="color: green;">0.482</b> sec (207.47 million rows/s., 1.87 GB/s.)</p>
+    </section>
+
+    <section class="slide">
+        <h2>Conclusion</h2>
+
+        <p>1. CI/CD infrastructure, especially performance tests, must be the core component of a high performance system.</p>
+        <p>2. Without deep introspection it is hard to investigate issues with performance.</p>
+        <p>3. For high performance systems interfaces must be determined by algorithms and data structures.</p>
+        <p>4. Use tools to profile, benchmark and check how your program works under load.</p>
+        <p>5. Avoid virtual function calls.</p>
+        <p>6. Always evaluate algorithms and data structures on real data.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Questions?</h2>
+    </section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
