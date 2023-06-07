@@ -1,6 +1,6 @@
 These are the presentations from the 7 June, 2023 Meetup - ClickHouse Meetup in Bangalore
 
-**Details*
+**Details**
 
 We're excited to announce an upcoming ClickHouse Meetup that you won't want to miss. Join us as we gather together to discuss the latest in the world of ClickHouse and share user stories.
 
