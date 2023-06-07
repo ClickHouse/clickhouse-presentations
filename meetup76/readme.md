@@ -10,7 +10,7 @@ And, of course, there will be plenty of time for food/drink and conversation wit
 So mark your calendars, spread the word, and get ready for an unforgettable ClickHouse Meetup. We can't wait to see you there!
 
 **Agenda**
-6:00 - 6:30 pm - Chat with attendees and grab some snacks
+6:00 - 6:30 pm - Chat with attendees and grab some snacks & A ClickHouse Introduction - Tyler Hannan (ClickHouse)
 6:30 - 7:00 pm - Lessons in building low-latency apps on historical data insights - Smit Shah (Hasura)
 7:00 - 7:30 pm - "Migrating 100 Billion rows of financial data" - Ritesh Shrivastav, Software Engineer, Console (Zerodha)
 7:30 - 8:00 pm - "Using ClickHouse as a Vector Database", Dale McDiarmid, Product Engineer (ClickHouse)
