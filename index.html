@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<title>clickhouse-presentations</title>
+<body>
+  <div id="container">
+    <h1>
+      <a href="https://presentations.clickhouse.com/"
+        >clickhouse-presentations</a
+      >
+    </h1>
+    <hr />
+    <p>
+      Presentation materials about ClickHouse, open-source column-oriented
+      database management system that allows generating analytical data reports
+      in real time.
+    </p>
+    <p>
+      <a href="https://github.com/ClickHouse/ClickHouse">Main repository</a>
+    </p>
+    <p><a href="https://clickhouse.com/">Official website</a></p>
+    <p><a href="https://www.youtube.com/c/ClickHouseDB">YouTube channel</a></p>
+    <p><a href="https://clickhouse.com/docs/en/">Documentation</a></p>
+    <p>
+      This site is open source.
+      <a
+        href="https://github.com/ClickHouse/clickhouse-presentations/edit/master/index.html"
+        >Improve this page</a
+      >.
+    </p>
+    <hr />
+    <div id="listing"><h2>Loading...</h2></div>
+  </div>
+</body>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial,
+      sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    font-size: 16px;
+    line-height: 1.5;
+    word-wrap: break-word;
+  }
+  #container {
+    max-width: 1012px;
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+  hr {
+    border: none;
+    border-bottom: 1px solid #eaecef;
+  }
+  ul {
+    padding-left: 1em;
+  }
+  li {
+    margin-bottom: 0.5em;
+  }
+  a {
+    text-decoration: none;
+    color: #0366d6;
+  }
+  a:hover {
+    text-decoration: underline;
+  }
+  code {
+    font-weight: normal;
+  }
+</style>
+<script>
+  (async () => {
+    const params = new Proxy(new URLSearchParams(window.location.search), {
+      get: (searchParams, prop) => searchParams.get(prop),
+    });
+
+    const listingNode = document.querySelector("#listing");
+
+    try {
+      const response = await fetch(
+        "https://api.github.com/repos/ClickHouse/clickhouse-presentations/contents" +
+          (params.path || "/")
+      );
+      const data = await response.json();
+      if (response.status !== 200) {
+        throw new Error(data.message);
+      }
+
+      const indexHtml = data.find((el) => el.name === "index.html");
+      const rootIndexHtml = indexHtml && indexHtml.path === "index.html";
+      if (indexHtml && !rootIndexHtml) {
+        window.location.replace(indexHtml.path);
+        return;
+      }
+
+      const list = document.createElement("ul");
+      data.forEach((el) => {
+        const listItem = document.createElement("li");
+        const anchor = document.createElement("a");
+
+        if (el.type === "file") {
+          if (el.name.endsWith(".md")) {
+            anchor.setAttribute(
+              "href",
+              el.path.split(".").slice(0, -1).join(".")
+            );
+          } else {
+            anchor.setAttribute("href", el.download_url);
+          }
+        } else if (el.type === "dir") {
+          anchor.setAttribute("href", "?path=" + encodeURIComponent(el.path));
+        }
+
+        anchor.textContent = el.name;
+        listItem.replaceChildren(anchor);
+        list.appendChild(listItem);
+      });
+      const heading = document.createElement("h2");
+      const pathEl = document.createElement("code");
+      pathEl.textContent = params.path || "/";
+      heading.textContent = "Contents of ";
+      heading.appendChild(pathEl);
+      listingNode.replaceChildren(heading, list);
+    } catch (e) {
+      const heading = document.createElement("h2");
+      heading.textContent = e;
+      listingNode.replaceChildren(heading);
+    }
+  })();
+</script>
