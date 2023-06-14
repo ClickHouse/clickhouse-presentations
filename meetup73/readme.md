@@ -12,15 +12,15 @@ If you are interested in presenting, we still have space on the agenda. Please e
 
 Join us for a fun evening of talks, food and discussion!
 
-Agenda
-18:00 Doors Open - Networking & Snacks
-18:30 Welcome
-18:35 Oleg Kozlyuk (Deutsche Bank Berlin Technology Centre) - 30 mins
-19:05 - Don't manage Data Infrastructure yourself: Clickhouse Tips for Growing Start-ups - Artem Popov (Fingerprint) - 30 mins
-19:40 “ClickHouse update”, Alexey Milovidov (ClickHouse) - 25 mins
-20:05 Q&A
-20:15 Food, Drinks & Conversation
-21:15 Event Ends
+**Agenda**
+* 18:00 Doors Open - Networking & Snacks
+* 18:30 Welcome
+* 18:35 Oleg Kozlyuk (Deutsche Bank Berlin Technology Centre) - 30 mins
+* 19:05 - Don't manage Data Infrastructure yourself: Clickhouse Tips for Growing Start-ups - Artem Popov (Fingerprint) - 30 mins
+* 19:40 “ClickHouse update”, Alexey Milovidov (ClickHouse) - 25 mins
+* 20:05 Q&A
+* 20:15 Food, Drinks & Conversation
+* 21:15 Event Ends
 
 Abstracts
 Don't manage Data Infrastructure yourself: Clickhouse Tips for Growing Start-ups
