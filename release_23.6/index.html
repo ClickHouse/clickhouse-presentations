@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 23.6 Webinar</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+         .slide table tr:not(:last-of-type)>* { background: none; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 23.6 Webinar</h1>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/summer1.jpg); background-size: cover;">
+        <h1 style="margin-top: 80px; line-height: 150%; color: white; font-size: 64pt; text-shadow: 1px 1px 10px black;">ClickHouse<br/> Release 23.6</h1>
+    </section>
+
+<section class="slide">
+<h2>Release 23.6 Webinar</h2>
+<p>1. (50 min) What's new in ClickHouse 23.6.</p>
+<p>2. (10 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/summer2.jpg); background-size: cover;">
+<h2><span class="hilite">Release 23.6</span></h2>
+<p><span class="hilite">ClickHouse Summer Release.</span></p>
+<p><span class="hilite">— 10 new features 🌞</span></p>
+<p><span class="hilite">— 12 performance optimizations 🕶️</span></p>
+<p><span class="hilite">— 31 bug fixes ⛱️</span></p>
+</section>
+
+<!--
+
+transform
+MongoDB 5.1+, 6
+INTO OUTFILE TRUNCATE
+Rename files after processing
+Skip empty files
+Connection string in clickhouse-client
+session_timezone
+
+Performance:
+
+Relax too many parts
+ReplicatedMergeTree and 5000 tables
+Parquet write
+Parquet read
+Sorting optimization
+
+Redis
+Overlay databases
+WITH FILL with prefix (?)
+
+Integrations
+
+Cloud
+
+Dedicated services
+GCP GA
+
+Highlights
+
+chdb
+SigNoz
+urleng
+
+Reading
+
+Choosing the right JOIN algorithm
+CDC from Postgres
+
+-->
+
+<section class="slide">
+<h2>All Data Types In Function transform</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT transform(
+    what,
+    [from1, from2, ...],
+    [to1, to2, ...],
+    default);
+
+SELECT CASE what
+    WHEN from1 THEN to1
+    WHEN from2 THEN to2
+    ELSE default END;
+</code></p>
+
+<p><b>23.5</b>: implemented only for numbers, strings, and date-times;<br/>
+<b>23.6</b>: implemented for <b style="color: green;">everything</b>;</p>
+
+<p style="color: gray;">Note: from and to values are required to be constants even in 23.6.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: -0.5em;">Developer: Alexey Milovidov.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">SELECT ... INTO OUTFILE '...' TRUNCATE</h2>
+
+<p>Version 23.5 introduced the <b>APPEND</b> modifier.
+<br/>Version 23.6 adds the <b style="color: green;">TRUNCATE</b> modifier.</p>
+
+<p><code style="line-height: 1.1; font-size: 14pt;">:) SELECT * FROM numbers(10)
+   INTO OUTFILE 'numbers.tsv'
+
+Ok.
+
+:) SELECT * FROM numbers(10)
+   INTO OUTFILE 'numbers.tsv'
+
+Cannot open file numbers.tsv, errno: 17,
+strerror: File exists, consider using APPEND or TRUNCATE. <span style="color: gray;">-- this is fine</span>
+
+:) SELECT * FROM numbers(10)
+   INTO OUTFILE 'numbers.tsv' <b style="color: green;">TRUNCATE</b>
+
+<b style="color: green;">Ok.</b></code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: -1em;">Developer: Manas Alekar.</p>
+</section>
+
+
+<section class="slide">
+<h2>Skip Empty Files On Data Import</h2>
+
+<p>New settings: <b>s3_skip_empty_files</b>, <b>hdfs_skip_empty_files</b>,
+<br/><b>engine_file_skip_empty_files</b>, <b>engine_url_skip_empty_files</b>.</p>
+
+<p>For what?</p>
+<p>&mdash; empty CSV, TSV, JSONEachRow, RowBinary, Native<br/>&mdash; are valid empty datasets;</p>
+<p>&mdash; but empty Parquet or ORC files are invalid &mdash; we want to skip them.</p>
+
+<p>Q: Do we need a setting to skip any broken files on import?</p>
+
+<p style="margin-top: 3em; color: gray; font-size: 14pt;">Developer: Pavel Kruglov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Rename Files After Processing</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">clickhouse-local --rename_files_after_processing '%f.processed' --query "
+    INSERT INTO table SELECT * FROM file('*.parquet')"</code></p>
+
+<p>&mdash; to build simple data pipelines, when new files<br/>&emsp; constantly appear in the directory;</p>
+<p>&mdash; it can rename by arbitrary pattern and move<br/>&emsp; into other directory, relative to the path;</p>
+<p>&mdash; the pattern can include the <b>timestamp</b> of processing;</p>
+
+<p>Demo</p>
+
+<!--
+
+SELECT 1 INTO OUTFILE 'data.parquet';
+ls -l
+SELECT * FROM file('*.parquet');
+SELECT * FROM file('*.parquet');
+SET rename_files_after_processing = '%f.processed';
+
+-->
+
+<p style="margin-top: 3em; color: gray; font-size: 14pt;">Developer: Aleksey Golub.</p>
+</section>
+
+<section class="slide">
+<h2>Rename Files After Processing</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">clickhouse-local --rename_files_after_processing '%f.processed' --query "
+    INSERT INTO table SELECT * FROM file('*.parquet')"</code></p>
+
+<p>Feature requests for the next versions:</p>
+
+<p>&mdash; extend it to S3 and HDFS;</p>
+<p>&mdash; better guarantees for INSERT SELECT;</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Connection String For clickhouse-client</h2>
+
+<p>The normal way:</p>
+<p><code style="font-size: 12pt; line-height: 1.5; margin-right: -1em;">clickhouse-client --host myhost.clickhouse.cloud --secure --password</code></p>
+
+<p>Alternative way (since 23.6):</p>
+<p><code style="font-size: 12pt; line-height: 1.5; margin-right: -1em;">clickhouse-client 'clickhouse://user:password@myhost.clickhouse.cloud/database?secure'</code></p>
+
+<!--<p>Why?</p>
+<p>&mdash; to standardize integrations and tools expecting connection strings;</p>-->
+
+<p style="margin-top: 3em; color: gray; font-size: 14pt;">Developer: Alexey Gerasimchuck.</p>
+</section>
+
+
+<section class="slide">
+<h2>session_timezone</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.1; margin-top: -1em;">:) SELECT now()
+
+┌───────────────now()─┐
+│ 2023-06-29 13:11:16 │
+└─────────────────────┘
+
+:) SELECT now('America/Los_Angeles')
+
+┌─now('America/Los_Angeles')─┐
+│        2023-06-29 04:11:21 │
+└────────────────────────────┘
+
+:) SET <b style="color: green;">session_timezone</b> = 'America/Los_Angeles';
+:) SELECT now();
+
+┌───────────────now()─┐
+│ 2023-06-29 04:11:29 │
+└─────────────────────┘
+</code></p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Andrey Zvonov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Integration With MongoDB 5.1+</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE test_mongo ... ENGINE = <b>MongoDB</b>(
+  'mongo1:27017', 'test', 'simple_table', 'testuser', 'clickhouse');
+
+SELECT * FROM test_mongo;
+
+SELECT * FROM <b>mongodb</b>(
+  'mongo1:27017', 'test', 'simple_table', 'testuser', 'clickhouse',
+  'x String, y UInt64, ...');
+</code></p>
+
+<p>Was: perfectly working until MongoDB 5.1.</p>
+<p>But: <span style="color: red;">they changed the protocol</span> :(</p>
+<p>Now: everything works up to <b style="color: green;">MongoDB 6</b>.</p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Nikolai Degterinskiy.</p>
+</section>
+
+
+<section class="slide">
+<h2>Performance Optimizations</h2>
+</section>
+
+<section class="slide">
+<h2>"Too many parts" Is Relaxed</h2>
+
+<p style="margin-top: -1em;">How many is too many?
+<br/>&mdash; parts_to_delay_insert, parts_to_throw_insert;</p>
+
+<p>How to perform backpressure?
+<br/>&mdash; should it slow-down long running inserts?</p>
+
+<img src="pictures/parts.png" style="width: 100%" />
+</section>
+
+<section class="slide">
+<h2>"Too many parts" Is Relaxed</h2>
+
+<img src="pictures/parts.png" style="width: 100%; margin-top: -1em;" />
+
+<p>Example: inserting 400 billion records with 4 threads on a single machine,<br/>7 million records/second, with concurrent SELECT queries for dashboards.</p>
+
+<p>Decision: enable <span style="color: green;">backpressure</span> during insert<br/>and <span style="color: green;">increase the default</span> value of max parts to 3000.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Background Threads In ReplicatedMergeTree</h2>
+
+<p>Before 23.6:</p><p>&mdash; aggressive scheduling of background threads
+<br/>(cleanup and merge selecting) was leading to
+<br/>a high CPU usage and excessive requests to Keeper.</p>
+
+<p>Release 23.6:</p><p>&mdash; introduce backoff for tables without inserts.</p>
+
+<p>Result:</p><p>&mdash; moderate CPU usage on a server with <b style="color: green;">5000 ReplicatedMergeTree</b> tables;
+<br/><b style="color: green;">three times less</b> the number of requests to Keeper and network traffic!</p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Alexander Tokmakov.</p>
+
+</section>
+
+<section class="slide">
+<h2>Sorting Almost Sorted Data</h2>
+
+<p>If the data is not assumed to be sorted,
+<br/>but <em>appears</em> to be sorted in certain ranges &mdash; detect that and use.</p>
+
+<p>Demo</p>
+
+<!--
+
+~/work/ClickHouse/programs/server/clickhouse-23.2 local
+clickhouse-local
+
+SELECT number FROM numbers(100000000) ORDER BY toString(number) LIMIT 90000000, 10;
+
+-->
+
+<p style="margin-top: 10em; color: gray; font-size: 14pt;">Developer: Maksim Kita, Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Reading Parquet From Local Files</h2>
+
+<p>clickhouse-local over partitioned Parquet files improved 2 times 🔥
+clickhouse-local over a single Parquet file improved 4 times ❤️‍🔥</p>
+
+<div style="height: 40%; overflow-y: hidden;"><img src="pictures/parquet.png" style="width: 100%;" /></div>
+
+<!--
+
+~/work/ClickHouse/programs/server/clickhouse-23.4 local
+clickhouse-local
+
+SELECT CounterID, uniq(UserID) AS u FROM file('hits.parquet') GROUP BY ALL ORDER BY u DESC LIMIT 10
+
+-->
+
+<p style="margin-top: 1em;">Demo.</p>
+
+<p style="margin-top: -1em; color: gray; font-size: 14pt;">Developer: Michael Kolupaev. Already included in the release 23.5.</p>
+</section>
+
+<section class="slide">
+<h2>Something Interesting</h2>
+</section>
+
+<section class="slide">
+<h2>Redis Tables</h2>
+
+<p>ClickHouse + Redis = ❤</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE test_redis (...)
+    ENGINE = <b>Redis</b>('host:6379', 0, 'password')
+    PRIMARY KEY k;
+
+SELECT * FROM test_redis;
+SELECT * FROM test_redis WHERE k = 'whatever';
+SELECT * FROM test_redis WHERE k IN ('a', 'b');
+
+SELECT * FROM <b>redis</b>(
+  'host:6379', k, 'k String, v String', 0, 'password');
+</code></p>
+
+<p style="margin-top: 3em; color: gray; font-size: 14pt;">Developer: Jacky Woo</p>
+</section>
+
+<section class="slide">
+<h2>Redis Tables</h2>
+
+<p>ClickHouse + Redis = ❤</p>
+
+<p style="line-height: 1.5;">Supports SELECT and INSERT,
+<br/>SELECT by a key, set of keys, or full scan,
+<br/>JOIN with Redis tables,
+<br/>ALTER UPDATE and DELETE!</p>
+
+<p style="color: gray;">What next? Support for hash data type in Redis?</p>
+
+<p style="margin-top: 3em; color: gray; font-size: 14pt;">Developer: Jacky Woo</p>
+</section>
+
+
+<section class="slide">
+<h2>A Secret Feature</h2>
+<p>It has a chance to ship in the release 23.6.</p>
+<p>... but it is not guaranteed.</p>
+<p style="margin-top: 2em; font-size: 28pt;"><b>Overlay Databases</b></p>
+<p style="font-size: 28pt;">with Filesystem, S3, and HDFS database engines!</p>
+</section>
+
+
+<section class="slide">
+<h2>Integrations</h2>
+<p><b>ClickHouse is supported by Confluent Cloud</b>:</p>
+<p>The integration can be installed as a custom connector.</p>
+
+<p style="margin-top: 2em;">Updates for <b>Metabase</b>; <b>Node.js</b>, <b>Python</b>, and <b>Go</b> drivers.</p>
+
+<p style="margin-top: 2em;">Official <b>Terraform</b> provider for ClickHouse Cloud:
+<br/><a href="https://registry.terraform.io/providers/ClickHouse/clickhouse/latest">https://registry.terraform.io/providers/ClickHouse/clickhouse/latest</a></p>
+</section>
+
+
+<section class="slide">
+<h2>Cloud Updates</h2>
+<p><b>GCP</b></p>
+<p>&mdash; ClickHouse Cloud is GA in GCP since Jun 20th!</p>
+<p><b>Dedicated Tier</b></p>
+<p>&mdash; dedicated environment;
+<br/>&mdash; advanced isolation and security;
+<br/>&mdash; custom compute options;
+<br/>&mdash; scheduled upgrades;
+<br/>&mdash; uptime SLAs;
+<br/>&mdash; named lead support engineer;</p>
+</section>
+
+<section class="slide">
+<img src="pictures/chdb.png" style="width: 50%; margin-top: 1em;"/>
+<p>"chDB is an embedded OLAP SQL engine powered by ClickHouse"</p>
+<p>Available as a Python module, Rust, Go, Node.js, and Bun library.</p>
+<p>Similar to clickhouse-local, but <b>embedded into your app</b>.</p>
+<p>Works with local and remote datasets, and <b>Pandas dataframes</b>.</p>
+
+<p style="margin-top: 3em; color: gray; font-size: 14pt;"><a href="https://chdb.io/">https://chdb.io/</a> Developers: Auxten, Lorenzo Mangani.</p>
+</section>
+
+<section class="slide">
+<h2>URLENG.com</h2>
+<p>"Unlimited ClickHouse URL tables. Like a pastie for SQL/JSON data."</p>
+<p>Share your query results and small datasets<br/>on a random server on the Internet.</p>
+<p>No guarantees. Just a demo/experiment.</p>
+
+<p style="margin-top: 3em; color: gray; font-size: 14pt;"><a href="https://get.urleng.com/">https://get.urleng.com/</a> Developers: Lorenzo Mangani.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Show Your Integration With ClickHouse</h2>
+<p style="line-height: 1.5;">If you want to demonstrate your project on the ClickHouse Webinar,
+<br/>write to tyler@clickhouse.com or connect with us on <a href="https://clickhouse.com/slack">https://clickhouse.com/slack</a></p>
+</section>
+
+
+
+<section class="slide">
+<h2>Reading Corner</h2>
+<img style="float: right; margin-top: -1em; margin-right: -2em; width: 40%; image-rendering: pixelated;" src="pictures/ai.png"/>
+
+<p><a href="https://clickhouse.com/blog/">https://clickhouse.com/blog/</a></p>
+<p style="line-height: 1.5;">&mdash; Choosing the Right Join Algorithm
+<br/>&mdash; Real-time event streaming with ClickHouse,<br/>&emsp; Kafka Connect and Confluent Cloud
+<br/>&mdash; CDC From Postgres To ClickHouse</p>
+
+<p style="margin-top: 2em;">ClickHouse for AI - Vectors, Embedding, Semantic Search, and more...</p>
+<p>Video Recordings: <a href="https://www.youtube.com/c/ClickHouseDB">https://www.youtube.com/c/ClickHouseDB</a></p>
+</section>
+
+<section class="slide" style="background: url(pictures/wing.jpg); background-size: cover; background-position: right; color: white; text-shadow: black 0 0 5px;">
+<h2 style="color: white;">Summer Meetups</h2>
+<p>🇫🇷 Paris, July 4th;</p>
+<p>🇺🇸 Boston, July 18th;</p>
+<p>🇺🇸 New York, July 19th;</p>
+<p>🇨🇦 Toronto, July 20th;</p>
+<p>🇸🇬 Singapore, July 27th;</p>
+<p>🇺🇸 San Francisco, Aug 8th;</p>
+<p>🇳🇱 Amsterdam, Aug 31th;</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/summer3.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
+<h2 style="color: white;">Q&amp;A</a></h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+
