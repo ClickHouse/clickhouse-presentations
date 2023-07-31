@@ -245,7 +245,7 @@ int <b>LLVMFuzzerTestOneInput</b>(const uint8_t * data, size_t size)
 </section>
 
 <section class="slide">
-<h2>Thread Fuzzer Alexey Milovidov</h2>
+<h2>Thread Fuzzer by Alexey Milovidov</h2>
 
 <p style="color: gray; font-size: 75%">Not to be confused with Thread Sanitizer.</p>
 
@@ -256,7 +256,7 @@ int <b>LLVMFuzzerTestOneInput</b>(const uint8_t * data, size_t size)
 </section>
 
 <section class="slide">
-<h2>Thread Fuzzer</h2>
+<h2>Thread Fuzzer by Alexey Milovidov</h2>
 
 <p>1. Set the signal on the timer: <b>setitimer</b>.</p>
 <p>2. Put hooks on <b>pthread_mutex_lock</b>, <b>pthread_mutex_unlock</b> functions.</p>
@@ -268,7 +268,7 @@ int <b>LLVMFuzzerTestOneInput</b>(const uint8_t * data, size_t size)
 </section>
 
 <section class="slide">
-<h2>Thread Fuzzer</h2>
+<h2>Thread Fuzzer by Alexey Milovidov</h2>
 
 <p>Works great with <b>Thread Sanitizer</b> and <b>Stress Test</b>!</p>
 <p>And he also finds a bunch of flaky tests
@@ -294,7 +294,7 @@ Mutating string literals...</p>
 
 
 <section class="slide">
-<h2>AST Fuzzer Alexander Kuzmenkov</h2>
+<h2>AST Fuzzer by Alexander Kuzmenkov</h2>
 
 <p><a href="https://github.com/ClickHouse/ClickHouse/pull/12111">https://github.com/ClickHouse/ClickHouse/pull/12111</a></p>
 
@@ -311,7 +311,7 @@ Mutating string literals...</p>
 
 
 <section class="slide">
-<h2>AST Fuzzer Alexander Kuzmenkov</h2>
+<h2>AST Fuzzer by Alexander Kuzmenkov</h2>
 
 <p>Bonus: Aggressive phasing of new tests in pull requests.</p>
 <p>Tests new code for edge cases,<br/>even when the author didn't think about it.</p>
