@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Fuzzing: Practical approaches in ClickHouse</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x10.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>Fuzzing: Practical approaches in ClickHouse</h1>
+    </header>
+
+    <section class="slide" id="cover">
+        <h1 style="margin-top: 200px;"><span style="background: rgba(255, 255, 255, 0.75)">Fuzzing: Practical approaches in <br/>ClickHouse</span></h1>
+    </section>
+
+<section class="slide">
+<h2>What is this about?</h2>
+<p>Not only about C++.</p>
+<p>Mostly not about C++.</p>
+</section>
+
+<section class="slide">
+<h2>Fuzzing</h2>
+<p>&mdash; is testing with random data <em>or conditions.</em>.</p>
+<p>First we start with a program, we give it a bunch of garbage as input</p>
+<p>Or forced to work in garbage conditions.</p>
+<p>What we check:</p>
+<p>
+&mdash; the program does not crash;<br/>
+&mdash; does not go into loop, and run for too long;<br/>
+&mdash; does not eat up too much memory;<br/>
+&mdash; internal invariants are not violated;<br/>
+&mdash; sanitizers do not find errors.
+</p>
+</section>
+
+<section class="slide">
+<h2>Fuzzing</h2>
+<div style="float: right; text-align: right;">
+<img src="pictures/power.png" style="margin-bottom: -30px;" />
+<br><span style="padding-right: 10px; font-size: 10px;">xkcd.com</span>
+</div>
+<p>&mdash; <b>A &laquo;gold mine&raquo;</b> for finding bugs<br/>
+(where fuzzing is not yet used).</p>
+
+<p>Do you have a parser, converter, compression algorithm?<br/>
+And you don't use fuzzing yet???</p>
+</section>
+
+<section class="slide">
+<h2>What is fuzzing?</h2>
+<img style="float: left; height: 60%; margin-left: -60px; margin-top: -60px; margin-right: 20px;" src="pictures/optimal.webp"/>
+<p>There are so many ways to do Fuzzing.</p>
+<p>The more, the better :)</p>
+</section>
+
+<section class="slide">
+<h2>What is fuzzing?</h2>
+<p> Unstructured:<br/> &mdash; testing with random bytes;</p>
+<p> Structured:<br/> &mdash; testing by a random<br/>&emsp; structurally correct input.</p>
+</section>
+
+<section class="slide">
+<h2>What is fuzzing?</h2>
+<p>&mdash; random data without feedback (stupid);</p>
+<p>&mdash; coverage guided (smart);</p>
+<p>&mdash; with a logical conclusion (very smart).</p>
+</section>
+
+<section class="slide">
+<h2>What is fuzzing?</h2>
+<p>Black box:<br/>&mdash; we test the finished binary <em>or service</em>  without changes;</p>
+<p>With instrumentation:<br/>&mdash; rebuilding the program for testing purpose.</p>
+</section>
+
+<section class="slide">
+<h2>What is fuzzing?</h2>
+<p>By input data:<br/>
+&mdash; we give the program a bunch of garbage as input;</p>
+<p>By settings and environment:<br/>
+&mdash; turn on random feature flags;<br/>
+&mdash; change the system time (<b>libfaketime</b>) and timezones;<br/>
+&mdash; Chaos Monkey;
+</p>
+<p>By the way the program is executed::<br/>
+&mdash; check the random order of execution of threads;<br/>
+&mdash; we cause hangups of servers in a distributed environment.
+</p>
+</section>
+
+<section class="slide">
+<h2>What is fuzzing?</h2>
+<p>Logical:<br/>
+&mdash; check that the behavior on random data is correct;<br/>
+&mdash; comparisons with another implementation; comparisons with the standard; checking invariants.
+</p>
+<p>Physical:<br/>
+&mdash; the result of the program is not important;<br/>
+&mdash; we check that the program does not crash, sanitizers do not throw error, etc.</p>
+</section>
+
+<section class="slide">
+<h2>Examples</h2>
+<p>Example of successful manual fuzzing:<br/>
+&mdash; kids cracked lock screen in Linux Mint:<br/>
+<a href="https://www.zdnet.com/article/linux-mint-fixes-screensaver-bypass-discovered-by-two-kids/">Linux Mint fixes screensaver bypass discovered by two kids</a>.
+</p>
+<p>Example: Linux kernel, Syzcaller tool:<br/>
+&mdash; Found more than 3000 bugs, 1056 pending fixes:<br/><a href="https://syzkaller.appspot.com/upstream">https://syzkaller.appspot.com/upstream</a>.</p>
+<p>Example: Chromium, ClusterFuzz tool, over 20,000 bugs!</p>
+<p>An example where fuzzing would help a lot:<br/>
+&mdash; iPhone crash when displaying<br/>a combination of characters from the Telugu language:
+<span style="font-size: 300%; position: absolute; margin-top: -60px; margin-left: 30px;">&#x0C1C;&#x0C4D;&#x0C1E;&#x200C;&#x0C3E;</span>
+</p>
+</section>
+
+<section class="slide">
+<h2>Fuzzing in ClickHouse</h2>
+<img style="float: right;" src="pictures/cat.png" />
+<p>The more fuzzing, the better!</p>
+<p>Some of them are dumb and primitive (ad-hoc fuzzer).</p>
+<p>&laquo;It doesn’t matter what the fuzzer looks like, the main thing is that it catches bugs&raquo;<br/>
+<span style="color: gray;">&mdash; Deng Xiaoping.</span></p>
+
+<p style="color: gray; font-size: 35%; text-align: right; margin-top: 80px;">http://en.naipo.com/Portals/0/web_en/Knowledge_Center/Feature/IPNE_170224_0701.htm</p>
+</section>
+
+
+<section class="slide">
+<h2>SQL fuzzer by Oleg Alekseenkov</h2>
+
+<code style="font-size: 50%; white-space: pre-wrap; margin-top: -3em;">$expression_cast = {
+    'CAST' => sub { my ($state) = @_; '(CAST((' . one_of($state, $expression_cast) . ') AS ' . one_of($state, $type_cast) . '))' },
+    'SELECT' => sub {
+        my ($state) = @_;
+        list_of(
+            $state, {max => 2},
+            [sub { '( ' . one_of($state, $query_select) . ' ) AS ' . rand_word() }, sub { '( ' . one_of($state, $query_select) . ' ) ' }]
+        );
+    },
+    'number' => sub { my ($state) = @_; return rand_pick(['', '-']) . rand_word(8, 0 .. 9) . rand_pick(['', '.' . rand_word(6, 0 .. 9)]) },
+    'string' => sub {
+        my ($state) = @_;
+        return q{'} . rand_word(8, map { $_ ~~ q{'} ? '\\' . $_ : $_ } map {chr} 32 .. 127) . q{'};
+    },
+    '[]'  => '[]',
+    '[x]' => sub { my ($state) = @_; return '[' . one_of($state, $expression) . ']' },
+    'function()' =>
+      sub { my ($state) = @_; return one_of($state, $functions) . '(' . list_of($state, {min => 0, max => 3}, $expression) . ')' },
+    "'\\0'" => "'\\0'",
+    "''"    => "''",
+    'NULL'  => 'NULL',
+};</code>
+
+<p style="margin-top: 1em;"><a href="https://github.com/ClickHouse/ClickHouse/pull/3442">https://github.com/ClickHouse/ClickHouse/pull/3442</a></p>
+</section>
+
+<section class="slide">
+<h2>SQL fuzzer by Oleg Alekseenkov</h2>
+
+<p>Perl script that generates SQL queries<br/> with random expressions.</p>
+
+<p style="margin-top: 1em;"><a href="https://github.com/ClickHouse/ClickHouse/pull/3442">https://github.com/ClickHouse/ClickHouse/pull/3442</a></p>
+
+<p>What did it find?</p>
+
+<p>&mdash; lack of checking for boundaries in the <a href="https://github.com/ClickHouse/ClickHouse/issues/19219">H3 library</a>.</p>
+
+</section>
+
+<section class="slide">
+<h2>Stress Test by Oleg Alekseenkov</h2>
+
+<p>Runs all ClickHouse tests in parallel,<br/>in random order, but does not check their result.</p>
+<p>Tests interfere with each other:<br/>they create and delete identical tables, etc.</p>
+<p>We launch 5 options: with Debug, ASan, MSan, TSan, UBSan.</p>
+<p>We check that:<br/>
+&mdash; the server does not fall;<br/>
+&mdash; no deadlocks (hanging requests);<br/>
+&mdash; the server can successfully restart after the test is completed;
+</p>
+
+<p>
+<a href="https://github.com/ClickHouse/ClickHouse/pull/3057">https://github.com/ClickHouse/ClickHouse/pull/3057</a><br/>
+<a href="https://github.com/ClickHouse/ClickHouse/pull/3438">https://github.com/ClickHouse/ClickHouse/pull/3438</a>
+</p>
+</section>
+
+<section class="slide">
+<h2>Stress Test by Oleg Alekseenkov</h2>
+
+<p style="margin-top: -1em;">What does it find?</p>
+
+<p>&mdash; bugs in RocksDB:<br/>
+<a href="https://github.com/facebook/rocksdb/issues/7711">facebook/rocksdb#7711</a> &mdash; race condition;<br/>
+<a href="https://github.com/facebook/rocksdb/issues/7821">facebook/rocksdb#7821</a> &mdash; use after free;<br/>
+<a href="https://github.com/facebook/rocksdb/issues/7778">facebook/rocksdb#7778</a> &mdash; misc.</p>
+
+<p>&mdash; race conditions in NuRaft, rdkafka, AMQP-CPP...</p>
+<p>&mdash; incredible bug in simdjson: <a href="https://github.com/simdjson/simdjson/issues/169">simdjson/simdjson#169</a>.</p>
+<p>&mdash; race condition in boost? <a href="https://github.com/ClickHouse-Extras/boost/pull/8">ClickHouse-Extras/boost#8</a></p>
+<p>&mdash; bug in LLVM libunwind <a href="https://bugs.llvm.org/show_bug.cgi?id=48186">https://bugs.llvm.org/show_bug.cgi?id=48186</a></p>
+<p>And of course, there are many potential and real bugs in ClickHouse,<br/>most of them before the release.</p>
+</section>
+
+<section class="slide">
+<h2>Libfuzzer</h2>
+
+<p>Added to ClickHouse by <b>Эльдар Заитов (Eldar Zaitov)</b>.</p>
+
+<p>libfuzzer &mdash; coverage guided fuzzer available from LLVM/clang.</p>
+
+<pre>-fsanitize=fuzzer,...<br/>-fprofile-instr-generate -fcoverage-mapping</pre>
+
+<code style="font-size: 75%">extern "C"
+int <b>LLVMFuzzerTestOneInput</b>(const uint8_t * data, size_t size)
+{
+    DB::Lexer lexer(data, data + size);
+
+    while (true)
+    {
+        DB::Token token = lexer.nextToken();
+        ...</code>
+
+<p><br/>It is recommended to enclose a &laquo;corpus&raquo; of examples of valid data.</p>
+</section>
+
+<section class="slide">
+<h2>Libfuzzer</h2>
+
+<p>What does it find?</p>
+<p>Buffer overrun in data decompression:<br/> <a href="https://github.com/ClickHouse/ClickHouse/pull/8404">https://github.com/ClickHouse/ClickHouse/pull/8404</a></p>
+<p>Exponential backtracking in the parser:</p>
+
+<code style="font-size: 14pt; white-space: pre-wrap;">SELECT fo,22222?LUTAY(SELECT(NOT CAUTAY(SELECT(NOT CAST(NOTT(NOT CAST(NOT NOT LEfT(NOT coARRAYlumnsFLuTAY(SELECT(NO0?LUTAY(SELECT(NOT CAUTAY(SELECT(NOT CAST(NOTT(NOT CAST(NOT NOT LEfT(NOT coARRAYlumnsFLuTAY(SELECT(NOTAYTAY(SELECT(NOTAYEFAULT(fo,22222?LUTAY(%SELECT(NOT CAST(NOT NOTAYTAY(SELECT(NOTAYEFAULT(fo,22222?LUTAY(SELECT(NOT CAST(NOT NOT (NOe)))))))))))))))))))))))))))))))))</code>
+
+<p><br/><a href="https://github.com/ClickHouse/ClickHouse/issues/20158">https://github.com/ClickHouse/ClickHouse/issues/20158</a></p>
+</section>
+
+<section class="slide">
+<h2>Thread Fuzzer Alexey Milovidov</h2>
+
+<p style="color: gray; font-size: 75%">Not to be confused with Thread Sanitizer.</p>
+
+<p>Race conditions are reproduced in<br/>a specific thread order.</p>
+<p>How to test as many different random execution orders as possible?</p>
+<p>&mdash; We need to switch streams as often as possible<br/>at random times.</p>
+<p><b>But how to do that?</b></p>
+</section>
+
+<section class="slide">
+<h2>Thread Fuzzer</h2>
+
+<p>1. Set the signal on the timer: <b>setitimer</b>.</p>
+<p>2. Put hooks on <b>pthread_mutex_lock</b>, <b>pthread_mutex_unlock</b> functions.</p>
+
+<p style="margin-top: 2em;">In the handler, we toss a coin and do:</p>
+<p>1. <b>sched_yield</b>.</p>
+<p>2. <b>sleep</b> for a random time.</p>
+<p>3. <b>sched_setaffinity</b> on a random CPU.</p>
+</section>
+
+<section class="slide">
+<h2>Thread Fuzzer</h2>
+
+<p>Works great with <b>Thread Sanitizer</b> and <b>Stress Test</b>!</p>
+<p>And he also finds a bunch of flaky tests
+<br/>(race not in the program but in tests).</p>
+
+<p><a href="https://github.com/ClickHouse/ClickHouse/blob/master/src/Common/ThreadFuzzer.h">https://github.com/ClickHouse/ClickHouse/blob/master/<br/>src/Common/ThreadFuzzer.h, cpp</a></p>
+</section>
+
+
+<section class="slide">
+<h2>AST Fuzzer Alexander Kuzmenkov</h2>
+
+<p>ВIn clickhouse-client we take requests from tests.<br/>
+From parsed requests, we take pieces of AST (Abstract Syntax Tree).<br/>
+We substitute them randomly in other queries.<br/>
+Mutating string literals...</p>
+
+<p>We execute... the result is not important, we check that the server has not crashed.</p>
+<p>Five options to test with: Debug, ASan, MSan, TSan, UBSan.</p>
+
+<code style="white-space: pre-wrap;">SELECT 0.00009999999747378752 * NULL, 1 * -2, 1024, sum(toUInt64(255, 1048576 * 65537, NULL * 100.0000991821289)) FROM (SELECT 1 * 1025, intDiv(number, 1.) AS k, toUInt64('0.0000065536', 255, toUInt64(7 * NULL), NULL * 0.) FROM numbers(2 * 9223372036854775807, toUInt64(10 * 255)) GROUP BY k)</code>
+</section>
+
+
+<section class="slide">
+<h2>AST Fuzzer Alexander Kuzmenkov</h2>
+
+<p><a href="https://github.com/ClickHouse/ClickHouse/pull/12111">https://github.com/ClickHouse/ClickHouse/pull/12111</a></p>
+
+<p>Discovery of the year! Over 200 issues:</p>
+
+<p><a href="https://github.com/ClickHouse/ClickHouse/issues?q=is%3Aissue+label%3Afuzz">https://github.com/ClickHouse/ClickHouse/issues?q=is%3Aissue+label%3Afuzz</a></p>
+
+<p>Not only bugs: edge cases, UBSan triggers...</p>
+
+<code style="white-space: pre-wrap;">SELECT bar((greatCircleAngle(100, -1, number, number) - number) * 2, -9223372036854775808, 1023, 100) FROM numbers(1048575);</code>
+
+<p><br/>Errored in UBSan, ASan tests... Somewhere it turns out NaN -> checks for array boundaries -> buffer overflow.</p>
+</section>
+
+
+<section class="slide">
+<h2>AST Fuzzer Alexander Kuzmenkov</h2>
+
+<p>Bonus: Aggressive phasing of new tests in pull requests.</p>
+<p>Tests new code for edge cases,<br/>even when the author didn't think about it.</p>
+
+<img src="pictures/ast_fuzzer.png" />
+</section>
+
+
+<section class="slide">
+<h2>SQLancer &mdash; logical SQL phaser</h2>
+
+<p>Developed by <b>Manuel Rigger</b> at ETH Zurich.</p>
+<p>Added to ClickHouse by <b>Ilya Yatsishin</b>.</p>
+
+<p>Generates random valid SQL queries and data.</p>
+<p>Verifies that the result is the same as a reference unoptimized query engine written according to the SQL standard.</p>
+
+<p>Example:</p>
+
+<code style="white-space: pre-wrap;">SELECT t0.c2, t0.c1, t0.c0 FROM t0 WHERE t0.c0 ORDER BY ((t0.c2)>=(t0.c1)), (((- (((t0.c0)>(t0.c0))))) IS NULL) FORMAT TabSeparatedWithNamesAndTypes;</code>
+
+<p><br/>Insufficient column type check in WHERE, result in SEGFAULT.</p>
+</section>
+
+
+<section class="slide">
+<h2>Fuzzers not in ClickHouse</h2>
+
+<p><b>zzuf</b> &mdash; mutates data when working with files and the network.</p>
+<p><b>fuzzgrind</b> &mdash; dynamic translation + solver for finding data that passes conditions in machine code (project abandoned).</p>
+<p><b>AFL</b> &mdash; Instrumentation builds are recommended, similar to <b>libfuzzer</b>, but run outside of the process.</p>
+<p><b>Hongfuzz</b> &mdash; supports hardware counters for coverage.</p>
+<p><b>Radamsa</b> &mdash; is not a fuzzer, but a separate data mutator.</p>
+<p>Service security scanners are also phasers, for example:<b>sqlmap</b>.</p>
+</section>
+
+
+
+<section class="slide">
+<h2>Conclusion</h2>
+<p><b>You have tp use Fuzzing.</b> Everywhere and more!</p>
+<p>We use fuzzer in CI &mdash; for pull requests and for commits.</p>
+
+<p style="margin-top: 3em;">Need more fuzzer.</p>
+<p><b style="color: green;">Bugs won't go away!</b></p>
+</section>
+
+
+    <section class="slide">
+        <h2>.</h2>
+    </section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+</body>
+</html>
