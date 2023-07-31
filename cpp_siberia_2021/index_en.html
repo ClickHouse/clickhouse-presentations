@@ -55,33 +55,33 @@ And you don't use fuzzing yet???</p>
 </section>
 
 <section class="slide">
-<h2>What is fuzzing?</h2>
-<img style="float: left; height: 60%; margin-left: -60px; margin-top: -60px; margin-right: 20px;" src="pictures/optimal.webp"/>
+<h2>Types of Fuzzing</h2>
+<img style="float: left; height: 60%; margin-left: -60px; margin-top: -60px; margin-right: 20px;" src="pictures/optimal_en.png"/>
 <p>There are so many ways to do Fuzzing.</p>
 <p>The more, the better :)</p>
 </section>
 
 <section class="slide">
-<h2>What is fuzzing?</h2>
+<h2>Types of Fuzzing</h2>
 <p> Unstructured:<br/> &mdash; testing with random bytes;</p>
 <p> Structured:<br/> &mdash; testing by a random<br/>&emsp; structurally correct input.</p>
 </section>
 
 <section class="slide">
-<h2>What is fuzzing?</h2>
+<h2>Types of Fuzzing</h2>
 <p>&mdash; random data without feedback (stupid);</p>
 <p>&mdash; coverage guided (smart);</p>
-<p>&mdash; with a logical conclusion (very smart).</p>
+<p>&mdash; with a logical solvers (very smart).</p>
 </section>
 
 <section class="slide">
-<h2>What is fuzzing?</h2>
+<h2>Types of Fuzzing</h2>
 <p>Black box:<br/>&mdash; we test the finished binary <em>or service</em>  without changes;</p>
 <p>With instrumentation:<br/>&mdash; rebuilding the program for testing purpose.</p>
 </section>
 
 <section class="slide">
-<h2>What is fuzzing?</h2>
+<h2>Types of Fuzzing</h2>
 <p>By input data:<br/>
 &mdash; we give the program a bunch of garbage as input;</p>
 <p>By settings and environment:<br/>
@@ -96,7 +96,7 @@ And you don't use fuzzing yet???</p>
 </section>
 
 <section class="slide">
-<h2>What is fuzzing?</h2>
+<h2>Types of Fuzzing</h2>
 <p>Logical:<br/>
 &mdash; check that the behavior on random data is correct;<br/>
 &mdash; comparisons with another implementation; comparisons with the standard; checking invariants.
@@ -213,7 +213,7 @@ And you don't use fuzzing yet???</p>
 <section class="slide">
 <h2>Libfuzzer</h2>
 
-<p>Added to ClickHouse by <b>Эльдар Заитов (Eldar Zaitov)</b>.</p>
+<p>Added to ClickHouse by <b>Eldar Zaitov</b>.</p>
 
 <p>libfuzzer &mdash; coverage guided fuzzer available from LLVM/clang.</p>
 
@@ -281,7 +281,7 @@ int <b>LLVMFuzzerTestOneInput</b>(const uint8_t * data, size_t size)
 <section class="slide">
 <h2>AST Fuzzer Alexander Kuzmenkov</h2>
 
-<p>ВIn clickhouse-client we take requests from tests.<br/>
+<p>In clickhouse-client we take requests from regression tests.<br/>
 From parsed requests, we take pieces of AST (Abstract Syntax Tree).<br/>
 We substitute them randomly in other queries.<br/>
 Mutating string literals...</p>
@@ -333,7 +333,7 @@ Mutating string literals...</p>
 
 <code style="white-space: pre-wrap;">SELECT t0.c2, t0.c1, t0.c0 FROM t0 WHERE t0.c0 ORDER BY ((t0.c2)>=(t0.c1)), (((- (((t0.c0)>(t0.c0))))) IS NULL) FORMAT TabSeparatedWithNamesAndTypes;</code>
 
-<p><br/>Insufficient column type check in WHERE, result in SEGFAULT.</p>
+<p><br/>Insufficient column type check in WHERE, result in segfault.</p>
 </section>
 
 
@@ -345,18 +345,18 @@ Mutating string literals...</p>
 <p><b>AFL</b> &mdash; Instrumentation builds are recommended, similar to <b>libfuzzer</b>, but run outside of the process.</p>
 <p><b>Hongfuzz</b> &mdash; supports hardware counters for coverage.</p>
 <p><b>Radamsa</b> &mdash; is not a fuzzer, but a separate data mutator.</p>
-<p>Service security scanners are also phasers, for example:<b>sqlmap</b>.</p>
+<p>Service security scanners are also phasers, for example:<b> sqlmap</b>.</p>
 </section>
 
 
 
 <section class="slide">
 <h2>Conclusion</h2>
-<p><b>You have tp use Fuzzing.</b> Everywhere and more!</p>
-<p>We use fuzzer in CI &mdash; for pull requests and for commits.</p>
+<p><b>You have to use Fuzzing.</b> Everywhere, as much as possible!</p>
+<p>We use fuzzer in CI &mdash; for pull request and for commit.</p>
 
 <p style="margin-top: 3em;">Need more fuzzer.</p>
-<p><b style="color: green;">Bugs won't go away!</b></p>
+<p><b style="color: green;">Bugs shall not pass!</b></p>
 </section>
 
 
