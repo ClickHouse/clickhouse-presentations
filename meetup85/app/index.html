@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Building a Toy With ClickHouse</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 20pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         table, tr, td { border: 0; }
+         .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>Building a Toy With ClickHouse</h1>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/title.jpg); background-size: cover; background-position: center;">
+        <h1 style="margin-top: 20px; line-height: 150%; color: white; font-size: 42pt; text-shadow: -2px 0 black, 0 2px black, 2px 0 black, 0 -2px black;">Building a Toy With ClickHouse</h1>
+    </section>
+
+<!--
+
+Building a toy with ClickHouse
+
+Where to get the data?
+
+Reverse DNS. What is it.
+Prepared datasets.
+
+How to scan all IPv4? MassDNS?
+Digital Ocean. AWS.
+
+DoH
+Google, Cloudflare
+Greynoise.
+Internet Telescopes.
+
+Inserting into a staging table.
+Materialized views
+JSON processing.
+
+Basic data analysis.
+Finding ClickHouse servers.
+Shodan.
+
+Data visualization. Internet map pictures.
+xkcd
+
+IANA, ARIN, RIPE, APNIC, AFRINIC
+
+space filling curves
+png from ClickHouse
+
+URL functions. Hashing.
+
+4 gigapixel.
+
+Tiles
+Leaflet, Openseadragon
+
+JavaScript code
+
+Demo
+
+Quotas
+
+-->
+
+<section class="slide">
+<h2>Let's build a demo app on ClickHouse</h2>
+<p>What for?</p>
+<p>&mdash; Testing. </p>
+<p>&mdash; An internal company contest.</p>
+<p>&mdash; I always like to play with ClickHouse and have fun :)</p>
+</section>
+
+<section class="slide">
+<h2>How?</h2>
+<p>We will need:</p>
+<p>&mdash; an idea.</p>
+<p>&mdash; a nice <b>dataset</b>.</p>
+<p>&mdash; a way to analyze and visialize it.</p>
+</section>
+
+<section class="slide">
+<h2>A Dataset</h2>
+<p>We want an "internet-scale" dataset. How to get it? 🤔</p>
+<p>&mdash; get it from the Internet 🤫</p>
+</section>
+
+<section class="slide">
+<h2>DNS</h2>
+<p>Forward:
+<code style="font-size: 16pt; line-height: 1.5; margin-top: 1em;">$ host <b>google.com</b>
+google.com has address <b>142.250.179.174</b>
+google.com has IPv6 address 2a00:1450:400e:802::200e
+google.com mail is handled by 10 smtp.google.com.</code></p>
+
+<p>Reverse:
+<code style="font-size: 16pt; line-height: 1.5; margin-top: 1em;">$ host <b>142.250.179.174</b>
+174.179.250.142.in-addr.arpa domain name pointer
+ams15s41-in-f14.<b style="color: green;">1e100.net</b>.</code></p>
+</section>
+
+<section class="slide">
+<h2>DNS</h2>
+<p>Forward:
+<code style="font-size: 16pt; line-height: 1.5; margin-top: 1em;">$ dig @1.1.1.1 google.com -t A
+;; ANSWER SECTION:
+google.com.             159     IN      A       <b>142.250.179.174</b>
+</code></p>
+
+<p>Reverse:
+<code style="font-size: 16pt; line-height: 1.5; margin-top: 1em;">$ dig @1.1.1.1 <b>174.179.250.142</b>.in-addr.arpa -t PTR
+;; ANSWER SECTION:
+<b>174.179.250.142</b>.in-addr.arpa. 81998 IN  PTR
+     ams15s41-in-f14.<b style="color: green;">1e100.net</b>.net.
+</code></p>
+</section>
+
+<section class="slide">
+<h2>Why do PTR records exist?</h2>
+<p><code style="font-size: 12pt; line-height: 1.5; margin-top: 1em;">$ mtr google.com
+
+ 1. <b>2a02-a210-1111-a500-aef8-ccff-fedc-1234.cable.dynamic.v6.ziggo.nl</b>
+ 2. (waiting for reply)
+ 3. 2a02:a200:0:12::1
+ 4. <b>asd-tr0021-cr101-lo10.core.as9143.net</b>
+ 5. <b>nl-ams14a-ri1-ae51-0.core.as9143.net</b>
+ 6. 2001:4860:1:1::2ac
+ 7. 2a00:1450:8012::1
+ 8. 2001:4860:0:1::e36
+ 9. 2001:4860:0:f8b::c
+10. 2001:4860::c:4002:c2d0
+11. 2001:4860::1:0:cd13
+12. 2001:4860:0:f8c::1
+13. 2001:4860:0:1::5a85
+14. <b>ams17s12-in-x0e.1e100.net</b></code></p>
+</section>
+
+<section class="slide">
+<h2>Scan All IPv4</h2>
+<p>... to perform reverse DNS request on all of them.</p>
+<p>There are only 2<sup>32</sup> IP addresses.</p>
+<p>Slightly less than 4 billion belongs to Internet.</p>
+<p style="margin-top: 2em;">How to do the scan?</p>
+</section>
+
+<section class="slide">
+<h2>Scan All IPv4</h2>
+<p>... to perform reverse DNS request on all of them.</p>
+<p>There are tools for that:</p>
+<p>&mdash; MassDNS: <a href="https://github.com/blechschmidt/massdns">https://github.com/blechschmidt/massdns</a></p>
+<p>&mdash; GNU adns library: <a href="https://github.com/lucab/adns">https://www.gnu.org/software/adns/</a></p>
+<p>Advantages: <span style="color: green;">they are fast :)</span></p>
+<p>Disadvantages: <span style="color: red;">you will be blocked :(</span></p>
+</section>
+
+<section class="slide">
+<h2>Scan All IPv4</h2>
+<p>Where to do it?</p>
+<p><b>From home?</b><br/>
+&mdash; your ISP will be surprised by unusual traffic.</p>
+<p><b>From a datacenter?</b><br/>
+&mdash; my friend tried it from Digital Ocean and was blocked.</p>
+<p><b>In the cloud?</b><br/>
+&mdash; if you do it in AWS, it is ok if you communicate in advance.</p>
+<p>What option did I choose?</p>
+</section>
+
+<section class="slide">
+<h2>DNS Over HTTPS (DoH)</h2>
+<p style="margin-top: -1em;">DNS can work:</p>
+<p>
+&mdash; over UDP (unreliable and not secure);<br/>
+&mdash; over TCP (reliable but not secure);<br/>
+&mdash; over TLS (reliable and secure, but heavyweight);<br/>
+&mdash; over HTTPS (reliable and secure, but heavyweight);<br/>
+&mdash; DNSCrypt over TCP or UDP (very different);</p>
+
+<p><code style="font-size: 14pt; line-height: 1.5; margin-left: -2em; margin-right: -3em;">curl -H 'accept: application/dns-json' \
+'https://<b>cloudflare-dns.com</b>/dns-query?name=174.179.250.142.in-addr.arpa&amp;type=PTR'</code></p>
+
+<p><code style="font-size: 14pt; line-height: 1.5; margin-left: -2em; margin-right: -3em;">curl -H 'accept: application/dns-json' \
+'https://<b style="color: green;">1.1.1.1</b>/dns-query?name=174.179.250.142.in-addr.arpa&amp;type=PTR'</code></p>
+</section>
+
+<section class="slide">
+<h2>DNS Over HTTPS (DoH)</h2>
+
+<p><code style="font-size: 14pt; line-height: 1; margin-top: -1em;">$ curl -H 'accept: application/dns-json' \
+'https://<b style="color: green;">1.1.1.1</b>/dns-query?name=174.179.250.142.in-addr.arpa&amp;type=PTR' \
+| jq
+
+{
+  "Status": 0,
+  "TC": false, "RD": true, "RA": true, "AD": false, "CD": false,
+  "Question": [
+    {
+      "name": "174.179.250.142.in-addr.arpa",
+      "type": 12
+    }
+  ],
+  "Answer": [
+    {
+      "name": "174.179.250.142.in-addr.arpa",
+      "type": 12,
+      "TTL": 77114,
+      "data": "<b>ams15s41-in-f14.1e100.net.</b>"
+    }
+  ]
+}
+</code></p>
+
+</section>
+
+<section class="slide">
+<h2>DNS Over HTTPS (DoH)</h2>
+
+<p>Bonus: it can use HTTP 1.0, 1.1, 2, 3.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">curl --http2 -H 'accept: application/dns-json' \
+'https://1.1.1.1/dns-query?name=174.179.250.142.in-addr.arpa&amp;type=PTR' \
+<b>--next --http2</b> -H 'accept: application/dns-json' \
+'https://1.1.1.1/dns-query?name=3.121.82.140.in-addr.arpa&amp;type=PTR'
+</code></p>
+
+<p>CloudFlare, Google, OpenDNS have this service.</p>
+<p>Using it for a mass scan could violate ToS,
+<br/>but at least CloudFlare does not restrict it.</p>
+<p>They are processing trillions of requests every day anyway :)</p>
+</section>
+
+<section class="slide">
+<h2>Table For Results</h2>
+<p><code style="font-size: 14pt; line-height: 1.5;">CREATE TABLE dns
+(
+    time DateTime DEFAULT now(),
+    json String
+)
+ENGINE = MergeTree
+ORDER BY ();
+</code></p>
+<p>We'll write the responses as is, and parse later.</p>
+</section>
+
+<section class="slide">
+<h2>A Script For DNS Scan</h2>
+<p><code style="font-size: 13pt; line-height: 1.5; margin-top: -1em; margin-left: -1em;">clickhouse-local --max_block_size 1 --progress --query "
+  WITH number DIV 65536 AS a, number DIV 256 MOD 256 AS b, number MOD 256 AS c
+  SELECT c::String || '.' || b::String || '.' || a::String
+  FROM numbers(16777216)
+  WHERE (a > 0 AND a &lt; 127 AND a != 10)
+     OR (a >= 128 AND a &lt; 192 AND (a != 172 OR b &lt; 16 OR b > 31)
+         AND (a != 169 AND b != 254))
+     OR (a >= 192 AND a &lt; 224 AND (a != 192 OR b != 168))
+" | xargs -P1000 -I{} bash -c "
+  seq 0 255 | sed -r -e '
+s@(.*)@--next --http2 -H \"accept: application/dns-json\" \
+\"https://1.1.1.1/dns-query?name=\\1.{}.in-addr.arpa\\&amp;type=PTR\"@' \
+| tr '\n' ' ' | sed 's/--next/curl -sS/' | bash \
+| clickhouse-client --send_timeout 60000 --receive_timeout 60000 --query '
+  INSERT INTO dns (json) FORMAT JSONAsString'"
+</code></p>
+</section>
+
+<section class="slide" style="background: url(pictures/disaster.webp) no-repeat black; background-size: cover; background-position: center;">
+</section>
+
+<section class="slide">
+<h2>A Script For DNS Scan</h2>
+<p>I tried to be <span style="color: green;">gentle</span> and run it from a single machine...</p>
+<p>How long did it take?</p>
+</section>
+
+<section class="slide">
+<h2>A Script For DNS Scan</h2>
+<p>I tried to be gentle and run it from a single machine...</p>
+<p>How long did it take?</p>
+<p><b style="color: green;">&mdash; around ten days.</b></p>
+<p><span style="color: gray;">&mdash; it could be just a few hours with MassDNS.</span></p>
+</section>
+
+<section class="slide">
+<img style="width: 100%;" src="pictures/greynoise.png"/>
+</section>
+
+<section class="slide">
+<h2>I didn't have to do it</h2>
+<p>There are open datasets of historical DNS scans:</p>
+<p>Project Sonar: <a href="https://opendata.rapid7.com/sonar.rdns_v2/">https://opendata.rapid7.com/sonar.rdns_v2/</a></p>
+</section>
+
+<section class="slide">
+<h2>Dataset</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">:) SELECT formatReadableQuantity(count()) FROM dns
+
+┌─formatReadableQuantity(count())─┐
+│ 3.69 billion                    │
+└─────────────────────────────────┘
+
+:) SELECT formatReadableSize(total_bytes)
+   FROM system.tables WHERE name = 'dns'
+
+┌─formatReadableSize(total_bytes)─┐
+│ 13.69 GiB                       │ <span style="color: gray;">-- we are storing JSON as a string</span>
+└─────────────────────────────────┘
+</code></p>
+</section>
+
+<section class="slide">
+<h2>Dataset</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">:) SELECT
+    name,
+    formatReadableSize(data_compressed_bytes) AS compr,
+    formatReadableSize(data_uncompressed_bytes) AS raw,
+    round(data_uncompressed_bytes / data_compressed_bytes, 2) AS ratio
+FROM system.columns
+WHERE table = 'dns' AND name = 'json'
+
+┌─name─┬─compr─────┬─raw────────┬─ratio─┐
+│ json │ <b>13.66 GiB</b> │ <b>896.18 GiB</b> │  <b style="color: green;">65.6</b> │
+└──────┴───────────┴────────────┴───────┘
+</code></p>
+</section>
+
+<section class="slide">
+<h2>Parse The Dataset</h2>
+
+<p><code style="font-size: 13pt; line-height: 1.5;"><b>CREATE TABLE</b> dns_parsed ENGINE = MergeTree ORDER BY ip
+AS
+<b>WITH</b> JSONExtract(json,
+'Tuple(Status UInt8, TC Bool, RD Bool, RA Bool, AD Bool, CD Bool,
+    Question Array(Tuple(name String)),
+    Answer Array(Tuple(name String, type UInt8, TTL UInt32, data String)),
+    Authority Array(Tuple(name String, type UInt8, TTL UInt32, data String)),
+    Comment Array(String))') AS t
+<b>SELECT</b> time, t.Status, t.TC, t.RD, t.RA, t.AD, t.CD,
+toIPv4(byteSwap(IPv4StringToNum(extract(
+  tupleElement(t.Question[1], 'name'), '^(\d+\.\d+\.\d+\.\d+)\.')))) AS ip,
+replaceRegexpOne(tupleElement(t.Answer[1], 'data'), '\.$', '') AS domain
+FROM dns WHERE t.Answer != ''
+SETTINGS allow_experimental_analyzer = 1;
+</code></p>
+</section>
+
+<section class="slide">
+<h2>Parse The Dataset</h2>
+<p><code style="font-size: 14pt; line-height: 1.5;">CREATE TABLE dns_parsed
+(
+    `time` DateTime,
+    `t.Status` UInt8,
+    `t.TC` Bool,
+    `t.RD` Bool,
+    `t.RA` Bool,
+    `t.AD` Bool,
+    `t.CD` Bool,
+    `ip` IPv4,
+    `domain` String,
+)
+ENGINE = MergeTree
+ORDER BY ip
+</code></p>
+</section>
+
+<section class="slide">
+<h2>Dataset</h2>
+<p><code style="font-size: 12pt; line-height: 1; margin-top: -1em;">:) SELECT formatReadableSize(total_bytes) FROM system.tables
+   WHERE name = 'dns_parsed'
+
+┌─formatReadableSize(total_bytes)─┐
+│ 4.88 GiB                        │
+└─────────────────────────────────┘
+
+:) SELECT name,
+   formatReadableSize(data_compressed_bytes) AS compr,
+   formatReadableSize(data_uncompressed_bytes) AS raw,
+   round(data_uncompressed_bytes / data_compressed_bytes, 2) AS ratio
+FROM system.columns WHERE table = 'dns_parsed'
+ORDER BY data_compressed_bytes DESC
+
+┌─name─────┬─compr──────┬─raw───────┬───ratio─┐
+│ ip       │ 3.24 GiB   │ 4.78 GiB  │    1.47 │
+│ domain   │ 1.54 GiB   │ 42.09 GiB │   27.41 │
+│ time     │ 31.68 MiB  │ 4.78 GiB  │  154.43 │
+│ t.RD     │ 859.97 KiB │ 1.19 GiB  │ 1456.31 │
+│ t.RA     │ 859.97 KiB │ 1.19 GiB  │ 1456.31 │
+│ t.Status │ 549.66 KiB │ 11.28 MiB │   21.02 │
+│ t.AD     │ 151.60 KiB │ 6.03 MiB  │    40.7 │
+│ t.TC     │ 96.74 KiB  │ 1.50 MiB  │    15.9 │
+│ t.CD     │ 96.74 KiB  │ 1.50 MiB  │    15.9 │
+└──────────┴────────────┴───────────┴─────────┘
+</code></p>
+</section>
+
+<section class="slide">
+<h2>Dataset</h2>
+<p><code style="font-size: 14pt; line-height: 1.25;">:) SELECT ip, domain FROM dns_parsed ORDER BY ip LIMIT 10
+
+┌─ip────────┬─domain─────────────────────┐
+│ 1.0.0.1   │ one.one.one.one            │
+│ 1.0.4.4   │ ns1.gtelecom.com.au        │
+│ 1.0.4.5   │ auth1.gtelecom.com.au      │
+│ 1.0.5.5   │ ns2.gtelecom.com.au        │
+│ 1.0.6.6   │ ns3.gtelecom.com.au        │
+│ 1.0.16.70 │ smtp.kakeibo.tepco.co.jp   │
+│ 1.0.16.71 │ smtp01.kakeibo.tepco.co.jp │
+│ 1.0.16.72 │ smtp02.kakeibo.tepco.co.jp │
+│ 1.0.16.73 │ smtp03.kakeibo.tepco.co.jp │
+│ 1.0.16.74 │ smtp04.kakeibo.tepco.co.jp │
+└───────────┴────────────────────────────┘
+</code></p>
+<p>What are the most popular TLDs? Orgs?</p>
+</section>
+
+
+<section class="slide">
+<h2>Dataset</h2>
+<p><code style="font-size: 14pt; line-height: 1.25;">:) SELECT topLevelDomain(domain) AS d, count() AS c, bar(c, 0, 1e9, 50)
+FROM dns_parsed GROUP BY d ORDER BY c DESC LIMIT 10
+
+┌─d───┬─────────c─┬─bar(count(), 0, 1000000000., 50)─┐
+│ net │ 406985266 │ ████████████████████▎            │
+│ com │ 281925343 │ ██████████████                   │
+│ jp  │  77920764 │ ███▉                             │
+│ br  │  54343724 │ ██▋                              │
+│ de  │  53843959 │ ██▋                              │
+│ it  │  34083123 │ █▋                               │
+│ fr  │  24368263 │ █▏                               │
+│ mx  │  21451597 │ █                                │
+│ cn  │  18691219 │ ▉                                │
+│ ru  │  17262632 │ ▊                                │
+└─────┴───────────┴──────────────────────────────────┘
+</code></p>
+</section>
+
+
+<section class="slide">
+<h2>Dataset</h2>
+<p><code style="font-size: 14pt; line-height: 1.25;">:) SELECT cutToFirstSignificantSubdomain(domain) AS d, count() AS c,
+    bar(c, 0, 1e8, 50)
+FROM dns_parsed GROUP BY d ORDER BY c DESC LIMIT 10
+
+┌─d────────────────┬────────c─┬─bar(count(), 0, 100000000., 50)─┐
+│ amazonaws.com    │ 56667330 │ ████████████████████████████▎   │
+│ comcast.net      │ 40638365 │ ████████████████████▎           │
+│ bbtec.net        │ 39534782 │ ███████████████████▊            │
+│ spectrum.com     │ 31682763 │ ███████████████▊                │
+│ sbcglobal.net    │ 31406669 │ ███████████████▋                │
+│ myvzw.com        │ 30122993 │ ███████████████                 │
+│ t-ipconnect.de   │ 25722620 │ ████████████▊                   │
+│ rr.com           │ 23476357 │ ███████████▋                    │
+│ telecomitalia.it │ 19438417 │ █████████▋                      │
+│ verizon.net      │ 16205490 │ ████████                        │
+└──────────────────┴──────────┴─────────────────────────────────┘
+</code></p>
+</section>
+
+<section class="slide">
+<h2>Dataset</h2>
+<p><code style="font-size: 14pt; line-height: 1.25; margin-top: -1em; height: 23em; overflow-y: scroll;">:) SELECT domain AS d, count() AS c
+FROM dns_parsed WHERE domain LIKE '%clickhouse%'
+GROUP BY d ORDER BY d
+
+┌─d──────────────────────────────────────────────────┬─c─┐
+│ appodeal-clickhouse-staging                        │ 1 │
+│ bettrade.prod.clickhouse-1                         │ 1 │
+│ bettrade.stage.clickhouse-1                        │ 1 │
+│ bhs-clickhouse-0.justuno.com                       │ 1 │
+│ bhs-clickhouse-1.justuno.com                       │ 1 │
+│ bhs-clickhouse-2.justuno.com                       │ 1 │
+│ bhs-clickhouse-3.justuno.com                       │ 1 │
+│ bhs-clickhouse-4.justuno.com                       │ 1 │
+│ bi-clickhouse-playground.dev.scraperapi.com        │ 1 │
+│ bitmedia.clickhouse-distribution-nyc1              │ 1 │
+│ bitmedia.clickhouse-log-nyc1                       │ 1 │
+│ bitmedia.clickhouse-r1s1-nyc1                      │ 1 │
+│ bitmedia.clickhouse-r1s2-nyc1                      │ 1 │
+│ bitmedia.clickhouse-r1s3-nyc1                      │ 1 │
+│ bitmedia.clickhouse-r2s1-nyc1                      │ 1 │
+│ bitmedia.clickhouse-r2s2-nyc1                      │ 1 │
+│ bitmedia.clickhouse-r2s3-nyc1                      │ 1 │
+│ bitmedia.clickhouse-r3s1-nyc1                      │ 1 │
+│ bitmedia.clickhouse-r3s2-nyc1                      │ 1 │
+│ bitmedia.clickhouse-r3s3-nyc1                      │ 1 │
+│ bpce-production-clickhouse01.kameleoon.net         │ 1 │
+│ bpce-production-clickhouse02.kameleoon.net         │ 1 │
+│ cld-clickhouse-log-new.q.smailru.net               │ 1 │
+│ cld-clickhouse-log.q.smailru.net                   │ 1 │
+│ cld-clickhouse-proxy.q.smailru.net                 │ 1 │
+│ cld-graphite-clickhouse.q.smailru.net              │ 1 │
+│ clickhouse-001-08.adpartner.pro                    │ 1 │
+│ clickhouse-001-09.adpartner.pro                    │ 1 │
+│ clickhouse-002-08.adpartner.pro                    │ 1 │
+│ clickhouse-002-09.adpartner.pro                    │ 1 │
+│ clickhouse-01-airflow.platform.aviata.team         │ 1 │
+│ clickhouse-01.dev.fxcintel.com                     │ 1 │
+│ clickhouse-01.ele26126.jscrambler.com              │ 1 │
+│ clickhouse-01.hipler.me                            │ 1 │
+│ clickhouse-01.lmd91999.jscrambler.com              │ 1 │
+│ clickhouse-01.nps00666.jscrambler.com              │ 1 │
+│ clickhouse-01.platform.aviata.team                 │ 1 │
+│ clickhouse-01.staging.fxcintel.com                 │ 1 │
+│ clickhouse-02.dev.fxcintel.com                     │ 1 │
+│ clickhouse-02.platform.aviata.team                 │ 1 │
+│ clickhouse-03.platform.aviata.team                 │ 1 │
+│ clickhouse-1-fi.subh.net                           │ 1 │
+│ clickhouse-1-u633.vm.elestio.app                   │ 1 │
+│ clickhouse-1.cdn77.com                             │ 1 │
+│ clickhouse-1.dorg.cc                               │ 1 │
+│ clickhouse-1.man.exa.net.uk                        │ 1 │
+│ clickhouse-1.stofa.net                             │ 1 │
+│ clickhouse-12.dorg.cc                              │ 1 │
+│ clickhouse-13.dorg.cc                              │ 1 │
+│ clickhouse-14.dorg.cc                              │ 1 │
+│ clickhouse-15.dorg.cc                              │ 1 │
+│ clickhouse-16.dorg.cc                              │ 1 │
+│ clickhouse-17.dorg.cc                              │ 1 │
+│ clickhouse-2-de.subh.net                           │ 1 │
+│ clickhouse-2.man.exa.net.uk                        │ 1 │
+│ clickhouse-21.dorg.cc                              │ 1 │
+│ clickhouse-22.dorg.cc                              │ 1 │
+│ clickhouse-23.dorg.cc                              │ 1 │
+│ clickhouse-24.dorg.cc                              │ 1 │
+│ clickhouse-25.dorg.cc                              │ 1 │
+│ clickhouse-3-fi.subh.net                           │ 1 │
+│ clickhouse-3.man.exa.net.uk                        │ 1 │
+│ clickhouse-4-de.subh.net                           │ 1 │
+│ clickhouse-4.dorg.cc                               │ 1 │
+│ clickhouse-4.man.exa.net.uk                        │ 1 │
+│ clickhouse-5.dorg.cc                               │ 1 │
+│ clickhouse-5.man.exa.net.uk                        │ 1 │
+│ clickhouse-6.man.exa.net.uk                        │ 1 │
+│ clickhouse-7.dorg.cc                               │ 1 │
+│ clickhouse-78f2-c27b61                             │ 1 │
+│ clickhouse-8.dorg.cc                               │ 1 │
+│ clickhouse-9.dorg.cc                               │ 1 │
+│ clickhouse-backup0d.dt07.net                       │ 1 │
+│ clickhouse-backup1.dt07.net                        │ 1 │
+│ clickhouse-ch-dev-1-public.htz.appfollow.io        │ 1 │
+│ clickhouse-ch-dev-2-public.htz.appfollow.io        │ 1 │
+│ clickhouse-ch-dev-3-public.htz.appfollow.io        │ 1 │
+│ clickhouse-ch-dev-4-public.htz.appfollow.io        │ 1 │
+│ clickhouse-ch-prod-1-public.htz.appfollow.io       │ 1 │
+│ clickhouse-ch-prod-2-public.htz.appfollow.io       │ 1 │
+│ clickhouse-ch-prod-3-public.htz.appfollow.io       │ 1 │
+│ clickhouse-ch-prod-4-public.htz.appfollow.io       │ 1 │
+│ clickhouse-control.corp.cloudlinux.com             │ 1 │
+│ clickhouse-dev.do.stp.local                        │ 1 │
+│ clickhouse-eval.es.net                             │ 1 │
+│ clickhouse-fsn-1.tradesoft.ru                      │ 1 │
+│ clickhouse-fsn-2.tradesoft.ru                      │ 1 │
+│ clickhouse-fsn-3.tradesoft.ru                      │ 1 │
+│ clickhouse-graphite-staging.innogames.de           │ 1 │
+│ clickhouse-graphite-testing.innogames.de           │ 1 │
+│ clickhouse-graphite.innogames.de                   │ 1 │
+│ clickhouse-hel-1.tradesoft.ru                      │ 1 │
+│ clickhouse-idrac.find.smapps.org                   │ 1 │
+│ clickhouse-ixc-1.hoztnode.net                      │ 1 │
+│ clickhouse-logs02                                  │ 2 │
+│ clickhouse-logs03                                  │ 1 │
+│ clickhouse-logs04                                  │ 1 │
+│ clickhouse-proactive1.cc-omsk.ertelecom.ru         │ 1 │
+│ clickhouse-proactive2.cc-perm.ertelecom.ru         │ 1 │
+│ clickhouse-prodev.ele26126.jscrambler.com          │ 1 │
+│ clickhouse-scfnx-u4604.vm.elestio.app              │ 1 │
+│ clickhouse-stage.mapper                            │ 1 │
+│ clickhouse-stats.eudc.cloud                        │ 1 │
+│ clickhouse-tds-01.do.stp-cis.local                 │ 1 │
+│ clickhouse-tds-01.do.stp-int.local                 │ 1 │
+│ clickhouse-tds-01.do.stp.local                     │ 1 │
+│ clickhouse-tds-02.do.stp-cis.local                 │ 1 │
+│ clickhouse-tds-02.do.stp-int.local                 │ 1 │
+│ clickhouse-tds-02.do.stp.local                     │ 1 │
+│ clickhouse-tv-analytics-1.stofa.net                │ 1 │
+│ clickhouse-u466.vm.elestio.app                     │ 1 │
+│ clickhouse-uploader01.42n.dk                       │ 1 │
+│ clickhouse-west1-ipmi.es.net                       │ 1 │
+│ clickhouse-west1.es.net                            │ 1 │
+│ clickhouse-west2-ipmi.es.net                       │ 1 │
+│ clickhouse-west2.es.net                            │ 1 │
+│ clickhouse-zk-dev-1-public.htz.appfollow.io        │ 1 │
+│ clickhouse-zk-dev-2-public.htz.appfollow.io        │ 1 │
+│ clickhouse-zk-dev-3-public.htz.appfollow.io        │ 1 │
+│ clickhouse-zk-prod-1-public.htz.appfollow.io       │ 1 │
+│ clickhouse-zk-prod-2-public.htz.appfollow.io       │ 1 │
+│ clickhouse-zk-prod-3-public.htz.appfollow.io       │ 1 │
+│ clickhouse.adgoaltech.net                          │ 1 │
+│ clickhouse.com                                     │ 1 │
+│ clickhouse.cruise.smapps.org                       │ 1 │
+│ clickhouse.cryptoboom.com                          │ 1 │
+│ clickhouse.db.eait.uq.edu.au                       │ 1 │
+│ clickhouse.dev                                     │ 1 │
+│ clickhouse.do.stp.local                            │ 1 │
+│ clickhouse.ecomru.ru                               │ 1 │
+│ clickhouse.ellada.space                            │ 1 │
+│ clickhouse.enaza.ru                                │ 1 │
+│ clickhouse.equeo.de                                │ 1 │
+│ clickhouse.find.smapps.org                         │ 1 │
+│ clickhouse.flashphoner.com                         │ 1 │
+│ clickhouse.growadvertising.com                     │ 1 │
+│ clickhouse.gsn.do-00                               │ 1 │
+│ clickhouse.gsn.do-01                               │ 1 │
+│ clickhouse.h.loggie.co                             │ 1 │
+│ clickhouse.lbl.gov                                 │ 1 │
+│ clickhouse.m.af.de                                 │ 1 │
+│ clickhouse.mahjong.smapps.org                      │ 1 │
+│ clickhouse.outofcloud.ru                           │ 1 │
+│ clickhouse.pulkovo-airport.com                     │ 1 │
+│ clickhouse.qencode.com                             │ 1 │
+│ clickhouse.realty.p.smailru.net                    │ 1 │
+│ clickhouse.smapps.net                              │ 1 │
+│ clickhouse.solitaire.smapps.org                    │ 1 │
+│ clickhouse.testomat.io                             │ 1 │
+│ clickhouse.toadman.io                              │ 1 │
+│ clickhouse.youlahdp.p.smailru.net                  │ 1 │
+│ clickhouse.zav.org.ua                              │ 1 │
+│ clickhouse00.gpn                                   │ 1 │
+│ clickhouse001.fra.eu.mktgoo.net                    │ 1 │
+│ clickhouse01-dev.node.dc01.int.timo.group          │ 1 │
+│ clickhouse01.adapex.io                             │ 1 │
+│ clickhouse01.dnx.lu                                │ 1 │
+│ clickhouse01.gb.smailru.net                        │ 1 │
+│ clickhouse01.het.mrf.io                            │ 1 │
+│ clickhouse01.ovh.mrf.io                            │ 1 │
+│ clickhouse01.stat.ams2.conversify.com              │ 1 │
+│ clickhouse02.dnx.lu                                │ 1 │
+│ clickhouse02.het.mrf.io                            │ 1 │
+│ clickhouse02.ovh.mrf.io                            │ 1 │
+│ clickhouse02.stat.ams2.conversify.com              │ 1 │
+│ clickhouse03.dnx.lu                                │ 1 │
+│ clickhouse03.het.mrf.io                            │ 1 │
+│ clickhouse03.ovh.mrf.io                            │ 1 │
+│ clickhouse03.stat.ams2.conversify.com              │ 1 │
+│ clickhouse04.dnx.lu                                │ 1 │
+│ clickhouse04.het.mrf.io                            │ 1 │
+│ clickhouse05.het.mrf.io                            │ 1 │
+│ clickhouse06.het.mrf.io                            │ 1 │
+│ clickhouse07.het.mrf.io                            │ 1 │
+│ clickhouse08.het.mrf.io                            │ 1 │
+│ clickhouse09.het.mrf.io                            │ 1 │
+│ clickhouse09.sdkl.info                             │ 1 │
+│ clickhouse1-1.ssel2.imcmdb.net                     │ 1 │
+│ clickhouse1-1.sselp15.imcmdb.net                   │ 1 │
+│ clickhouse1.cluster.zebralution.it                 │ 1 │
+│ clickhouse1.nyc1.crafty.ner                        │ 1 │
+│ clickhouse10.het.mrf.io                            │ 1 │
+│ clickhouse10.sdkl.info                             │ 1 │
+│ clickhouse11.het.mrf.io                            │ 1 │
+│ clickhouse11.sdkl.info                             │ 1 │
+│ clickhouse12.het.mrf.io                            │ 1 │
+│ clickhouse12.sdkl.info                             │ 1 │
+│ clickhouse13.het.mrf.io                            │ 1 │
+│ clickhouse13.sdkl.info                             │ 1 │
+│ clickhouse14.het.mrf.io                            │ 1 │
+│ clickhouse14.sdkl.info                             │ 1 │
+│ clickhouse15.sdkl.info                             │ 1 │
+│ clickhouse16.sdkl.info                             │ 1 │
+│ clickhouse2.cluster.zebralution.it                 │ 1 │
+│ clickhouse2.fppressa.ru                            │ 1 │
+│ clickhouse2.nyc1.fontbundles.net                   │ 1 │
+│ clickhouse2.r-lab.biz                              │ 1 │
+│ clickhousemysqlslave01.dnx.lu                      │ 1 │
+│ club.prod.clickhouse.main                          │ 1 │
+│ club.stage.clickhouse.main                         │ 1 │
+│ conclickhouse001.srv.conova.net                    │ 1 │
+│ de-hz-clickhouse1                                  │ 1 │
+│ defra1-clickhousecdn01d.sys.i3d.network            │ 1 │
+│ defra1-clickhousecdn02d.sys.i3d.network            │ 1 │
+│ defra1-clickhousecdn03d.sys.i3d.network            │ 1 │
+│ defra1-clickhousecdn04d.sys.i3d.network            │ 1 │
+│ dev-clickhouse1.nyc1.crafty.net                    │ 1 │
+│ dwh-clickhouse.dc.smailru.net                      │ 1 │
+│ fi-hz-clickhouse2                                  │ 1 │
+│ fiddler-clickhouse-node-0.sd.spawar.navy.mil       │ 1 │
+│ fiddler-clickhouse-node-1.sd.spawar.navy.mil       │ 1 │
+│ france-production-clickhouse01.kameleoon.net       │ 1 │
+│ france-production-clickhouse02.kameleoon.net       │ 1 │
+│ france-production-clickhouse03.kameleoon.net       │ 1 │
+│ france-production-clickhouse04.kameleoon.net       │ 1 │
+│ france-production-clickhouse05.kameleoon.net       │ 1 │
+│ france-production-clickhouse06.kameleoon.net       │ 1 │
+│ fsn-clickhouse1.node.prerender.io                  │ 1 │
+│ graphite-clickhouse-01.cern.ch                     │ 1 │
+│ hitron-clickhouse.cloudcheck.net                   │ 1 │
+│ is-graph-clickhouse.i.smailru.net                  │ 1 │
+│ iva-clickhouse1.yamoney.ru                         │ 1 │
+│ iva-clickhouse2.yamoney.ru                         │ 1 │
+│ iva-clickhouse3.yamoney.ru                         │ 1 │
+│ lidl-production-clickhouse01.kameleoon.net         │ 1 │
+│ lidl-production-clickhouse02.kameleoon.net         │ 1 │
+│ load-clickhouse.nyc1.fontbundles.net               │ 1 │
+│ lsclickhouse1.gcore                                │ 1 │
+│ lsclickhouse2.gcore                                │ 1 │
+│ lsclickhouse3.gcore                                │ 1 │
+│ lsg-clickhouse.lbl.gov                             │ 1 │
+│ mclickhouse0.freenet.de                            │ 1 │
+│ mclickhouse1.freenet.de                            │ 1 │
+│ mclickhouse2.freenet.de                            │ 1 │
+│ nlrtm1-clickhouse01.sys.i3d.network                │ 1 │
+│ nlrtm1-clickhousecdn01d.sys.i3d.network            │ 1 │
+│ nlrtm1-clickhousecdn02d.sys.i3d.network            │ 1 │
+│ nlrtm1-clickhousecdn03d.sys.i3d.network            │ 1 │
+│ nlrtm1-clickhousecdn04d.sys.i3d.network            │ 1 │
+│ node01.clickhouse.statistics.aatkit.com            │ 1 │
+│ node02.clickhouse.statistics.aatkit.com            │ 1 │
+│ node03.clickhouse.statistics.aatkit.com            │ 1 │
+│ node03.dev.clickhouse.statistics.aatkit.com        │ 1 │
+│ node04.clickhouse.statistics.aatkit.com            │ 1 │
+│ node05.clickhouse.statistics.aatkit.com            │ 1 │
+│ node06.clickhouse.statistics.aatkit.com            │ 1 │
+│ node07.clickhouse.statistics.aatkit.com            │ 1 │
+│ node08.clickhouse.statistics.aatkit.com            │ 1 │
+│ node09.clickhouse.statistics.aatkit.com            │ 1 │
+│ node101.clickhouse.statistics.aatkit.com           │ 1 │
+│ node102.clickhouse.statistics.aatkit.com           │ 1 │
+│ node103.clickhouse.statistics.aatkit.com           │ 1 │
+│ node104.clickhouse.statistics.aatkit.com           │ 1 │
+│ node105.clickhouse.statistics.aatkit.com           │ 1 │
+│ node106.clickhouse.statistics.aatkit.com           │ 1 │
+│ node107.clickhouse.statistics.aatkit.com           │ 1 │
+│ node108.clickhouse.statistics.aatkit.com           │ 1 │
+│ node109.clickhouse.statistics.aatkit.com           │ 1 │
+│ node201.clickhouse.statistics.aatkit.com           │ 1 │
+│ node202.clickhouse.statistics.aatkit.com           │ 1 │
+│ node203.clickhouse.statistics.aatkit.com           │ 1 │
+│ node204.clickhouse.statistics.aatkit.com           │ 1 │
+│ node205.clickhouse.statistics.aatkit.com           │ 1 │
+│ node206.clickhouse.statistics.aatkit.com           │ 1 │
+│ node207.clickhouse.statistics.aatkit.com           │ 1 │
+│ node208.clickhouse.statistics.aatkit.com           │ 1 │
+│ node209.clickhouse.statistics.aatkit.com           │ 1 │
+│ prod-us-clickhouse-01.jscrambler.com               │ 1 │
+│ product-recommendations-clickhouse01.kameleoon.net │ 1 │
+│ product-recommendations-clickhouse02.kameleoon.net │ 1 │
+│ production-clickhouse01.kameleoon.net              │ 1 │
+│ production-clickhouse02.kameleoon.net              │ 1 │
+│ production-clickhouse03.kameleoon.net              │ 1 │
+│ production-clickhouse04.kameleoon.net              │ 1 │
+│ production-clickhouse05.kameleoon.net              │ 1 │
+│ production-clickhouse06.kameleoon.net              │ 1 │
+│ projectx-clickhouse-nl-1.itsts.net                 │ 1 │
+│ pushhouse-clickhouse-1.t.push.house                │ 1 │
+│ pushhouse-clickhouse-2.t.push.house                │ 1 │
+│ pushhouse-clickhouse-3.t.push.house                │ 1 │
+│ pushhouse-clickhouse-4.t.push.house                │ 1 │
+│ pushhouse-clickhouse-5.t.push.house                │ 1 │
+│ pushhouse-clickhouse-6.t.push.house                │ 1 │
+│ rclickhouse1.gcore                                 │ 1 │
+│ ru-ihor-clickhouse-1.loc                           │ 1 │
+│ s04.servers.clickhouse.pepper.com                  │ 1 │
+│ s05.servers.clickhouse.pepper.com                  │ 1 │
+│ s06.servers.clickhouse.pepper.com                  │ 1 │
+│ s07.servers.clickhouse.pepper.com                  │ 1 │
+│ sds-clickhouse-01.pltrm.net                        │ 1 │
+│ sds-clickhouse-02.pltrm.net                        │ 1 │
+│ sds-clickhouse-03.pltrm.net                        │ 1 │
+│ sds-clickhouse-05.pltrm.net                        │ 1 │
+│ sds-clickhouse-06.pltrm.net                        │ 1 │
+│ sds-clickhouse-07.pltrm.net                        │ 1 │
+│ sm-clickhouse-prod-001.brq2.ff.avast.com           │ 1 │
+│ sm-clickhouse-prod-002.brq2.ff.avast.com           │ 1 │
+│ sm-clickhouse-prod-003.brq2.ff.avast.com           │ 1 │
+│ srv-clickhouse.infomatix.tech                      │ 1 │
+│ srv01.clickhouse.tonlabs.io                        │ 1 │
+│ steerfox-intg-clickhouse00.evolix.net              │ 1 │
+│ steerfox-pp-clickhouse00.evolix.net                │ 1 │
+│ steerfox-prod-clickhouse00.evolix.net              │ 1 │
+│ test-clickhouse01.kameleoon.net                    │ 1 │
+│ test-clickhouse02.kameleoon.net                    │ 1 │
+│ test-clickhouse03.kameleoon.net                    │ 2 │
+│ usa-production-clickhouse01.kameleoon.net          │ 2 │
+└────────────────────────────────────────────────────┴───┘
+
+307 rows in set. Elapsed: 4.130 sec. Processed 1.30 billion rows,
+56.10 GB (314.15 million rows/s., 13.58 GB/s.)
+</code></p>
+</section>
+
+<section class="slide">
+<img style="width: 100%;" src="pictures/shodan.png"/>
+</section>
+
+<section class="slide">
+<h2>Visualization</h2>
+<p>I want nice pictures out of this dataset!</p>
+<p>What to do?</p>
+</section>
+
+<section class="slide">
+<p style="position: absolute; right: 3em; bottom: 1em; font-size: 10pt; color: gray;">2006, xkcd.com, CC BY-NC 2.5</p>
+<p style="float: right; margin-top: 1em;">⟵ I want something<br/>&emsp;&emsp;like this</p>
+<img style="width: 62%;" src="pictures/xkcd.jpg"/>
+</section>
+
+<section class="slide">
+<p style="float: right; margin-top: 1em;">⟵ I want this<br/>&emsp;&nbsp;but bigger and better</p>
+<p style="position: absolute; right: 3em; bottom: 1em; font-size: 10pt; color: gray;">2018, Ben Cartwright-Cox<br/><a href="https://blog.benjojo.co.uk/post/scan-ping-the-internet-hilbert-curve">https://blog.benjojo.co.uk/post/<br/>scan-ping-the-internet-hilbert-curve</a></p>
+<img style="width: 65%;" src="pictures/benjojo.jpg"/>
+</section>
+
+<section class="slide">
+<h2>Drawing a Picture With ClickHouse</h2>
+<p><code style="font-size: 14pt; line-height: 1.25; margin-top: -0.5em;">(echo 'P3 4096 4096 255';
+clickhouse client --host ... --query "
+  WITH 4096 AS w, 4096 AS h, w * h AS pixels,
+    cutToFirstSignificantSubdomain(domain) AS tld,
+    sipHash64(tld) AS hash,
+    <span style="color: red;">hash MOD 256 AS r,</span>
+    <span style="color: green;">hash DIV 256 MOD 256 AS g,</span>
+    <span style="color: blue;">hash DIV 65536 MOD 256 AS b,</span>
+    toUInt32(ip) AS num,
+    num DIV (0x100000000 DIV pixels) AS idx,
+    mortonDecode(2, idx) AS coord
+  SELECT avg(r)::UInt8, avg(g)::UInt8, avg(b)::UInt8
+  FROM dns_parsed GROUP BY coord
+  ORDER BY coord.2 * w + coord.1
+    WITH FILL FROM 0 TO 4096*4096
+" --progress
+) | pnmtopng > image.png
+</code></p>
+</section>
+
+<section class="slide" style="background: url(pictures/map1.png) no-repeat black; background-size: contain; background-position: center;">
+</section>
+
+<section class="slide" style="background: url(pictures/map1.png) no-repeat black; background-size: cover; background-position: center;">
+</section>
+
+<section class="slide">
+<h2>Visualization</h2>
+<p>So what?</p>
+<p>It is just 4K resolution.</p>
+<p>I want a full picture of 4 gigapixel, 65536⨯65536!</p>
+
+<p style="color: gray; margin-top: 2em;">It works &mdash; we can generate 4 gigapixel picture straight away.</p>
+<p style="color: gray;">But the picture does not open in many viewers.</p>
+</section>
+
+<section class="slide">
+<h2>Solution: Tiles</h2>
+<img style="float: right; width: 30%; margin-right: -3em;" src="pictures/javascript.webp"/>
+<p>Let's represent a giant picture in the same way<br/>as Google Maps &mdash; as a set of tiles.</p>
+<p>And make a web page that will load the tiles on demand.</p>
+
+<p>But now we have to use JavaScript...</p>
+
+<p>Libraries for viewing large images:
+<br/>&mdash; Leaflet: <a href="https://leafletjs.com/">https://leafletjs.com/</a>
+<br/>&mdash; OpenSeaDragon: <a href="https://openseadragon.github.io/">https://openseadragon.github.io/</a></p>
+</section>
+
+<section class="slide">
+<h2>Tiles</h2>
+<p><code style="font-size: 14pt; line-height: 1.25;">0-0-0.png  1-0-0.png  1-0-1.png  1-1-0.png  1-1-1.png  2-0-0.png
+2-0-1.png  2-0-2.png  2-0-3.png  2-1-0.png  2-1-1.png  2-1-2.png
+2-1-3.png  2-2-0.png  2-2-1.png  2-2-2.png  2-2-3.png  2-3-0.png
+2-3-1.png  2-3-2.png  2-3-3.png  3-0-0.png  3-0-1.png  3-0-2.png
+3-0-3.png  3-0-4.png  3-0-5.png  3-0-6.png  3-0-7.png  3-1-0.png
+3-1-1.png  3-1-2.png  3-1-3.png  3-1-4.png  3-1-5.png  3-1-6.png
+3-1-7.png  3-2-0.png  3-2-1.png  3-2-2.png  3-2-3.png  3-2-4.png
+3-2-5.png  3-2-6.png  3-2-7.png  3-3-0.png  3-3-1.png  3-3-2.png
+3-3-3.png  3-3-4.png  3-3-5.png  3-3-6.png  3-3-7.png  3-4-0.png
+3-4-1.png  3-4-2.png  3-4-3.png  3-4-4.png  3-4-5.png  3-4-6.png
+3-4-7.png  3-5-0.png  3-5-1.png  3-5-2.png  3-5-3.png  3-5-4.png
+...
+</code></p>
+<p>{zoom}-{x}-{y}.png</p>
+</section>
+
+<section class="slide">
+<h2>Tiles</h2>
+<p><code style="font-size: 14pt; line-height: 1.25; margin-top: -1em; height: 23em; overflow-y: scroll;">for zoom in {0..6}
+do
+  num_tiles=$((2**zoom))
+  for tile_x in $(seq 0 $(($num_tiles - 1)))
+  do
+    for tile_y in $(seq 0 $(($num_tiles - 1)))
+    do
+      filename="tiles/${zoom}-${tile_x}-${tile_y}.png"
+      echo $filename
+
+      [ -s "$filename" ] ||
+      (
+        echo 'P3 1024 1024 255';
+        clickhouse client --host driel7jwie.eu-west-1.aws.clickhouse-staging.com --secure --password "$PASSWORD" --query "
+          WITH 1024 AS w, 1024 AS h, w * h AS pixels,
+            cutToFirstSignificantSubdomain(domain) AS tld,
+            sipHash64(tld) AS hash,
+            hash MOD 256 AS r, hash DIV 256 MOD 256 AS g, hash DIV 65536 MOD 256 AS b,
+            toUInt32(ip) AS num,
+
+            mortonDecode(2, num) AS src_coord,
+
+            bitShiftRight(65536, ${zoom}) AS crop_size,
+            ${tile_x} * crop_size AS left,
+            ${tile_y} * crop_size AS top,
+            left + crop_size AS right,
+            top + crop_size AS bottom,
+
+            (src_coord.1 >= left AND src_coord.1 < right) AND (src_coord.2 >= top AND src_coord.2 &lt; bottom) AS in_tile,
+
+            (src_coord.1 - left) DIV (crop_size DIV w) AS x,
+            (src_coord.2 - top)  DIV (crop_size DIV h) AS y
+
+          SELECT avg(r)::UInt8, avg(g)::UInt8, avg(b)::UInt8
+          FROM dns_parsed
+          WHERE in_tile
+          GROUP BY x, y
+          ORDER BY y * w + x WITH FILL FROM 0 TO 1024*1024
+        " --progress
+      ) | pnmtopng > $filename
+
+    done
+  done
+done
+</code></p>
+</section>
+
+<section class="slide" style="background: url(pictures/tiles.png) no-repeat black; background-size: cover; background-position: center;">
+</section>
+
+<section class="slide">
+<h2>ReverseDNS.space</h2>
+<p><a href="https://reversedns.space/">https://reversedns.space/</a> ⟵ click here</p>
+</section>
+
+<section class="slide">
+<h2>ReverseDNS.space</h2>
+<p>Every click generates an SQL query to ClickHouse:</p>
+<p><code style="font-size: 12pt; line-height: 1.5;">const response = fetch(
+    `https://driel7jwie.eu-west-1.aws.clickhouse-staging.com/?user=website`,
+    {
+        method: 'POST',
+        body: `<b>SELECT domain FROM dns_parsed WHERE ip = '${ip_str}' FORMAT JSON</b>`
+    }).then(response => response.json().then(o => {
+
+        let host = o.rows ? o.data[0].domain : 'no response';
+
+        if (ip_str == current_requested_ip) {
+            popup.setContent(`&lt;b>${ip_str}&lt;/b>&lt;br/>${host}`);
+        }
+    }));
+</code></p>
+</section>
+
+<section class="slide">
+<h2>ReverseDNS.space</h2>
+<p>Don't forget to set up users and quotas:</p>
+<p><code style="font-size: 12pt; line-height: 1.4;">CREATE USER website IDENTIFIED WITH ...
+SETTINGS
+    add_http_cors_header = 1 READONLY,
+    limit = 1 READONLY,
+    offset = 0 READONLY,
+    max_result_rows = 1 READONLY
+
+GRANT SELECT ON default.dns_parsed TO website;
+
+CREATE QUOTA website
+    KEYED BY ip_address
+    FOR RANDOMIZED INTERVAL 1 MINUTE MAX query_selects = 100,
+    FOR RANDOMIZED INTERVAL 1 HOUR MAX query_selects = 3000,
+    FOR RANDOMIZED INTERVAL 1 DAY MAX query_selects = 30000
+    TO website;
+</code></p>
+</section>
+
+<section class="slide">
+<div style="float: right; width: 30%;">
+    <video style="margin-right: 1em;"><source src="pictures/fun.mp4" type="video/mp4"></video>
+    <p style="font-size: 10pt; color: gray;">Source: Eh Bee Family, 2014, https://vine.co/v/OwTOez0W6wg</p>
+</div>
+<h2>Takeaways</h2>
+<p>Don't be afraid &mdash; you can use ClickHouse<br/>for everything.</p>
+<p>You will find something new in the process.</p>
+<p>Maybe you fill find a creative way to break something.</p>
+
+<p style="margin-top: 3em;">Source code: <a href="https://github.com/ClickHouse/reversedns.space/">https://github.com/ClickHouse/reversedns.space/</a></p>
+</section>
+
+<section class="slide" style="background: url(pictures/final.jpg); background-size: cover; background-position: center;">
+<h2><span class="hilite">Q&amp;A</a></h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+
