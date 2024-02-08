@@ -302,31 +302,6 @@ differs from type defined by previous rows: String.</span>
 <p style="color: gray; font-size: 14pt; margin-top: 0em;">Developer: Alexander Tokmakov.</p>
 </section>
 
-<section class="slide">
-<h2>Improvements For Partitions</h2>
-
-<p>Now it's possible to ATTACH a partition or a part
-<br/>with a <span style="color: green;">different partition key!</span></p>
-
-<p>Examples: you created an excessively granular partition key,<br/>and want to simplify it or remove the partition key whatsoever.</p>
-
-<!--
-
-SHOW CREATE TABLE hits;
-CREATE TABLE hits2 AS hits ENGINE = MergeTree PRIMARY KEY (CounterID, EventDate, UserID, EventTime, WatchID) PARTITION BY EventDate;
-ALTER TABLE hits2 ATTACH PARTITION () FROM hits
-
-INSERT INTO hits2 SELECT * FROM hits LIMIT 1000000;
-CREATE TABLE hits3 AS hits ENGINE = MergeTree PRIMARY KEY (CounterID, EventDate, UserID, EventTime, WatchID);
-
-SELECT DISTINCT partition FROM system.parts WHERE table = 'hits2';
-ALTER TABLE hits3 ATTACH PARTITION '2013-07-15' FROM hits2;
-
--->
-
-<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Arthur Passos.</p>
-</section>
-
 
 <section class="slide" style="background: url(pictures/back4.jpg); background-size: cover;">
 <h2><span class="hilite">Performance Improvements</span></h2>
