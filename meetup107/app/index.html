@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Building an Analytic Application With ClickHouse</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 20pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         table, tr, td { border: 0; }
+         .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>Building an Analytic Application With ClickHouse</h1>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/Dubai.jpg); background-size: cover; background-position: center;">
+        <h1 style="margin-top: 20px; line-height: 150%; color: white; font-size: 42pt; text-shadow: 2px 2px black;">Building an Analytic Application With ClickHouse</h1>
+
+        <a href="https://www.goodfon.com/city/wallpaper-dubai-uae-dubay-oae-nochnoy-1966.html" style="position: absolute; left: 1em; bottom: 0em; color: lightgray; font-size: 8pt;">Maxima, 2017</a>
+    </section>
+
+<section class="slide">
+<h2>Let's build a demo app on ClickHouse</h2>
+<p>What for?</p>
+<p>&mdash; Testing. </p>
+<p>&mdash; An internal company contest.</p>
+<p>&mdash; I always like to play with ClickHouse and have fun :)</p>
+</section>
+
+<section class="slide">
+<h2>How?</h2>
+<p>We will need:</p>
+<p>&mdash; an idea.</p>
+<p>&mdash; a nice <b>dataset</b>.</p>
+<p>&mdash; a way to analyze and visialize it.</p>
+</section>
+
+<section class="slide">
+<h2>A Dataset</h2>
+<p>I need a large and interesting dataset. How to get it? 🤔</p>
+<p>Examples:</p>
+<p>&mdash; social networks (Reddit, Twitter, Stackoverflow);
+<br/>&mdash; web crawl (CommonCrawl);
+<br/>&mdash; public sector (NYPD crime reports, UK house prices);
+<br/>&mdash; wikipedia dumps and page views;
+<br/>&mdash; maps (OpenStreetMap);
+<br/>&mdash; sensor data (sensor.community);</p>
+<p><a href="https://clickhouse.com/docs/en/getting-started/example-datasets">https://clickhouse.com/docs/en/getting-started/example-datasets</a>
+</section>
+
+<section class="slide">
+<h2>ADS-B ✈️</h2>
+<p>Automatic Dependent Surveillance–Broadcast</p>
+<p>The data broadcast by "transponders"<br/>installed on airplanes (and not only planes).<p>
+<p>Contains a lot of telemetry (coordinates, velocity, heading, roll angle)<br/>and metadata (aircraft type, owner, year).</p>
+<p style="color: green;">Unencrypted and open for use without restrictions.</p>
+<p>You can collect the data using a software-defined radio! 📡</p>
+</section>
+
+<section class="slide">
+<h2>ADS-B ✈️</h2>
+<p>Can be collected directly. But only near your receiver (~100 km)</p>
+<p>Can be collected and exchanged by a community of participants<br/>around the world.<p>
+<p>Example: flightradar24.com</p>
+<p>&mdash; this website collects the data, but does not give it back.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/flightradar24.png); background-size: cover; background-position: center;">
+</section>
+
+<section class="slide">
+<h2>I want it in ClickHouse!</h2>
+<p>There are many ADS-B data exchanges:</p>
+<p style="font-family: monospace;">&mdash; adsb.fi
+<br/>&mdash; adsb.one
+<br/>&mdash; adsb.lol
+<br/>&mdash; adsbhub.org
+<br/>&mdash; airplanes.live
+<br/>&mdash; openflights.org
+<br/>&mdash; flightaware.com
+<br/>&mdash; adsbexchange.com
+<br/>&mdash; flightradar24.com
+<br/>&mdash; opensky-network.org</p>
+</section>
+
+<section class="slide" style="background: url(pictures/adsblol.png); background-size: cover; background-position: center;">
+</section>
+
+<section class="slide">
+<h2>Which data source to use?</h2>
+<p><b style="color: green;">adsb.lol</b> &mdash; ODbL, direct batch data downloads, ~1 TB/year, from Feb 2023.</p>
+<p><b style="color: #444400;">adsbexchange.com</b> &mdash; sample data for 1st day of each month, better coverage.</p>
+<p><b style="color: darkgreen;">airplanes.live</b> &mdash; the author provided the archive on request,<br/>for non-commercial usage with restrictions (no redistribution).</p>
+</section>
+
+<section class="slide" style="background: url(pictures/adsblol_releases.png); background-size: cover; background-position: center;">
+</section>
+
+<section class="slide">
+<h2>The Easy Part</h2>
+<p>Download all the data.</p>
+<p>Insert into ClickHouse.</p>
+</section>
+
+<section class="slide">
+<h2>The Easy Part</h2>
+<p>The data is just a bunch of JSON files, produced by the <b>readsb</b> tool.</p>
+
+<code style="font-size: 14pt; line-height: 1.25; white-space: pre-wrap; overflow-x: auto; overflow-y: scroll; height: 18em;">{<span style="color: brown;">"icao":"020100",
+"r":"CN-COH",
+"t":"AT76",               <span style="color: gray;">&lt;-- metadata</span>
+"dbFlags":0,                                 <span style="color: gray;">traces</span>
+"desc":"ATR-72-600",                         <span style="color: gray;">  |</span>
+"timestamp": 1680307200.000,</span>                 <span style="color: gray;">  v</span>
+"trace":[
+<span style="color: darkblue;">[44993.52,36.589873,-8.205326,20000,200.9,340.2,1,0,null,"adsb_icao",21050,32,175,0.7],
+[45022.97,36.615921,-8.216915,20000,200.9,340.2,1,0,null,"adsb_icao",21050,null,null,null],
+[45063.81,36.651352,-8.232708,20000,200.9,340.2,1,0,{"type":"adsb_icao","flight":"RAM980E ","alt_geom":21050,"ias":175,"tas":242,"mach":0.384,"wd":304,"ws":50,"track":340.21,"roll":0.00,"mag_heading":334.34,"true_heading":333.25,"baro_rate":0,"geom_rate":32,"squawk":"7737","category":"A2","nav_qnh":1013.6,"nav_altitude_mcp":20000,"nic":8,"rc":186,"version":2,"nic_baro":1,"nac_p":9,"nac_v":2,"sil":3,"sil_type":"perhour","alert":0,"spi":0},"adsb_icao",21050,32,175,0.0],
+[45081.72,36.667191,-8.239746,20000,200.9,340.2,1,0,null,"adsb_icao",21050,32,175,0.0],
+[45094.87,36.678589,-8.244839,20000,199.6,340.4,0,64,null,"adsb_icao",21050,64,173,0.0],
+[45120.17,36.700993,-8.254765,20000,199.9,340.1,1,0,null,"adsb_icao",21050,0,173,0.0],</span>
+</code>
+</section>
+
+<section class="slide">
+<h2>The Easy Part</h2>
+<p>1. Split each JSON into two: metadata and traces.</p>
+<p>2. Join them together into a flat table.</p>
+<p>3. Insert into the destination ClickHouse server.</p>
+</section>
+
+<section class="slide">
+<h2>The Easy Part</h2>
+<p>Join two JSON files and cleanup the data:</p>
+<p><code style="font-size: 14pt; line-height: 1.25;">clickhouse-local --query "
+  INSERT INTO FUNCTION remoteSecure('...aws.clickhouse.cloud',
+    default.planes_mercator, 'default', '')
+  SELECT
+    CAST(timestamp + time_offset AS DateTime64(3)) AS time,
+    time::Date AS date,
+    icao, r, t, dbFlags, noRegData, ownOp, year, desc,
+    lat, lon,
+    toInt32OrZero(altitude),
+    ...
+  FROM
+    file('${TMPFILE}.data.jsonl', JSONCompactEachRow) AS d,
+    file('${TMPFILE}.meta.jsonl', JSONEachRow) AS m
+"</code></p>
+</section>
+
+
+<section class="slide">
+<h2>A Table</h2>
+<code style="font-size: 10pt; line-height: 1.25; white-space: pre-wrap; overflow-x: auto; overflow-y: scroll; height: 33em; margin-top: -3em; margin-left: -2em; margin-right: -2em;">CREATE TABLE planes_mercator
+(
+    mercator_x UInt32 MATERIALIZED 0xFFFFFFFF * ((lon + 180) / 360),
+    mercator_y UInt32 MATERIALIZED 0xFFFFFFFF * (1/2 - log(tan((lat + 90) / 360 * pi())) / 2 / pi()),
+
+    INDEX idx_x (mercator_x) TYPE minmax,
+    INDEX idx_y (mercator_y) TYPE minmax,
+
+    time DateTime64(3),
+    date Date,
+    icao String,
+    r String,
+    t LowCardinality(String),
+    dbFlags Int32,
+    noRegData Bool,
+    ownOp LowCardinality(String),
+    year UInt16,
+    desc LowCardinality(String),
+    lat Float64,
+    lon Float64,
+    altitude Int32,
+    ground_speed Float32,
+    track_degrees Float32,
+    flags UInt32,
+    vertical_rate Int32,
+    aircraft_alert Int64,
+    aircraft_alt_geom Int64,
+    aircraft_gva Int64,
+    aircraft_nac_p Int64,
+    aircraft_nac_v Int64,
+    aircraft_nic Int64,
+    aircraft_nic_baro Int64,
+    aircraft_rc Int64,
+    aircraft_sda Int64,
+    aircraft_sil Int64,
+    aircraft_sil_type LowCardinality(String),
+    aircraft_spi Int64,
+    aircraft_track Float64,
+    aircraft_type LowCardinality(String),
+    aircraft_version Int64,
+    aircraft_category Enum8(
+        'A0', 'A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7',
+        'B0', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7',
+        'C0', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7',
+        'D0', 'D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7',
+        ''),
+    aircraft_emergency Enum8('', 'none', 'general', 'downed', 'lifeguard', 'minfuel', 'nordo', 'unlawful', 'reserved'),
+    aircraft_flight LowCardinality(String),
+    aircraft_squawk String,
+    aircraft_baro_rate Int64,
+    aircraft_nav_altitude_fms Int64,
+    aircraft_nav_altitude_mcp Int64,
+    aircraft_nav_modes Array(Enum8('althold', 'approach', 'autopilot', 'lnav', 'tcas', 'vnav')),
+    aircraft_nav_qnh Float64,
+    aircraft_geom_rate Int64,
+    aircraft_ias Int64,
+    aircraft_mach Float64,
+    aircraft_mag_heading Float64,
+    aircraft_oat Int64,
+    aircraft_roll Float64,
+    aircraft_tas Int64,
+    aircraft_tat Int64,
+    aircraft_true_heading Float64,
+    aircraft_wd Int64,
+    aircraft_ws Int64,
+    aircraft_track_rate Float64,
+    aircraft_nav_heading Float64,
+    source LowCardinality(String),
+    geometric_altitude Int32,
+    geometric_vertical_rate Int32,
+    indicated_airspeed Int32,
+    roll_angle Float32,
+
+    data_source Enum8('', 'adsb.lol', 'adsbexchange', 'airplanes.live')
+) ENGINE = MergeTree ORDER BY (mortonEncode(mercator_x, mercator_y), time);
+</code>
+</section>
+
+
+<section class="slide">
+<h2>I have a table, now what?</h2>
+
+<p>After a day, the table contains 50 billion records, around 1.6 TB.</p>
+<p>What to do with this data?</p>
+<p>&mdash; something beautiful!</p>
+
+<p style="margin-top: 2em; color: green;">Visualize it on the fly in the browser.</p>
+<p style="color: green;">Aggregate and generate reports.</p>
+</section>
+
+<section class="slide">
+<h2>Demo</h2>
+<p><a href="https://adsb.exposed/">https://adsb.exposed/</a></p>
+<!-- r = 'A6-EEC' -->
+</section>
+
+<section class="slide">
+<h2>How Is It Possible?</h2>
+</section>
+
+<section class="slide">
+<h2>REST API</h2>
+<p>ClickHouse has HTTP API included.</p>
+<p><code style="font-size: 14pt; line-height: 1.5;">const url = `${host}/?user=website&amp;default_format=JSON&amp;param_x=${x}`;
+const response = await fetch(host, { method: 'POST', body: sql });
+const data = await response.json();
+</code></p>
+<p>You can query it directly from the web page.</p>
+<p style="margin-top: 2em;">Advanced usage? &mdash; use the TypeScript driver.</p>
+<p>Any other language? &mdash; there are drivers for all of them.</p>
+</section>
+
+<section class="slide">
+<h2>Parameterized Queries</h2>
+<p>Type-safe parameterized queries:</p>
+<p><code style="font-size: 14pt; line-height: 1.5;">WITH
+    tile_size * <b style="color: green;">{x:UInt16}</b> AS tile_x_begin,
+    tile_size * <b style="color: green;">{y:UInt16}</b> AS tile_y_begin,
+...
+SELECT round(red)::UInt8, round(green)::UInt8, round(blue)::UInt8
+FROM <b style="color: green;">{table:Identifier}</b>
+</code></p>
+<p>Bonus: parameterized views.</p>
+<p><code style="font-size: 14pt; line-height: 1.5;">CREATE VIEW example AS SELECT ...;
+SELECT * FROM <b style="color: green;">example(x = 123, y = 456)</b>;</b>
+</code></p>
+</section>
+
+<section class="slide">
+<h2>Materialized Views</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">CREATE TABLE planes_mercator_sample10 AS planes_mercator;
+
+CREATE TABLE planes_mercator_sample100 AS planes_mercator;
+
+CREATE MATERIALIZED VIEW view_sample10 TO planes_mercator_sample10
+AS SELECT * FROM planes_mercator WHERE rand() % 10 = 0;
+
+CREATE MATERIALIZED VIEW view_sample100 TO planes_mercator_sample100
+AS SELECT * FROM planes_mercator WHERE rand() % 100 = 0;
+</code></p>
+
+<p>Can be used for incremental (continuous) data transformations on inserts,<br/>
+such as aggregation, filtering, and indexing data in different ways.</p>
+</section>
+
+<section class="slide">
+<h2>Role-Based Access Control</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">CREATE USER website IDENTIFIED WITH sha256_hash BY '...'
+SETTINGS
+    add_http_cors_header = 1,
+    max_result_rows = 1048576,
+    ...
+    readonly = 1;
+
+GRANT SELECT ON default.planes_mercator TO website;
+GRANT SELECT ON default.planes_mercator_sample10 TO website;
+GRANT SELECT ON default.planes_mercator_sample100 TO website;
+
+CREATE USER website_progress IDENTIFIED WITH sha256_hash BY ...;
+GRANT SELECT ON system.processes TO website_progress;
+GRANT REMOTE ON *.* TO website_progress;
+</code></p>
+</section>
+
+<section class="slide">
+<h2>Quotas and Query Complexity Limits</h2>
+<p><code style="font-size: 14pt; line-height: 1.5;">CREATE QUOTA website
+KEYED BY ip_address
+FOR RANDOMIZED INTERVAL 1 MINUTE
+  MAX query_selects = 1000, read_rows = 100_000_000_000,
+FOR RANDOMIZED INTERVAL 1 HOUR
+  MAX query_selects = 10000, read_rows = 1_000_000_000_000,
+FOR RANDOMIZED INTERVAL 1 DAY
+  MAX query_selects = 50000, read_rows = 5_000_000_000_000
+TO website;
+
+CREATE USER ... SETTINGS
+    max_result_rows = 1048576,
+    enable_http_compression = 1,
+    max_execution_time = 180;
+</code></p>
+</section>
+
+<section class="slide">
+<h2>Indices On Expressions</h2>
+<p><code style="font-size: 12pt; line-height: 1.5;">CREATE TABLE planes_mercator
+(
+    mercator_x UInt32 <b style="color: green;">MATERIALIZED</b> 0xFFFFFFFF * ((lon + 180) / 360),
+    mercator_y UInt32 <b style="color: green;">MATERIALIZED</b>
+        0xFFFFFFFF * (1/2 - log(tan((lat + 90) / 360 * pi())) / 2 / pi()),
+
+    INDEX idx_x (mercator_x) TYPE minmax,
+    INDEX idx_y (mercator_y) TYPE minmax,
+
+    time DateTime64(3),
+    lat Float64,
+    lon Float64,
+    ...
+) ENGINE = MergeTree
+ORDER BY (<b style="color: green;">mortonEncode(mercator_x, mercator_y)</b>, time);
+</code></p>
+</section>
+
+<section class="slide">
+<h2>Modern, Friendly SQL</h2>
+<p><code style="font-size: 12pt; line-height: 1.25; margin-top: -1em;">WITH <span style="color: gray;">-- can be used for CTE and for scalar aliases</span>
+    tile_size * {x:UInt16} AS tile_x_begin,
+    tile_size * {y:UInt16} AS tile_y_begin,
+    <span style="color: gray;">...</span>
+    mercator_x >= tile_x_begin AND mercator_x &lt; tile_x_end
+    AND mercator_y >= tile_y_begin AND mercator_y &lt; tile_y_end AS in_tile,
+    <span style="color: gray;">...</span>
+    bitShiftRight(mercator_x - tile_x_begin, 32 - 10 - {z:UInt8}) AS x,
+    bitShiftRight(mercator_y - tile_y_begin, 32 - 10 - {z:UInt8}) AS y,
+    <span style="color: gray;">...</span>
+    <span style="color: gray;">-- aliases can refernce each other in expressions;</span>
+    y * 1024 + x AS pos,
+    <span style="color: gray;">...</span>
+SELECT round(red)::UInt8, round(green)::UInt8, round(blue)::UInt8
+FROM {table:Identifier} <span style="color: gray;">-- query parameters</span>
+WHERE in_tile <span style="color: gray;">-- aliases in any place of a query</span>
+GROUP BY pos
+ORDER BY pos <b style="color: green;">WITH FILL FROM 0 TO 1024*1024</span></b> <span style="color: gray;">-- gaps filling;</span>
+</code></p>
+</section>
+
+<section class="slide">
+<h2>Input/Output Formats</h2>
+<p><b>TSV</b>, <b>CSV</b>, <b>CustomSeparated</b>... &mdash; text formats;</p>
+<p><b>RowBinary</b> &mdash; compact, raw bitmap (we use it for pictures);</p>
+<p><b>JSON</b>, <b>JSONLines</b>, <b>JSONCompact</b>... &mdash; good for web UIs;</p>
+<p><b>Parquet</b>, <b>ORC</b>, <b>Arrow</b>, <b>Native</b>... &mdash; column-oriented (for data lakes);</p>
+<p><b>Protobuf</b>, <b>Avro</b>, <b>MsgPack</b>... &mdash; import/export (for Kafka and similar);</p>
+<p style="color: green;">... every format you might need is already supported by ClickHouse!</p>
+</section>
+
+<section class="slide">
+<h2>Compression Out Of The Box</h2>
+<p>Data inside ClickHouse is compressed<br/>in a column-oriented format (MergeTree);</p>
+<p>Compression for external data is automatically recognized<br/>(gz, lz4, zstd, br, snappy, bz2, xz; zip, 7z, tar.*);</p>
+<p>Compression over network is supported as well<br/>(Accept-Encoding, Content-Encoding in the HTTP interface);</p>
+</section>
+
+<section class="slide">
+<h2>Infinite Storage</h2>
+<p>ClickHouse supports:</p>
+<p>&mdash; local storage;</p>
+<p>&mdash; object storage (AWS S3, GCS, and Azure);</p>
+<p>&mdash; hybrid storage (tiering and/or caching);</p>
+<p>&mdash; external tables (data lakes and querying other databases);</p>
+<p style="color: gray; margin-top: 2em;">* ClickHouse Cloud has unlimited storage.</p>
+</section>
+
+<section class="slide">
+<h2>Parallel And Distributed Queries</h2>
+<p>Add CPU and/or machines, and your queries run faster:</p>
+<p>&mdash; queries parallelize across all CPU cores on the machine<br/>&emsp; (you can also limit it);</p>
+<p>&mdash; queries parallelize using <b>shards</b> or <b>replicas</b>;</p>
+</section>
+
+<section class="slide">
+<h2>Query Result Cache</h2>
+
+<p><code style="line-height: 1.5">$ cat /etc/clickhouse-server/config.d/query_cache.yaml
+query_result_cache:
+    size: 1073741824
+    max_entries: 1024
+    max_entry_size: 104857600
+    max_entry_records: 30000000
+</code></p>
+<p><code style="line-height: 1.5">SET use_query_cache = 1;</code></p>
+</section>
+
+<section class="slide">
+<h2>Query Result Cache</h2>
+
+<p>Allows to control on a per-query basis:</p>
+<p style="line-height: 1.25;">&mdash; min query runs to cache the result;<br/>
+&mdash; min query runtime to cache the result;<br/>
+&mdash; max result size to put into cache;<br/>
+&mdash; max staleness to use the cached entry;<br/>
+&mdash; passive usage of the existing entries in cache;<br/>
+&mdash; caching of queries with non-deterministic functions;<br/>
+&mdash; sharing the cache between users;</p>
+</section>
+
+<section class="slide">
+<h2>Local And Server Modes</h2>
+<p style="margin-top: -1em;">ClickHouse can work <b>as a server</b> (clickhouse-server)
+<br/>or <b>as a tool</b> without installation (clickhouse-local).</p>
+
+<p><b style="color: green;">clickhouse-local</b>
+<br/>&mdash; a small tool for data analytics on local and remote datasets.</p>
+
+<p><b>All possible data formats:</b>
+<br/>&mdash; text: CSV, TSV, JSON, Values, MySQLDump, Regexp...
+<br/>&mdash; binary: Parquet, Arrow, ORC, Avro, BSON, Protobuf, MsgPack...
+<br/>&mdash; schemaful and schemaless;
+</p>
+
+<p><b>External data:</b>
+<br/>&mdash; remote databases: MySQL, PostgreSQL, MongoDB, ODBC, JDBC...
+<br/>&mdash; object storages: S3, HDFS, Azure...
+<br/>&mdash; external tables: Hudi, Delta Lake...
+<br/>&mdash; from URL and local files; from SQLite.
+</p>
+</section>
+
+<section class="slide">
+<h2>Preprocessing the Data</h2>
+<p style="margin-top: -1em;">With <b style="color: green;">clickhouse-local</b>
+<br/>&mdash; a small tool for data analytics on local and remote datasets.</p>
+<p>Similar tools:<br/><span style="color: gray;">textql, octosql, dsq, duckdb, glaredb, trdsql, q, datafusion-cli, spyql</span>.</p>
+
+<p>Install it:</p>
+<p><code>curl https://clickhouse.com/ | sh
+
+./clickhouse local</code></p>
+</section>
+
+<section class="slide">
+<h2>What Else?</h2>
+<p>ClickHouse is the best DBMS for analytic applications:</p>
+<p>&mdash; Fast, scalable, and resource efficient;</p>
+<p>&mdash; Easy to use and pleasant to work with;</p>
+<p>&mdash; Robust and reliable;</p>
+<p>&mdash; Batteries included.</p>
+<p style="margin-top: 2em;">Friends tell friends to use ClickHouse!</p>
+</section>
+
+<section class="slide" style="background: url(pictures/Airport.jpg); background-size: cover; background-position: center;">
+<h2><span class="hilite">Q&amp;A</a></h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+
