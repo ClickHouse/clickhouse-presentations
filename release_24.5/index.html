@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 24.5 Webinar</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+         .slide table tr:not(:last-of-type)>* { background: none; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 24.5 Webinar</h1>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/back1.jpg); background-size: cover;">
+        <h1 style="margin-top: 60px; line-height: 150%; font-size: 56pt;"><span class="hilite">ClickHouse Release<br/>24.5</span></h1>
+    </section>
+
+<section class="slide">
+<h2>Release 24.5 Webinar</h2>
+<p>1. (55 min) What's new in ClickHouse 24.5.</p>
+<p>2. (5 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back2.jpg); background-size: cover;">
+<h2><span class="hilite">Release 24.5</span></h2>
+<p><span class="hilite">ClickHouse Spring/Summer Release.</span></p>
+<p><span class="hilite">— 19 new features 🌿</span></p>
+<p><span class="hilite">— 20 performance optimizations 🚴‍</span></p>
+<p><span class="hilite">— 68 bug fixes 🐝</span></p>
+</section>
+<!--
+
+Small
+
+Any keys in Map
+clamp
+NPy as an output format
+Direct reading from archives on S3
+generateSnowflakeID
+fromReadableSize
+
+Usability
+
+Trailing commas in INSERT
+stdout compression autodetection
+positional argument
+English-style quotes
+width and ANSI sequences
+
+Performance
+
+Native Parquet reader
+DateTime vs DateTime64
+Indices of type Set
+-UTF8: substringUTF8, substringIndexUTF8, reverseUTF8, lowerUTF8, leftPadUTF8, rightPadUTF8
+Faster globs
+splitByRegexp when a single character
+FixedHashTable
+Sparse columns, Vertical merge.
+
+Main
+
+Dynamic
+Azure - workload identity, backups
+Compressing cross join; cross join in external memory
+Inequal join
+Form data format
+
+chdb
+9 times faster processing of data frames
+custom readers
+chdb-server
+
+
+
+Bonus
+
+loongarch64
+
+Integrations
+
+ClickPipes: Kinesis
+Kafka offsets
+Kafka meta-columns: key, timestamp, headers, topic, offset
+
+Metabase update: CSV uploads
+
+dbt: codecs
+Java, Go, Python
+Tableau
+
+https://github.com/rjoelnorgren - DBT
+https://github.com/Wang - Golang client
+https://github.com/jirislav - Kafka Connector
+https://github.com/abhishekgahlot2 - Kafka Connector
+https://github.com/feychenie - Python client
+https://github.com/calherries
+
+Reading
+
+Graviton
+New SQL console
+API endpoints
+Configurable backups
+Kinesis
+Certification program
+Elasticsearch comparison
+
+-->
+
+<section class="slide" style="background: url(pictures/back3.jpg); background-size: cover;">
+<h2><span class="hilite">Small And Nice Features</span></h2>
+</section>
+
+<section class="slide">
+<h2>Unrestricted Map Data Type</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TEMPORARY TABLE test (
+   x Map(Array(Map(Float64, String)), String));
+
+INSERT INTO test VALUES
+   ({[]: 'Hello'}),
+   ({[{1.1: 'test'}]: 'World'});
+
+SELECT * FROM test1;
+
+   ┌─x────────────────────────┐
+1. │ {[]:'Hello'}             │
+2. │ {[{1.1:'test'}]:'World'} │
+   └──────────────────────────┘
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: TaiYang Li.</p>
+</section>
+
+
+<section class="slide">
+<h2>Npy As An Output Format</h2>
+
+<p>It was available for data import since 23.10.</p>
+<p>Since 24.5 it also supports data export.</p>
+
+<p><code style="font-size: 14pt;">SELECT [number, number * 2]
+FROM numbers(10) <b style="color: green;">INTO OUTFILE 'test.npy'</b> <span style="color: gray;">-- or <b>FORMAT Npy</b></span>
+
+SELECT * FROM 'test.npy'
+
+python3 -c "
+    import numpy as np;
+    array = np.load('test.npy');
+    print(array)"
+</code></p>
+
+<p>Demo.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: HowePa.</p>
+</section>
+
+
+<section class="slide">
+<h2>clamp</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;"><span style="color: gray;">:) SELECT greatest(5, least(10, x))</span>
+
+<span style="color: gray;">:) SELECT max2(5, min2(10, x))</span>
+
+<span style="color: green;">:) SELECT <b>clamp</b>(x, 5, 10)</span>
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: skyoct.</p>
+</section>
+
+
+<section class="slide">
+<h2>generateSnowflakeID</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">:) SELECT generateSnowflakeID() FROM numbers(3)
+
+   ┌─generateSnowflakeID()─┐
+1. │   7201822390320365568 │
+2. │   7201822390320365569 │
+3. │   7201822390320365570 │
+   └───────────────────────┘
+</code></p>
+
+<p>Generates a monotonic 64-bit unique identifier.</p>
+<p>Similar to UUID, but smaller and monotonic.</p>
+<p style="color: gray; font-size: 14pt;">Has nothing to do with Snowflake Inc.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Danila Puzov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Reading From Archives On S3</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT * FROM s3(
+  '<b style="color: green;">s3://</b>umbrella-static/top-1m-2024-01-*.csv<b style="color: green;">.zip :: *.csv</b>')
+  LIMIT 10;
+
+SELECT _path, c1 FROM s3(
+  '<b style="color: green;">s3://</b>umbrella-static/top-1m-2024-01-*.csv<b style="color: green;">.zip :: *.csv</b>')
+  WHERE c2 = 'clickhouse.com' ORDER BY _path;</code></p>
+
+<p>The contents of container formats, such as <b>*.tar.*</b>, <b>*.zip</b>, <b>*.7z</b>
+<br/>can be read directly from S3.</p>
+
+<p>For the local filesystem &mdash; already supported since 23.8.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Dan Ivanik.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
+<h2><span class="hilite">Usability Improvements</span></h2>
+</section>
+
+<section class="slide">
+<h2>Trailing Commas In INSERT</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">INSERT INTO test (c1, c2<b style="color: red;">,</b>) VALUES ('Hello', 'World'<b style="color: red;">,</b>);
+
+INSERT INTO test
+(
+    c1,
+    c2<b style="color: red;">,</b>
+)
+VALUES
+(
+    'Hello',
+    'World'<b style="color: red;">,</b>
+);</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Alexey Milovidov.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Autodetection Of Compression In StdOut</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">ch -q "SELECT * FROM 'test.parquet' INTO OUTFILE 'test.csv.gz'"</code></p>
+
+<p style="margin-top: 2em;">Since version 24.5 it works even with shell redirects!</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">ch -q "SELECT * FROM 'test.parquet'" <b style="color: green;">> test.csv.gz</b>
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developers: v01dXYZ.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Command Line Simplification</h2>
+
+<p><code style="font-size: 14pt; line-height: 2;">clickhouse-local --query "SELECT 1"
+clickhouse-local -q "SELECT 1"
+echo "SELECT 1" | clickhouse local
+ch -q "SELECT 1"
+echo "SELECT 1" | ch
+<b style="color: green;">ch "SELECT 1"</b> <span style="color: gray;"> # since 24.5</span>
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developers: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">English Quotes</h2>
+
+<p><code style="line-height: 2; font-family: Sans-Serif;">SELECT 'Hello, world';
+SELECT ‘Hello, world’;
+</code></p>
+
+<p>Why??? Demo.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developers: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Improvements for visibleWidth</h2>
+
+<!--
+
+
+-->
+
+<p>Demo</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developers: Shaun Struwig.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
+<h2>Performance Improvements</h2>
+</section>
+
+<section class="slide">
+<h2>Fast Parquet Reader</h2>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: ZhiHong Zhang.</p>
+</section>
+
+<section class="slide">
+<h2>Faster String Functions</h2>
+
+<p><b>UTF8</b> functions have shortcuts when a string is ASCII-only:</p>
+<p>&mdash; substringUTF8, substringIndexUTF8, reverseUTF8,
+<br/>&emsp; lower/upperUTF8, left/rightPadUTF8.</p>
+
+<p><b>splitByRegexp</b> has a shortcut when a regular expression is a single character.</p>
+
+<!-- TODO: How much? -->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: TaiYang Li.</p>
+</section>
+
+<section class="slide">
+<h2>Faster Index Analysis</h2>
+
+<p>For indices of type <b>set</b>.</p>
+
+<p>Index analysis can take a long time, delaying query processing
+<br/>especially for tables with trillions of rows or with a low index_granularity.</p>
+
+<p>Now up to 1.5 times faster!</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Index Analysis For DateTime64</h2>
+
+<p>When DateTime is compared with a constant DateTime64.</p>
+
+<!--
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Faster GROUP BY</h2>
+
+<p>When keys fit in 16 bits.</p>
+<p>By optimizing merging of lookup tables.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Jie Binn.</p>
+</section>
+
+
+<section class="slide">
+<h2>Faster Glob Matching For S3</h2>
+
+<p><code>prefix{1,2,3}/file*.csv</code></p>
+
+<p>Was: make a regular expression
+<br/>and match it against all paths for a prefix.</p>
+
+<p>Now: interpret <b>{1,2,3}</b> as lazy generators,
+<br/>only match <b>file*.csv</b> inside <b>prefix1/</b>, <b>prefix2/</b>, <b>prefix3/</b>.</p>
+
+<p>Faster when there is a huge number of files.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Andrey Zvonov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Faster Merges</h2>
+
+<p>With sparse columns.</p>
+
+<p>Sparse columns &mdash; is a special data format used for<br/>columns with a high ratio of default values.</p>
+
+<p>The query engine automatically takes the benefit of the sparse format<br/>by optimizing functions and expressions.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Anton Popov.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
+<h2 style="color: white; margin-top: 2.5em;">Something Interesting</h2>
+</section>
+
+<section class="slide">
+<h2>Dynamic Data Type</h2>
+
+<p>A new experimental data type for <b>semistructured data</b>.</p>
+<p>Similar to the <b>Variant</b> data type, but <i>dynamic</i>.</p>
+
+<p><b>Variant(String, UInt64, Array(String))</b> &mdash; anything from the list of types.</p>
+
+<p><b>Dynamic</b> &mdash; anything, automatically extending the list of types.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Pavel Kruglov</p>
+</section>
+
+<!-- TODO -->
+
+<section class="slide">
+<h2>Azure</h2>
+
+<p>Support for <b>"workload identity"</b> &mdash; Vinay Suryadevara.</p>
+<p>Optimizing <b>backups</b> with the server-side copy &mdash; Alexander Sapin.</p>
+<p>Support for <b>plain_rewritable</b> metadata for <b>azure</b> object storage &mdash; Julia Kartseva.</p>
+
+<p style="margin-top: 2em;">Azure is <b>production ready</b> since 24.5!</p>
+
+<p style="color: green;">What for?</p>
+</section>
+
+<section class="slide">
+<h2>Azure</h2>
+
+<p style="color: green;">What for?</p>
+<p>We launched ClickHouse Cloud on Azure (beta)!</p>
+<!-- TODO: a link -->
+<p>ClickHouse Cloud: now on AWS, GCP, <b>and Azure</b>,
+<br/>... and a partner service on AliCloud.</p>
+</section>
+
+<section class="slide">
+<h2>Form Data Format</h2>
+<p><code style="font-size: 14pt; line-height: 1.5;">INSERT INTO test FORMAT <b style="color: green;">Form</b>
+name=Vasya&amp;email=vasya@pupkin.com&amp;text=I%20like%20ClickHouse%20so%much!
+</code></p>
+<p>Inserting directly from HTML forms (<b>x-www-form-urlencoded</b> MIME type)</p>
+<p>Direct integration with JavaScript libraries, such as Boomerang.js.</p>
+<p>Supports inserting a single record<br/>(asynchronous inserts are recommended).</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Shaun Struwig.</p>
+</section>
+
+<section class="slide">
+<h2>JOIN Improvements</h2>
+<p>From now on, you will see JOIN improvements in every ClickHouse release.</p>
+
+<p><b>In-memory compression</b> for CROSS (comma) JOIN:
+<br/>&mdash; fast processing of a large table's product.</p>
+
+<p><b>On-disk</b> processing for CROSS (comma) JOIN:
+<br/>&mdash; generate a large table's product even when<br/>&emsp; the right hand side is too large.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: TODO.</p>
+</section>
+
+<section class="slide">
+<h2>Non-Equal JOIN</h2>
+
+<p><code>SET allow_experimental_join_condition = 1;</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Lgbo-USTC.</p>
+</section>
+
+
+<section class="slide">
+<h2>chdb</h2>
+<p>Fast processing of Pandas Dataframes.</p>
+
+<img src="pictures/chdb.jpg" style="width: 100%;"/>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Auxten</p>
+</section>
+
+<section class="slide">
+<h2>chdb</h2>
+<p>Custom data types: any user-provided data type could be processed:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.25; overflow-y: scroll; height: 70%;">class myReader(chdb.PyReader):
+    def __init__(self, data):
+        self.data = data
+        self.cursor = 0
+        super().__init__(data)
+
+    def read(self, col_names, count):
+        block = [self.data[col] for col in col_names]
+        block = [col[self.cursor : self.cursor + count] for col in block]
+        self.cursor += block[0].shape[0]
+        return block
+
+reader = myReader(df_old)
+
+ret = chdb.query("""
+   SELECT RegionID, SUM(AdvEngineID), COUNT(*) AS c
+   FROM Python(reader) GROUP BY RegionID ORDER BY c DESC LIMIT 10""",
+    "DataFrame")
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Auxten</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back8.jpg); background-size: cover;">
+<h2><span class="hilite">Bonus</span></h2>
+</section>
+
+
+<section class="slide">
+<h2>Bonus: loongarch64</h2>
+<p>Now we have:</p>
+<p>&mdash; <b>x86_64</b> (production);
+&mdash; <b>aarch64</b> (production);
+&mdash; <b>risc-v</b> (experimental);
+&mdash; <b>powerpc64-le</b> (experimental);
+&mdash; <b>s390x</b> (experimental);
+&mdash; <b style="color: green;">loongarch64</b> (experimental);</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: TODO</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back8.jpg); background-size: cover;">
+<h2><span class="hilite">Integrations</span></h2>
+</section>
+
+<section class="slide">
+<h2>Integrations</h2>
+<img src="pictures/fivetran.png" style="width: 100%;">
+</section>
+
+<section class="slide">
+<h2>Integrations</h2>
+<p>ClickPipes:
+<br/>&mdash; <b>Kinesis</b> support;
+<br/>&mdash; allow to set <b>offsets</b> for Kafka;
+<br/>&mdash; meta-columns <b>key</b>, <b>timestamp</b>, <b>headers</b>, <b>topic</b>, <b>offset</b> for Kafka;
+</p>
+<p><b>Metabase</b> &mdash; directly import CSV into ClickHouse.</p>
+
+<p>Updates for <b>dbt</b> and <b>Tableau</b> integrations,
+<br/>as well as <b>Java</b>, <b>Go</b>, and <b>Python</b> drivers.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Contributors: TODO</p>
+</section>
+
+<section class="slide" style="background: url(pictures/reading.png); background-size: cover; color: white;">
+<h2 style="color: white;">Reading Corner</h2>
+
+<p><a href="https://clickhouse.com/blog/" style="filter: brightness(150%)">https://clickhouse.com/blog/</a></p>
+<p style="line-height: 1.5;">&mdash; Real-world AWS Graviton 4 performance;
+<br/>&mdash; The new SQL console;
+<br/>&mdash; API endpoints;
+<br/>&mdash; Flexible backups;
+<br/>&mdash; How to become a certified ClickHouse developer;
+<br/>&mdash; Why ClickHouse is faster than Elasticsearch;
+</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back9.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
+<h2 style="color: white; margin-left: -1em;">Q&amp;A</a></h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+
