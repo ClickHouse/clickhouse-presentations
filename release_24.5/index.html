@@ -178,7 +178,7 @@ python3 -c "
 <p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: skyoct.</p>
 </section>
 
-
+<!--
 <section class="slide">
 <h2>generateSnowflakeID</h2>
 
@@ -197,7 +197,7 @@ python3 -c "
 
 <p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Danila Puzov.</p>
 </section>
-
+-->
 
 <section class="slide">
 <h2>Reading From Archives On S3</h2>
@@ -218,7 +218,7 @@ SELECT _path, c1 FROM s3(
 <p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Dan Ivanik.</p>
 </section>
 
-<section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
+<section class="slide" style="background: url(pictures/back4.jpg); background-size: cover;">
 <h2><span class="hilite">Usability Improvements</span></h2>
 </section>
 
@@ -281,26 +281,16 @@ SELECT ‘Hello, world’;
 <p style="color: gray; font-size: 14pt; margin-top: 5em;">Developers: Alexey Milovidov.</p>
 </section>
 
-<section class="slide">
-<h2 style="font-size: 32pt;">Improvements for visibleWidth</h2>
 
-<!--
-
-
--->
-
-<p>Demo</p>
-
-<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developers: Shaun Struwig.</p>
-</section>
-
-
-<section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
-<h2>Performance Improvements</h2>
+<section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
+<h2 style="color: white;">Performance Improvements</h2>
 </section>
 
 <section class="slide">
 <h2>Fast Parquet Reader</h2>
+
+<p>It is enabled by default.</p>
+<p>No comments. Try it, and you will see the difference.</p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: ZhiHong Zhang.</p>
 </section>
@@ -384,8 +374,8 @@ SELECT ‘Hello, world’;
 </section>
 
 
-<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
-<h2 style="color: white; margin-top: 2.5em;">Something Interesting</h2>
+<section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
+<h2 style="color: white; margin-top: 1em;">Something Interesting</h2>
 </section>
 
 <section class="slide">
@@ -401,14 +391,115 @@ SELECT ‘Hello, world’;
 <p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Pavel Kruglov</p>
 </section>
 
-<!-- TODO -->
+<section class="slide">
+<h2>Dynamic Data Type</h2>
+
+<p>Using <b>Dynamic</b> type in table's definition:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE test (d Dynamic) ENGINE = Memory;
+INSERT INTO test VALUES (NULL), (42), ('Hello, World!'), ([1, 2, 3]);
+SELECT d, dynamicType(d) FROM test;
+
+┌─d─────────────┬─dynamicType(d)─┐
+│ ᴺᵁᴸᴸ          │ None           │
+│ 42            │ Int64          │
+│ Hello, World! │ String         │
+│ [1,2,3]       │ Array(Int64)   │
+└───────────────┴────────────────┘
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Pavel Kruglov</p>
+</section>
+
+<section class="slide">
+<h2>Dynamic Data Type</h2>
+
+<p style="margin-top: -1em;">CAST from an ordinary column:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.1;">SELECT 'Hello, World!'<b style="color: green;">::Dynamic</b> as d, <b style="color: green;">dynamicType(d)</b>;
+
+┌─d─────────────┬─dynamicType(d)─┐
+│ Hello, World! │ String         │
+└───────────────┴────────────────┘
+</code></p>
+
+<p>CAST from a <b>Variant</b> column:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.1;">SET allow_experimental_variant_type = 1, use_variant_as_common_type = 1;
+SELECT multiIf(number % 3 = 0, number,
+number % 3 = 1, range(number + 1), NULL)::<b style="color: green;">Dynamic</b> AS d, <b style="color: green;">dynamicType(d)</b>
+FROM numbers(3)
+
+┌─d─────┬─dynamicType(d)─┐
+│ 0     │ UInt64         │
+│ [0,1] │ Array(UInt64)  │
+│ ᴺᵁᴸᴸ  │ None           │
+└───────┴────────────────┘
+</code></p>
+</section>
+
+<section class="slide">
+<h2>Dynamic Data Type</h2>
+
+<p style="margin-top: -1em;">Reading subcolumns of the Dynamic value:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.1;">SELECT d, dynamicType(d), d.String, d.`Array(Int64)` FROM test;
+
+┌─d─────────────┬─dynamicType(d)─┬─d.String──────┬─d.Array(Int64)─┐
+│ ᴺᵁᴸᴸ          │ None           │ ᴺᵁᴸᴸ          │ []             │
+│ 42            │ Int64          │ ᴺᵁᴸᴸ          │ []             │
+│ Hello, World! │ String         │ Hello, World! │ []             │
+│ [1,2,3]       │ Array(Int64)   │ ᴺᵁᴸᴸ          │ [1,2,3]        │
+└───────────────┴────────────────┴───────────────┴────────────────┘
+
+SELECT toTypeName(d.String) FROM test;
+
+┌─toTypeName(d.String)─┐
+│ Nullable(String)     │
+└──────────────────────┘
+
+SELECT d, dynamicType(d), dynamicElement(d, 'String') FROM test;
+
+┌─d─────────────┬─dynamicType(d)─┬─dynamicElement(d, 'String')─┐
+│ ᴺᵁᴸᴸ          │ None           │ ᴺᵁᴸᴸ                        │
+│ 42            │ Int64          │ ᴺᵁᴸᴸ                        │
+│ Hello, World! │ String         │ Hello, World!               │
+│ [1,2,3]       │ Array(Int64)   │ ᴺᵁᴸᴸ                        │
+└───────────────┴────────────────┴─────────────────────────────┘
+</code></p>
+</section>
+
+<section class="slide">
+<h2>Dynamic Data Type</h2>
+
+<p style="margin-top: -1em;">Type inference from data formats:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.1;">SELECT d, dynamicType(d)
+FROM format(JSONEachRow, 'd Dynamic',
+'
+    {"d" : "Hello, World!"},
+    {"d" : 42},
+    {"d" : 42.42},
+    {"d" : "2020-01-01"},
+    {"d" : [1, 2, 3]}
+')
+
+┌─d─────────────┬─dynamicType(d)─┐
+│ Hello, World! │ String         │
+│ 42            │ Int64          │
+│ 42.42         │ Float64        │
+│ 2020-01-01    │ Date           │
+│ [1,2,3]       │ Array(Int64)   │
+└───────────────┴────────────────┘
+</code></p>
+</section>
 
 <section class="slide">
 <h2>Azure</h2>
 
 <p>Support for <b>"workload identity"</b> &mdash; Vinay Suryadevara.</p>
 <p>Optimizing <b>backups</b> with the server-side copy &mdash; Alexander Sapin.</p>
-<p>Support for <b>plain_rewritable</b> metadata for <b>azure</b> object storage &mdash; Julia Kartseva.</p>
+<p style="margin-right: -3em;">Support for <b>plain_rewritable</b> metadata for <b>azure</b> blob storage &mdash; Julia Kartseva.</p>
 
 <p style="margin-top: 2em;">Azure is <b>production ready</b> since 24.5!</p>
 
@@ -416,11 +507,12 @@ SELECT ‘Hello, world’;
 </section>
 
 <section class="slide">
+<img style="float: right; width: 25%; margin-right: -3em;" src="pictures/azure.png"/>
 <h2>Azure</h2>
 
 <p style="color: green;">What for?</p>
 <p>We launched ClickHouse Cloud on Azure (beta)!</p>
-<!-- TODO: a link -->
+<p style="margin-right: -5em;"><a href="https://clickhouse.com/blog/clickhouse-cloud-is-now-on-azure-in-public-beta">https://clickhouse.com/blog/clickhouse-cloud-is-now-on-azure-in-public-beta</a>
 <p>ClickHouse Cloud: now on AWS, GCP, <b>and Azure</b>,
 <br/>... and a partner service on AliCloud.</p>
 </section>
@@ -428,7 +520,7 @@ SELECT ‘Hello, world’;
 <section class="slide">
 <h2>Form Data Format</h2>
 <p><code style="font-size: 14pt; line-height: 1.5;">INSERT INTO test FORMAT <b style="color: green;">Form</b>
-name=Vasya&amp;email=vasya@pupkin.com&amp;text=I%20like%20ClickHouse%20so%much!
+name=Vasya&amp;email=vasya@pupkin.com&amp;text=I%20like%20ClickHouse%20so%20much!
 </code></p>
 <p>Inserting directly from HTML forms (<b>x-www-form-urlencoded</b> MIME type)</p>
 <p>Direct integration with JavaScript libraries, such as Boomerang.js.</p>
@@ -447,13 +539,15 @@ name=Vasya&amp;email=vasya@pupkin.com&amp;text=I%20like%20ClickHouse%20so%much!
 <p><b>On-disk</b> processing for CROSS (comma) JOIN:
 <br/>&mdash; generate a large table's product even when<br/>&emsp; the right hand side is too large.</p>
 
-<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: TODO.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Maksim Alekseev.</p>
 </section>
 
 <section class="slide">
 <h2>Non-Equal JOIN</h2>
 
 <p><code>SET allow_experimental_join_condition = 1;</code></p>
+
+<p>And now ClickHouse supports not only equality conditions in ON.</p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Lgbo-USTC.</p>
 </section>
@@ -465,12 +559,12 @@ name=Vasya&amp;email=vasya@pupkin.com&amp;text=I%20like%20ClickHouse%20so%much!
 
 <img src="pictures/chdb.jpg" style="width: 100%;"/>
 
-<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Auxten</p>
+<p style="color: gray; font-size: 14pt; margin-top: -0.5em;">Developer: Auxten</p>
 </section>
 
 <section class="slide">
 <h2>chdb</h2>
-<p>Custom data types: any user-provided data type could be processed:</p>
+<p style="margin-top: -1em;">Custom data types: any user-provided data type could be processed:</p>
 
 <p><code style="font-size: 12pt; line-height: 1.25; overflow-y: scroll; height: 70%;">class myReader(chdb.PyReader):
     def __init__(self, data):
@@ -491,11 +585,10 @@ ret = chdb.query("""
    FROM Python(reader) GROUP BY RegionID ORDER BY c DESC LIMIT 10""",
     "DataFrame")
 </code></p>
-
-<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Auxten</p>
+<p style="color: gray; font-size: 14pt; margin-top: -1.25em;">Developer: Auxten</p>
 </section>
 
-<section class="slide" style="background: url(pictures/back8.jpg); background-size: cover;">
+<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
 <h2><span class="hilite">Bonus</span></h2>
 </section>
 
@@ -504,23 +597,18 @@ ret = chdb.query("""
 <h2>Bonus: loongarch64</h2>
 <p>Now we have:</p>
 <p>&mdash; <b>x86_64</b> (production);
-&mdash; <b>aarch64</b> (production);
-&mdash; <b>risc-v</b> (experimental);
-&mdash; <b>powerpc64-le</b> (experimental);
-&mdash; <b>s390x</b> (experimental);
-&mdash; <b style="color: green;">loongarch64</b> (experimental);</p>
+<br/>&mdash; <b>aarch64</b> (production);
+<br/>&mdash; <b>risc-v</b> (experimental);
+<br/>&mdash; <b>powerpc64-le</b> (experimental);
+<br/>&mdash; <b>s390x</b> (experimental);
+<br/>&mdash; <b style="color: green;">loongarch64</b> (experimental);</p>
 
-<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: TODO</p>
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: QiangXuhui</p>
 </section>
 
 
 <section class="slide" style="background: url(pictures/back8.jpg); background-size: cover;">
 <h2><span class="hilite">Integrations</span></h2>
-</section>
-
-<section class="slide">
-<h2>Integrations</h2>
-<img src="pictures/fivetran.png" style="width: 100%;">
 </section>
 
 <section class="slide">
@@ -535,13 +623,16 @@ ret = chdb.query("""
 <p>Updates for <b>dbt</b> and <b>Tableau</b> integrations,
 <br/>as well as <b>Java</b>, <b>Go</b>, and <b>Python</b> drivers.</p>
 
-<p style="color: gray; font-size: 14pt; margin-top: 3em;">Contributors: TODO</p>
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">+ Thanks for many fixes to our contributors:
+<br/>R. Joel Norgren, Guo Qiang Wang,
+Jiří Kozlovský, Abhishek Gahlot, Frederik Eychenié, Cal Herries.</p>
 </section>
 
-<section class="slide" style="background: url(pictures/reading.png); background-size: cover; color: white;">
-<h2 style="color: white;">Reading Corner</h2>
+<section class="slide">
+<img style="float: right; width: 40%; margin-right: -3em;" src="pictures/twitch.png"/>
+<h2>Reading Corner</h2>
 
-<p><a href="https://clickhouse.com/blog/" style="filter: brightness(150%)">https://clickhouse.com/blog/</a></p>
+<p><a href="https://clickhouse.com/blog/">https://clickhouse.com/blog/</a></p>
 <p style="line-height: 1.5;">&mdash; Real-world AWS Graviton 4 performance;
 <br/>&mdash; The new SQL console;
 <br/>&mdash; API endpoints;
