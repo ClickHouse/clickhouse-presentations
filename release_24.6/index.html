@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 24.6 Webinar</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+         .slide table tr:not(:last-of-type)>* { background: none; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 24.6 Webinar</h1>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/back1.jpg); background-size: cover;">
+        <h1 style="margin-top: 0px; line-height: 100%; font-size: 56pt; color: white; text-align: center;">ClickHouse Release 24.6</h1>
+        <p style="position: absolute; right: 5px; bottom: 0; color: white; font-size: 6pt; text-shadow: black 1px 1px 1px; background-color: rgba(0, 0, 0, 0.5);">Photo by Eduard Gordeev, <a style="color: #8CF" href="https://www.shutterstock.com/image-photo/amsterdam-town-autumn-november-rain-1571566054">https://www.shutterstock.com/image-photo/amsterdam-town-autumn-november-rain-1571566054</a></p>
+    </section>
+
+<section class="slide">
+<h2>Release 24.6 Webinar</h2>
+<p>1. (50 min) What's new in ClickHouse 24.6.</p>
+<p>2. (5 min) Guest Talks.</p>
+<p>2. (5 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back2.jpg); background-size: cover;">
+<h2><span class="hilite">Release 24.6</span></h2>
+<p><span class="hilite">ClickHouse Summer Release.</span></p>
+<p><span class="hilite">— 23 new features 🏖️</span></p>
+<p><span class="hilite">— 24 performance optimizations 🍉</span></p>
+<p><span class="hilite">— 59 bug fixes 🍦</span></p>
+<p style="position: absolute; right: 5px; bottom: 0; color: white; font-size: 6pt; text-shadow: black 1px 1px 1px; background-color: rgba(0, 0, 0, 0.5);">Photo by Eduard Gordeev, <a style="color: #8CF" href="https://www.shutterstock.com/image-photo/amsterdam-night-city-autumn-october-1571585038">https://www.shutterstock.com/image-photo/amsterdam-night-city-autumn-october-1571585038</a></p>
+</section>
+<!--
+
+Small
+
+Empty tuples
+snowflakeID
+base64 for URL
+parseReadableSize
+editDistanceUTF8
+_time virtual column
+http_response_headers
+IPv4 and IPv6 can be compared
+
+Security
+
+Protection from a large number of tables
+Logging privileges in the query_log
+
+Usability
+
+Inline documentation for system tables
+Footers
+
+Performance
+
+Reordering
+No materialization on INSERT
+Native Parquet reader
+
+Main
+
+Named collections in Keeper
+Hilbert curves
+
+Experimental
+
+Statistics for Replicated tables
+
+Bonus
+
+chDB 2.0
+UI query insights
+Horizontal scaling
+OSS Trust Center
+VLDB
+
+Integrations
+
+Spark connector
+The new Java driver
+
+Reading
+
+Azure
+Prefect, Trip.com, CommonRoom ...
+
+-->
+
+<section class="slide" style="background: url(pictures/back3.jpg); background-size: cover;">
+<h2><span class="hilite">Small And Nice Features</span></h2>
+</section>
+
+<section class="slide">
+<h2>Empty Tuples</h2>
+
+<p>Almost useless. But needed for completeness.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">()</b>;
+
+CREATE TABLE test (x String) ORDER BY <b style="color: green;">()</b>;
+
+ALTER TABLE test DETACH PARTITION <b style="color: green;">()</b>;
+</code></p>
+
+<p>Demo</p>
+
+<!--
+
+SELECT (), [], ([],), [()], [([],[])]
+SELECT * APPLY toTypeName FROM (SELECT (), [], ([],), [()], [([],[])])
+
+SELECT (),()
+SELECT ()||()
+SELECT ()+()
+SELECT ()*()
+SELECT (*),(*)
+SELECT [(*),(*)]
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Amos Bird.</p>
+</section>
+
+
+<section class="slide">
+<h2>generateSnowflakeID</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">:) SELECT <b style="color: green;">generateSnowflakeID()</b> FROM numbers(3)
+
+   ┌─generateSnowflakeID()─┐
+1. │   7201822390320365568 │
+2. │   7201822390320365569 │
+3. │   7201822390320365570 │
+   └───────────────────────┘
+</code></p>
+
+<p>Generates a monotonic 64-bit unique identifier.</p>
+<p>Similar to UUID, but smaller and monotonic.</p>
+<p style="color: gray; font-size: 14pt;">Has nothing to do with Snowflake Inc.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Danila Puzov.</p>
+</section>
+
+<section class="slide">
+<h2>snowflakeID Functions</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">:) SELECT generateSnowflakeID() AS x,
+          <b style="color: green;">snowflakeIDToDateTime(x)</b>,
+          <b style="color: green;">snowflakeIDToDateTime64(x)</b>
+
+Row 1:
+──────
+x:                          7213775618830237696
+snowflakeIDToDateTime(x):   2024-07-02 07:28:52
+snowflakeIDToDateTime64(x): 2024-07-02 07:28:52.999
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Robert Schulze and Jasine.</p>
+</section>
+
+
+
+<section class="slide">
+<h2>Base64 For URL</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">:) SELECT
+    '🌞🏖️🍉🏊🍦⛱️🏝️🌴🌊' AS x,
+    base64Encode(x) AS a,
+    <b style="color: green;">base64URLEncode(x)</b> AS b,
+    base64Decode(a) AS x1,
+    <b style="color: green;">base64URLDecode(b)</b> AS x2  <span style="color: gray;">-- also, tryBase64URLDecode</span>
+
+Row 1:
+──────
+x:  🌞🏖️🍉🏊🍦⛱️🏝️🌴🌊
+a:  8J<b style="color: red">+</b>MnvCfj5bvuI<b style="color: red">/</b>wn42J8J<b style="color: red">+</b>PivCfjabim7HvuI<b style="color: red">/</b>wn4<b style="color: red">+</b>d77iP8J<b style="color: red">+</b>MtPCfjIo<b style="color: red">=</b>
+b:  8J<b style="color: green">-</b>MnvCfj5bvuI<b style="color: green">_</b>wn42J8J<b style="color: green">-</b>PivCfjabim7HvuI<b style="color: green">_</b>wn4<b style="color: green">-</b>d77iP8J<b style="color: green">-</b>MtPCfjIo
+x1: 🌞🏖️🍉🏊🍦⛱️🏝️🌴🌊
+x2: 🌞🏖️🍉🏊🍦⛱️🏝️🌴🌊
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Mikhail Gorshkov.</p>
+</section>
+
+
+
+<section class="slide">
+<h2>parseReadableSize</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">:) SELECT <b style="color: green">parseReadableSize</b>('1GB'), <b style="color: green">parseReadableSize</b>('1 GiB')
+
+   ┌─parseReadableSize('1GB')─┬─parseReadableSize('1 GiB')─┐
+1. │               1000000000 │                 1073741824 │
+   └──────────────────────────┴────────────────────────────┘
+
+:) SELECT <b style="color: green">parseReadableSizeOrNull</b>(arrayJoin(['1.1 MiB', 'Hello'])) AS x
+
+   ┌───────x─┐
+1. │ 1153434 │
+2. │    ᴺᵁᴸᴸ │
+   └─────────┘
+</code></p>
+
+<p>The opposite of <b>formatReadableSize</b>.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Francisco J. Jurado Moreno.</p>
+</section>
+
+
+<section class="slide">
+<h2>editDistanceUTF8</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">:) WITH
+    'Hôtel Genève' AS a,
+    'Hotel Geneve' AS b
+SELECT
+    editDistance(a, b),
+    editDistanceUTF8(a, b)
+
+   ┌─editDistance(a, b)─┬─editDistanceUTF8(a, b)─┐
+1. │                  4 │                      2 │
+   └────────────────────┴────────────────────────┘
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Liu Neng.</p>
+</section>
+
+
+<section class="slide">
+<h2>Virtual Column _time</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">:) SELECT _path, _file, _time FROM file('*', One)
+
+   ┌─_path──────────────────────┬─_file──────┬───────────────_time─┐
+1. │ ...release_24.6/LICENSE.md │ LICENSE.md │ 2024-05-30 15:53:13 │
+2. │ ...release_24.6/index.html │ index.html │ 2024-07-02 08:07:36 │
+   └────────────────────────────┴────────────┴─────────────────────┘
+</code></p>
+
+<p>Works for all file-like table functions: file, url, s3, hdfs, azureBlobStorage...</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Ilya Golshtein.</p>
+</section>
+
+
+<section class="slide">
+<h2>Comparison of IPv4 and IPv6</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">:) SELECT toIPv4('127.0.0.1') == toIPv6('::ffff:127.0.0.1')
+
+1
+
+:) SELECT toIPv4('127.0.0.1') == toIPv6('::1')
+
+0
+
+:) SELECT toIPv4('127.0.0.1') == toIPv6('::127.0.0.1')
+
+0
+</code></p>
+
+<p>IPv4 is considered equal to the corresponding IPv6-mapped address.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Francisco J. Jurado Moreno.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
+<h2><span class="hilite">Boring Security Features</span></h2>
+</section>
+
+<section class="slide">
+<h2>Logging privileges in the query_log</h2>
+
+<p><code style="font-size: 12pt; line-height: 1.2; margin-left: -2em; margin-right: -2em; overflow-x: hidden;">:) SELECT query, <b style="color: green;">used_privileges</b>, <b style="color: green;">missing_privileges</b> FROM system.query_log
+   WHERE type IN ('QueryFinish', 'ExceptionBeforeStart') AND event_time >= now() - 300
+
+Row 1:
+──────
+query:              DESCRIBE system.query_log
+used_privileges:    ['<b style="color: green;">SHOW COLUMNS ON system.query_log</b>']
+missing_privileges: []
+
+Row 2:
+──────
+query:              SELECT query, used_privileges, missing_privileges FROM system.query_log
+                    WHERE type IN ('QueryFinish', 'ExceptionBeforeStart') AND event_time >= now() - 300
+used_privileges:    ['<b style="color: green;">SELECT(query, used_privileges, missing_privileges, type, event_time)
+                      ON system.query_log</b>']
+missing_privileges: []
+</code></p>
+
+<p>You can paste these into a GRANT query.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexey Katsman.</p>
+</section>
+
+<section class="slide">
+<h2>Limits On The Number Of Tables</h2>
+
+<p>A new server settings:</p>
+<p><b>max_database_num_to_warn</b>, <b>max_table_num_to_warn</b>
+<br/>&mdash; a user will receive a warning in the client.</p>
+<p><b>max_database_num_to_throw</b>, <b>max_table_num_to_throw</b>
+<br/>&mdash; a user will receive an exception on attempt to create a next<br/>&emsp; database or table over the limit.</p>
+
+<p style="color: gray;">A question: how many tables a reasonable person can have in ClickHouse?</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Xu Jia.</p>
+</section>
+
+
+
+<section class="slide" style="background: url(pictures/back4.jpg); background-size: cover;">
+<h2><span class="hilite">Usability Improvements</span></h2>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Inline Documentation For System Tables</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -2em;">:) SELECT table, comment FROM system.tables WHERE database = 'system'
+
+Row 1:
+──────
+table:   aggregate_function_combinators
+comment: Contains a list of all available aggregate function combinators,
+which could be applied to aggregate functions and change the way they work.
+
+Row 2:
+──────
+table:   asynchronous_insert_log
+comment: Contains a history for all asynchronous inserts executed on
+the current server.
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Nikita Mikhailov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Pretty Formats Are Event Prettier</h2>
+
+<p>Demo</p>
+<!--
+
+SELECT table, comment FROM system.tables WHERE database = 'system'
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Shaun Struwig.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
+<h2><span class="hilite">Performance Improvements</span></h2>
+</section>
+
+<section class="slide">
+<h2>Optimal Table Sorting</h2>
+
+<p>The physical storage order of MergeTree tables
+<br/>is defined by their ORDER BY key.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -2em;">CREATE TABLE hits
+(CounterID UInt32, UserID UInt64, EventTime DateTime, URL String)
+<b>ORDER BY (CounterID, UserID)</b>;
+</code></p>
+
+<p>It has three purposes:
+<br/>&mdash; an <b>index</b> for range requests (can be specified as PRIMARY KEY);
+<br/>&mdash; a <b>key for merging</b> modes, such as Aggregating- or ReplacingMergeTree;
+<br/>&mdash; a way to <b>improve compression</b> by co-locating data;
+</p>
+
+<p style="color: green;">Can the order be automatically selected for the best compression?</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Igor Markelov.</p>
+</section>
+
+<section class="slide">
+<h2>Optimal Table Sorting</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -2em;">CREATE TABLE hits
+(CounterID UInt32, UserID UInt64, EventTime DateTime, URL String)
+ORDER BY (CounterID, UserID)
+<b style="color: green;">SETTINGS optimize_row_order = true</b>;
+</code></p>
+
+<p>&mdash; After sorting by ORDER BY key, it will automatically sort the data
+<br/>&emsp; for best-effort optimal compression rate!</p>
+
+<p>Demo</p>
+
+<!--
+
+cd ~/work/newswire
+wc -c *.json
+ch
+
+SET schema_inference_make_columns_nullable = 0
+CREATE TABLE newswire ENGINE = MergeTree ORDER BY () EMPTY AS SELECT * FROM '*.json'
+CREATE TABLE newswire_optimal ENGINE = MergeTree ORDER BY () SETTINGS optimize_row_order = 1 EMPTY AS SELECT * FROM '*.json'
+SET max_insert_threads = 64
+INSERT INTO newswire SELECT * FROM '*.json'
+INSERT INTO newswire_optimal SELECT * FROM '*.json'
+SELECT name, total_rows, total_bytes, total_bytes_uncompressed, total_bytes_uncompressed / total_bytes AS ratio FROM system.tables WHERE database = 'default'
+
+SELECT year, count() AS c, bar(c, 0, max(c) OVER (), 80) FROM newswire WHERE arrayExists(x -> x LIKE '%Churchill%', people_mentioned.person_name) GROUP BY year ORDER BY year;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Igor Markelov.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">An Option To Skip Secondary Indices On Insert</h2>
+
+<p>Get faster INSERTs and postpone the calculation
+<br/>of secondary indices until background merges:</p>
+
+<p><code style="line-height: 1.5;">SET materialize_skip_indexes_on_insert = 0;
+SET materialize_statistics_on_insert = 0;</code></p>
+
+<p>Useful in the presence of a large number of indices.</p>
+<p>Does not significantly affect the performance of SELECT.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Anton Popov.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
+<h2 style="color: white; margin-top: 1em;">Something Interesting</h2>
+</section>
+
+<section class="slide">
+<h2>Named Collections In Keeper</h2>
+
+<p style="margin-top: -1em;">Shared storage of named collections on the cluster:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">$ cat /etc/clickhouse-server/config.d/collections.yaml
+
+named_collections_storage:
+    type: keeper
+    path: '/named_collections'
+    update_timeout_ms: 1000  <span style="color: gray;"># Optional</span>
+</code></p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE NAMED COLLECTION <b>mydb</b> AS host = 'example.test', port = 3306,
+    user = 'business', password = 'xyz', db = 'test';
+GRANT NAMED COLLECTION ON <b>mydb</b> TO viewer;
+SELECT * FROM system.named_collections;
+
+SELECT * FROM mysql(<b>mydb</b>, table = 'mytable');</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Kseniia Sumarokova</p>
+</section>
+
+<section class="slide">
+<h2>Hilbert Curves</h2>
+
+<p>New functions: <b>hilbertEncode</b>, <b>hilbertDecode</b>.</p>
+<p>Similar to <b>mortonEncode</b>, <b>mortonDecode</b>, but different curves.</p>
+
+<p>Use when you have two similar keys, and you want to mix their order:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE t (x UInt32, y UInt32, ...)
+ORDER BY hilbertEncode(x, y);</code></p>
+
+<!--
+
+SELECT 1234 AS x, 5678 AS y, mortonEncode(x, y) AS z1, hilbertEncode(x, y) AS z2, hilbertDecode(2, z2)
+
+WITH number MOD 256 AS x, number DIV 256 AS y SELECT x, y FROM numbers(65536) ORDER BY hilbertEncode(x, y) LIMIT 100
+
+WITH number MOD 256 AS x, number DIV 256 AS y SELECT row_number() over (), x FROM numbers(65536) ORDER BY hilbertEncode(x, y)
+FORMAT JSONCompactColumns
+
+WITH number MOD 64 AS x, number DIV 64 AS y SELECT x, y, number FROM numbers(4096) ORDER BY hilbertEncode(x, y)
+
+reversedns.space
+
+(echo 'P3 4096 4096 255'; ch "
+WITH
+    number / 16777216 AS angle,
+    trunc(angle * 6) AS sector,
+    angle * 6 - trunc(angle * 6) AS v,
+
+    CASE WHEN sector = 0 THEN (v, 0, 1)
+         WHEN sector = 1 THEN (1, 0, 1 - v)
+         WHEN sector = 2 THEN (1, v, 0)
+         WHEN sector = 3 THEN (1 - v, 1, 0)
+         WHEN sector = 4 THEN (0, 1, v)
+         WHEN sector = 5 THEN (0, 1 - v, 1)
+         ELSE (0, 0, 0)
+    END AS rgb,
+
+    round(rgb.1 * 255) AS r,
+    round(rgb.2 * 255) AS g,
+    round(rgb.3 * 255) AS b,
+
+    mortonDecode(2, number) AS z,
+    z MOD 4096 AS x,
+    z DIV 4096 AS y
+
+SELECT r, g, b FROM numbers(16777216) ORDER BY x, y
+") | pnmtopng > image_hilbert_hsv.png
+
+-->
+
+<p>Demo</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Artem Mustafin</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back10.jpg); background-size: cover;">
+<h2><span class="hilite">Bonus</span></h2>
+</section>
+
+
+<section class="slide">
+<h2 style="float: right;"><a href="https://chdb.io/">https://chdb.io/</a></h2>
+<h2>chdb 2.0</h2>
+<p style="margin-top: -1em;">pip install chdb==2.0.0b0</p>
+<img src="pictures/chdb.png" style="width: 100%;"/>
+</section>
+
+<section class="slide" style="background: url(pictures/insights.png); background-size: cover;">
+<h2><span class="hilite">Query Insights</span></h2>
+</section>
+
+<section class="slide">
+<h2>OSS Trust Center</h2>
+<p><a href="https://trust.clickhouse.com/">https://trust.clickhouse.com/</a></p>
+<p>Early notifications of vulnerabilities in the open-source ClickHouse distribution.</p>
+<p>Bonus: ClickHouse, Inc. is now a CVE Numbering Authority (CNA).</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 14pt;">50th International Conference on <b>Very Large Databases</b>, Guangzhou, China - August 26-30, 2024.</h2>
+<img src="pictures/vldb.png" style="width: 80%;"/>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back8.jpg); background-size: cover;">
+<h2><span class="hilite">Integrations</span></h2>
+</section>
+
+<section class="slide" style="background: url(pictures/java1.png); background-size: cover;">
+</section>
+<section class="slide" style="background: url(pictures/java2.png); background-size: cover;">
+</section>
+<section class="slide" style="background: url(pictures/java3.png); background-size: cover;">
+</section>
+
+<section class="slide">
+<h2>Integrations</h2>
+<p>Support for <b>Metabase 0.50</b> and <b>DBT 1.8</b>.</p>
+<p>The <b>Spark</b> connector is now officially supported:<br/><a href="https://github.com/ClickHouse/spark-clickhouse-connector">https://github.com/ClickHouse/spark-clickhouse-connector</a>.</p>
+
+<p>Updates for <b>Node.JS</b> and <b>Go</b> clients,
+<br/>as well as <b>Kafka</b> connector, <b>Grafana</b>, and <b>OTEL</b>.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">+ Thanks for many fixes to our contributors:
+<br/>the4thamigo-uk, gogingersnap777, andy1xx8, sylph-eu, Holi0317, dmitryax.</p>
+</section>
+
+<section class="slide">
+<img style="float: right; width: 30%; margin-right: -3em;" src="pictures/azure.png"/>
+<h2>Reading Corner</h2>
+
+<p><a href="https://clickhouse.com/blog/">https://clickhouse.com/blog/</a></p>
+<p style="line-height: 1.5;">&mdash; How we launched ClickHouse Cloud on Azure;
+<br/>&mdash; How Trip.com processes 50 PB of data in ClickHouse;
+<br/>&mdash; Java Client… the SEQUEL?!;
+<br/>&mdash; Building a UI for Query Insights;
+<br/>&mdash; Shopee, CommonRoom, and others;
+<br/>&mdash; ClickHouse OSS Trust Center;
+</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back9.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
+<h2 style="color: white; margin-left: -1em;">Q&amp;A</a></h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+
