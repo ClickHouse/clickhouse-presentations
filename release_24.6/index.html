@@ -393,7 +393,7 @@ SELECT table, comment FROM system.tables WHERE database = 'system'
 
 <p><code style="font-size: 14pt; line-height: 1.25; margin-right: -2em;">CREATE TABLE hits
 (CounterID UInt32, UserID UInt64, EventTime DateTime, URL String)
-ORDER BY (CounterID, UserID)
+ENGINE = MergeTree ORDER BY (CounterID, UserID)
 <b style="color: green;">SETTINGS optimize_row_order = true</b>;
 </code></p>
 
