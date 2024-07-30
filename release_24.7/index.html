@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 24.7 Webinar</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+         .slide table tr:not(:last-of-type)>* { background: none; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 24.7 Webinar</h1>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/back1.jpg); background-size: cover;">
+        <h1 style="margin-top: 10px; line-height: 100%; font-size: 56pt; color: yellow; text-shadow: black 1px 1px 1px; text-align: center;">ClickHouse Release 24.7</h1>
+    </section>
+
+<section class="slide">
+<h2>Release 24.7 Webinar</h2>
+<p>1. (45 min) What's new in ClickHouse 24.7.</p>
+<p>2. (10 min) Guest Talks.</p>
+<p>2. (5 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back3.jpg); background-size: cover;">
+<h2><span class="hilite">Release 24.7</span></h2>
+<p><span class="hilite">ClickHouse Summer Release.</span></p>
+<p><span class="hilite">— 18 new features 🏖️</span></p>
+<p><span class="hilite">— 12 performance optimizations 🍉</span></p>
+<p><span class="hilite">— 76 bug fixes 🍦</span></p>
+</section>
+<!--
+
+Small
+
+changeYear, ...
+groupConcat
+percent_rank
+system.error_log
+system.detached_tables
+Partitioned DeltaLake
+AzureQueue
+Automatic named tuples
+
+Performance
+
+Full-sorting JOIN for ASOF JOIN
+int to string
+read_in_order_use_buffering
+AZ-aware balancing for Keeper
+Unloading primary key for inactive parts
+
+Main
+
+Startup scripts
+On-disk storage for Keeper
+Deduplication in materialized views
+Projections and lightweight deletes
+
+Guest
+
+PeerDB
+
+Bonus
+
+chDB at EuroPython
+chDB: your engine in Python
+
+Integrations
+
+Reading
+
+Braintrust
+Prometheus
+Luzmo
+Rill
+
+-->
+
+<section class="slide" style="background: url(pictures/back2.jpg); background-size: cover;">
+<h2><span class="hilite">A Few New Functions</span></h2>
+</section>
+
+<section class="slide">
+<h2>change- Functions for Date and Time</h2>
+
+<p><b>changeYear</b>, <b>changeMonth</b>, <b>changeDay</b>,
+<br/><b>changeHour</b>, <b>changeMinute</b>, <b>changeSecond</b></p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">:) SELECT <b style="color: green;">changeMonth</b>('2024-06-30'::Date, <b>7</b>)
+
+2024-<b>07</b>-30
+
+:) SELECT <b style="color: green;">changeHour</b>('2024-06-30 01:02:03'::DateTime, <b>7</b>)
+
+2024-06-30 <b>07</b>:02:03
+
+:) SELECT <b style="color: green;">changeMonth</b>('2024-07-31'::Date, <b>6</b>)
+
+2024-<b>07-01</b>
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Maksim Galkin.</p>
+</section>
+
+
+<section class="slide">
+<h2>groupConcat</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">:) SELECT <b style="color: green;">groupConcat</b>(number) FROM numbers(10)
+
+0123456789
+
+:) SELECT <b style="color: green;">groupConcat(', ')</b>(number) FROM numbers(10)
+
+0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+
+<span style="color: gray;">:) SELECT arrayStringConcat(groupArray(number), ', ') FROM numbers(10)
+
+0, 1, 2, 3, 4, 5, 6, 7, 8, 9</span>
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Yarik Briukhovetskyi.</p>
+</section>
+
+<section class="slide">
+<h2>percent_rank</h2>
+
+<p>ClickHouse 24.6 and before:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">((rank(x) OVER (PARTITION BY p ORDER BY x)) - 1)
+    / ((count() OVER (PARTITION BY p)) - 1) AS rank</span>
+</code></p>
+
+<p><b style="color: green;">ClickHouse 24.7</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;"><b style="color: green;">percent_rank(x)</b> OVER (PARTITION BY p ORDER BY x ASC) AS rank
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Lgbo-ustc.</p>
+</section>
+
+<section class="slide">
+<h2>percent_rank</h2>
+
+<p><code style="font-size: 10pt; line-height: 1.1; margin-top: -1em;">:) SELECT rand() AS x, <b style="color: green;">percent_rank(x)</b> OVER (PARTITION BY x % 2 ORDER BY x ASC) AS rank,
+    bar(x, 0, 4294967295, 10), bar(rank, 0, 1, 10)
+FROM numbers(20)
+
+    ┌──────────x─┬──<b style="color: green;">rank</b>─┬─bar(x, 0, 4294967295, 10)─┬─bar(rank, 0, 1, 10)─┐
+ 1. │  705326014 │     0 │ █▋                        │                     │
+ 2. │  708688864 │ 0.125 │ █▋                        │ █▎                  │
+ 3. │ 1259609466 │  0.25 │ ██▉                       │ ██▌                 │
+ 4. │ 1355100558 │ 0.375 │ ███▏                      │ ███▊                │
+ 5. │ 2082860634 │   0.5 │ ████▊                     │ █████               │
+ 6. │ 2858971834 │ 0.625 │ ██████▋                   │ ██████▎             │
+ 7. │ 2996846962 │  0.75 │ ██████▉                   │ ███████▌            │
+ 8. │ 3619294100 │ 0.875 │ ████████▍                 │ ████████▊           │
+ 9. │ 4294415588 │     1 │ █████████▉                │ ██████████          │
+10. │  943458595 │     0 │ ██▏                       │                     │
+11. │ 1090300259 │   0.1 │ ██▌                       │ █                   │
+12. │ 1110633147 │   0.2 │ ██▌                       │ ██                  │
+13. │ 1264568749 │   0.3 │ ██▉                       │ ███                 │
+14. │ 1750026929 │   0.4 │ ████                      │ ████                │
+15. │ 2042026585 │   0.5 │ ████▊                     │ █████               │
+16. │ 2622295817 │   0.6 │ ██████                    │ ██████              │
+17. │ 2864900309 │   0.7 │ ██████▋                   │ ███████             │
+18. │ 3908068691 │   0.8 │ █████████                 │ ████████            │
+19. │ 4097824191 │   0.9 │ █████████▌                │ █████████           │
+20. │ 4208535643 │     1 │ █████████▊                │ ██████████          │
+    └────────────┴───────┴───────────────────────────┴─────────────────────
+</code></p>
+</section>
+
+<section class="slide" style="background: url(pictures/back2.jpg); background-size: cover;">
+<h2><span class="hilite">A Few New System Tables</span></h2>
+</section>
+
+<section class="slide">
+<h2>system.error_log</h2>
+
+<p style="color: gray; margin-top: -1em;">These tables already existed in previous versions:</p>
+
+<p>Total number of any error messages since server startup:</p>
+<p><code style="font-size: 14pt; line-height: 1.5;">SELECT value FROM <b>system.events</b> WHERE name = 'LogError'</code></p>
+
+<p>Total number of errors by their type since server startup:</p>
+<p><code style="font-size: 14pt; line-height: 1.5;">SELECT * FROM <b>system.errors</b></code></p>
+
+<p>The number of any error messages by time, stored persistently:</p>
+<p><code style="font-size: 14pt; line-height: 1.5;">SELECT event_time, ProfileEvent_LogError
+FROM <b>system.metric_log</b> ORDER BY event_time</code></p>
+</section>
+
+<section class="slide">
+<h2>system.error_log</h2>
+
+<p>All error messages with full details, persistent:</p>
+<p><code style="font-size: 14pt; line-height: 1.5;">SELECT * FROM <b>system.text_log</b> WHERE level = 'Error'
+    AND event_date = today() ORDER BY event_time_microseconds</code></p>
+
+<p>The number of error messages by time, for each type of error, persistent:</p>
+<p><code style="font-size: 14pt; line-height: 1.5;">SELECT * FROM <b style="color: green;">system.error_log</b> ORDER BY event_time</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Pablo Marcos.</p>
+</section>
+
+<section class="slide">
+<h2>system.detached_tables</h2>
+
+<p>If you did DETACH TABLE, you will find the information there
+<br/>and you can ATTACH the table back.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Konstantin Morozov.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
+<h2><span class="hilite">More Nice Things</span></h2>
+</section>
+
+
+<section class="slide">
+<h2>AzureQueue</h2>
+
+<p>A table engine for streaming consumption from <b>Azure</b>.</p>
+<p>It is the same as <b>S3Queue</b> but for <b>Azure</b>:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.5; margin-right: -3em; overflow: hidden;">CREATE TABLE <b>queue</b> ENGINE = <b style="color: green;">AzureQueue</b>('AccountName=devstoreaccount1;AccountKey=...;BlobEndpoint=https://account.blob.core.windows.net/endpoint;',
+    'test_container') SETTINGS mode = 'unordered';
+
+CREATE TABLE <b>data</b> ENGINE = MergeTree ORDER BY () EMPTY AS SELECT * FROM queue;
+
+CREATE MATERIALIZED VIEW <b>consumer</b> TO <b>data</b> AS SELECT * FROM <b>queue</b>;
+</code></p>
+
+<p>&mdash; Consumes data from a bunch of files on Azure.<br/>
+&mdash; Consumes new files as soon as they appear.<br/>
+&mdash; Supports parallel and distributed consumption.</p>
+
+<p style="color: gray; font-size: 14pt;">Developer: Kseniia Sumarokova.</p>
+</section>
+
+
+<section class="slide">
+<h2>Automatic Named Tuples</h2>
+
+<p>If you specify aliases (AS) for elements of a tuple, it will be a named tuple.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT ('Hello' AS a, 123 AS b) AS x, toTypeName(x)</code></p>
+<pre>24.6: Tuple(String, UInt8)
+<span style="color: green;">24.7: Tuple(a String, b UInt8)</span>
+</pre>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT ('Hello' AS a, 123 AS b) AS x FORMAT JSONEachRow</code></p>
+<pre>24.6: {"x":["Hello",123]}
+<span style="color: green;">24.7: {"x":{"a":"Hello","b":123}}</span>
+</pre>
+
+<p>Controlled by the setting <b>enable_named_columns_in_function_tuple</b>.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Amos Bird.</p>
+</section>
+
+
+<section class="slide">
+<h2>Partitioned DeltaLake Tables</h2>
+
+<p>Since version 24.7,
+<br/>ClickHouse supports reading of partitioned Delta Lake tables,
+<br/>where partition columns are not stored inside the data files.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Kseniia Sumarokova.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
+<h2><span style="color: white;">Performance Improvements</span></h2>
+</section>
+
+<section class="slide">
+<h2>Faster Int To String Conversion</h2>
+
+<p>Happens when:
+<br/>&mdash; you output data in a text format (<b>TSV</b>, <b>JSON</b>, etc);
+<br/>&mdash; you do type conversion such as <b>toString</b>;</p>
+
+<p style="color: green;"><b>10..20% faster!</b></p>
+
+<p>Demo</p>
+
+<!--
+
+ch
+./clickhouse-24.6 local
+SELECT count() FROM system.numbers_mt WHERE NOT ignore(toString(rand()))
+SELECT count() FROM system.numbers WHERE NOT ignore(toString(rand() % 2 ? 0 : rand()))
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Raul Marin.</p>
+</section>
+
+<section class="slide">
+<h2>Faster Parallel Hash Join</h2>
+
+<p>By using runtime statistics of hash table sizes.</p>
+
+<pre>SET join_algorithm = 'parallel_hash';</pre>
+
+<p style="color: green;">Up to <b>80%</b> faster!</p>
+
+<p>Demo</p>
+
+<!--
+
+SELECT count() FROM hits t1 JOIN hits t2 ON t1.ClientIP = t2.RemoteIP WHERE t1.ClientIP != 0;
+SET join_algorithm = 'parallel_hash';
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Nikita Taranov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Merge Join Algorithm For ASOF JOIN</h2>
+
+<p><b>ASOF JOIN</b> &mdash; a JOIN method to find the closest matching record,
+<br/>e.g. the closest by time, without strict equality*</p>
+
+<p style="color: gray; font-size: 80%;">* ClickHouse is the first SQL DBMS to introduce the ASOF JOIN in Apr 2019.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">SELECT count() FROM hits h
+    <b>ASOF JOIN</b> sessions s
+    ON h.UserID = s.UserID AND h.EventTime &gt; s.StartTime;
+</code></p>
+
+<pre>SET join_algorithm = 'full_sorting_merge';</pre>
+
+<p>Less memory usage and often faster. Demo.</p>
+
+<!--
+
+SELECT count() FROM hits t1 ASOF JOIN hits t2 ON t1.UserID = t2.UserID AND t1.EventTime < t2.EventTime;
+SET join_algorithm = 'full_sorting_merge';
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Vladimir Cherkasov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Optimizations For Reading In Order</h2>
+
+<p>If a query contains ORDER BY corresponding to the table's ORDER BY key,
+<br/>the "read in order" algorithm is activated
+<br/>(controlled by the <b>optimize_read_in_order</b> setting).</p>
+
+<p><code style="font-size: 14pt; line-height: 2;">CREATE TABLE hits (...) <b>ORDER BY CounterID</b>, UserID, EventTime;
+SELECT UserID FROM hits WHERE SearchEngineID != 0 <b>ORDER BY CounterID</b>;</code></p>
+
+<p>In ClickHouse 24.7 this algorithm is <span style="color: green;">up to <b>10x</b> faster</span>,
+<br/>if the query uses a high-selectivity filter.</p>
+
+<p>Demo.</p>
+
+<!--
+
+SELECT UserID FROM hits WHERE SearchEngineID != 0 ORDER BY CounterID FORMAT Null;
+SET read_in_order_use_buffering = 0;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Anton Popov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">AZ-Aware Load Balancing In ClickHouse Keeper</h2>
+
+<p style="margin-top: -1em;">Keeper can tell about its availability zone:</p>
+<p><code style="font-size: 14pt; line-height: 1.1;"><span style="color: gray;">$ cat /etc/clickhouse-keeper/config.d/az.yaml</span>
+
+placement:
+    use_imds: 0             <span style="color: gray;"># Or 1 for auto-detection</span>
+    availability_zone: az2  <span style="color: gray;"># Arbitrary string</span>
+</code></p>
+
+<p>Server will switch to a closest Keeper node after some time:</p>
+<p><code style="font-size: 14pt; line-height: 1.1;"><span style="color: gray;">$ cat /etc/clickhouse-server/config.d/keeper.yaml</span>
+
+prefer_local_availability_zone: 1
+fallback_session_lifetime:
+    min: 0
+    max: 1
+
+placement:                  <span style="color: gray;"># Similar configuration for the server</span>
+    use_imds: 1
+</code></p>
+
+
+<p style="color: gray; font-size: 14pt; margin-top: -1em;">Developer: Alexander Tokmakov.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
+<h2><span class="hilite">Something Interesting</span></h2>
+</section>
+
+<section class="slide">
+<h2>Startup Scripts</h2>
+
+<p>Run SQL commands at server startup.
+<br/>The server accepts connections only after processing the script.</p>
+<p>Good for infrastructure automatization.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;"><span style="color: gray;">$ cat /etc/clickhouse-server/config.d/startup.yaml</span>
+startup_scripts:
+    scripts:
+        <span style="color: gray;"># Run a query:</span>
+        query: <span style="color: green;">"CREATE ROLE OR REPLACE test_role"</span>
+    scripts:
+        <span style="color: gray;"># Run a query if another query returned 1:</span>
+        query: <span style="color: green;">"CREATE TABLE test (id UInt64) ENGINE = TinyLog"</span>
+        condition: <span style="color: green;">"SELECT 1"</span>
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Artem Brustovetskii.</p>
+</section>
+
+<section class="slide">
+<h2>On-Disk Storage For Keeper</h2>
+
+<p><b>ClickHouse Keeper</b> is a drop-in replacement for ZooKeeper,
+<br/>that is <b style="color: green;">faster</b>, uses <b style="color: green;">less memory</b>, more <b style="color: green;">stable</b>, and <b style="color: green;">easier to use</b>.</p>
+
+<p>Traditionally, <em>distributed consensus</em> systems,
+<br/>such as ZooKeeper, ClickHouse Keeper, Etcd, keep the entire
+<br/>dataset in RAM, and require enough RAM to accommodate it.</p>
+
+<p style="margin-top: 3em;">What if you have to keep billions of values in ClickHouse Keeper?</p>
+</section>
+
+<section class="slide">
+<h2>On-Disk Storage For Keeper</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;"><span style="color: gray;">$ cat /etc/clickhouse-keeper/config.d/on-disk.yaml</span>
+keeper_server:
+    <b style="color: green;">experimental_use_rocksdb: 1</b>
+</code></p>
+
+<p>With the cost of ~2..3x less performance,
+<br/>it no longer requires as much RAM as data size.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Han Fei.</p>
+</section>
+
+
+<section class="slide">
+<h2>Deduplication In Materialized Views</h2>
+
+<p>ClickHouse supports <em>idempotent</em> inserts for exactly-once semantics.</p>
+
+<p>For each INSERT it calculates the deduplication token as a hash of the data,
+<br/>or a user can provide a custom deduplication token (<b>insert_deduplication_token</b>).</p>
+
+<p>How the deduplication works when there is a chain of <b>materialized views</b>, attached to a table?</b>
+
+<p>24.6 and older: it didn't guarantee exactly once insertion into the views.</p>
+<p>24.7: it calculates deterministic Merkle Tree of the source token and its transformations... <span style="color: green;">and everything works as expected!</span><p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Sema Checherinda.</p>
+</section>
+
+
+<section class="slide">
+<h2>Projections And Lightweight Deletes</h2>
+
+<p style="margin-top: -1em;">A table in ClickHouse can contain "projections" &mdash; they represent the same data in a different physical order or an aggregation, to automatically optimize queries by using this data.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -2em;">CREATE TABLE hits (CounterID UInt32, URL String, ...
+<b>PROJECTION totals (SELECT CounterID, count(), uniq(URL) GROUP BY CounterID)</b>
+) ENGINE = MergeTree ORDER BY (CounterID, EventTime);
+</code></p>
+
+<p>What happens to projections when you apply a mutation, such as DELETE?</p>
+
+<p>24.6 and older: projections remains in an inconsistent state,<br/>and deleted rows are still visible when a query uses projections.</p>
+<p>24.7: <b>SETTINGS <b style="color: green;">lightweight_mutation_projection_mode</b> = 'throw'/'drop';</b><p>
+
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: ShiChao Jin.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
+<h2><span class="hilite">Something Even More Interesting</span></h2>
+</section>
+
+<section class="slide">
+<h2>Guest Talk</h2>
+</section>
+
+
+<section class="slide">
+<h2>Integrations</h2>
+<p>Continuous insertion from <b>S3 in ClickPipes</b>.
+<br/>Support for _path, _size, _timestamp <b>virtual columns</b>.</p>
+
+<p><b>Kafka</b> connector now supports schema ids inside messages.</p>
+
+<p>Updates for <b>Fivetran</b> and <b>dbt</b> integrations,
+<br/>as well as the <b>Java</b>, <b>Python</b>, and <b>node.js</b> drivers,
+<br/><b>Grafana</b>, and <b>OTEL</b>.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">+ Thanks for many fixes to our contributors:
+<br/>the4thamigo-uk, rjoelnorgren, steffen030, dmitryax, pimeys, pan3793, vrischmann, jmaicher.</p>
+</section>
+
+<section class="slide">
+<h2>Reading Corner</h2>
+
+<img style="float: right; width: 30%; margin-right: -3em; image-rendering: pixelated; margin-top: 1em;" src="pictures/rill.png"/>
+<p><a href="https://clickhouse.com/blog/">https://clickhouse.com/blog/</a></p>
+<p style="line-height: 1.5;">&mdash; How to replace ZooKeeper with ClickHouse Keeper;
+<br/>&mdash; ClickHouse improves AI at Braintrust;
+<br/>&mdash; ClickHouse Cloud Monitoring with Prometheus;
+<br/>&mdash; User-Facing Dashboard With ClickHouse and Luzmo;
+<br/>&mdash; Rill replaces DuckDB with ClickHouse;
+</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back10.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
+<h2 style="color: white; margin-left: -1em;">Q&amp;A</a></h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+
