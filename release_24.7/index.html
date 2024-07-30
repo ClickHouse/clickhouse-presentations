@@ -494,7 +494,7 @@ keeper_server:
 <p>What happens to projections when you apply a mutation, such as DELETE?</p>
 
 <p>24.6 and older: projections remains in an inconsistent state,<br/>and deleted rows are still visible when a query uses projections.</p>
-<p>24.7: <b>SET <b style="color: green;">lightweight_mutation_projection_mode</b> = 'throw'/'drop';</b><p>
+<p>24.7: <b>SETTINGS <b style="color: green;">lightweight_mutation_projection_mode</b> = 'throw'/'drop';</b><p>
 
 
 <p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: ShiChao Jin.</p>
