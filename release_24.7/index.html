@@ -131,55 +131,6 @@ Rill
 <p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Yarik Briukhovetskyi.</p>
 </section>
 
-<section class="slide">
-<h2>percent_rank</h2>
-
-<p>ClickHouse 24.6 and before:</p>
-
-<p><code style="font-size: 14pt; line-height: 1.25;">((rank(x) OVER (PARTITION BY p ORDER BY x)) - 1)
-    / ((count() OVER (PARTITION BY p)) - 1) AS rank</span>
-</code></p>
-
-<p><b style="color: green;">ClickHouse 24.7</b>:</p>
-
-<p><code style="font-size: 14pt; line-height: 1.25;"><b style="color: green;">percent_rank(x)</b> OVER (PARTITION BY p ORDER BY x ASC) AS rank
-</code></p>
-
-<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Lgbo-ustc.</p>
-</section>
-
-<section class="slide">
-<h2>percent_rank</h2>
-
-<p><code style="font-size: 10pt; line-height: 1.1; margin-top: -1em;">:) SELECT rand() AS x, <b style="color: green;">percent_rank(x)</b> OVER (PARTITION BY x % 2 ORDER BY x ASC) AS rank,
-    bar(x, 0, 4294967295, 10), bar(rank, 0, 1, 10)
-FROM numbers(20)
-
-    ┌──────────x─┬──<b style="color: green;">rank</b>─┬─bar(x, 0, 4294967295, 10)─┬─bar(rank, 0, 1, 10)─┐
- 1. │  705326014 │     0 │ █▋                        │                     │
- 2. │  708688864 │ 0.125 │ █▋                        │ █▎                  │
- 3. │ 1259609466 │  0.25 │ ██▉                       │ ██▌                 │
- 4. │ 1355100558 │ 0.375 │ ███▏                      │ ███▊                │
- 5. │ 2082860634 │   0.5 │ ████▊                     │ █████               │
- 6. │ 2858971834 │ 0.625 │ ██████▋                   │ ██████▎             │
- 7. │ 2996846962 │  0.75 │ ██████▉                   │ ███████▌            │
- 8. │ 3619294100 │ 0.875 │ ████████▍                 │ ████████▊           │
- 9. │ 4294415588 │     1 │ █████████▉                │ ██████████          │
-10. │  943458595 │     0 │ ██▏                       │                     │
-11. │ 1090300259 │   0.1 │ ██▌                       │ █                   │
-12. │ 1110633147 │   0.2 │ ██▌                       │ ██                  │
-13. │ 1264568749 │   0.3 │ ██▉                       │ ███                 │
-14. │ 1750026929 │   0.4 │ ████                      │ ████                │
-15. │ 2042026585 │   0.5 │ ████▊                     │ █████               │
-16. │ 2622295817 │   0.6 │ ██████                    │ ██████              │
-17. │ 2864900309 │   0.7 │ ██████▋                   │ ███████             │
-18. │ 3908068691 │   0.8 │ █████████                 │ ████████            │
-19. │ 4097824191 │   0.9 │ █████████▌                │ █████████           │
-20. │ 4208535643 │     1 │ █████████▊                │ ██████████          │
-    └────────────┴───────┴───────────────────────────┴─────────────────────
-</code></p>
-</section>
-
 <section class="slide" style="background: url(pictures/back2.jpg); background-size: cover;">
 <h2><span class="hilite">A Few New System Tables</span></h2>
 </section>
