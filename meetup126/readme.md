@@ -7,6 +7,6 @@ https://www.meetup.com/clickhouse-australia-user-group/events/302862966/
 - 6:00 PM: Welcome and Introductions
 - 6:10 PM: What’s new with ClickHouse: Updates, Integrations & Acquisitions by Johnny Mirza, Solution Architect @ ClickHouse
 - 6:30 PM: Our Journey to Ingest and Analyse 5 Billion Network Events / Day by Sharat Madanapalli, Head of Data & AI @ Canopus
-- 6:50 PM: Talk track 3 (CipherStash)
+- 6:50 PM: Searchable encryption in-use for ClickHouse: what, how and why by Dan Draper, Founder & CEO @ CipherStash
 - 7:10 PM: Q&A, networking, light dinner, and more drinks
 - 8:30 PM: Wrap-up
