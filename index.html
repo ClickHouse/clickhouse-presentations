@@ -14,9 +14,7 @@
     </h1>
     <hr />
     <p>
-      Presentation materials about ClickHouse, open-source column-oriented
-      database management system that allows generating analytical data reports
-      in real time.
+      Presentations about ClickHouse, an open-source real-time analytics database management system.
     </p>
     <p>
       <a href="https://github.com/ClickHouse/ClickHouse">Main repository</a>
@@ -106,14 +104,7 @@
         const anchor = document.createElement("a");
 
         if (el.type === "file") {
-          if (el.name.endsWith(".md")) {
-            anchor.setAttribute(
-              "href",
-              el.path.split(".").slice(0, -1).join(".")
-            );
-          } else {
-            anchor.setAttribute("href", el.download_url);
-          }
+          anchor.setAttribute("href", el.download_url);
         } else if (el.type === "dir") {
           anchor.setAttribute("href", "?path=" + encodeURIComponent(el.path));
         }
