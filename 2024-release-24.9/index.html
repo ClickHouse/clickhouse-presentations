@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 24.9 Webinar</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+         .slide table tr:not(:last-of-type)>* { background: none; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 24.9 Webinar</h1>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/back1.jpg); background-size: cover;">
+        <h1 style="margin-top: 10px; line-height: 110%; font-size: 56pt; color: black; text-align: center;">ClickHouse Release 24.9</h1>
+    </section>
+
+<section class="slide">
+<h2>Release 24.9 Webinar</h2>
+<p>1. (50 min) What's new in ClickHouse 24.9.</p>
+<p>2. (10 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back2.jpg); background-size: cover;">
+<h2><span class="hilite">Release 24.9</span></h2>
+<p><span class="hilite">ClickHouse Autumn Release.</span></p>
+<p><span class="hilite">— 23 new features 🌾</span></p>
+<p><span class="hilite">— 14 performance optimizations 🍎</span></p>
+<p><span class="hilite">— 76 bug fixes 🦉</span></p>
+</section>
+<!--
+
+Small
+
+pretty_print_type_names
+create_if_not_exists
+input_format_json_empty_as_default
+overlay
+DELETE ... IN PARTITION
+_headers in URL
+system.projections
+arrayZipUnaligned
+
+Performance
+
+Array construction
+Partition pruning in Hive partitioning
+JOIN optimization
+
+Main
+
+Iceberg on Azure and locally
+Multiple authentication methods
+APPEND mode for Refreshable Materialized Views
+Variants in schema inference
+Aggregate functions for distinct paths
+
+Bonus
+
+VLDB
+chDB on Pandas
+Integrations
+
+Reading
+
+Postgres to ClickHouse
+DWH
+VLDB
+Salesforce
+Endpoints
+Redshift+InfluxDB
+
+-->
+
+<section class="slide" style="background: url(pictures/back3.jpg); background-size: cover;">
+<h2><span class="hilite">Small And Nice Features</span></h2>
+</section>
+
+<section class="slide">
+<h2>Pretty Printing For Type Names</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25; white-space: pre-wrap;">:) CREATE TEMPORARY TABLE test (x Tuple(a String, b Array(Tuple(c Tuple(e String), d String))), y String)
+
+CREATE TEMPORARY TABLE test
+(
+    `x` Tuple(
+        a String,
+        b Array(Tuple(
+            c Tuple(
+                e String),
+            d String))),
+    `y` String
+)</code></p>
+</section>
+
+
+<section class="slide">
+<h2>create_if_not_exists As a Setting</h2>
+
+<p>A usual way:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE <b>IF NOT EXISTS</b> test (x UInt8) ORDER BY ();
+</code></p>
+
+<p>A new option, since 24.9:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SET <b style="color: green;">create_if_not_exists</b> = 1;
+
+CREATE TABLE test (x UInt8) ORDER BY ();
+</code></p>
+
+<p>&mdash; "out of band" <i>if not exists</i> specification as a setting.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Peter Nguyen.</p>
+</section>
+
+
+<section class="slide">
+<h2>New Functions overlay, overlayUTF8</h2>
+
+<p>Replaces a fragment in a string with another string in a specified position.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">overlay</b>('Hello, world!', 'test', 8, 5) AS res
+
+   ┌─res──────────┐
+1. │ Hello, test! │
+   └──────────────┘
+
+WITH 'Hello, world!' AS s, 'test' AS replacement, 8 AS pos, 5 AS length
+SELECT concat(substring(s, 1, pos - 1),
+              replacement,
+              substring(s, pos + length)) AS res
+
+   ┌─res──────────┐
+1. │ Hello, test! │
+   └──────────────┘
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: TaiYang Li.</p>
+</section>
+
+<section class="slide">
+<h2>input_format_json_empty_as_default</h2>
+
+<p><code style="font-size: 12pt; line-height: 1.25;">:) CREATE TEMPORARY TABLE test (x String <b>DEFAULT 'ClickHouse'</b>)
+:) INSERT INTO test FORMAT JSONEachRow {"x":""}
+   ┌─x─┐
+1. │   │
+   └───┘
+:) SET <b style="color: green;">input_format_json_empty_as_default</b> = 1
+:) INSERT INTO test FORMAT JSONEachRow {"x":""}
+   ┌─x──────────┐
+1. │            │
+2. │ ClickHouse │
+   └────────────┘
+:) ALTER TABLE test ADD COLUMN y UInt8 <b>DEFAULT 123</b>
+:) INSERT INTO test FORMAT JSONEachRow {"x":"","y":""}
+   ┌─x──────────┬───y─┐
+1. │            │   0 │
+2. │ ClickHouse │   0 │
+3. │ ClickHouse │ 123 │
+   └────────────┴─────┘
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexis Arnaud.</p>
+</section>
+
+<section class="slide">
+<h2>input_format_json_empty_as_default</h2>
+
+<p>But you will rarely need it:</p>
+
+<p>&mdash; <b>omitted fields</b> in JSON are interpreted as default;</p>
+<p>&mdash; <b>input_format_null_as_default</b> is also enabled,
+<br/>&emsp; and nulls in JSON will be interpreted as default;</p>
+
+<p>The new setting, <b>input_format_json_empty_as_default</b> is for rare cases<br/>when an empty string should be mapped to the default expression.</p>
+
+</section>
+
+
+<section class="slide">
+<h2>DELETE ... IN PARTITION</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">DELETE FROM test <b style="color: green;">IN PARTITION 202409</b> WHERE data LIKE '%trash%'</code></p>
+
+<p>An option for <b>DELETE</b> query to explicitly limit it for a specified partition.</p>
+
+<p>It avoids copying parts metadata for unrelated partitions.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Sunny.</p>
+</section>
+
+
+<section class="slide">
+<h2>system.projections</h2>
+
+<p style="color: gray;">A table in ClickHouse can contain "projections" &mdash; they represent the same data in a different physical order or an aggregation, to automatically optimize queries by using this data.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -2em; color: gray;">CREATE TABLE hits (CounterID UInt32, URL String
+<b>PROJECTION totals (SELECT CounterID, count(), uniq(URL) GROUP BY CounterID)</b>
+) ENGINE = MergeTree ORDER BY (CounterID, EventTime);
+</code></p>
+
+<p>A new system table to introspect projections.</p>
+
+<p>Demo</p>
+
+<!--
+
+SELECT * FROM system.projections;
+SHOW TABLE tp_1;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Jordi Villar.</p>
+</section>
+
+<section class="slide">
+<h2>_headers Column For URL Engine</h2>
+
+<p>Obtain a dictionary of HTTP response headers when querying a remote server.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -2em;">SELECT <b style="color: green;">_headers</b>, *
+FROM url('https://api.github.com/repos/ClickHouse/ClickHouse')
+FORMAT Vertical
+</code></p>
+
+<p>Demo</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Flynn.</p>
+</section>
+
+<section class="slide">
+<h2>arrayZipUnaligned</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">:) SELECT <b>arrayZip</b>([1, 2, 3], ['Hello', 'world'])
+
+Received exception:
+<span style="color: red;">The argument 1 and argument 2 of function arrayZip have different<br/>array sizes.</span>
+
+:) SELECT <b style="color: green;">arrayZipUnaligned</b>([1, 2, 3], ['Hello', 'world']) AS res
+
+   ┌─res────────────────────────────────┐
+1. │ [(1,'Hello'),(2,'world'),(3,<b>NULL</b>)] │
+   └────────────────────────────────────┘
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: TaiYang Li.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back4.jpg); background-size: cover;">
+<h2><span style="color: black;"><span class="hilite">Performance Improvements</span></h2>
+</section>
+
+<section class="slide">
+<h2>Hive-Style Partitioning</h2>
+
+<p>A partitioning of data into different directories,<br/>
+when an object path contains sub-directories in the form of <b>key=value</b>.</p>
+
+<p>Example: <pre style="font-size: 14pt;">s3://ookla-open-data/parquet/performance/<b>type=<span style="color: green;">fixed</span></b>/<b>year=<span style="color: green;">2019</span></b>/<b>quarter=<span style="color: green;">1</span></b>/<br/>2019-01-01_performance_fixed_tiles.parquet</pre></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Yarik Briukhovetskyi.</p>
+</section>
+
+<section class="slide">
+<h2>Hive-Style Partitioning</h2>
+
+<p><b>ClickHouse 24.8</b>:<br/><pre style="font-size: 14pt;">SET use_hive_partitioning = 1;</pre></p>
+
+<p>&mdash; enables virtual columns from the paths: <b>type</b>, <b>year</b>, <b>quarter</b>
+<br/>&emsp; and automatically infers their types.</p>
+
+<p><b style="color: green;">ClickHouse 24.9</b>:</p>
+
+<p>&mdash; does automatic partition pruning!</p>
+
+<p>Demo</p>
+
+<!--
+
+DESCRIBE s3('s3://ookla-open-data/parquet/performance/**');
+SELECT _path, count() FROM s3('s3://ookla-open-data/parquet/performance/**') GROUP BY _path ORDER BY _path;
+SET use_hive_partitioning = 1;
+- columns are virtual:
+DESCRIBE s3('s3://ookla-open-data/parquet/performance/**');
+SELECT _path, count() FROM s3('s3://ookla-open-data/parquet/performance/**') WHERE _year = 2024 GROUP BY _path ORDER BY _path;
+SELECT *, _type, _year, _quarter, toTypeName(_type), toTypeName(_year), toTypeName(_quarter) FROM s3('s3://ookla-open-data/parquet/performance/**') LIMIT 1 FORMAT Vertical;
+
+~/work/ClickHouse/programs/server/clickhouse-24.8 local
+
+SELECT _path, count() FROM s3('s3://ookla-open-data/parquet/performance/**') WHERE _year = 2024 AND _type = 'fixed' AND _quarter = 1 GROUP BY _path ORDER BY _path;
+
+ch
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Yarik Briukhovetskyi.</p>
+</section>
+
+<section class="slide">
+<h2>Faster Array/Map Construction</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">:) SELECT [a, b, c] FROM table
+</code></p>
+
+<p>Demo</p>
+
+<!--
+
+~/work/ClickHouse/programs/server/clickhouse-24.8 local
+
+SELECT count() FROM system.numbers_mt WHERE NOT ignore([number])
+SELECT count() FROM system.numbers_mt WHERE NOT ignore([number, number])
+SELECT count() FROM system.numbers_mt WHERE NOT ignore([number::String])
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: TaiYang Li.</p>
+</section>
+
+<section class="slide">
+<h2>Faster JOINs</h2>
+
+<p>By a low-level optimization for the case of repeating keys.</p>
+
+<p>Demo</p>
+
+<!--
+
+WITH t AS (SELECT UserID FROM hits) SELECT count() FROM t AS t1 JOIN t AS t2 ON t1.UserID = t2.UserID
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: KevinyhZou.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
+<h2><span class="hilite">Something Interesting</span></h2>
+</section>
+
+<section class="slide">
+<h2>Iceberg On Azure And Local</h2>
+
+<p>In version <b>24.8</b>, Iceberg tables were supported only for S3.</p>
+
+<p>In version <b style="color: green;">24.9</b>, it is supported for <b style="color: green;">Azure Blob</b> storage
+<br/>and <b style="color: green;">local filesystem</b>.</p>
+
+<p>Now there are <b>IcebergS3</b>, <b>IcebergAzure</b>, and <b>IcebergLocal</b> table engines,
+<br/>as well as <b>icebergS3</b>, <b>icebergAzure</b>, and <b>icebergLocal</b> table functions.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Daniil Ivanik.</p>
+</section>
+
+<section class="slide">
+<h2>Multiple Credentials For a User</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-top: -1em;"><span style="color: gray;">-- create a user with two alternative passwords:</span>
+CREATE USER test IDENTIFIED
+    BY 'abc' VALID UNTIL '2024-10-01',
+    BY 'def' VALID UNTIL '2024-11-01';
+
+<span style="color: gray;">-- create a user with multiple authentication methods:</span>
+CREATE USER test IDENTIFIED
+    WITH sha256_password BY 'abc',
+    WITH ssh_key BY KEY '...' TYPE 'ssh-ed25519';
+
+<span style="color: gray;">-- add a new method:</span>
+ALTER USER test ADD IDENTIFIED ...;
+
+<span style="color: gray;">-- keep only the latest method:</span>
+ALTER USER test RESET AUTHENTICATION METHODS TO NEW;
+</code></p>
+
+<span style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Arthur Passos.</span>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt; margin-right: -2em;">APPEND For Refreshable Materialized Views 🧪</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">CREATE MATERIALIZED VIEW [IF NOT EXISTS] [db.]table_name
+  <b style="green">REFRESH</b> EVERY|AFTER interval [OFFSET interval]
+  RANDOMIZE FOR interval
+  DEPENDS ON [db.]name [, [db.]name [, ...]]
+  [<b style="color: green;">APPEND</b>] [TO [db.]name] [(columns)] [ENGINE = engine]
+  AS SELECT ...
+</code></p>
+
+<p>Refreshable Materialized Views exist since <b>23.11</b>.</p>
+<p>The APPEND mode is new in <b style="color: green;">24.9</b>.</p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Michael Kolupaev.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt; margin-right: -2em;">APPEND For Refreshable Materialized Views 🧪</h2>
+
+<p>Run the SELECT query in background<br/>and <b style="color: green">atomically</b>
+replace or <b style="color: green;">append</b> to the table with its result.</p>
+<p>Run the refresh process using a <b style="color: green">flexible configured schedule</b>.</p>
+<p>Support a <b style="color: green">dependency graph</b> with multiple materialized views.</p>
+
+<p>Example: periodically request an external API with the <b>url</b> table function
+<br/>and keep accumulating results in a table.
+</p>
+
+<!--
+
+SET allow_experimental_json_type = 1, allow_experimental_refreshable_materialized_view = 1;
+
+CREATE TABLE hackernews_top (update_time, data JSON) ORDER BY update_time;
+
+CREATE MATERIALIZED VIEW hackernews_updater
+REFRESH EVERY 1 SECOND
+APPEND TO hackernews_top
+AS SELECT now() AS update_time, json AS data FROM url('https://hacker-news.firebaseio.com/v0/item/{'
+    || (SELECT substring(line, 2, -1) FROM url('https://hacker-news.firebaseio.com/v0/topstories.json', 'LineAsString'))
+    || '}.json', JSONAsObject)
+
+
+SET allow_experimental_json_type = 1, allow_experimental_refreshable_materialized_view = 1;
+
+CREATE TABLE bitcoin_price (data JSON) ORDER BY ();
+
+CREATE MATERIALIZED VIEW bitcoin_updater
+REFRESH EVERY 1 SECOND
+APPEND TO bitcoin_price
+AS SELECT json AS data FROM url('https://api.coindesk.com/v1/bpi/currentprice.json', JSONAsObject)
+
+-->
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Michael Kolupaev.</p>
+</section>
+
+<section class="slide">
+<h2>Variant Types In Schema Inference 🧪</h2>
+
+<p>Now ClickHouse supports automatic usage of the <b>Variant</b> data type
+<br>for schema inference.</p>
+
+<p>Demo</p>
+
+<!--
+
+SELECT hello FROM format(JSON, '{"hello":"world"} {"hello":[123]}');
+SELECT hello FROM format(JSON, '{"hello":"world"} {"hello":[123]}') SETTINGS input_format_try_infer_variants = 1;
+SELECT hello, toTypeName(hello) FROM format(JSON, '{"hello":"world"} {"hello":[123]}') SETTINGS input_format_try_infer_variants = 1;
+DESCRIBE format(JSON, '{"hello":"world"} {"hello":[123]}') SETTINGS input_format_try_infer_variants = 1;
+SELECT json.hello FROM format(JSONAsObject, '{"hello":"world"} {"hello":[123]}') SETTINGS allow_experimental_json_type = 1;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Shaun Struwig.</p>
+</section>
+
+<section class="slide">
+<h2 style="margin-right: -2em;">Aggregate Functions To Analyze JSON 🧪</h2>
+
+<p><b>distinctDynamicTypes</b>,<br/><b>distinctJSONPaths</b>,<br/><b>distinctJSONPathsAndTypes</b></p>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">SELECT DISTINCT arrayJoin(JSONAllPaths(data)) FROM website_traffic;
+
+SELECT <b style="color: green;">distinctJSONPaths</b>(data) FROM website_traffic;</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Pavel Kruglov.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
+<h2><span class="hilite">Bonus</span></h2>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 14pt;">50th International Conference on <b>Very Large Databases</b>, Guangzhou, China - August 26-30, 2024.</h2>
+<img src="pictures/vldb.png" style="width: 80%;"/>
+</section>
+
+<section class="slide">
+<h2>Integrations</h2>
+<p><b>ClickPipes</b>:
+<br/>&mdash; allows custom certificates for authentication in Kafka (SASL, TLS);
+<br/>&mdash; shows the ingestion latency graph for Kafka and Kinesis;
+<br/>&mdash; scaling controls for (private beta);
+<br/>&mdash; allows to put the entire raw message into a single column.</p>
+
+<p><b>Java</b> connector: version 0.7.0 with memory and performance optimizations.</p>
+
+<p><b>Rust</b> client: improved parameter bindings; documentation.</p>
+
+<p><b>JavaScript</b> client: supports the experimental JSON type.</p>
+
+<p><b>DBT</b>: now supports projections! + role_arn for S3.</p>
+
+</section>
+
+<section class="slide">
+<h2>Integrations</h2>
+
+<p>Updates for <b>Spark</b> and <b>Beam</b>, <b>Grafana</b>, <b>PeerDB</b>.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Thanks for many updates to our contributors:
+<br/>mitchbregs, rjoelnorgren (DBT),
+<br/>loyd, pravic, blind-oracle (Rust),
+<br/>javiercj93, alxhill, BeenAxis (Java),
+<br/>Kenterfie, Defman (Grafana),
+<br/>achmad-dev (Go), bakwc, angusholder (Python),
+<br/>AlexTheKing (Spark).</p>
+</section>
+
+<section class="slide" style="background: url(pictures/wing.jpg); background-size: cover;">
+<h2>Meetups</h2>
+<p style="margin-top: -1em;"><span class="hilite">&mdash; 🇦🇺 DataEngBytes, Perth, Sept 27th</span>
+<br/><span class="hilite">&mdash; 🇮🇩 Jakarta, Oct 1st</span>
+<br/><span class="hilite">&mdash; 🇦🇺 DataEngBytes, Melbourne, Oct 1st</span>
+<br/><span class="hilite">&mdash; 🇸🇬 Singapore, Oct 3rd</span>
+<br/><span class="hilite">&mdash; 🇳🇿 DataEngBytes, Auckland, Oct 4th</span>
+<br/><span class="hilite">&mdash; 🇪🇸 Madrid, Oct 21th</span>
+<br/><span class="hilite">&mdash; 🇪🇸 Barcelona, Oct 29th</span>
+<br/><span class="hilite">&mdash; 🇳🇴 Oslo, Oct 31th</span>
+<br/><span class="hilite">&mdash; 🇳🇱 Ghent, Nov 19th</span>
+<br/><span class="hilite">&mdash; 🇦🇪 Dubai, Nov 21th</span>
+<br/><span class="hilite">&mdash; 🇫🇷 Paris, Nov 26th</span>
+</p>
+<p><span class="hilite">I will be in person on some of these meetups :)</span></p>
+</section>
+
+
+<section class="slide">
+<h2>Reading Corner</h2>
+
+<img style="float: right; width: 30%; margin-right: -3em; image-rendering: pixelated; margin-top: 1em;" src="pictures/blog.png"/>
+<p><a href="https://clickhouse.com/blog/">https://clickhouse.com/blog/</a></p>
+<p style="line-height: 1.5;">&mdash; How we built our DWH;
+<br/>&mdash; VLDB paper + videos;
+<br/>&mdash; Building apps with query API endpoints;
+<br/>&mdash; Salesforce analytics with Estuary Flow;
+<br/>&mdash; ePilot migrated from Redshift and Influx to ClickHouse;
+<br/>&mdash; How Weights&amp;Biases uses ClickHouse;
+<br/>&mdash; ClickHouse for ML &amp; AI;
+</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
+<h2 style="color: white; margin-left: -1em;">Q&amp;A</a></h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+

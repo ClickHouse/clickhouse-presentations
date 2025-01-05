@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 23.7 Webinar</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+         .slide table tr:not(:last-of-type)>* { background: none; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 23.7 Webinar</h1>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/summer1.jpg); background-size: cover;">
+        <h1 style="margin-top: 130px; line-height: 150%; color: white; font-size: 64pt; text-shadow: 10px 10px 10px black;">ClickHouse<br/> Release 23.7</h1>
+    </section>
+
+<section class="slide">
+<h2>Release 23.7 Webinar</h2>
+<p>1. (55 min) What's new in ClickHouse 23.7.</p>
+<p>&emsp; + guest talks!</p>
+<p>2. (5 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/summer2.jpg); background-size: cover;">
+<h2><span class="hilite">Release 23.7</span></h2>
+<p><span class="hilite">ClickHouse Summer Release.</span></p>
+<p><span class="hilite">— 31 new features 🌞</span></p>
+<p><span class="hilite">— 16 performance optimizations 🕶️</span></p>
+<p><span class="hilite">— 47 bug fixes ⛱️</span></p>
+</section>
+
+<!--
+
+initcap
+hasSubsequence
+arrayJaccardIndex
+firstLine
+
+STOP LISTEN
+
+Logs and snaphots on disks in Keeper
+Keeper's reconfig
+
+RowBinaryWithDefaults
+Variable number of columns in CSV
+default_temporary_table_engine
+disable_url_encoding
+
+Compatibility
+
+PRIMARY KEY in columns declaration
+array_agg
+any_value
+array_concat_agg
+OCTET_LENGTH
+current_database
+current_schemas
+curdate current_date current_timestamp
+
+Performance:
+
+Parquet writing
+Sparse columns
+Multi-stage prewhere
+
+
+Main:
+
+PRQL
+Overlay databases
+RISC-V in CI
+
+
+Guest talks:
+
+CHDB
+BigHouse
+
+Integrations
+
+ClickPipes
+JS driver
+
+Reading
+
+Internal DWH on ClickHouse
+ClickPipes
+Vantage migration from Redshift
+
+-->
+
+<section class="slide">
+<h2>Nice New Functions</h2>
+</section>
+
+<section class="slide">
+<h2>initcap, initcapUTF8</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">:) SELECT <b style="color: green;">initCap</b>('what is this?');
+
+What Is This?
+
+:) SELECT <b style="color: green;">initcapUTF8</b>('унылая хрень');
+
+Унылая Хрень
+
+:) SELECT <b style="color: green;">initcapUTF8</b>('好的数据库');
+
+好的数据库
+</code></p>
+
+<p style="color: gray; font-size: 14pt;">* Not safe for Turkish.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: -0.5em;">Developer: Dmitry Kardymon.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">hasSubsequence</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">:) SELECT <b style="color: green;">hasSubsequence</b>('<b style="color: blue;">Rep</b>licated<b style="color: blue;">M</b>erge<b style="color: blue;">T</b>ree', 'RepMT');
+
+1
+
+:) SELECT <b style="color: green;">hasSubsequenceCaseInsensitive</b>(
+          '<b style="color: blue;">Click</b>stream Data Ware<b style="color: blue;">house</b>', 'ClickHouse');
+
+1
+
+:) SELECT <b style="color: green;">hasSubsequenceCaseInsensitiveUTF8</b>(
+          '<b style="color: blue;">не </b>при<b style="color: blue;">слон</b>ятьс<b style="color: blue;">я</b>', 'не слонЯ');
+
+1
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Dmitry Kardymon.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">firstLine</h2>
+
+ClickHouse 23.6: 🥱
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT extract(text, '^[^\n]+') FROM articles;</code></p>
+<p><code style="font-size: 14pt; line-height: 1.25; margin-top: -0.5em;">SELECT substring(text, 1, position('\n' IN text) - 1) FROM articles;</code></p>
+
+ClickHouse 23.7: 😎
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">firstLine</b>(text) FROM articles;</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Dmitry Kardymon.</p>
+</section>
+
+
+<section class="slide">
+<h2>arrayJaccardIndex</h2>
+
+<p><img src="https://wikimedia.org/api/rest_v1/media/math/render/svg/89dcb98a3dc7e505fe274e3f779a2fdf11009efd"/></p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">:) SELECT <b style="color: green;">arrayJaccardIndex</b>(
+          tokens('ClickHouse is a database'),
+          tokens('ClickHouse is a good database'))
+</code></p>
+
+<p style="color: white;">0.8</p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: FFFFFFFHHHHHHH.</p>
+</section>
+
+<section class="slide">
+<h2>Operations</h2>
+</section>
+
+<section class="slide">
+<h2>SYSTEM STOP LISTEN</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">SYSTEM STOP LISTEN <b>QUERIES HTTPS</b></code></p>
+
+<p>&mdash; TCP, TCP WITH PROXY, TCP SECURE,<br/>
+&emsp; HTTP, HTTPS, MYSQL, GRPC,<br/>
+&emsp; POSTGRESQL, PROMETHEUS, CUSTOM,<br/>
+&emsp; INTERSERVER HTTP, INTERSERVER HTTPS,<br/>
+&emsp; QUERIES ALL, QUERIES DEFAULT, QUERIES CUSTOM;</p>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">SYSTEM START LISTEN <b>QUERIES ALL</b> ON CLUSTER default</code></p>
+
+<p style="margin-top: 3em; color: gray; font-size: 14pt;">Developer: Nikolai Degterinskiy.</p>
+</section>
+
+<section class="slide">
+<h2>Something For Keeper</h2>
+</section>
+
+<section class="slide">
+<h2>Custom Disks In Keeper</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">keeper_server:
+    log_storage_disk: log_s3_plain
+    latest_log_storage_disk: log_local
+    snapshot_storage_disk: snapshot_s3_plain
+    latest_snapshot_storage_disk: snapshot_local
+</code></p>
+
+<p>Only the latest log requires local storage.</p>
+<p>Previous logs and all snapshots can use S3 (with the <b>s3_plain</b> disk type).</p>
+
+<p>&mdash; to keep the local storage space <b style="color: green;">small</b> and <b style="color: green;">bounded</b> (~100 MB);
+<br/>&mdash; supports migration between disks;</p>
+
+<p style="margin-top: 2em; color: gray; font-size: 14pt;">Developer: Antonio Andelic.</p>
+</section>
+
+<section class="slide">
+<h2>Dynamic Reconfiguration of Keeper</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">keeper_server:
+    enable_reconfiguration: 1
+</code></p>
+
+<p>Allows to choose between reconfiguration by editing the configuration file
+<br/>and by sending the <b>reconfig</b> command.</p>
+
+<p>It is <b style="color: green;">compatible</b> with the ZooKeeper protocol.</p>
+<p>All clients supporting ZooKeeper's reconfig will work with Keeper.</p>
+
+<p style="margin-top: 2em; color: gray; font-size: 14pt;">Developer: Michael Kot.</p>
+</section>
+
+<section class="slide">
+<h2>Import/Export</h2>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">CSV With Variable Number Of Columns</h2>
+
+<p>A normal CSV:</p>
+<p><code style="font-size: 12pt; line-height: 1.5; margin-right: -1em;">"Name","Is It Good","Stars","LOC","Contributors"
+ClickHouse,Yes,29990,800000,1300
+MongoDB,No<b style="color: red;">,,,</b>
+</code></p>
+
+<p>A weird CSV:</p>
+<p><code style="font-size: 12pt; line-height: 1.5; margin-right: -1em;">"Name","Is It Good","Stars","LOC","Contributors"
+ClickHouse,Yes,29990,800000,1300
+MongoDB,No
+</code></p>
+
+<p>To parse a weird CSV, <br/>SET <b style="color: green;">input_format_csv_allow_variable_number_of_columns</b> = 1.</p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Dmitry Kardymon.</p>
+</section>
+
+
+<section class="slide">
+<h2>Format RowBinaryWithDefaults</h2>
+
+<p>Similar to RowBinary, but allows encoding the <i>absense of values</i>.</p>
+
+<p><code style="font-size: 12pt; line-height: 1.5; margin-right: -1em;"><b style="color: green;">0x00</b> encoded_value
+<span style="color: gray;">^ when the value is present</span>
+
+<b style="color: green;">0x01</b>
+<span style="color: gray;">^ when the value is absent</span></code></p>
+
+<p>Allows to calculate table's DEFAULT expressions on per-record basis.</p>
+
+<p>Note: you can also utilize the <b>input_format_null_as_default</b> setting.
+<br/>But NULL and the <i>absense of a value</i> are different.</p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Pavel Kruglov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Performance Optimizations</h2>
+</section>
+
+<section class="slide">
+<h2>Parquet Writing</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">:) SELECT * FROM hits INTO OUTFILE 'hits.parquet'
+</code></p>
+
+<p>23.6: <b style="color: red">325.50 thousand</b> rows/s., <b style="color: red">270.16 MB/s</b>.</p>
+<p>23.7: <b style="color: green">1.57 million</b> rows/s., <b style="color: green">1.30 GB/s</b>.</p>
+
+<p><b>6 times</b> faster!</p>
+
+<p style="margin-top: 3em; color: gray; font-size: 14pt;">Developer: Michael Kolupaev.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 36pt">Sparse Columns, Multi-Stage Prewhere</h2>
+
+<img src="pictures/clickbench.png" style="width: 100%"/>
+</section>
+
+
+<section class="slide">
+<h2>Community Projects</h2>
+<p><b>chdb</b>: Auxten &amp; Lorenzo Mangani;</p>
+<p><b>BigHouse</b>: Dan Goodman;</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Show Your Integration With ClickHouse</h2>
+<p style="line-height: 1.5;">If you want to demonstrate your project on the ClickHouse Webinar,
+<br/>write to tyler@clickhouse.com or connect with us on <a href="https://clickhouse.com/slack">https://clickhouse.com/slack</a></p>
+</section>
+
+
+
+<section class="slide">
+<h2>Something Special</h2>
+</section>
+
+
+<section class="slide">
+<h2>Filesystem As A Database</h2>
+
+<p style="margin-top: -1em;">Automatically attached in <b>clickhouse-local</b>.</p>
+
+<p><code style="font-size: 12pt; line-height: 1.5; margin-right: -1em;">$ clickhouse-local
+
+<span style="color: gray;"># ClickHouse 1.1 (2017)</span>
+:) SELECT * FROM file('test.csv', CSVWithNames, 'a String, b String')
+
+<span style="color: gray;"># ClickHouse 22.1 (2022)</span>
+:) SELECT * FROM file('test.csv', CSVWithNames)
+
+<span style="color: gray;"># ClickHouse 23.1 (2023)</span>
+:) SELECT * FROM file('test.csv')
+
+<span style="color: gray;"># ClickHouse 23.7 (2023)</span>
+:) SELECT * FROM <b style="color: green;">`test.csv`</b>
+</code></p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Aleksey Golub.</p>
+</section>
+
+<section class="slide">
+<h2>Filesystem As A Database</h2>
+
+<p style="margin-top: -1em;">Can be created on the server,
+<br/>using the files in the <b>user_files</b> directory:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.5; margin-right: -1em;">CREATE DATABASE files ENGINE = <b style="color: green;">Filesystem</b>;
+CREATE DATABASE files ENGINE = <b style="color: green;">Filesystem</b>('subdir/');
+
+SELECT * FROM files.`path/to/file.avro.zst`;
+</code></p>
+
+<p>And there are <b>S3</b> and <b>HDFS</b> database engines 😍</p>
+
+<p><code style="font-size: 12pt; line-height: 1.5; margin-right: -4em;">CREATE DATABASE s3 ENGINE = <b style="color: green;">S3</b>;
+CREATE DATABASE bucket ENGINE = <b style="color: green;">S3</b>('https://clickhouse-public-datasets.s3.amazonaws.com/');
+
+SELECT * FROM
+    s3.`https://clickhouse-public-datasets.s3.amazonaws.com/hits_compatible/hits.csv.gz`;
+
+SELECT * FROM bucket.`hits_compatible/hits.csv.gz`;
+</code></p>
+</section>
+
+
+<section class="slide">
+<h2>PRQL &mdash; a New Language</h2>
+<img src="pictures/prql.png" style="width: 100%;"/>
+</section>
+
+<section class="slide">
+<h2>PRQL &mdash; a New Language</h2>
+<p>Experimental support in ClickHouse.</p>
+<p><code style="font-size: 12pt; line-height: 1.5; margin-right: -1em;">:) SET dialect = 'prql';
+:) from tracks
+   select [album_id, name, unit_price] | sort [-unit_price, name]
+   group album_id (aggregate [track_count = count, album_price = sum unit_price])
+   join albums (==album_id)
+   group artist_id (
+       aggregate [track_count = sum track_count, artist_price = sum album_price])
+   join artists (==artist_id)
+   select [artists.name, artist_price, track_count] | sort [-artist_price]
+   derive avg_track_price = artist_price / track_count | take 10;</code></p>
+
+<p>Try it... and maybe, it will work.</p>
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: János Benjamin Antal.</p>
+</section>
+
+<section class="slide">
+<h2>ClickPipes in ClickHouse Cloud</h2>
+<img src="https://clickhouse.com/uploads/clickpipes_1mn_88c2bc30a1.gif" style="width: 125%; margin: -1.5em -100px 0 -100px"/>
+</section>
+
+<section class="slide">
+<h2>JavaScript Client</h2>
+<p>Now available for browsers and CloudFlare workers!</p>
+<p style="color: gray;">Btw, you can use ClickHouse without any drivers,
+<br/>using just <b>fetch</b> or even XMLHttpRequest.</p>
+<p>But with <b>ClickHouse.js</b>, you get:</p>
+<p>&mdash; streaming;<br/>
+&mdash; types for TypeScript (e.g., typed settings)<br/>
+&mdash; ready-to-use examples.</p>
+<p><a href="https://github.com/ClickHouse/clickhouse-js">https://github.com/ClickHouse/clickhouse-js</a></p>
+</section>
+
+<section class="slide">
+<h2>Reading Corner</h2>
+<img style="float: right; margin-top: -1em; margin-right: -2em; width: 40%; image-rendering: pixelated;" src="pictures/ai.png"/>
+
+<p><a href="https://clickhouse.com/blog/">https://clickhouse.com/blog/</a></p>
+<p style="line-height: 1.5;">&mdash; Vantage's Journey from Redshift and Postgres<br/>&emsp; to ClickHouse
+<br/>&mdash; How we built the Internal Data Warehouse<br/>&emsp; at ClickHouse
+<br/>&mdash; Real-time event streaming with ClickHouse,<br/>&emsp; Confluent Cloud and ClickPipes</p>
+
+<p>Video Recordings: <a href="https://www.youtube.com/c/ClickHouseDB">https://www.youtube.com/c/ClickHouseDB</a></p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/summer3.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
+<h2 style="color: white;">Q&amp;A</a></h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+

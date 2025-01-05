@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Clickhouse Features to Blow your Mind</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x10.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>Clickhouse Features to Blow your Mind</h1>
+    </header>
+
+    <section class="slide" id="cover" style="background: #FFF url('pictures/amsterdam.jpg') no-repeat; background-size: 100%;">
+        <h1 style="margin-top: 150px; font-size: 48pt;"><span style="background: rgba(255, 255, 255, 0.75)">Clickhouse Features<br/>to Blow your Mind</span></h1>
+    </section>
+
+<section class="slide">
+<h2>Per-Column Compression Codecs</h2>
+<code style="margin-top: -1em;">col type <b>CODEC(codecs...)</b></code>
+<p style="margin-top: 1em;">Available codecs:
+<br/>&mdash; LZ4 (default);
+<br/>&mdash; ZSTD; &mdash; level can be specified: ZSTD(1);
+<br/>&mdash; LZ4HC; &mdash; level can be specified;
+<br/>&mdash; NONE;
+<br/>&mdash; Delta(N); &mdash; N is the size of the data type in bytes.</p>
+<p>Codecs can be chained together:</p>
+<code>time DateTime <b>CODEC(Delta, LZ4)</b></code>
+<p style="margin-top: 1em;">&mdash; Delta is not a compression itself, it must be chained with a second codec.</p>
+<p>Per-column codecs have priority over <b>&lt;compression></b> config settings.</p>
+</section>
+
+<section class="slide">
+<h2>Per-Column Compression Codecs</h2>
+<code style="margin-top: -1em; margin-left: -50px; margin-right: -50px; font-size: 11pt;">SELECT
+    name,
+    type,
+    formatReadableSize(data_compressed_bytes) AS compressed,
+    formatReadableSize(data_uncompressed_bytes) AS uncompressed,
+    data_uncompressed_bytes / data_compressed_bytes AS ratio,
+    compression_codec
+FROM system.columns
+WHERE (database = 'test') AND (table = 'hits')
+ORDER BY data_compressed_bytes DESC
+LIMIT 10
+
+┌─name────────────┬─type─────┬─compressed─┬─uncompressed─┬──────────────ratio─┬─compression_codec─┐
+│ Referer         │ String   │ 180.19 MiB │ 582.99 MiB   │ 3.2353881463220975 │                   │
+│ URL             │ String   │ 128.93 MiB │ 660.58 MiB   │  5.123600238954646 │                   │
+│ Title           │ String   │ 95.29 MiB  │ 595.01 MiB   │  6.244488505685867 │                   │
+│ WatchID         │ UInt64   │ 67.28 MiB  │ 67.70 MiB    │ 1.0062751884416956 │                   │
+│ URLHash         │ UInt64   │ 37.09 MiB  │ 67.70 MiB    │ 1.8254645825020759 │                   │
+│ ClientEventTime │ DateTime │ 31.42 MiB  │ 33.85 MiB    │ 1.0772947535816229 │                   │
+│ EventTime       │ DateTime │ 31.40 MiB  │ 33.85 MiB    │ 1.0780959105750834 │                   │
+│ UTCEventTime    │ DateTime │ 31.39 MiB  │ 33.85 MiB    │ 1.0783175064258996 │                   │
+│ HID             │ UInt32   │ 28.28 MiB  │ 33.85 MiB    │   1.19709852035762 │                   │
+│ RefererHash     │ UInt64   │ 27.68 MiB  │ 67.70 MiB    │  2.445798559204409 │                   │
+└─────────────────┴──────────┴────────────┴──────────────┴────────────────────┴───────────────────┘</code>
+</section>
+
+<section class="slide">
+<h2>Per-Column Compression Codecs</h2>
+<code style="margin-top: -1em;">ALTER TABLE test.hits
+    MODIFY COLUMN ClientEventTime <b>CODEC(Delta, LZ4)</b></code>
+<p style="margin-top: 1em;">Changes are applied lazily: only for new data and while merging.</p>
+<code>ALTER TABLE test.hits
+    UPDATE ClientEventTime = ClientEventTime WHERE 1</code>
+<p style="margin-top: 1em;">&mdash; a trick to rewrite column data on disk.</p>
+<p style="margin-top: 1em;">&mdash; also executed in background, look at <b>system.mutations</b> table.</p>
+</section>
+
+<section class="slide">
+<h2>Per-Column Compression Codecs</h2>
+<code style="margin-top: -1em; margin-left: -50px; margin-right: -50px; font-size: 11pt;">SELECT
+    name,
+    type,
+    formatReadableSize(data_compressed_bytes) AS compressed,
+    formatReadableSize(data_uncompressed_bytes) AS uncompressed,
+    data_uncompressed_bytes / data_compressed_bytes AS ratio,
+    compression_codec
+FROM system.columns
+WHERE (database = 'test') AND (table = 'hits') AND (name = 'ClientEventTime')
+ORDER BY data_compressed_bytes DESC
+LIMIT 10
+
+┌─name────────────┬─type─────┬─compressed─┬─uncompressed─┬──────────────ratio─┬─compression_codec────┐
+│ ClientEventTime │ DateTime │ 19.47 MiB  │ 33.85 MiB    │ 1.7389218149308554 │ CODEC(Delta(4), LZ4) │
+└─────────────────┴──────────┴────────────┴──────────────┴────────────────────┴──────────────────────┘</code>
+
+<code style="margin-top: 1em; margin-left: -50px; margin-right: -50px; font-size: 11pt;">ALTER TABLE test.hits
+    MODIFY COLUMN
+    ClientEventTime CODEC(Delta(4), ZSTD),
+    UPDATE ClientEventTime = ClientEventTime WHERE 1</code>
+
+<code style="margin-top: 1em; margin-left: -50px; margin-right: -50px; font-size: 11pt;">┌─name────────────┬─type─────┬─compressed─┬─uncompressed─┬─────────────ratio─┬─compression_codec────────┐
+│ ClientEventTime │ DateTime │ 14.00 MiB  │ 33.85 MiB    │ 2.417489322394391 │ CODEC(Delta(4), ZSTD(1)) │
+└─────────────────┴──────────┴────────────┴──────────────┴───────────────────┴──────────────────────────┘</code>
+
+</section>
+
+
+<section class="slide">
+<h2>LowCardinality Data Type</h2>
+<p>Just replace String to <b>LowCardinality</b>(String)<br/>
+for string fields with low number of unique values.</p>
+<p>... and it will magically work faster.</p>
+<p>For high cardinality fields it will work fine but pointless.</p>
+<p>Examples:</p>
+<p>
+&mdash; <span style="color: green;">city name</span> &mdash; ok;<br/>
+&mdash; <span style="color: green;">domain of URL</span> &mdash; ok;<br/>
+&mdash; <span style="color: red;">search phrase</span> &mdash; bad;<br/>
+&mdash; <span style="color: red;">URL</span> &mdash; bad;</p>
+</section>
+
+<section class="slide">
+<h2>LowCardinality Data Type</h2>
+<code>SELECT count()
+FROM hits_333
+WHERE URLDomain LIKE '%aena.es%'
+
+┌─count()─┐
+│     101 │
+└─────────┘
+
+1 rows in set. Elapsed: <b>0.446</b> sec.
+Processed 333.36 million rows, 7.32 GB
+(747.87 million rows/s., 16.43 GB/s.)</code>
+</section>
+
+<section class="slide">
+<h2>LowCardinality Data Type</h2>
+<code>ALTER TABLE hits_333
+    MODIFY COLUMN
+    URLDomain LowCardinality(String)
+
+
+Ok.
+
+0 rows in set. Elapsed: 16.228 sec.</code>
+</section>
+
+<section class="slide">
+<h2>LowCardinality Data Type</h2>
+<code>SELECT count()
+FROM hits_333
+WHERE URLDomain LIKE '%aena.es%'
+
+┌─count()─┐
+│     101 │
+└─────────┘
+
+1 rows in set. Elapsed: <b>0.244</b> sec.
+Processed 333.36 million rows, 1.72 GB
+(1.37 billion rows/s., 7.04 GB/s.)</code>
+<p style="color: green;"><br/>Two times faster!</p>
+</section>
+
+<section class="slide">
+<h2>TTL expressions</h2>
+<p>&mdash; for columns:</p>
+<code>CREATE TABLE t (
+    date Date,
+    ClientIP UInt32 TTL date + INTERVAL 3 MONTH</code>
+<p style="margin-top: 1em;">&mdash; for all table data:</p>
+<code>CREATE TABLE t (date Date, ...)
+ENGINE = MergeTree ORDER BY ... 
+TTL date + INTERVAL 3 MONTH</code>
+</section>
+
+
+<section class="slide">
+<h2>Tiered Storage</h2>
+<p>Example: store hot data on SSD and archive data on HDDs.</p>
+<p>Multiple storage policies can be configured and used on per-table basis.</p>
+</section>
+
+<section class="slide">
+<h2>Tiered Storage</h2>
+<p>Step 1: configure available disks (storage paths):</p>
+<code>&lt;disks>
+    &lt;fast_disk> &lt;!-- disk name -->
+        &lt;path>/mnt/fast_ssd/clickhouse&lt;/path>
+    &lt;/fast_disk>
+    &lt;disk1>
+        &lt;path>/mnt/hdd1/clickhouse&lt;/path>
+        &lt;keep_free_space_bytes>10485760
+            &lt;/keep_free_space_bytes>
+    &lt;/disk1>
+    ...
+</code>
+</section>
+
+<section class="slide">
+<h2>Tiered Storage</h2>
+<p style="margin-top: -1em;">Step 2: configure storage policies:</p>
+<code>&lt;policies>
+    &lt;ssd_and_hdd>
+        &lt;volumes>
+            &lt;hot>
+                &lt;disk>fast_ssd&lt;/disk>
+                &lt;max_data_part_size_bytes>1073741824
+                    &lt;/max_data_part_size_bytes>
+            &lt;/hot>
+            &lt;cold>
+                &lt;disk>disk1&lt;/disk>
+            &lt;/cold>
+            &lt;move_factor>0.2&lt;/move_factor>
+        &lt;/volumes>
+    &lt;/ssd_and_hdd>
+    ...
+</code>
+</section>
+
+<section class="slide">
+<h2>Tiered Storage</h2>
+<p>Step 3: use the configured policy for your table:</p>
+<code>CREATE TABLE table
+(
+...
+)
+ENGINE = MergeTree
+ORDER BY ...
+SETTINGS <b>storage_policy</b> = 'ssd_and_hdd'
+</code>
+</section>
+
+<section class="slide">
+<h2>Tiered Storage</h2>
+<p>The data will be moved between volumes automatically.</p>
+<p>You can also do it manually:</p>
+<code>ALTER TABLE table 
+  MOVE PART|PARTITION ...
+  TO VOLUME|DISK ...</code>
+<p style="color: green; font-size: 14pt; margin-top: 2em;">&mdash; available in 19.15.</p>
+</section>
+
+<section class="slide">
+<h2>ASOF JOIN</h2>
+<p>(by <b>Citadel Securities</b>)</p>
+<p>Join data by inexact (nearest) match.<br/>
+Usually by date/time.</p>
+<p>Example:<br/>
+&mdash; to correlate stock prices with weather sensors.</p>
+</section>
+
+
+<section class="slide">
+<h2>Data Skipping Indices</h2>
+
+<p>Collect a summary of column/expression values for every N granules.</p>
+<p>Use this summaries to skip data while reading.</p>
+
+<p>Indices are available for <b>MergeTree</b> family of table engines.</p>
+<code>SET allow_experimental_data_skipping_indices = 1;</code>
+</section>
+
+<section class="slide">
+<h2>Data Skipping Indices</h2>
+
+<code>CREATE TABLE table
+(...
+  <b>INDEX</b> name expr TYPE type(params...) GRANULARITY n
+...)</code>
+
+<code style="margin-top: 1em;">ALTER TABLE ... <b>ADD INDEX</b> name expr
+  TYPE type(params...) GRANULARITY n</code>
+
+<code style="margin-top: 1em;">ALTER TABLE ... <b>DROP INDEX</b> name</code>
+</section>
+
+<section class="slide">
+<h2>Secondary Index Types</h2>
+<p><b>minmax</b>
+<br/>&mdash; summary is just min/max boundaries of values;
+<br/>&mdash; use when values are correlated to table order;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;or distributed locally; or sparse;</p>
+
+<p><b>set(k)</b>
+<br/>&mdash; summary is a set of all distinct values, but not larger than <b>k</b>;
+<br/>&mdash; use when values are sparse or have low cardinality;
+<br/>&mdash; reasonable values of <b>k</b> is about hundred;
+</p>
+
+<p>Used for comparison and IN operators.</p>
+</section>
+
+<section class="slide">
+<h2>Secondary Index Types</h2>
+
+<p>Full text search indices
+<span style="color: green;">(highly experimental)</span></p>
+
+<p><b>ngrambf_v1(chars, size, hashes, seed)</b></p>
+<p><b>tokenbf_v1(size, hashes, seed)</b></p>
+
+<p>Used for equals comparison, IN and LIKE.</p>
+</section>
+
+<section class="slide">
+<h2>Data Skipping Indices</h2>
+<code style="margin-top: -1em;">SELECT count()
+FROM test.hits
+WHERE URLDomain LIKE '%aena.es%'
+
+┌─count()─┐
+│       1 │
+└─────────┘
+
+Processed 8.87 million rows</code>
+</section>
+
+
+<section class="slide">
+<h2>Data Skipping Indices</h2>
+<code>SET allow_experimental_data_skipping_indices = 1;
+
+ALTER TABLE test.hits
+    ADD INDEX
+    domain_index URLDomain
+    TYPE set(1000) GRANULARITY 1;
+
+OPTIMIZE TABLE test.hits FINAL;</code>
+</section>
+
+<section class="slide">
+<h2>Data Skipping Indices</h2>
+<code style="margin-top: -1em;">SELECT count()
+FROM test.hits
+WHERE URLDomain LIKE '%aena.es%'
+
+┌─count()─┐
+│       1 │
+└─────────┘
+
+Processed 65.54 thousand rows</code>
+</section>
+
+
+<section class="slide">
+<h2>Advanced Text Processing</h2>
+<p>Multiple substring search</p>
+<p>Multiple regexp search</p>
+<p>Fuzzy string comparison and search</p>
+<p>Fuzzy regexp match</p>
+<code style="margin-right: -25px;">SELECT count()
+FROM hits_100m
+WHERE <b>multiSearchAny</b>(URL,
+['chelyabinsk.74.ru', 'doctor.74.ru', 'transport.74.ru',
+'m.74.ru', 'chel.74.ru', 'afisha.74.ru', 'diplom.74.ru',
+'//chel.ru', 'chelyabinsk.ru', 'cheldoctor.ru'])
+</code>
+</section>
+
+<section class="slide">
+<h2>Advanced Text Processing</h2>
+<p>
+&mdash; multiSearchAny
+<br/>&mdash; multiSearchFirstPosition
+<br/>&mdash; multiSearchFirstIndex
+<br/>&mdash; multiSearchAllPositions
+<br/>+ -UTF8, -CaseInsensitive, -CaseInsensitiveUTF8
+</p><p>
+&mdash; multiMatchAny
+<br/>&mdash; multiMatchAnyIndex
+<br/>&mdash; multiFuzzyMatchAny
+<br/>&mdash; multiFuzzyMatchAnyIndex
+</p><p>
+&mdash; ngramDistance
+<br/>&mdash; ngramSearch
+<br/>+ -UTF8, -CaseInsensitive, -CaseInsensitiveUTF8
+</p>
+</section>
+
+<section class="slide" style="background: #FFF url('pictures/bycicles.jpg') no-repeat; background-size: 100%;">
+    &nbsp;
+</section>
+
+
+<section class="slide">
+<h2>Advanced Text Processing</h2>
+<code style="font-size: 12pt;">SELECT DISTINCT
+    SearchPhrase,
+    <b>ngramDistance</b>(SearchPhrase, 'clickhouse') AS dist
+FROM hits_100m_single
+ORDER BY dist ASC
+LIMIT 10
+
+┌─SearchPhrase────┬───────dist─┐
+│ tickhouse       │ 0.23076923 │
+│ clockhouse      │ 0.42857143 │
+│ house           │  0.5555556 │
+│ clickhomecyprus │ 0.57894737 │
+│ 1click          │        0.6 │
+│ uhouse          │        0.6 │
+│ teakhouse.ru    │      0.625 │
+│ teakhouse.com   │ 0.64705884 │
+│ madhouse        │  0.6666667 │
+│ funhouse        │  0.6666667 │
+└─────────────────┴────────────┘
+
+10 rows in set. Elapsed: 1.267 sec. Processed 100.00 million rows, 1.52 GB
+(78.92 million rows/s., 1.20 GB/s.)</code>
+</section>
+
+
+<section class="slide">
+<h2>MySQL Protocol Support</h2>
+<p>&mdash; enable <b>&lt;mysql_port></b> in clickhouse-server/config.xml;</p>
+<p>&mdash; connect with your favorite mysql client;</p>
+<p style="color: green;">&mdash; TLS and sha256 authentication are supported;</p>
+<p style="color: green;">&mdash; available from version 19.9;</p>
+</section>
+
+<section class="slide">
+<h2>MySQL Protocol Support</h2>
+<code style="margin-left: -50px;">$ mysql -u default --port 9336 --host 127.0.0.1 
+Welcome to the MySQL monitor.  Commands end with ; or \g.
+Your MySQL connection id is 0
+Server version: <b>19.9.1.1-ClickHouse</b></code>
+</section>
+
+<section class="slide">
+<h2>MySQL Protocol Support</h2>
+<code style="font-size: 12pt;">mysql> SELECT URL AS k, count() FROM default.hits_333 
+    -> GROUP BY k ORDER BY count() DESC LIMIT 10;
++---------------------------------------------+---------+
+| k                                           | count() |
++---------------------------------------------+---------+
+| http://smeshariki.ru/GameMain.aspx#location | 3116222 |
+| http://pogoda.yandex.ru/moscow/             | 2944772 |
+| http://maps.yandex.ru/                      | 1740193 |
+| http://newsru.com/                          | 1381836 |
+| http://radiorecord.ru/xml/sms_frame.html    | 1351173 |
+| goal://www.gtavicecity.ru/advert_site       | 1190643 |
+| http://auto.ria.ua/                         | 1069057 |
+| http://video.yandex.ru/                     | 1002206 |
+| http://loveplanet.ru/a-folders/#page/1      | 989686  |
+| http://pogoda.yandex.ru/saint-petersburg/   | 971312  |
++---------------------------------------------+---------+
+10 rows in set (11.86 sec)
+Read 333454281 rows, 28.95 GiB in 11.860 sec., 28116209 rows/sec., 2.44 GiB/sec.
+</code>
+</section>
+
+<section class="slide">
+<h2>HDFS import/export</h2>
+<p>(contributed by <b>TouTiao/ByteDance</b>)</p>
+<code style="margin-top: 1em;">SELECT * FROM <b>hdfs</b>(
+    'hdfs://hdfs1:9000/file',
+    'TSV', 'id UInt64, text String');</code>
+<code style="margin-top: 1em;">INSERT INTO TABLE FUNCTION <b>hdfs</b>(
+    'hdfs://hdfs1:9000/file',
+    'TSV', 'id UInt64, text String') VALUES ...</code>
+<code style="margin-top: 1em;">CREATE TABLE (...) ENGINE =
+    <b>HDFS</b>('hdfs://hdfs1:9000/file', 'TSV');</code>
+<p><br/>Drawbacks: not all authentication methods supported.</p>
+</section>
+
+<section class="slide">
+<h2>Table Functions</h2>
+<p>&mdash; url;</p>
+<p>&mdash; file;</p>
+<p>&mdash; cluster;</p>
+<p>&mdash; mysql;</p>
+<p>&mdash; odbc;</p>
+<p>&mdash; hdfs;</p>
+<p>&mdash; input (since 19.15).</p>
+</section>
+
+<section class="slide">
+<h2>Table Function 'input'</h2>
+<p>For data transformation at INSERT time:</p>
+<code>INSERT INTO table
+  SELECT *, domain(URL)
+  FROM input(TSV, 'URL String, ...')
+</code>
+<p style="margin-top: 1em;">You pipe your data to this query as with usual INSERT.</p>
+<p>Data is transformed on the fly by SELECT expression.</p>
+<p>Examples:<br/>
+&mdash; calculate data for columns;<br/>
+&mdash; skip unneeded columns;<br/>
+&mdash; do filtering, aggregations, joins.
+</p>
+<p style="color: green; font-size: 14pt; margin-top: 1em;">&mdash; available in 19.15 testing.</p>
+</section>
+
+<section class="slide">
+<h2>New Formats</h2>
+
+<p><b>Protobuf</b></p>
+<p>&mdash; efficient implementation, no excessive copies/allocations<br/>(ClickHouse style);</p>
+<p>&mdash; transparent type conversions between Proto's and ClickHouse types (UInt8, Int64, DateTime &lt;-> sint64, uint64, sint32, uint32, String &lt;-> bytes, string, etc.);</p>
+<p>&mdash; support for Nested types via repeated Messages or parallel repeated fields;</p>
+<p>&mdash; <b>format_schema</b> setting must be specified.</p>
+</section>
+
+<section class="slide">
+<h2>New Formats</h2>
+<p><b>Parquet</b></p>
+<p>&mdash; columnar format; naturally implemented without unpacking of columns;</p>
+<p>&mdash; transparent type conversions also supported.</p>
+<p><b>ORC</b></p>
+<p>&mdash; since 19.14 (input only).</p>
+</section>
+
+<section class="slide">
+<h2>Template Format</h2>
+<p>Allow to define a template for data formatting/parsing.</p>
+<p>A template contains substitutions and delimieters.</p>
+<p>Each substitution specifies data escaping rule:<br/>Quoted, Escaped, CSV, JSON, XML, Raw.</p>
+<code>Website ${domain:Quoted} has ${count:Raw} pageviews.</code>
+<p style="margin-top: 1em;">You can specify a template for rows, a delimiter between rows<br/>and a template to wrap resultset.</p>
+<p style="margin-top: 1em;">Example: to parse web access logs.<br/>
+Example: to parse deeply nested JSON.<br/>
+Example: generate HTML right in ClickHouse.</p>
+</section>
+
+<section class="slide">
+<h2>Data Gaps Filling</h2>
+<code style="margin-top: -1em;">SELECT EventDate, count() FROM table
+GROUP BY EventDate ORDER BY EventDate
+
+┌──EventDate─┬─count()─┐
+│ 2019-09-01 │       5 │
+│ 2019-09-02 │       3 │
+│ 2019-09-04 │       4 │
+│ 2019-09-05 │       1 │
+└────────────┴─────────┘
+</code>
+</section>
+
+<section class="slide">
+<h2>Data Gaps Filling</h2>
+<code style="margin-top: -1em;">SELECT EventDate, count() FROM table
+GROUP BY EventDate ORDER BY EventDate <b>WITH FILL</b>
+
+┌──EventDate─┬─count()─┐
+│ 2019-09-01 │       5 │
+│ 2019-09-02 │       3 │
+│ 2019-09-03 │       0 │
+│ 2019-09-04 │       4 │
+│ 2019-09-05 │       1 │
+└────────────┴─────────┘
+</code>
+</section>
+
+<section class="slide">
+<h2>Data Gaps Filling</h2>
+<p><b>WITH FILL</b> &mdash; a modifier for ORDER BY element;</p>
+<p><b>WITH FILL FROM</b> start</p>
+<p><b>WITH FILL FROM</b> start <b>TO</b> end</p>
+<p><b>WITH FILL FROM</b> start <b>TO</b> end <b>STEP</b> step</p>
+<p><b>WITH FILL</b> can be applied for any elements in ORDER BY:</p>
+<p>ORDER BY EventDate <b>WITH FILL</b>, EventTime <b>WITH FILL STEP</b> 3600</p>
+<p style="color: green; font-size: 14pt;">&mdash; available in version 19.14.</p>
+<p style="margin-top: 3em; color: gray; font-size: 12pt;">Developers &mdash; Anton Popov, Yandex; Dmitri Utkin, HSE Moscow</p>
+</section>
+
+<section class="slide">
+<h2>JSON Functions</h2>
+<p>&mdash; the world-fastest implementation;</p>
+<p>&mdash; <b>simdjson</b> by <b>Daniel Lemire</b> when <b>AVX2</b> is available,<br/><b>rapidjson</b> otherwise;</p>
+<p>&mdash; supports extraction of nested fields;</p>
+
+<code>SELECT JSONExtractString(
+    '{"hello": {"world": [123, "ClickHouse"]}}',
+    'hello', 'world', 2) AS s
+
+┌─s──────────┐
+│ ClickHouse │
+└────────────┘</code>
+
+</section>
+
+<section class="slide">
+<h2>JSON Functions</h2>
+<p>&mdash; JSONHas;<br/>
+&mdash; JSONExtractUInt/Int/Float/Bool/String;<br/>
+&mdash; JSONExtract, JSONExtractRaw;<br/>
+&mdash; JSONType, JSONLength;<br/>
+&mdash; JSONExtractKeysAndValues;</p>
+</section>
+
+
+<section class="slide">
+<h2>Server Logs for Introspection</h2>
+<p style="margin-top: -1em;">in system tables:</p>
+<p>&mdash; system.query_log;</p>
+<p>&mdash; system.query_thread_log;</p>
+<p>&mdash; system.part_log;</p>
+<p style="color: green;">&mdash; system.trace_log;</p>
+<p style="color: green;">&mdash; system.text_log;</p>
+<p style="color: green;">&mdash; system.metric_log;</p>
+</section>
+
+<section class="slide">
+<h2>Server Logs for Introspection</h2>
+<p style="margin-top: -1em;">system.<b>text_log</b></p>
+<p>Now we write ClickHouse logs into ClickHouse!</p>
+<code style="margin-top: 1em; font-size: 14pt;">DESCRIBE TABLE system.text_log
+
+┌─name──────────┬─type───────────────────┐
+│ event_date    │ Date                   │
+│ event_time    │ DateTime               │
+│ microseconds  │ UInt32                 │
+│ thread_name   │ LowCardinality(String) │
+│ thread_number │ UInt32                 │
+│ os_thread_id  │ UInt32                 │
+│ level         │ Enum8('Fatal' = 1, '...│
+│ query_id      │ String                 │
+│ logger_name   │ LowCardinality(String) │
+│ message       │ String                 │
+│ revision      │ UInt32                 │
+│ source_file   │ LowCardinality(String) │
+│ source_line   │ UInt64                 │
+└───────────────┴────────────────────────┘</code>
+</section>
+
+<section class="slide">
+<h2>Server Logs for Introspection</h2>
+<p style="margin-top: -1em;">system.<b>metric_log</b></p>
+<p>&mdash; for those who forgot to setup monitoring.</p>
+<p>&mdash; record all the ClickHouse metrics each second (by default).</p>
+
+<code style="font-size: 16pt;">SELECT
+    toStartOfMinute(event_time) AS h,
+    sum(ProfileEvent_<b>UserTimeMicroseconds</b>) AS user_time,
+    bar(user_time, 0, 60000000, 80) AS bar
+FROM system.<b>metric_log</b> WHERE event_date = today()
+GROUP BY h ORDER BY h</code>
+</section>
+
+<section class="slide">
+<h2>Server Logs for Introspection</h2>
+<code style="font-size: 16pt; margin-top: -1em;">SELECT
+    toStartOfMinute(event_time) AS h,
+    sum(ProfileEvent_<b>UserTimeMicroseconds</b>) AS user_time,
+    bar(user_time, 0, 60000000, 80) AS bar
+FROM system.<b>metric_log</b> WHERE event_date = today()
+GROUP BY h ORDER BY h</code>
+
+<code style="font-size: 12pt; margin-top: 1em; margin-left: -30px; margin-right: -30px;">┌───────────────────h─┬─user_time─┬─bar───────────────────────────────────────────────┐
+│ 2019-09-05 04:12:00 │         0 │                                                   │
+│ 2019-09-05 04:13:00 │         0 │                                                   │
+│ 2019-09-05 04:14:00 │    524000 │ ▋                                                 │
+│ 2019-09-05 04:15:00 │  15880000 │ █████████████████████▏                            │
+│ 2019-09-05 04:19:00 │  36724000 │ ████████████████████████████████████████████████▊ │
+│ 2019-09-05 04:20:00 │  17508000 │ ███████████████████████▎                          │
+│ 2019-09-05 04:21:00 │         0 │                                                   │
+│ 2019-09-05 04:22:00 │         0 │                                                   │
+│ 2019-09-05 04:23:00 │         0 │                                                   │
+│ 2019-09-05 04:24:00 │         0 │                                                   │
+│ 2019-09-05 04:25:00 │         0 │                                                   │
+│ 2019-09-05 04:26:00 │         0 │                                                   │
+│ 2019-09-05 04:27:00 │         0 │                                                   │
+│ 2019-09-05 04:28:00 │         0 │                                                   │
+│ 2019-09-05 04:29:00 │     80000 │                                                   │
+│ 2019-09-05 04:30:00 │         0 │                                                   │
+│ 2019-09-05 04:31:00 │         0 │                                                   │</code>
+</section>
+
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Sampling Profiler on a Query Level</h2>
+<p>Record code locations where the query was executing<br/>
+in every execution thread, at each moment of time with some period.</p>
+<p style="font-weight: strong; font-size: 150%">If the query is slow &mdash; where exactly (in code) it was slow?</p>
+<p>&mdash; where the specific query spent time?</p>
+<p>&mdash; where the time was spent for queries of some kind?</p>
+<p>&mdash; where the time was spent for queries of some user?</p>
+<p>&mdash; where the time was spent for queries, cluster wide?</p>
+<p style="margin-top: 3em; color: gray; font-size: 12pt;">Developer &mdash; Nikita Lapkov, HSE Moscow; et all.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Sampling Profiler on a Query Level</h2>
+<p>1. Turn on one of the following settings (or both):</p>
+<code>SET query_profiler_<b>cpu</b>_time_period_ns = 1000000;</code>
+<code style="margin-top: 10px;">SET query_profiler_<b>real</b>_time_period_ns = 1000000;</code>
+<p style="margin-top: 1em;">2. Run your queries.<br/>Recorded samples will be saved into <b>system.trace_log</b> table.</p>
+<code style="margin-top: 1em; font-size: 12pt;">event_date:    2019-09-05
+event_time:    2019-09-05 05:47:44
+revision:      54425
+timer_type:    CPU
+thread_number: 149
+query_id:      b1d8e7f9-48d8-4cb3-a768-0a6683f6f061
+trace:         [140171472847748,61781958,110943821,117594728,117595220,115654933,
+120321783,63251928,111161800,120329436,120331356,120308294,120313436,120319113,
+120143313,115666412,120146905,111013972,118237176,111013972,117990912,111013972,
+110986070,110986938,61896391,61897898,61887509,156206624,140171472807643]
+</code>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Sampling Profiler on a Query Level</h2>
+<p style="margin-top: -1em;"><b>trace</b> &mdash; an array of addresses in machine code (stack trace);</p>
+<p>Translate address to function name:<br/>&mdash; demangle(addressToSymbol(trace[1]))<br/>
+Translate address to source file name and line number:<br/>&mdash; addressToLine(trace[1])</p>
+<p>* don't forget to install clickhouse-common-static-<b>dbg</b> package</p>
+<p>Example: functions top:</p>
+<code style="margin-right: -10px;">SELECT count(),
+  demangle(addressToSymbol(trace[1] AS addr)) AS symbol
+FROM system.trace_log
+WHERE event_date = today()
+GROUP BY symbol
+ORDER BY count() DESC LIMIT 10</code>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Sampling Profiler on a Query Level</h2>
+<p>Пример: топ функций:</p>
+<code style="margin-left: -100px; margin-right: -100px;">┌─count()─┬─symbol──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│     517 │ void LZ4::(anonymous namespace)::decompressImpl&lt;32ul, false>(char const*, char*, unsigned long)                                                                                                                         │
+│     480 │ void DB::deserializeBinarySSE2&lt;4>(DB::PODArray&lt;unsigned char, 4096ul, Allocator&lt;false, false>, 15ul, 16ul>&amp;, DB::PODArray&lt;unsigned long, 4096ul, Allocator&lt;false, false>, 15ul, 16ul>&amp;, DB::ReadBuffer&amp;, unsigned long) │
+│     457 │ DB::VolnitskyBase&lt;true, true, DB::StringSearcher&lt;true, true> >::search(unsigned char const*, unsigned long) const                                                                                                       │
+│     270 │ read                                                                                                                                                                                                                    │
+│     163 │ void LZ4::(anonymous namespace)::decompressImpl&lt;16ul, true>(char const*, char*, unsigned long)                                                                                                                          │
+│     130 │ void LZ4::(anonymous namespace)::decompressImpl&lt;16ul, false>(char const*, char*, unsigned long)                                                                                                                         │
+│      58 │ CityHash_v1_0_2::CityHash128WithSeed(char const*, unsigned long, std::pair&lt;unsigned long, unsigned long>)                                                                                                               │
+│      44 │ void DB::deserializeBinarySSE2&lt;2>(DB::PODArray&lt;unsigned char, 4096ul, Allocator&lt;false, false>, 15ul, 16ul>&amp;, DB::PODArray&lt;unsigned long, 4096ul, Allocator&lt;false, false>, 15ul, 16ul>&amp;, DB::ReadBuffer&amp;, unsigned long) │
+│      37 │ void LZ4::(anonymous namespace)::decompressImpl&lt;8ul, true>(char const*, char*, unsigned long)                                                                                                                           │
+│      32 │ memcpy                                                                                                                                                                                                                  │
+└─────────┴─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘</code>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Sampling Profiler on a Query Level</h2>
+<p>Example: top of contexts (stacks) for a query:</p>
+<code style="margin-right: -10px;">SELECT count(),
+  arrayStringConcat(arrayMap(x -> concat(
+    demangle(addressToSymbol(x)),
+    '\n    ',
+    addressToLine(x)), trace), '\n') AS sym
+FROM system.trace_log
+WHERE query_id = '1a1272b5-695a-4b17-966d-a1701b61b3eb'
+  AND event_date = today()
+GROUP BY trace
+ORDER BY count() DESC
+LIMIT 10</code>
+</section>
+
+<section class="slide">
+<code style="margin-left: -100px; margin-right: -100px; font-size: 11pt;">count(): 154
+sym:     DB::VolnitskyBase&lt;true, true, DB::StringSearcher&lt;true, true> >::search(unsigned char const*, unsigned long) const
+    /opt/milovidov/ClickHouse/build_gcc9/dbms/programs/clickhouse
+DB::MatchImpl&lt;true, false>::vector_constant(DB::PODArray&lt;unsigned char, 4096ul, Allocator&lt;false, false>, 15ul, 16ul> const&amp;, DB::PODArray&lt;unsigned long, 4096ul, Allocator&lt;false, false>, 15ul, 16ul> const&amp;, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char>, std::allocator&lt;char> > const&amp;, DB::PODArray&lt;unsigned char, 4096ul, Allocator&lt;false, false>, 15ul, 16ul>&amp;)
+    /opt/milovidov/ClickHouse/build_gcc9/dbms/programs/clickhouse
+DB::FunctionsStringSearch&lt;DB::MatchImpl&lt;true, false>, DB::NameLike>::executeImpl(DB::Block&amp;, std::vector&lt;unsigned long, std::allocator&lt;unsigned long> > const&amp;, unsigned long, unsigned long)
+    /opt/milovidov/ClickHouse/build_gcc9/dbms/programs/clickhouse
+DB::PreparedFunctionImpl::execute(DB::Block&amp;, std::vector&lt;unsigned long, std::allocator&lt;unsigned long> > const&amp;, unsigned long, unsigned long, bool)
+    /home/milovidov/ClickHouse/build_gcc9/../dbms/src/Functions/IFunction.cpp:464
+DB::ExpressionAction::execute(DB::Block&amp;, bool) const
+    /usr/local/include/c++/9.1.0/bits/stl_vector.h:677
+DB::ExpressionActions::execute(DB::Block&amp;, bool) const
+    /home/milovidov/ClickHouse/build_gcc9/../dbms/src/Interpreters/ExpressionActions.cpp:759
+DB::FilterBlockInputStream::readImpl()
+    /home/milovidov/ClickHouse/build_gcc9/../dbms/src/DataStreams/FilterBlockInputStream.cpp:84
+DB::IBlockInputStream::read()
+    /usr/local/include/c++/9.1.0/bits/stl_vector.h:108
+DB::ExpressionBlockInputStream::readImpl()
+    /home/milovidov/ClickHouse/build_gcc9/../dbms/src/DataStreams/ExpressionBlockInputStream.cpp:34
+DB::IBlockInputStream::read()
+    /usr/local/include/c++/9.1.0/bits/stl_vector.h:108
+DB::ParallelInputsProcessor&lt;DB::ParallelAggregatingBlockInputStream::Handler>::thread(std::shared_ptr&lt;DB::ThreadGroupStatus>, unsigned long)
+    /usr/local/include/c++/9.1.0/bits/atomic_base.h:419
+ThreadFromGlobalPool::ThreadFromGlobalPool&lt;void (DB::ParallelInputsProcessor&lt;DB::ParallelAggregatingBlockInputStream::Handler>::*)(std::shared_ptr&lt;DB::ThreadGroupStatus>, unsigned long), DB::ParallelInputsProcessor&lt;DB::ParallelAggregatingBlockInputStream::Handler>*, std::shared_ptr&lt;DB::ThreadGroupStatus>, unsigned long&amp;>(void (DB::ParallelInputsProcessor&lt;DB::ParallelAggregatingBlockInputStream::Handler>::*&amp;&amp;)(std::shared_ptr&lt;DB::ThreadGroupStatus>, unsigned long), DB::ParallelInputsProcessor&lt;DB::ParallelAggregatingBlockInputStream::Handler>*&amp;&amp;, std::shared_ptr&lt;DB::ThreadGroupStatus>&amp;&amp;, unsigned long&amp;)::{lambda()#1}::operator()() const
+    /usr/local/include/c++/9.1.0/bits/shared_ptr_base.h:729
+ThreadPoolImpl&lt;std::thread>::worker(std::_List_iterator&lt;std::thread>)
+    /usr/local/include/c++/9.1.0/bits/atomic_base.h:551
+execute_native_thread_routine
+    /home/milovidov/ClickHouse/ci/workspace/gcc/gcc-build/x86_64-pc-linux-gnu/libstdc++-v3/include/bits/unique_ptr.h:81
+start_thread
+    /lib/x86_64-linux-gnu/libpthread-2.27.so
+clone
+    /build/glibc-OTsEL5/glibc-2.27/misc/../sysdeps/unix/sysv/linux/x86_64/clone.S:97
+</code>
+</section>
+
+
+
+<section class="slide">
+<h2>Row-Level Security</h2>
+<code>&lt;users>
+    &lt;user_name>
+        ...
+        &lt;databases>
+            &lt;database_name>
+                &lt;table_name>
+                    <b>&lt;filter>IsYandex = 1&lt;/filter></b>
+                &lt;table_name>
+            &lt;/database_name>
+        &lt;/databases>
+    &lt;/user_name>
+&lt;/users>
+</code>
+</section>
+
+
+<section class="slide">
+<h2><span style="background: rgba(255, 255, 255, 0.75)">Upcoming</span></h2>
+</section>
+
+<section class="slide">
+<h2>Autumn 2019</h2>
+<p>&mdash; Indexing by z-Order curve</p>
+<p>&mdash; DDL queries for dictionaries</p>
+<p>&mdash; S3 import/export</p>
+<p>&mdash; Parallel parsing of data formats;</p>
+<p>&mdash; Speedup of INSERT with VALUES with expressions;</p>
+<p>&mdash; Aggregate functions for data clustering</p>
+<p>&mdash; Optimization of GROUP BY with table's order key</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">October 2019</h2>
+<p>&mdash; Initial implementation of RBAC;</p>
+<p>&mdash; Initial implementation of Merge JOIN;</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Autumn-Winter 2019</h2>
+<p>&mdash; More than initial implementation of RBAC;</p>
+<p>&mdash; More than initial implementation of Merge JOIN;</p>
+<p>&mdash; Workload management;</p>
+</section>
+
+    <section class="slide">
+        <h2><span style="background: rgba(255, 255, 255, 0.75)">.</span></h2>
+    </section>
+
+    <section class="slide">
+        <h2>.</h2>
+        <p>Web site: <a href="https://clickhouse.com/">https://clickhouse.com/</a></p>
+        <p>Maillist: clickhouse-feedback@yandex-team.com</p>
+        <p>YouTube: <a href="https://www.youtube.com/c/ClickHouseDB">https://www.youtube.com/c/ClickHouseDB</a></p>
+        <p>Telegram chat: <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_ru</a>, <a href="https://telegram.me/clickhouse_en">clickhouse_en</a></p>
+        <p>GitHub: <a href="https://github.com/ClickHouse/ClickHouse/">https://github.com/ClickHouse/ClickHouse/</a></p>
+        <p>Twitter: <a href="https://twitter.com/ClickHouseDB">https://twitter.com/ClickHouseDB</a></p>
+        <p>Google groups: <a href="https://groups.google.com/forum/#!forum/clickhouse">https://groups.google.com/forum/#!forum/clickhouse</a></p>
+    </section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+</body>
+</html>

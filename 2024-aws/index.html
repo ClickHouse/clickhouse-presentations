@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Uncovering the Real-World Performance of AWS Graviton4 with ClickHouse</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 20pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         table, tr, td { border: 0; }
+         .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>Uncovering the Real-World Performance<br/>of AWS Graviton4 with ClickHouse</h1>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/title.png); background-size: cover; background-position: center;">
+    </section>
+
+<section class="slide">
+<h2>What Is ClickHouse?</h2>
+<p>An open-source analytic DBMS.</p>
+<p>Used everywhere: Microsoft, Spotify, Cloudflare, Lyft, Deutsche Bank,<br/> + thousands companies.</p>
+<p>Open-source since 2016, currently the most popular analytic DBMS.</p>
+<p>Scalable from a laptop or a server to datacenters.</p>
+<p>1,482 contributors and 34,700 stars.</p>
+<!--
+
+Open-source with 34,700 stars
+Popular in the industry
+
+Speed, low latency, high concurrency, real-time insertion
+
+Bigquery or Snowflake but with no limits
+Like Postgres but for analytics
+
+Laptop, server, datacenter
+
+ClickHouse Cloud with
+Available in AWS marketplace
+
+-->
+</section>
+
+<section class="slide" style="background: url(pictures/history.png); background-size: cover; background-position: center;">
+</section>
+
+<section class="slide">
+<h2>What Is ClickHouse?</h2>
+<p>ClickHouse is like <b>Postgres</b>, but for analytics.</p>
+
+<p>Fast SQL queries with low latency and high concurrency
+<br/>with real-time insertion.</p>
+
+<p style="margin-top: 2em;">Available in ClickHouse Cloud, on AWS Marketplace.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/cloud.png); background-size: cover; background-position: center;">
+</section>
+
+<section class="slide">
+<h2>Machines</h2>
+<p>AWS has a lot of instance types:
+<br/>&mdash; m, c, r, x, z, u; t, a; i, im, d; g, p, f, inf, trn, vt, hpc, mac;</p>
+<p>With tweaks:
+<br/>&mdash; -d with local disks; -n with faster network; -flex;</p>
+<p>Different types and generations of CPU:
+<br/>&mdash; i - Intel, a - AMD; up to 7th generation as of May 2024</p>
+<p>Different CPU architectures:
+<br/>&mdash; x86_64 - Intel and AMD; AArch64 (aka ARM64) - Graviton;</p>
+<p>Example: <b>r6idn-24xlarge</b>:
+<br/>RAM-optimized (8 GB per vCPU), 6th-generation of Intel CPU, <br/>with local SSD, network optimized, 4*24 vCPU.</p>
+</section>
+
+
+<section class="slide">
+<h2>Graviton</h2>
+<p><b>AWS Graviton</b> is an Aarch64 CPU, custom built by AWS.</p>
+<p>2018 - 1st generation; ... 2024 - 4th generation (currently in preview!)</p>
+
+<p>It is a different architecture, so <span style="color: red;">not all software is going to work</span>.
+<br/>Some have to be adapted, compiled, and tested on ARM.</p>
+<p>Good news: <b style="color: green;">ClickHouse works!</b> <b>deb</b>, <b>rpm</b>, <b>tgz</b> are available for AArch64</p>
+<p>Quick installation autodetects the architecture:
+</p>
+<p><code>curl https://clickhouse.com/ | sh</code></p>
+
+<!--
+
+a1
+c6g, t4g, g4g
+c7g
+
+r8g.8xlarge
+r8g.24xlarge
+
+clickhouse-cloud :) SELECT sum(cityHash64(*)) FROM build_time_trace
+
+SELECT sum(cityHash64(*))
+FROM build_time_trace
+
+Query id: 419da4ff-1430-4bbf-86fb-8be60a77c6a1
+
+   ┌─sum(cityHash64(pull_request_number, commit_sha, check_start_time, check_name, instance_type, instance_id, file, library, date, time, pid, tid, ph, ts, dur, cat, name, detail, count, avgMs, args_name, is_total))─┐
+1. │                                                                                                                                                                                               18424954377991503633 │ -- 18.42 quintillion
+   └────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+1 row in set. Elapsed: 3745.202 sec. Processed 1.07 trillion rows, 374.14 TB (285.45 million rows/s., 99.90 GB/s.)
+
+-->
+</section>
+
+<section class="slide">
+<h2>Let's Play!</h2>
+<p>Step 1: run a benchmark on every generation.</p>
+<p>ClickBench: <a href="https://benchmark.clickhouse.com/hardware">https://benchmark.clickhouse.com/hardware</a></p>
+<p>&mdash; fully automated benchmark, runs on all instance types.
+<br/>&mdash; attempts to mimic a clickstream analytics workload;</p>
+<p>Btw, you can run it by yourself and submit results.</p>
+<p style="margin-top: 2em;"><b>Results (demo):</b> <a href="https://pastila.nl/?000b1ba6/c224ddf960900f4f2d0d9e100cef5445.html">https://pastila.nl/?000b1ba6/c224ddf960900f4f2d0d9e100cef5445.html</a></p>
+</section>
+
+<section class="slide">
+<h2>How To Decide?</h2>
+<p><b>Throughput on a single query:</b>
+<br/>&mdash; how quickly a massively-parallel query runs, e.g. 1 second vs 1.5 seconds;
+<br/>&mdash; depends on the number of CPU; aggregate performance; and mem bw;
+<br/>&emsp; and on the software optimization for a particular instruction set;
+</p>
+
+<p><b>Latency on short queries:</b>
+<br/>&mdash; how quickly a small query runs, e.g. 25 ms vs 50 ms.
+<br/>&mdash; depends on the speed of a single CPU core;
+</p>
+
+<p><b>Total load capacity:</b>
+<br/>&mdash; how many concurrent users and QPS can we sustain.
+<br/>&mdash; depends on the aggregate CPU performance and memory bw;
+</p>
+</section>
+
+<section class="slide">
+<h2>How To Decide?</h2>
+
+<p><b>Availability of the instances:</b>
+<br/>&mdash; in particular regions; in particular configurations.
+<br/>&mdash; ask your AWS architect.
+</p>
+
+<p><b>Software compatibility:</b>
+<br/>&mdash; and how well it is tested on this architecture.
+</p>
+
+<p><b>Cost/performance:</b>
+<br/>&mdash; this also depends on what performance metric is in comparison.
+</p>
+
+<!--
+
+a1.4xlarge:  $0.4080
+c6g.4xlarge: $0.5440   +33%    avg 3 times faster
+c7g.4xlarge: $0.5800   +6.6%   avg 30% faster
+
+r6g.8xlarge: $1.6128
+r7g.8xlarge: $1.7136   +6.25%  avg 30% faster
+r8g.8xlarge: preview           avg 30% faster
+
+r7i.8xlarge: $2.016
+
+r6g.16xlarge: $3.2256
+r7g.16xlarge: $3.4272  +6.25%
+r8g.16xlarge: preview
+
+-->
+</section>
+
+<section class="slide">
+<h2>Let's Play!</h2>
+<p>Step 1: estimate total capacity.</p>
+<p>By running all ClickBench's queries in parallel:</p>
+<p><code>clickhouse-benchmark -c32 -i1000 &lt; queries.sql</code></p>
+<table>
+<tr><th>machine</th><th>QPS</th><th>cost</th></tr>
+<tr><td>r7i.8xlarge</td><td>2.800</td><td>$2.0160</td></tr>
+<tr><td>r7g.8xlarge</td><td>3.500 (+25%)</td><td>$1.7136 (-15%)</td></tr>
+<tr><td>r8g.8xlarge</td><td>4.595 (+64%)</td><td style="color: gray">preview</td></tr>
+</table>
+</section>
+
+
+<section class="slide">
+<h2>Should we use Graviton today?</h2>
+
+<p>Summary comparison with contemporary Intel/AMD machines:</p>
+
+<p><b>Graviton 1</b> (2018):<br/>&mdash; low powerful machines, not comparable in performance.</p>
+<p><b>Graviton 2</b> (2020):<br/>&mdash; comparable throughput, but single-core performance is lower.</p>
+<p><b>Graviton 3</b> (2022):<br/>&mdash; better throughput and comparable single-core performance.</p>
+<p><b>Graviton 4</b> (2024):<br/>&mdash; even better throughput, lower latency, and more cores 😋.</p>
+</section>
+
+<section class="slide">
+<h2>Can we use Graviton today?</h2>
+
+<p>In ClickHouse Cloud.</p>
+<p><b style="color: green;">It looks obvious</b>: we can get more power for lower price!</p>
+<p>But it is <b>not so obvious</b>...</p>
+
+<p><b>Availability of disk instances</b>
+<br/>ClickHouse Cloud uses S3 and local SSDs for cache. But Graviton 3 instances with local SSDs started to be available in required regions only recently*.
+<br/><span style="color: gray; font-size: 80%;">* we are introducing a "distributed cache" to decouple disks and remove this requirement.</span></p>
+
+<p><b>Live migration</b>
+<br/>A cluster should be able to run in a hybrid mode &mdash; some replicas x86_64, some AArch64.
+</p>
+</section>
+
+<section class="slide">
+<h2>Can we use Graviton today?</h2>
+
+<p><b>Orchestration and infrastructure</b>
+<br/>All components have to be ported to AArch64 as well.
+</p>
+
+<p><b>Full continuous integration</b> with all test suites
+<br/>had to be enabled on Graviton instance types.</p>
+
+<p><b>Feature parity</b>
+<br/>Every existing feature should work on AArch64, even rarely used ones.
+<br/>Especially our own debugging and introspection capabilities.
+</p>
+
+<p><b>Pricing and performance consistency</b>
+<br/>We cannot randomly give 2x powerful machines in a subset of regions,
+<br/>as it could lead into surprises for customers.
+</p>
+</section>
+
+<section class="slide">
+<h2>Can we use Graviton today?</h2>
+
+<p>We have to do it! <b style="color: green;">The advantages are overwhelming</b>.</p>
+
+<p>So we prepared everything and migrated<br/>our staging environment to Graviton :) (m7gd)</p>
+
+<p>We use staging environment for testing and for personal, internal,<br/> and demo projects.</p>
+</section>
+
+<section class="slide">
+<h2>Case 1: CI Logs Cluster</h2>
+
+<p>A cluster in the Cloud, that collects logs from all builds and tests.</p>
+
+<p>We run ~2,000,000 tests every day, and each test generates a lot of logs.</p>
+
+<!--
+
+SELECT sum(total_rows) FROM system.tables WHERE database = 'default'
+
+SELECT formatReadableSize(sum(data_uncompressed_bytes)), formatReadableSize(sum(data_compressed_bytes)) FROM system.columns WHERE database = 'default'
+
+-->
+
+<p>4.3 trillion rows, 65 TiB compressed data, 1.39 PiB uncompressed.</p>
+
+<p style="margin-top: 3em;">Let's run a heavy query... Scan a table with 1.08 trillion reconds.</p>
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT sum(cityHash64(*)) AS x FROM build_time_trace</code></p>
+
+</section>
+
+<section class="slide">
+<h2>Case 1: CI Logs Cluster</h2>
+
+<p>Let's run a heavy query... Scan a table with 1.08 trillion reconds:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">clickhouse-cloud :) SELECT sum(cityHash64(*)) AS x FROM build_time_trace
+
+┌────────────────────x─┐
+│ 18424954377991503633 │
+└──────────────────────┘
+
+Elapsed: 3745.202 sec. Processed 1.07 trillion rows, 374.14 TB
+(285.45 million rows/s., 99.90 GB/s.)</code></p>
+
+<p>This is before the migration to Graviton.</p>
+<p style="color: green;">How much faster is it after the migration?</p>
+</section>
+
+
+<section class="slide">
+<h2>Case 1: CI Logs Cluster</h2>
+
+<p>How much faster is it after the migration to Graviton?</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">clickhouse-cloud :) SELECT sum(cityHash64(*)) AS x FROM build_time_trace
+
+┌────────────────────x─┐
+│ 18424954377991503633 │
+└──────────────────────┘
+
+Elapsed: 3395.191 sec. Processed 1.08 trillion rows, 376.63 TB
+(316.99 million rows/s., 110.93 GB/s.)</code></p>
+
+<p><b style="color: green;">&mdash; about 10% faster.</b></p>
+<p>It was <em>mostly</em> network bound, reading from S3,
+<br/>and we rather should have used network-optimized instances.</p>
+
+</section>
+
+<section class="slide">
+<h2>Case 2: A Public Demo</h2>
+
+<p>Demo: <a href="https://adsb.exposed/">https://adsb.exposed/</a></p>
+
+<!--
+
+r8g.24xlarge
+r6i.metal
+SELECT desc, count() FROM planes_mercator GROUP BY desc ORDER BY count() DESC LIMIT 20
+
+-->
+
+<!-- AND NOT ignore(now()) -->
+</section>
+
+<section class="slide">
+<h2>Case 2: A Public Demo</h2>
+
+<p>Demo: <a href="https://adsb.exposed/">https://adsb.exposed/</a></p>
+
+<p><b>r6i.metal</b>: 16.27 GB/sec;</p>
+<p><b>r8g.24xlarge</b> (Graviton 4): 26.71 GB/sec;</p>
+
+<p style="margin-top: 2em;">&mdash; <b style="color: green;">64% faster!</b></p>
+</section>
+
+
+<section class="slide">
+<h2>Takeaways</h2>
+<p>If you can use Graviton, you should already do so.</p>
+<p><b>Graviton 4 is going to be amazing...</b> the only question is availability.</p>
+<p style="margin-top: 2em;">We will make ClickHouse Cloud even faster!</p>
+</section>
+
+<section class="slide" style="background: url(pictures/reading.png); background-size: cover; background-position: center;">
+<h2><span class="hilite">Q&amp;A</a></h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+

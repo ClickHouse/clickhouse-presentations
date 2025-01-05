@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 23.4 Webinar</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         table, tr, td { border: 0; }
+         .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 23.4 Webinar</h1>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/spring1.jpg); background-size: cover;">
+        <h1 style="margin-top: 80px; line-height: 150%; color: white; font-size: 64pt; text-shadow: 1px 1px 10px black;">ClickHouse<br/> Release 23.4</h1>
+    </section>
+
+<section class="slide">
+<h2>Release 23.4 Webinar</h2>
+<p>1. (50 min) What's new in ClickHouse 23.4.</p>
+<p>2. (10 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/spring2.jpg); background-size: cover;">
+<h2><span class="hilite">Release 23.4</span></h2>
+<p><span class="hilite">ClickHouse Spring Release.</span></p>
+<p><span class="hilite">— 15 new features 🌳</span></p>
+<p><span class="hilite">— 11 performance optimizations 🛼</span></p>
+<p><span class="hilite">— 36 bug fixes 🦋</span></p>
+</section>
+
+<!--
+
+Minor:
+
+Trailing comma
+Dashes
+quantileGK
+kolmogorovSmirnovTest
+soundex
+SHOW COLUMNS
+ParquetMetadata
+extractKeyValuePairs
+replace*
+mapConcat, mapSort, mapExists
+use_environment_credentials for s3
+
+Performance:
+
+Parquet
+Parallel processing of file
+Parallel replicas
+Hedged requests
+
+Major:
+
+Data lakes
+bitCount, bitHammingDistance
+
+Integrations
+
+Looker
+Pending: Quicksight
+
+A new website
+
+Cloud
+
+-->
+
+<section class="slide">
+<h2>Trailing Comma Before FROM</h2>
+
+<p><code>SELECT UserID,
+       SearchPhrase,
+       RegionID<b style="color: red;">,</b>
+FROM test.hits</code></p>
+
+<p>Was: <span style="color: gray;">Expected one of: token, Dot, OR, AND, BETWEEN, NOT BETWEEN, LIKE, ILIKE, NOT LIKE, NOT ILIKE, IN, NOT IN, GLOBAL IN, GLOBAL NOT IN, MOD, DIV, IS NULL, IS NOT NULL, alias, AS, Comma, FROM, PREWHERE, WHERE, GROUP BY, WITH, HAVING, WINDOW, ORDER BY, LIMIT, OFFSET, SETTINGS, UNION, EXCEPT, INTERSECT, INTO OUTFILE, FORMAT, end of query</span></p>
+
+<p>Now: <b style="color: green;">Just works!</b></p>
+
+<p style="margin-top: 10em; color: gray; font-size: 14pt;">Developer: Nikolai Degterinskiy.</p>
+</section>
+
+<section class="slide">
+<h2>Settings With <span style="background-color: #DDD; padding: 0 0.25em;">-</span> In Command Line</h2>
+
+<p><code>clickhouse-client --max<b style="color: green;">_</b>threads 1 --query "SELECT 1"</code></p>
+<p><code>clickhouse-client --max<b style="color: red;">-</b>threads 1 --query "SELECT 1"</code></p>
+<p>Was: <span style="color: gray;">Code: 552. DB::Exception: Unrecognized option '--max-threads'.</span></p>
+<p>Now: <b style="color: green;">Just works!</b></p>
+
+<p>Bonus:</p>
+<p><code>clickhouse-client <b>—max-threads</b> 1 --query "SELECT 1"</code></p>
+<p>— It also works 👀</p>
+
+<p style="margin-top: 10em; color: gray; font-size: 14pt;">Developer: Alexey Golub.</p>
+</section>
+
+
+<section class="slide">
+<h2>quantileGK</h2>
+
+<p>We have many quantile functions:</p>
+<p>— <b>quantile</b>, <b>quantileDeterministic</b>, <b>quantileExact</b>, <b>quantileExactWeighted</b>, <b>quantileTiming</b>, <b>quantileTDigest</b>, <b>quantileBFloat16</b>...</p>
+<p>So, we decided to confuse you with the <b style="color: green;">Greenwald-Khanna</b> algorithm...</p>
+<p style="margin-top: 2em;">Demo</p>
+
+<!--
+
+SELECT quantile<tab>
+
+SELECT quantile(ResolutionWidth) FROM hits
+SELECT quantileExact(ResolutionWidth) FROM hits
+SELECT quantileTDigest(ResolutionWidth) FROM hits
+SELECT quantileTiming(ResolutionWidth) FROM hits
+SELECT quantileBFloat16(ResolutionWidth) FROM hits
+SELECT quantileGK(100)(ResolutionWidth) FROM hits
+
+SELECT RegionID, quantileExact(ResolutionWidth) FROM hits GROUP BY RegionID ORDER BY count() DESC LIMIT 10
+SELECT RegionID, quantileGK(100)(ResolutionWidth) FROM hits GROUP BY RegionID ORDER BY count() DESC LIMIT 10
+
+SELECT URL, quantileExact(ResolutionWidth) FROM hits GROUP BY ALL ORDER BY count() DESC LIMIT 10
+SELECT URL, quantileGK(100)(ResolutionWidth) FROM hits GROUP BY ALL ORDER BY count() DESC LIMIT 10
+
+-->
+
+<p style="margin-top: 7em; color: gray; font-size: 14pt;">Developer: TaiYang Li.</p>
+</section>
+
+
+<section class="slide">
+<h2>kolmogorovSmirnovTest</h2>
+
+<p><code style="font-size: 16pt;">SELECT kolmogorovSmirnovTest(ResolutionWidth, ResolutionHeight)
+FROM hits
+
+┌─kolmogorovSmirnovTest(ResolutionWidth, ResolutionHeight)─┐
+│ (0.9962541421161303,0)                                   │
+└──────────────────────────────────────────────────────────┘</code></p>
+
+<p style="margin-top: 5em; color: gray; font-size: 14pt;">Developer: FFFFFFFHHHHHHH.</p>
+</section>
+
+
+<section class="slide">
+<h2>SOUNDEX</h2>
+
+<p>The algorithm developed in <b>1918</b>. It's obsolete by all means.</p>
+
+<p><code style="font-size: 16pt;">SELECT soundex('Hello, world!') AS x
+
+┌─x────┐
+│ H464 │
+└──────┘
+
+SELECT soundex('Hallo, wereld!') AS x
+
+┌─x────┐
+│ H464 │
+└──────┘</code></p>
+
+<p>... but we need it for compatibility with other SQL DBMS.</p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: FriendLey.</p>
+</section>
+
+<section class="slide">
+<h2>SHOW COLUMNS</h2>
+
+<p><code style="margin-top: -1em; height: 18em; overflow-y: scroll; font-size: 12pt;">┌─field─────────────────┬─type─────┬─null─┬─key─────┬─default─┬─extra─┐
+│ AdvEngineID           │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ Age                   │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ BrowserCountry        │ String   │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ BrowserLanguage       │ String   │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ CLID                  │ Int32    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ ClientEventTime       │ DateTime │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ ClientIP              │ Int32    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ ClientTimeZone        │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ CodeVersion           │ Int32    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ ConnectTiming         │ Int32    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ CookieEnable          │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ CounterClass          │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ CounterID             │ Int32    │    0 │ PRI SOR │ ᴺᵁᴸᴸ    │       │
+│ DNSTiming             │ Int32    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ DontCountHits         │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ EventDate             │ Date     │    0 │ PRI SOR │ ᴺᵁᴸᴸ    │       │
+│ EventTime             │ DateTime │    0 │ PRI SOR │ ᴺᵁᴸᴸ    │       │
+│ FUniqID               │ Int64    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ FetchTiming           │ Int32    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ FlashMajor            │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ FlashMinor            │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ FlashMinor2           │ String   │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ FromTag               │ String   │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ GoodEvent             │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ HID                   │ Int32    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ HTTPError             │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ HasGCLID              │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ HistoryLength         │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ HitColor              │ String   │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ IPNetworkID           │ Int32    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ Income                │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ Interests             │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ IsArtifical           │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ IsDownload            │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ IsEvent               │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ IsLink                │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ IsMobile              │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ IsNotBounce           │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ IsOldCounter          │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ IsParameter           │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ IsRefresh             │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ JavaEnable            │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ JavascriptEnable      │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ LocalEventTime        │ DateTime │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ MobilePhone           │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ MobilePhoneModel      │ String   │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ NetMajor              │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ NetMinor              │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ OS                    │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ OpenerName            │ Int32    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ OpenstatAdID          │ String   │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ OpenstatCampaignID    │ String   │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ OpenstatServiceName   │ String   │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ OpenstatSourceID      │ String   │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ OriginalURL           │ String   │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ PageCharset           │ String   │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ ParamCurrency         │ String   │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ ParamCurrencyID       │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ ParamOrderID          │ String   │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ ParamPrice            │ Int64    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ Params                │ String   │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ Referer               │ String   │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ RefererCategoryID     │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ RefererHash           │ Int64    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ RefererRegionID       │ Int32    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ RegionID              │ Int32    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ RemoteIP              │ Int32    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ ResolutionDepth       │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ ResolutionHeight      │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ ResolutionWidth       │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ ResponseEndTiming     │ Int32    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ ResponseStartTiming   │ Int32    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ Robotness             │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ SearchEngineID        │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ SearchPhrase          │ String   │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ SendTiming            │ Int32    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ Sex                   │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ SilverlightVersion1   │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ SilverlightVersion2   │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ SilverlightVersion3   │ Int32    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ SilverlightVersion4   │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ SocialAction          │ String   │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ SocialNetwork         │ String   │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ SocialSourceNetworkID │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ SocialSourcePage      │ String   │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ Title                 │ String   │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ TraficSourceID        │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ URL                   │ String   │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ URLCategoryID         │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ URLHash               │ Int64    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ URLRegionID           │ Int32    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ UTMCampaign           │ String   │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ UTMContent            │ String   │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ UTMMedium             │ String   │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ UTMSource             │ String   │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ UTMTerm               │ String   │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ UserAgent             │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ UserAgentMajor        │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ UserAgentMinor        │ String   │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ UserID                │ Int64    │    0 │ PRI SOR │ ᴺᵁᴸᴸ    │       │
+│ WatchID               │ Int64    │    0 │ PRI SOR │ ᴺᵁᴸᴸ    │       │
+│ WindowClientHeight    │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ WindowClientWidth     │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ WindowName            │ Int32    │    0 │         │ ᴺᵁᴸᴸ    │       │
+│ WithHash              │ Int16    │    0 │         │ ᴺᵁᴸᴸ    │       │
+└───────────────────────┴──────────┴──────┴─────────┴─────────┴───────┘
+</code></p>
+
+<p>A worse version of SELECT * FROM system.columns.
+<br/>This is compatible with MySQL, but ugly.</p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Robert Schulze.</p>
+</section>
+
+<section class="slide">
+<h2>ParquetMetadata format</h2>
+
+<p><code>SELECT * FROM file('hits.parquet', ParquetMetadata)
+FORMAT PrettyJSONEachRow</code></p>
+
+<p>Represents the metadata about row groups and column statistics as a table.</p>
+
+<p>Demo</p>
+
+<!--
+
+SELECT * FROM file('hits.parquet', ParquetMetadata);
+DESCRIBE file('hits.parquet', ParquetMetadata);
+SELECT * FROM file('hits.parquet', ParquetMetadata) FORMAT PrettyJSONEachRow;
+
+-->
+
+<p style="margin-top: 5em; color: gray; font-size: 14pt;">Developer: Pavel Kruglov.</p>
+</section>
+
+<section class="slide">
+<h2>extractKeyValuePairs</h2>
+
+<p><code>SELECT extractKeyValuePairs(
+    'hello="world", abc="def"',
+    '=',
+    ', ',
+    '"') AS x
+
+┌─x─────────────────────────────┐
+│ {'hello':'world','abc':'def'} │ <span style="color: gray">Map(String, String)</span>
+└───────────────────────────────┘
+</code></p>
+
+<p style="margin-top: 3em; color: gray; font-size: 14pt;">Developer: Arthur Passos.</p>
+</section>
+
+<section class="slide">
+<h2>replace with non-constant needles</h2>
+
+<p><code>SELECT replaceAll('Hello, world',
+    number % 2 ? 'Hello' : 'world',
+    number % 3 ? 'Goodbye' : 'Greetings') AS x
+FROM numbers(2)
+
+┌─x────────────────┐
+│ Hello, Greetings │
+│ Goodbye, world   │
+└──────────────────┘</code></p>
+
+<p>&mdash; replaceOne, replaceAll, replaceRegexpOne, replaceRegexpAll...</p>
+<p>&mdash; both <b>needle</b> and <b>replacement</b> arguments can be non-constant.</p>
+
+<p style="color: gray; font-size: 14pt;">Developer: Robert Schulze.</p>
+</section>
+
+
+<section class="slide">
+<h2>Performance Optimizations</h2>
+</section>
+
+<section class="slide">
+<h2>Faster Parquet Reading</h2>
+
+<img style="float: right; margin-top: -1em; width: 40%; image-rendering: pixelated;" src="pictures/parquet.png"/>
+<p>From S3 and URLs.</p>
+<p><b>100 times faster.</b></p>
+
+<p style="margin-top: 2em;">Demo.</p>
+
+<!--
+clickhouse-local
+SELECT AdvEngineID, COUNT(*) AS c FROM url('https://clickhouse-public-datasets.s3.amazonaws.com/hits_compatible/hits.parquet') GROUP BY AdvEngineID ORDER BY c DESC LIMIT 10;
+
+programs/server/clickhouse-23.2 local
+SELECT AdvEngineID, COUNT(*) AS c FROM url('https://clickhouse-public-datasets.s3.amazonaws.com/hits_compatible/hits.parquet') GROUP BY AdvEngineID ORDER BY c DESC LIMIT 10;
+-->
+
+<p style="margin-top: 5em; color: gray; font-size: 14pt;">Developer: Michael Kolupaev.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 36pt;">Asynchronous Connections To Replicas</h2>
+
+<p>Before: <b>connect_timeout_with_failover_ms</b> = 50.</p>
+<p>Allowed quick failover on unavailable replicas.
+<br/><span style="color: gray;">But required tuning on cross-continent connections.</span></p>
+<p>Now: <b>connect_timeout_with_failover_ms</b> = 1000,
+<br/>but <b>hedged_connection_timeout_ms</b> = 50.</p>
+
+<p>It starts to connect to other replicas after 50 ms, <br/>but doesn't drop the connection to the first replica,
+<br/>and continue connecting to multiple replcias <b style="color: green;">in parallel</b>.</p>
+
+<p style="margin-top: 5em; color: gray; font-size: 14pt;">Developers: Pavel Kruglov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Data Lakes</h2>
+
+<p>Support for <b>Iceberg v2</b>.</p>
+<p>Support for partitioned and non-partitioned <b>Iceberg</b>, <b>Hudi</b> and <b>DeltaLake</b>.</p>
+<p>Taking <b>Delta</b> format's checkpoints for reading optimization.</p>
+<p>Tracking the changes of the data.</p>
+
+<p style="margin-top: 5em; color: gray; font-size: 14pt;">Developers: Kseniia Sumarokova.</p>
+</section>
+
+<section class="slide">
+<h2>Integrations</h2>
+<img src="pictures/looker.png" style="height: 90%; margin-top: -1em;"/>
+</section>
+
+<section class="slide">
+<h2>Integrations</h2>
+<p><b>Looker</b>:</p>
+<p>&mdash; works with ClickHouse through MySQL protocol.<br/>
+<span style="color: gray;">&mdash; next: Quicksight?</span></p>
+
+<p><b>Kafka Connector</b></p>
+<p>&mdash; Added support for Nullable types</p>
+<p>&mdash; Added retry mechanism for connection errors</p>
+<p>&mdash; Published on Confluent Hub</p>
+
+<p>Updates for <b>Metabase</b>, <b>Golang</b>, <b>Python</b>, and <b>Java</b> drivers.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/website.png); background-size: cover;">
+</section>
+
+<section class="slide">
+<h2>Reading Corner</h2>
+<p><a href="https://clickhouse.com/blog/">https://clickhouse.com/blog/</a></p>
+<p>&mdash; A Deep Dive into Apache Parquet with ClickHouse</p>
+<p>&mdash; A Deep Dive into JOIN algorithms in ClickHouse</p>
+<p>&mdash; A Story Of A Serial Product Manager</p>
+
+<p><a href="https://github.com/ClickHouse/NoiSQL">https://github.com/ClickHouse/NoiSQL</a></p>
+<p>&mdash; Generating music with SQL queries in ClickHouse</p>
+</section>
+
+<section class="slide" style="background: url(pictures/cloud.jpg); background-size: cover;">
+<h2><span class="hilite">ClickHouse Cloud</span></h2>
+
+<p><span class="hilite">&mdash; free 30-day trial with $300 credits up to 10 TB of data;</span></p>
+<p><span class="hilite">&mdash; affordable clusters for developers with full HA &lt; $100/month</span></p>
+<p><span class="hilite">Try it! <a href="https://clickhouse.cloud/">https://clickhouse.cloud/</a>.</span></p>
+</section>
+
+<section class="slide" style="background: url(pictures/spring3.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
+<h2 style="color: white;">Q&amp;A</a></h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+

@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 23.5 Webinar</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+         .slide table tr:not(:last-of-type)>* { background: none; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 23.5 Webinar</h1>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/spring1.jpg); background-size: cover;">
+        <h1 style="margin-top: 80px; line-height: 150%; color: white; font-size: 64pt; text-shadow: 1px 1px 10px black;">ClickHouse<br/> Release 23.5</h1>
+    </section>
+
+<section class="slide">
+<h2>Release 23.5 Webinar</h2>
+<p>1. (50 min) What's new in ClickHouse 23.5.</p>
+<p>2. (10 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/spring2.jpg); background-size: cover;">
+<h2><span class="hilite">Release 23.5</span></h2>
+<p><span class="hilite">ClickHouse May Release.</span></p>
+<p><span class="hilite">— 29 new features 🌿</span></p>
+<p><span class="hilite">— 25 performance optimizations 🚴</span></p>
+<p><span class="hilite">— 83 bug fixes 🐝</span></p>
+</section>
+
+<!--
+
+Minor:
+
+space
+attach from temporary tables
+CASE without ELSE
+INTO OUTFILE APPEND
+generateRandom
+
+system.zookeeper_connection
+system.user_processes
+
+dotProduct
+bitHammingDistance
+bitCount
+
+SHOW INDEX
+
+Major:
+
+Azure
+Keeper Client
+urlCluster
+_file, _path
+Schema inference for table engines
+WITH FILL with prefix
+
+By default:
+
+Query Cache
+Geographical data types
+Compressed marks and indices
+Memory bound aggregation
+
+Performance:
+
+Control over memory consumption for merges
+Control over memory consumption when writing to s3
+Control over projection usage
+Parallel processing
+Parquet
+
+Security:
+
+Default password schema
+Bcrypt
+BACKUP for encrypted data
+
+Integrations
+
+Cloud
+
+GCP
+API
+IAM
+
+Reading
+
+Meetup in New York
+Meetup in Berlin
+Meetup in Barcelona
+Meetup in London
+Meetup in San-Francisco
+Meetup in Bengaluru
+ClickHouse for Vector Search
+ClickHouse for AI
+ClickHouse for CDC
+Observability
+JOINs
+Hash Tables
+
+-->
+
+<section class="slide">
+<h2>Compatibility of the CASE expression</h2>
+
+<table>
+<tr>
+<td>
+<p style="margin-top: -1em;"><code style="font-size: 13pt;">SELECT CASE WHEN number = 1 THEN 'Hello'
+            WHEN number = 2 THEN 'World'
+            ELSE '-' END
+       AS res FROM numbers(4)
+
+┌─res───┐
+│ -     │
+│ Hello │
+│ World │
+│ -     │
+└───────┘
+</code></p>
+
+</td>
+<td style="padding-left: 1em;">
+
+<p style="margin-top: -1em;"><code style="font-size: 13pt;">SELECT CASE number WHEN 1 THEN 'Hello'
+                   WHEN 2 THEN 'World'
+                   ELSE '-' END
+       AS res FROM numbers(4)
+
+┌─res───┐
+│ -     │
+│ Hello │
+│ World │
+│ -     │
+└───────┘
+</code></p>
+
+</td>
+</tr>
+<tr>
+<td>
+
+
+<p><code style="font-size: 13pt;">SELECT CASE WHEN number = 1 THEN 'Hello'
+            WHEN number = 2 THEN 'World'
+            END
+       AS res FROM numbers(4)
+
+┌─res───┐
+│ ᴺᵁᴸᴸ  │
+│ Hello │
+│ World │
+│ ᴺᵁᴸᴸ  │
+└───────┘
+</code></p>
+
+</td>
+<td style="padding-left: 1em;">
+
+<p><code style="font-size: 13pt; background-color: #FEE">SELECT CASE number WHEN 1 THEN 'Hello'
+                   WHEN 2 THEN 'World'
+                   END
+       AS res FROM numbers(4)
+
+┌─res───┐
+│ ᴺᵁᴸᴸ  │
+│ <b style="color: red;">ᴺᵁᴸᴸ</b>  │
+│ <b style="color: red;">ᴺᵁᴸᴸ</b>  │
+│ ᴺᵁᴸᴸ  │
+└───────┘
+</code></p>
+
+</td>
+</tr>
+</table>
+</section>
+
+<section class="slide">
+<h2>Compatibility of the CASE expression</h2>
+
+<table>
+<tr>
+<td>
+<p style="margin-top: -1em;"><code style="font-size: 13pt;">SELECT CASE WHEN number = 1 THEN 'Hello'
+            WHEN number = 2 THEN 'World'
+            ELSE '-' END
+       AS res FROM numbers(4)
+
+┌─res───┐
+│ -     │
+│ Hello │
+│ World │
+│ -     │
+└───────┘
+</code></p>
+
+</td>
+<td style="padding-left: 1em;">
+
+<p style="margin-top: -1em;"><code style="font-size: 13pt;">SELECT CASE number WHEN 1 THEN 'Hello'
+                   WHEN 2 THEN 'World'
+                   ELSE '-' END
+       AS res FROM numbers(4)
+
+┌─res───┐
+│ -     │
+│ Hello │
+│ World │
+│ -     │
+└───────┘
+</code></p>
+
+</td>
+</tr>
+<tr>
+<td>
+
+
+<p><code style="font-size: 13pt;">SELECT CASE WHEN number = 1 THEN 'Hello'
+            WHEN number = 2 THEN 'World'
+            END
+       AS res FROM numbers(4)
+
+┌─res───┐
+│ ᴺᵁᴸᴸ  │
+│ Hello │
+│ World │
+│ ᴺᵁᴸᴸ  │
+└───────┘
+</code></p>
+
+</td>
+<td style="padding-left: 1em;">
+
+<p><code style="font-size: 13pt; background-color: #DED">SELECT CASE number WHEN 1 THEN 'Hello'
+                   WHEN 2 THEN 'World'
+                   END
+       AS res FROM numbers(4)
+
+┌─res───┐
+│ ᴺᵁᴸᴸ  │
+│ Hello │
+│ World │
+│ ᴺᵁᴸᴸ  │
+└───────┘
+</code></p>
+
+</td>
+</tr>
+</table>
+</section>
+
+<section class="slide">
+<h2>Compatibility of the CASE expression</h2>
+
+<table>
+<tr>
+<td>
+<p style="margin-top: -1em;"><code style="font-size: 13pt;">SELECT multiIf(number = 1, 'Hello',
+               number = 2, 'World',
+               '-') AS res FROM numbers(4)
+
+┌─res───┐
+│ -     │
+│ Hello │
+│ World │
+│ -     │
+└───────┘
+</code></p>
+
+</td>
+<td style="padding-left: 1em;">
+
+<p style="margin-top: -1em;"><code style="font-size: 13pt;">SELECT transform(number,
+       [1, 2], ['Hello', 'World'],
+       '-') AS res FROM numbers(4)
+
+┌─res───┐
+│ -     │
+│ Hello │
+│ World │
+│ -     │
+└───────┘
+</code></p>
+
+</td>
+</tr>
+</table>
+</section>
+
+<section class="slide">
+<h2>SELECT ... INTO OUTFILE '...' APPEND</h2>
+
+<p><code style="line-height: 1.25; font-size: 14pt; margin-top: -1em;">:) SELECT * FROM numbers(10)
+   INTO OUTFILE 'numbers.tsv'
+
+Ok.
+
+:) SELECT * FROM numbers(10)
+   INTO OUTFILE 'numbers.tsv'
+
+Cannot open file numbers.tsv, errno: 17,
+strerror: File exists.                                <span style="color: gray;">-- this is fine</span>
+
+:) SELECT * FROM numbers(10)
+   INTO OUTFILE 'numbers.tsv' <b style="color: green;">APPEND</b>
+
+<b style="color: green;">Ok.</b></code></p>
+
+<p style="color: gray; font-size: 14pt;">Developer: Manas Alekar.</p>
+</section>
+
+
+<section class="slide">
+<h2>ATTACH ... From Temporary Tables</h2>
+
+<p>Preparing data inside staging tables
+<br/>and attaching it in one large batch.</p>
+
+<p><code style="line-height: 1.25; font-size: 14pt;">CREATE <b style="color: green;">TEMPORARY TABLE</b> src (x UInt64) <b style="color: green;">ENGINE</b> = MergeTree ORDER BY x;
+INSERT INTO src SELECT * FROM numbers(1000000);
+...
+
+ALTER TABLE dst <b>ATTACH PARTITION</b> () FROM src;
+</code></p>
+
+<p>Works with <b>REPLACE PARTITION</b> as well.</p>
+
+<p style="margin-top: 5em; color: gray; font-size: 14pt;">Developer: Roman Vasin.</p>
+</section>
+
+
+<section class="slide">
+<h2>generateRandom is Self-Sufficient</h2>
+
+<p><code style="font-size: 16pt; line-height: 1.5;">SELECT * FROM generateRandom('x UInt8, y String') LIMIT 10;</code></p>
+
+<p><code style="font-size: 16pt; line-height: 1.5;">CREATE TEMPORARY TABLE test (x UInt8, y String);
+INSERT INTO test SELECT * FROM generateRandom() LIMIT 10;</code></p>
+
+<p><code style="font-size: 16pt; line-height: 1.5; color: green;">SELECT * FROM generateRandom() LIMIT 10;
+DESCRIBE (SELECT * FROM generateRandom());</code></p>
+
+<p>Demo</p>
+
+<p style="margin-top: 3em; color: gray; font-size: 14pt;">Developer: Pavel Kruglov.</p>
+</section>
+
+
+<section class="slide">
+<h2>SHOW INDEX</h2>
+
+<p style="margin-top: -1em;">For MySQL compatibility.</p>
+
+<p><code style="font-size: 13pt;">SHOW INDEX FROM hits
+
+Row 1:
+──────
+table:         hits
+non_unique:    0
+key_name:      PRIMARY
+seq_in_index:  ᴺᵁᴸᴸ
+column_name:   ᴺᵁᴸᴸ
+collation:     A
+cardinality:   ᴺᵁᴸᴸ
+sub_part:      ᴺᵁᴸᴸ
+packed:        ᴺᵁᴸᴸ
+null:          ᴺᵁᴸᴸ
+index_type:    primary
+comment:       ᴺᵁᴸᴸ
+index_comment: ᴺᵁᴸᴸ
+visible:       YES
+expression:    CounterID, EventDate, UserID, EventTime, WatchID</code></p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Robert Schulze.</p>
+</section>
+
+<section class="slide">
+<h2>New System Tables</h2>
+
+<p><b>system.user_processes</b></p>
+<p>&mdash; current memory usage and resource counters for every user.</p>
+
+<p>Demo</p>
+
+<p style="margin-top: 8em; color: gray; font-size: 14pt;">Developer: Kovi Benjamin Antal.</p>
+</section>
+
+<section class="slide">
+<h2>New System Tables</h2>
+
+<p><code style="line-height: 1.25; font-size: 16pt;">SELECT *
+FROM system.zookeeper_connection
+
+Row 1:
+──────
+name:               default
+host:               127.0.0.1
+port:               9181
+index:              0
+connected_time:     1970-01-01 01:25:00
+is_expired:         0
+keeper_api_version: 3
+client_id:          122
+</code></p>
+
+<!-- SELECT name FROM system.tables WHERE database = 'system' AND NOT match(name, '_\d+$') -->
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Mateng915.</p>
+</section>
+
+
+<section class="slide">
+<h2>Boring Security Features</h2>
+<p>&mdash; <b>bcrypt</b> for password hashing;</p>
+<p>&mdash; allow configuring the default password hashing;</p>
+<p><code>CREATE USER test IDENTIFIED BY 'my_password';
+
+<span style="color: gray;">config.d/password_type.yaml:</span>
+
+default_password_type: sha256_password
+</code></p>
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Nikolai Degterinskiy.</p>
+
+<p>&mdash; BACKUP and RESTORE works with encryption-at-rest
+<br/>&emsp; without decryption and re-ecryption.</p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Vitaly Baranov.</p>
+</section>
+
+<section class="slide">
+<h2>Boring Features</h2>
+<p>&mdash; <b>space</b> function;</p>
+<p>&mdash; for compatibility with Spark;</p>
+<p>Demo</p>
+<!--
+SELECT space(number) FROM numbers(10)
+SELECT space(number) FROM numbers(10) FORMAT JSONLines
+SELECT space(number + 100000) FROM numbers(10)
+SELECT space(number + 1000000) FROM numbers(10)
+SELECT repeat(' ', number) FROM numbers(10)
+
+SELECT count() FROM system.numbers_mt WHERE NOT ignore(repeat(' ', number % 10))
+SELECT count() FROM system.numbers_mt WHERE NOT ignore(space(number % 10))
+-->
+<p style="margin-top: 4em; color: gray; font-size: 14pt;">Developer: Robert Schulze.</p>
+</section>
+
+<section class="slide">
+<h2>Azure Table Function</h2>
+
+<p>Table engine:</p>
+
+<p><code style="font-size: 14pt; background-color: azure;">CREATE TABLE test ... ENGINE = <b style="color: green;">AzureBlobStorage</b>(
+  'https://alesapintestazure.blob.core.windows.net',
+  'container', 'path.tsv');
+
+SELECT * FROM test;
+INSERT INTO test ...;
+</code></p>
+
+<p>Table function:</p>
+
+<p><code style="font-size: 14pt; background-color: azure;">SELECT * FROM <b style="color: green;">azure_blob_storage</b>('...', 'container', 'path.tsv');
+INSERT INTO FUNCTION <b style="color: green;">azure_blob_storage</b>('...', 'container', 'path.tsv');</code></p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Alexander Sapin, Smita Kulkarni.</p>
+</section>
+
+<section class="slide">
+<h2>urlCluster Table Function</h2>
+
+<p><code style="font-size: 14pt;">SELECT ... FROM s3(
+    'https://bucket.s3.amazonaws.com/data*.parquet.zst')</code></p>
+<p><code style="font-size: 14pt;">SELECT ... FROM <b style="color: green;">s3Cluster</b>(
+    cluster, 'https://bucket.s3.amazonaws.com/data*.parquet.zst')</code></p>
+
+<p style="color: green;">Since version 23.5:</p>
+
+<p><code style="font-size: 14pt;">SELECT ... FROM url(
+    'https://bucket.s3.amazonaws.com/data{01..99}.parquet.zst')</code></p>
+<p><code style="font-size: 14pt;">SELECT ... FROM <b style="color: green;">urlCluster</b>(
+    cluster, 'https://bucket.s3.amazonaws.com/data{01..99}.parquet.zst')</code></p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Attack204, Pavel Kruglov.</p>
+
+<!--
+SELECT count() FROM urlCluster('https://clickhouse-public-datasets.s3.amazonaws.com/wikistat/original/pageviews-202202{01..28}-{01..23}0000.gz', LineAsString);
+
+SELECT count() FROM urlCluster(default, 'https://clickhouse-public-datasets.s3.amazonaws.com/wikistat/original/pageviews-202202{01..28}-{01..23}0000.gz', LineAsString);
+
+SELECT * FROM system.clusters;
+-->
+</section>
+
+<section class="slide">
+<h2>ClickHouse Keeper Client</h2>
+
+<p><b>clickhouse keeper-client</b></p>
+<p>&mdash; a tool inside ClickHouse to introspect your Keeper or ZooKeeper.</p>
+
+<p>Demo</p>
+
+<!--
+
+clickhouse keeper-client --port 2181
+clickhouse keeper-client --port 9181
+
+ls /
+ls /clickhouse
+ruok
+
+clickhouse keeper-client --port 9181 --query 'ls /'
+
+-->
+
+<p style="color: gray; font-size: 14pt;">Developer: Artem Brustovetskii.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 26pt;">Experimental Features Becoming Production Ready</h2>
+
+<p><b>Query Results Cache</b></p>
+<p>&mdash; securely separated between users by default;
+<br/>&mdash; normalized queries to their AST;
+<br/>&mdash; respects query settings, and non-deterministic functions;
+<br/>&mdash; controllable in size for each element, or in total;
+<br/>&mdash; can be enabled for active and passive usage;
+<br/><b style="color: green;">&mdash; production ready since 23.5!</b>
+</p>
+
+<p><b>Geographical Data Types</b></p>
+<p>&mdash; Point, Ring, Polygon, and MultiPolygon data types;
+<br/>&mdash; distance, area, perimeter, union, intersection, convex hull, etc. functions;
+<br/>&mdash; cartesian and spherical coordinates;
+<br/>&mdash; read from WKT, output into SVG;
+<br/><b style="color: green;">&mdash; production ready since 23.5!</b>
+</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Features Enabled By Default</h2>
+
+<p><b>Compressed marks and indices on disk</b></p>
+<p>&mdash; available since 22.9;
+<br/>&mdash; improves the speed of first queries after server startup;
+<br/><b style="color: green;">&mdash; enabled by default in 23.5.</b>
+</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Memory Usage In Background Operations</h2>
+
+<p style="margin-top: -1em;">New server settings to control memory usage:</p>
+<p><b>merges_mutations_memory_usage_soft_limit</b> and<br/><b>merges_mutations_memory_usage_to_ram_ratio</b> = 0.5</p>
+
+<p>Merges and mutations will not start if more than half<br/>of server memory is already consumed by background operations.</p>
+<p style="color: gray; font-size: 14pt;">Developer: Dmitri Novik.</p>
+
+<p>New table settings to lower memory usage:</p>
+<p><b>merge_max_block_size_bytes</b> and <b>vertical_merge_algorithm_min_bytes_to_activate</b>
+<br/> &mdash; save memory when merging tables with large rows;</p>
+
+<p style="color: gray; font-size: 14pt;">Developer: Nikita Mikhaylov.</p>
+</section>
+
+<section class="slide">
+<h2>Integrations</h2>
+<!-- <img src="pictures/looker.png" style="height: 90%; margin-top: -1em;"/> -->
+</section>
+
+<section class="slide">
+<h2>Integrations</h2>
+<p><b>The Official Tableau Connector</b>:</p>
+<p><a href="https://github.com/ClickHouse/clickhouse-tableau-connector-jdbc">https://github.com/ClickHouse/clickhouse-tableau-connector-jdbc</a></p>
+
+<p style="color: gray; font-size: 14pt;">Originally developed by Analytika Plus.</p>
+
+<p style="margin-top: 2em;">Updates for <b>Grafana</b>, <b>Metabase</b>, <b>Kafka Connect</b>, <b>Node.js</b>, and <b>Go</b> drivers.</p>
+</section>
+
+<section class="slide">
+<h2>Cloud Updates</h2>
+<p><b>GCP</b></p>
+<p>&mdash; ClickHouse Cloud is now available in Google Cloud!</p>
+<p><b>API</b></p>
+<p>&mdash; now you can control your services programmatically!
+<br/>&mdash; easy to use and complete REST API for services, organizations, etc.
+<br/>&emsp; OpenAPI; Swagger endpoint available;
+<br/>&mdash; upcoming: Terraform provider;</p>
+<p><b>IAM</b></p>
+<p>&mdash; secure access to your S3 buckets from ClickHouse Cloud.</p>
+</section>
+
+<section class="slide">
+<h2>Reading Corner</h2>
+<img style="float: right; margin-top: -1em; width: 40%; image-rendering: pixelated;" src="pictures/ai.png"/>
+
+<p><a href="https://clickhouse.com/blog/">https://clickhouse.com/blog/</a></p>
+<p>&mdash; Vector Search In ClickHouse
+<br/>&mdash; CDC From Postgres To ClickHouse
+<br/>&mdash; ClickHouse For Observability with SigNoz
+<br/>&mdash; Optimization of Hash Tables
+<br/>&mdash; JOINs in ClickHouse: a deep dive</p>
+
+<p>ClickHouse Meetups in<br/><b>New York</b>, <b>Berlin</b>, <b>Barcelona</b>, <b>London</b>,
+<br/><b>San-Francisco</b>, <b>Bengaluru</b>.</b>
+
+<p>ClickHouse for AI - Vectors, Embedding, Semantic Search, and more...</p>
+<p>Video Recordings: <a href="https://www.youtube.com/c/ClickHouseDB">https://www.youtube.com/c/ClickHouseDB</a></p>
+</section>
+
+<section class="slide" style="background: url(pictures/cloud.jpg); background-size: cover;">
+<h2><span class="hilite">ClickHouse Cloud</span></h2>
+
+<p style="margin-bottom: 2em;"><span class="hilite">Now available in <svg style="width: 1.4em; position: relative; top: 0.35em;" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" class="fill-current h-10 w-auto ">
+  <g clip-path="url(#clip0_516_16271)">
+    <path d="M20.364 10.2439L21.389 10.2614L24.174 7.47638L24.309 6.29638C22.1 4.32838 19.1835 3.12988 15.9965 3.12988C10.2265 3.12988 5.35654 7.05588 3.91504 12.3739C4.21904 12.1619 4.86904 12.3209 4.86904 12.3209L10.434 11.4059C10.434 11.4059 10.72 10.9324 10.865 10.9559C11.5158 10.241 12.3087 9.6699 13.1929 9.27925C14.0772 8.88861 15.0333 8.68701 16 8.68738C17.65 8.69088 19.17 9.27388 20.364 10.2384V10.2439Z" fill="#EA4335"></path>
+    <path d="M28.0851 12.3849C27.4386 9.99989 26.1061 7.89389 24.3076 6.29639L20.3641 10.2399C21.9441 11.5149 22.9576 13.4659 22.9576 15.6499V16.3459C24.8761 16.3459 26.4346 17.9079 26.4346 19.8229C26.4346 21.7414 24.8726 23.2999 22.9576 23.2999H16.0036L15.3076 23.9999V28.1729L16.0036 28.8654H22.9576C25.3547 28.8621 27.6527 27.9084 29.3478 26.2134C31.0429 24.5185 31.9967 22.2205 32.0001 19.8234C31.9966 16.7459 30.4501 14.0234 28.0851 12.3854V12.3849Z" fill="#4285F4"></path>
+    <path d="M9.0426 28.87H15.9926V23.3H9.0426C8.54882 23.3001 8.0608 23.194 7.6116 22.989L6.6081 23.2965L3.8231 26.0815L3.5791 27.0215C5.14854 28.2188 7.0681 28.8669 9.0421 28.866L9.0426 28.87Z" fill="#34A853"></path>
+    <path d="M9.0425 10.7849C6.64538 10.7882 4.34738 11.7419 2.65232 13.4369C0.957249 15.1318 0.0034392 17.4298 0 19.8269C0 22.7634 1.4065 25.3744 3.583 27.0284L7.615 22.9964C7.00471 22.7212 6.48675 22.2758 6.12323 21.7137C5.75971 21.1515 5.56606 20.4964 5.5655 19.8269C5.5655 17.9084 7.1275 16.3499 9.0425 16.3499C10.4525 16.3499 11.6645 17.1999 12.2125 18.3999L16.2445 14.3679C14.591 12.1914 11.9795 10.7849 9.043 10.7849H9.0425Z" fill="#FBBC05"></path>
+  </g>
+  <defs>
+    <clipPath id="clip0_516_16271">
+      <rect width="32" height="32" fill="white"></rect>
+    </clipPath>
+  </defs>
+</svg></span></p>
+
+<p><span class="hilite">&mdash; free 30-day trial with $300 credits up to 10 TB of data;</span></p>
+<p><span class="hilite">&mdash; affordable clusters for developers with full HA &lt; $100/month</span></p>
+<p><span class="hilite">Try it! <a href="https://clickhouse.cloud/">https://clickhouse.cloud/</a>.</span></p>
+</section>
+
+<section class="slide" style="background: url(pictures/spring3.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
+<h2 style="color: white;">Q&amp;A</a></h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+

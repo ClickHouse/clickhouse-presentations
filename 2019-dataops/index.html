@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Performance Analysis of ClickHouse Queries</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>Performance Analysis of ClickHouse Queries</h1>
+    </header>
+
+    <section class="slide" id="cover" style="background: #FFF url('pictures/amsterdam.jpg') no-repeat; background-size: 100%;">
+        <h1 style="margin-top: 150px; font-size: 42pt;"><span style="background: rgba(255, 255, 255, 0.75);">Performance Analysis<br/>of ClickHouse Queries</span></h1>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">What is ClickHouse?</h2>
+        <p>Open-source distributed analytical DBMS.</p>
+        <p><a href="https://github.com/ClickHouse/ClickHouse/">https://github.com/ClickHouse/ClickHouse/</a></p>
+        <p>Used in: CARTO, Mercadona, Zara, Idealista, Corunet, ... Cloudflare, Spotify, Amadeus, Bloomberg, Cisco, Deutsche Bank, Tencent, ByteDance...</p>
+    </section>
+    
+    <section class="slide">
+        <h2 style="font-size: 32pt;">Query performance analysis</h2>
+        <p><ul><li>Is the query executing fast enough?</li>
+        <li>If not &mdash; why?</li>
+        <li>Is it possible to make query execute faster?</li></ul></p>
+    </section>
+
+    <section class="slide">
+        <h2>Trivial facts</h2>
+        <p>... and common truths.</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 31pt;">What hardware resources do the system use?</h2>
+        <p>&mdash; CPU;</p>
+        <p>&mdash; RAM;</p>
+        <p>&mdash; disk;</p>
+        <p>&mdash; network.</p>
+        <p style="font-size: 12pt;">... also the performance can be bounded by "sleep".</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 31pt;">What hardware resources do the system use?</h2>
+        <p>Resource utilization &mdash; is an aggregated value, <br/>that usually cannot show the full picture.</p>
+        <p>If the utilization is "100%"<br/> &mdash; it doesn't necessarily mean that you cannot make performance better.</p>
+        <p>If the utilization is less than "100%"<br/> &mdash; it doesn't necessarily mean, that it's possible to do better.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Example 1, CPU</h2>
+        <p>Look at CPU utilization in <b>top</b>, <b>htop</b>, etc.</p>
+<p>If it shows that CPU core is loaded 100% &mdash; it means that CPU is processing instructions, but:</p>
+<p>&mdash; CPU can process different number of instructions per clock (IPC);</p>
+<p>&mdash; CPU can spent time waiting for data to be loaded from memory or cache,<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;but this time is also accounted as CPU utilization (<b>perf record</b>);</p>
+<p>&mdash; CPU can work with lowered clock frequency (<b>turbostat</b>, <b>dmesg</b>);</p>
+        </section>
+
+    <section class="slide">
+        <h2>Example 1, CPU</h2>
+<p>If it show that CPU (sum for all cores) is loaded for 50%:</p>
+<p>&mdash; it's possible that it is enough,<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if the Hyper-Threading does not make sense for your code;</p>
+<p>&mdash; it's possible that you see some average metric for time interval, but
+<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CPU is fully utilized at smaller intervals processing quick-response interactive queries.</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 23pt;">Time is spent for what? What is the bottleneck for the query?</h2>
+
+        <img style="margin-top: -30px;" src="pictures/random_set_query.png"/>
+        <img src="pictures/perf.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Example 2, disks</h2>
+        <p>... and SSD.</p>
+        <p>A program spend all its time for disk read,<br/>but <b>iostat</b> shows utilization less than 100%:<br/>
+&mdash; you use RAID, but the program performs reads with not big enough<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;buffer size with O_DIRECT or without readahead &mdash; disks<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;are used sequentialy rather than in parallel;<br/>
+&mdash; you use RAID-10, but it has <b>near</b>, rather than <b>far</b> layout in mdadm;<br/>
+&mdash; you use RAID-5/6, but have wrong <b>stripe cache size</b>;<br/>
+&mdash; you do random reads with not enough level of paralellism.<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+(for SSD always use AIO (<b>io_submit</b>) to perform random reads).</p>
+<p><b>And finally</b>: always compress data stored on disk.</p>
+    </section>
+
+    <section class="slide">
+        <video style="height: 90%"><source src="video/iostat_bad.ogv" type="video/ogg"></video>
+    </section>
+
+    <section class="slide">
+        <video style="height: 90%"><source src="video/iostat_good.ogv" type="video/ogg"></video>
+    </section>
+
+    <section class="slide">
+        <h2>Example 3, RAM</h2>
+<p>Linux shows that there is almost no "free" RAM:<br/>
+&mdash; keep calm and don't look at "free" memory: <a href="https://www.linuxatemyram.com/">https://www.linuxatemyram.com/</a>.</p>
+<p>Top show that the process allocated more memory than exists in the system:<br/>
+&mdash; don't look at VIRT memory (large size of address space<br/> &mdash; it is fine, better to look at RSS).</p>
+<p>Memory usage graph shows that the process doesn't release memory:<br/>
+&mdash; modern memory allocators (almost) don't release memory back to OS directly.</p>
+<p><b>And finally</b>: always disable swap;</p>
+    </section>
+
+    <section class="slide">
+        <h2>Example 4, network</h2>
+<p>A program spent all its time transferring data over the network,<br/>but network is not utilized enough:</p>
+<p>&mdash; probably you create a new TCP connection<br/>for every data transfer;</p>
+<p>&mdash; probably you use a single TCP connection<br/>to transfer files over the network with high packet loss;</p>
+<p>&mdash; probably you send data by small chunks <br/>with TCP_NODELAY enabled.</p>
+<p><b>And finally</b>: always compress data transferred over the network.</p>
+    </section>
+
+    <section class="slide" style="background: #FFF url('pictures/linux_observability_tools.png') center no-repeat; background-size: 75%;">
+    &nbsp;
+    </section>
+
+    <section class="slide">
+        <h2>Basic toolset</h2>
+        <p><b>top</b>, <b>htop</b>: CPU, memory by process;</p>
+        <p><b>dstat</b>: IO, network, ...;</p>
+        <p><b>iostat</b>: IO by devices;</p>
+        <p><b>iotop</b>: IO by process;</p>
+        <p><b>iftop</b>: network by hosts;</p>
+        <p><b>perf top</b>: CPU by functions inside processes;</p>
+    </section>
+
+    <section class="slide">
+        <h2>Example: top by threads</h2>
+    </section>
+
+    <section class="slide">
+        <video style="height: 90%"><source src="video/top.ogv" type="video/ogg"></video>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">Example: clickhouse-benchmark + perf top</h2>
+    </section>
+
+    <section class="slide">
+        <video style="height: 90%"><source src="video/benchmark_perf.ogv" type="video/ogg"></video>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">Resource usage observability<br/>inside ClickHouse</h2>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">What is happening right now?</h2>
+        <p>
+        <code>SHOW PROCESSLIST</code>
+        </p><p>
+        Или <code>SELECT * FROM system.processes</code>
+        </p><p>
+        <code>SELECT * FROM system.merges</code>
+        </p><p>
+        &laquo;clickhouse top&raquo;:<br/>
+        <code style="line-height: 1.5; font-size: 16pt;">watch -n1 'clickhouse-client --query="SHOW PROCESSLIST"'</code>
+        </p>
+    </section>
+
+    <section class="slide">
+        <video style="height: 90%"><source src="video/clickhouse_top.ogv" type="video/ogg"></video>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">What had happened before?</h2>
+        <p><b>system.query_log</b><br/>
+        &mdash; can be enabled globally, for user, for session or for query;<br/>
+        &mdash; a setting: <b>log_queries</b> = 1;<br/>
+        &mdash; queries are logged twice: at the beginning and at the end of execution.</p>
+        <p><b>system.part_log</b><br/>
+        &mdash; can be enabled globally in config.xml;<br/>
+        &mdash; all operations on MergeTree data parts are logged.</p>
+        <p>System tables with logs are updated asynchronously.<br>
+        (each 7 seconds). <b>SYSTEM FLUSH LOGS</b> to force write.</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">What can you do with query_log?</h2>
+        <p>&mdash; select a list of queries<br/>and perform load testing with <b>clickhouse-benchmark</b>:</p>
+        <p><code style="display: block; white-space: pre;">clickhouse-client --query="
+  SELECT query FROM system.query_log
+  WHERE type = 2 AND event_date = today()
+  " > queries.tsv</code></p>
+        <p><code>clickhouse-benchmark &lt; queries.tsv</code></p>
+        <p>&mdash; find the first query (root cause) that was lead to blow-up;</p>
+        <p>&mdash; create a report of resource usage by users.</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">Query tracing</h2>
+        <p><code>SET <b>send_logs_level</b> = 'trace'</code></p>
+        <p>&mdash; logs will be sent from all nodes<br/> participated in query processing<br/>
+        (distributed tracing);</p>
+    </section>
+
+    <section class="slide">
+        <video style="height: 90%"><source src="video/trace.ogv" type="video/ogg"></video>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">Resource metrics</h2>
+        <p>Global:<br/>
+        &mdash; system.<b>events</b>;<br/>
+        &mdash; system.<b>metrics</b>;<br/>
+        &mdash; system.<b>asynchronous_metrics</b>.</p>
+        <p>For each query:<br/>
+        &mdash; system.<b>processes</b>;<br/>
+        &mdash; system.<b>query_log</b>.</p>
+        <p>For each query execution thread:<br/>
+        &mdash; system.<b>query_thread_log</b>.</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">Resource metrics</h2>
+        <p><b>User-space</b>:<br/>
+        &mdash; FileOpen;<br/>
+        &mdash; NetworkReceiveElapsedMicroseconds;<br/>
+        &mdash; ReadBufferFromFileDescriptorReadBytes...</p>
+        <p><b>Kernel-space</b>:<br/>
+        &mdash; OSReadChars;<br/>
+        &mdash; OSReadBytes;<br/>
+        &mdash; OSIOWaitMicroseconds;<br/>
+        &mdash; OSCPUWaitMicroseconds;<br/>
+        &mdash; UserTimeMicroseconds;<br/>
+        &mdash; SoftPageFaults...</p>
+    </section>
+
+    <section class="slide">
+        <video style="height: 90%; margin-left: -50px;"><source src="video/page_cache.ogv" type="video/ogg"></video>
+    </section>
+
+    <section class="slide">
+        <video style="height: 90%; margin-left: -50px;"><source src="video/query_stats.ogv" type="video/ogg"></video>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">Per-query resource metrics</h2>
+        <p><table style="line-height: 1.5;">
+        <tr><th>Metric</th><th>First run</th><th>Second run</th></tr>
+        <tr><td>Total time</td><td>6.7 sec</td><td style="color: green;">1.3 sec</td></tr>
+        <tr><td>...FileDescriptorReadBytes</td><td>2.56 GiB</td><td>2.56 GiB</td></tr>
+        <tr><td>ReadChars</td><td>2.56 GiB</td><td>2.56 GiB</td></tr>
+        <tr><td>ReadBytes</td><td>3.23 GiB</td><td style="color: green;">3.13 MiB</td></tr>
+        <tr><td>IOWait</td><td>87.3 sec</td><td style="color: green;">0.023 sec</td></tr>
+        <tr><td>CPUWait</td><td>0.027 sec</td><td>0.045 sec</td></tr>
+        <tr><td>UserTime</td><td>9.9 sec</td><td>13.4 sec</td></tr>
+        <tr><td>SystemTime</td><td>2.4 sec</td><td>2.2 sec</td></tr>
+        </table>
+    </section>
+
+    <section class="slide">
+        <video style="height: 90%; margin-left: -50px;"><source src="video/thread_stats.ogv" type="video/ogg"></video>
+    </section>
+
+    <section class="slide">
+        <h1>.</h1>
+    </section>
+
+    <section class="slide">
+        <p style="margin-top: 50px;">Web site: <a href="https://clickhouse.com/">https://clickhouse.com/</a></p>
+        <p>GitHub: <a href="https://github.com/ClickHouse/ClickHouse/">https://github.com/ClickHouse/ClickHouse/</a> (now with 7200 stars)</p>
+        <p>Twitter: <a href="https://twitter.com/ClickHouseDB">https://twitter.com/ClickHouseDB</a></p>
+        <p>Telegram chat: <a href="https://telegram.me/clickhouse_en">https://telegram.me/clickhouse_en</a> and <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_ru</a> (now with over 2000 members)</p>
+        <p>Google groups: <a href="https://groups.google.com/forum/#!forum/clickhouse">https://groups.google.com/forum/#!forum/clickhouse</a></p>
+        <p>Maillist: clickhouse-feedback@yandex-team.com</p>
+
+        <!-- TODO Draw map -->
+        <p>+ meetups. Moscow, Saint-Petersburg, Novosibirsk, Ekaterinburg, Minsk, Nizhny Novgorod, Berlin, Palo Alto, Beijing, Sunnyvale, San Francisco, Paris, Amsterdam, <b>Madrid</b>, Limassol, Shenzhen, Shanghai...</p>
+    </section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
