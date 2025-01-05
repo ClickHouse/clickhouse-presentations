@@ -104,7 +104,14 @@
         const anchor = document.createElement("a");
 
         if (el.type === "file") {
-          anchor.setAttribute("href", el.download_url);
+          if (el.name.endsWith(".md")) {
+            anchor.setAttribute(
+              "href",
+              el.path.split(".").slice(0, -1).join(".")
+            );
+          } else {
+            anchor.setAttribute("href", el.download_url);
+          }
         } else if (el.type === "dir") {
           anchor.setAttribute("href", "?path=" + encodeURIComponent(el.path));
         }
