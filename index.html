@@ -109,6 +109,16 @@
           anchor.setAttribute("href", "?path=" + encodeURIComponent(el.path));
         }
 
+        // The folder naming schema was changed in the meantime. New folders
+        // start with a year number, e.g. 2020-meetup-paris.
+        // The renamed-from folders are retained to keep outside links alive but
+        // they only contain a HTML forward to // their renamed-to folder. We
+        // also grey out old links so it becomes more clear. Do this only for
+        // the top-level index.html (!params.path).
+        if (!params.path && !(/^\d/.test(el.name))) {
+            anchor.setAttribute("style", "color:grey")
+        }
+
         anchor.textContent = el.name;
         listItem.replaceChildren(anchor);
         list.appendChild(listItem);
