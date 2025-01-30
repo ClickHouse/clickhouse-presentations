@@ -3868,36 +3868,7 @@ SELECT data FROM test;
 <p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Pavel Kruglov.</p>
 </section>
 
-<section class="slide">
-<h2>JSON Data Type 🧪</h2>
-
-<p>Demo</p>
-
-<!--
-
-ssh ubuntu@3.68.116.197
-
-DESCRIBE s3('s3://clickhouse-public-datasets/gharchive/original/2024-08-20-10.json.gz');
-
-CREATE TABLE test1 ENGINE = MergeTree ORDER BY () AS SELECT * FROM s3('s3://clickhouse-public-datasets/gharchive/original/2024-08-20-10.json.gz');
-
-CREATE TABLE test2 (data JSON) ENGINE = MergeTree ORDER BY () AS SELECT * FROM s3('s3://clickhouse-public-datasets/gharchive/original/2024-08-20-10.json.gz', JSONAsObject);
-
-CREATE TABLE test3 (data String) ENGINE = MergeTree ORDER BY () AS SELECT * FROM s3('s3://clickhouse-public-datasets/gharchive/original/2024-08-20-10.json.gz', JSONAsString);
-
-SELECT count() FROM test1 WHERE actor.login = 'alexey-milovidov';
-
-SELECT * FROM test1 WHERE actor.login = 'alexey-milovidov' FORMAT PrettyJSONEachRow;
-
-SELECT payload.comment.body FROM test1 WHERE actor.login = 'alexey-milovidov';
-SELECT data.payload.comment.body FROM test2 WHERE data.actor.login = 'alexey-milovidov';
-SELECT JSON_VALUE(data, '$.payload.comment.body') FROM test3 WHERE JSON_VALUE(data, '$.actor.login') = 'alexey-milovidov';
-
-SELECT JSONAllPaths(data) FROM test2 WHERE data.actor.login = 'alexey-milovidov';
-
--->
-
-<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Pavel Kruglov.</p>
+<section class="slide" style="background: url(pictures/json.png) no-repeat; background-size: contain">
 </section>
 
 
@@ -4073,147 +4044,6 @@ GRANT SELECT ON default.view1 TO bob;
 </section>
 
 <section class="slide">
-<h2>The New Kafka Engine 🧪</h2>
-
-<p style="margin-top: -1em;">The <b>Kafka</b> engine exists in ClickHouse since 2017
-<br/>&mdash; it implements streaming consumption and data pipelines from Kafka.</p>
-
-<p>Its downside: non-atomic commit to Kafka and to ClickHouse, leading to the possibility of duplicates in the case of retries.</p>
-
-<p>Now there is an option to manage the offsets in Keeper:</p>
-<p><code style="font-size: 14pt; line-height: 1.25;">SET <b style="color: green;">allow_experimental_kafka_offsets_storage_in_keeper</b> = 1;
-
-CREATE TABLE ... ENGINE = <b>Kafka</b>(
-    'localhost:19092', 'topic', 'consumer', 'JSONEachRow')
-SETTINGS
-    <b style="color: green;">kafka_keeper_path</b> = '/clickhouse/{database}/kafka',
-    <b style="color: green;">kafka_replica_name</b> = 'r1';</code></p>
-
-<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: János Benjamin Antal.</p>
-</section>
-
-<section class="slide">
-<h2>The New Kafka Engine 🧪</h2>
-
-<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE ... ENGINE = <b>Kafka</b>(
-    'localhost:19092', 'topic', 'consumer', 'JSONEachRow')
-SETTINGS
-    <b style="color: green;">kafka_keeper_path</b> = '/clickhouse/{database}/kafka',
-    <b style="color: green;">kafka_replica_name</b> = 'r1';</code></p>
-
-<p>With the new option it does not rely on Kafka to track the offsets,
-<br/>and does it by itself with ClickHouse Keeper.</p>
-<p>If an insertion attempt fails, it will take exactly the same chunk of data and repeat the insertion, regardless of network or server failures.</p>
-<p>This enables deduplication and makes the consumption <b style="color: green;">exactly-once</b>.</p>
-
-<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: János Benjamin Antal.</p>
-</section>
-
-<section class="slide">
-<h2>TimeSeries Engine 🧪</h2>
-
-<p>Now ClickHouse supports <b style="color: green;">Prometheus protocols</b> for remote write and read.</p>
-<p>The new, <b style="color: green;">TimeSeries</b> Engine implements storage for metrics.</p>
-
-<p><code style="font-size: 14pt; line-height: 1.25;">SET allow_experimental_time_series_table = 1;
-
-CREATE TABLE tbl ENGINE = TimeSeries; <span style="color: gray;">-- the default options.</span>
-
-CREATE TABLE tbl ENGINE = TimeSeries
-    DATA ENGINE = MergeTree
-    TAGS ENGINE = ReplacingMergeTree
-    METRICS ENGINE = ReplacingMergeTree;
-</code></p>
-
-<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Vitaly Baranov.</p>
-</section>
-
-<section class="slide">
-<h2>TimeSeries Engine 🧪</h2>
-
-<p><code style="font-size: 12pt; line-height: 1.25; margin-top: -1em;">$ cat /etc/clickhouse-server/config.d/prometheus.yaml
-prometheus:
-    port: 8053
-    handlers:
-        my_rule_1:
-            url: '/write'
-            handler:
-                type: <b style="color: green;">remote_write</b>
-                database: default
-                table: tbl
-        my_rule_2:
-            url: '/read'
-            handler:
-                type: <b style="color: green;">remote_read</b>
-                database: default
-                table: tbl
-        my_rule_3:
-            url: '/metrics'
-            handler:
-                type: expose_metrics
-</code></p>
-
-<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Vitaly Baranov.</p>
-</section>
-
-<section class="slide">
-<h2>TimeSeries Engine 🧪</h2>
-
-<p>ClickHouse is listening the <b>Prometheus</b> protocol
-<br/>and ready to receive metrics.</p>
-
-<p>TimeSeries engine is simple to use, but allows many customizations:
-<br/>&mdash; put some tags (e.g., hostname) into separate columns;
-<br/>&mdash; adjust table's primary key;
-<br/>&mdash; adjust column types;
-<br/>&mdash; ...</p>
-
-<p>But there is more work to do:
-<br/>&mdash; support for PromQL;
-</p>
-
-<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Vitaly Baranov.</p>
-</section>
-
-<section class="slide">
-<h2 style="font-size: 32pt;">Asynchronous Loading Of Tables</h2>
-
-<p>How long does the server take to start up?</p>
-<p>... if you have 10 000 replicated tables?</p>
-
-<p style="color: gray;">But having 10 000 tables is an anti-pattern...</p>
-</section>
-
-<section class="slide">
-<h2 style="font-size: 32pt;">Asynchronous Loading Of Tables</h2>
-
-<p>Enable with <b>async_load_databases</b> in the config.xml.</p>
-<p>ClickHouse will start <b style="color: green;">instantly</b>.</p>
-<p>It accepts connections and start loading the tables at the same time.</p>
-<p>If a query requires a table, its initialization will be put in front,
-<br/>and the query will wait for it.</p>
-
-<p><span style="color: green;">Pros: it's amazing!</span> <span style="color: gray;">Cons: caveats exist.</span></p>
-<p style="color: gray; font-size: 14pt;">Developer: Sergei Trifonov.</p>
-</section>
-
-<section class="slide">
-<h2>Adaptive Asynchronous Inserts</h2>
-
-<p>SET async_insert = true;</p>
-<p>&mdash; allows to combine data for insertion from many concurrent clients;
-<br/>&emsp; to support highly concurrent, frequent inserts.</p>
-
-<p>24.1: if there are not many inserts,<br/>they will wait up to the timeout (= 200 ms by default);</p>
-<p style="color: red;">&mdash; In 24.1, infrequent inserts have a higher latency.</p>
-
-<p>Since 24.2: automatically adjusts to the frequency of inserts;</p>
-<p style="color: green;">&mdash; In 24.2, you can enable async_insert and stop worrying.</p>
-
-<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Julia Kartseva.</p>
-</section>
-
-<section class="slide">
 <h2>Iceberg REST Catalog 🧊</h2>
 <p><code style="font-size: 12pt; line-height: 1.5; margin-left: -3em; margin-right: -4em;">CREATE DATABASE unity_demo
 ENGINE = <b style="color: green;">Iceberg</b>('https://dbc-55555555-5555.cloud.databricks.com/api/2.1/unity-catalog/iceberg')
@@ -4250,7 +4080,7 @@ frame.info()
 </section>
 
 <section class="slide" style="background: url(pictures/final.jpg); background-size: cover;">
-<h2>Q&amp;A</h2>
+<h2 style="color: white;"><span style="background: rgba(0,0,0,0.5)">Q&amp;A</span></h2>
 </section>
 
 
