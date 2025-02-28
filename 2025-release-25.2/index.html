@@ -101,7 +101,7 @@ JSONBench
 (
     data JSON
     time DateTime DEFAULT <span style="color: red;">getSubcolumn(data 'created_at')</span>
-) ORDER BY <b>data.actor_login</b>
+) ORDER BY <b>data.actor_login::String</b>
 </code></p>
 
 <p style="color: green;">25.2:</p>
@@ -110,7 +110,7 @@ JSONBench
 (
     data JSON
     time DateTime DEFAULT <b style="color: green;">data.created_at</b>
-) ORDER BY <b style="color: green;">data.actor_login</b>
+) ORDER BY <b style="color: green;">data.actor_login</b>::String
 </code></p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Pavel Kruglov.</p>
