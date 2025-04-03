@@ -1,4 +1,4 @@
-This event was held on 22 March 2025 in Delhi, India at WeWork Blue One Square
+This event was held on 22 March 2025 in Delhi, India at WeWork Blue One Square.
 
 https://www.meetup.com/clickhouse-delhi-user-group/events/306253492/
 
