@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 25.7 Call</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+         .slide table tr:not(:last-of-type)>* { background: none; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 25.7 Call</h1>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/back1.jpg); background-size: cover;">
+        <h1 style="margin-top: 25px; line-height: 110%; font-size: 56pt; color: white; text-shadow: black 1px 0 10px; text-align: center;">ClickHouse Release 25.7</h1>
+    </section>
+
+<section class="slide">
+<h2>ClickHouse release 25.7</h2>
+<p>1. (50 min) What's new in ClickHouse 25.7.</p>
+<p>1. (5 min) Guest Talk.</p>
+<p>3. (5 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back2.jpg); background-size: cover;">
+<h2><span class="hilite">Release 25.7</span></h2>
+<p><span class="hilite">ClickHouse Summer Release.</span></p>
+<p><span class="hilite">— 27 new features 🌺</span></p>
+<p><span class="hilite">— 26 performance optimizations 🍦</span></p>
+<p><span class="hilite">— 98 bug fixes 🐞</span></p>
+</section>
+<!--
+
+Small
+
+system.formats
+colored brackets
+Financial functions
+Geo: WKB write, polygonsIntersect
+SZ3
+Color science
+Read/Write grants for sources
+Parameterized CREATE USER
+NumericIndexedVector
+
+Performance
+
+Parallel distributed INSERT SELECT is enabled by default
+Async logging
+JOIN optimization
+Aggregation with count only
+
+Main
+
+Lightweight Updates
+Iceberg writes
+Iceberg misc: positional deletes, complex types in schema evolution
+Databricks-managed tables
+Vector similarity search is beta
+
+Bonus
+
+AI
+AWS Marketplace for AI
+
+Integrations
+
+MySQL CDC public Beta: https://clickhouse.com/blog/mysql-cdc-connector-clickpipes-beta
+ClickPipes logging to system tables
+Fully managed connector in Confluent Cloud
+JSON support in Kafka Connect
+Airbyte ClickHouse destination v2
+
+Bonus
+
+Shared Catalog
+Updates for ClickBench
+
+Coffeeshop benchmark
+MongoDB analytics benchmark
+
+Reading
+
+Updates 1, 2
+OpenAI
+Anthropic
+Tesla
+LLM Observability
+Polygon
+
+
+
+-->
+
+<section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
+<h2><span class="hilite">Small And Nice Features</span></h2>
+</section>
+
+<section class="slide">
+<h2>system.formats</h2>
+
+<p><code style="font-size: 12pt; margin-top: -1em; line-height: 1.2;">:) SELECT * FROM <b style="color: green;">system.formats</b> WHERE name = 'JSONEachRow'
+
+Row 1:
+──────
+name:                         JSONEachRow
+is_input:                     1
+is_output:                    1
+supports_parallel_parsing:    1
+supports_parallel_formatting: 1
+is_tty_friendly:              1
+content_type:                 application/x-ndjson; charset=UTF-8
+supports_random_access:       0
+has_schema_inference:         1
+has_external_schema:          0
+prefers_large_blocks:         0
+supports_append:              0
+supports_subsets_of_columns:  1
+</code></p>
+
+<p>Demo.</p>
+
+<!--
+
+SELECT count() FROM system.formats
+SELECT count() FROM system.formats WHERE is_input
+SELECT count() FROM system.formats WHERE is_output
+SELECT count() FROM system.formats WHERE is_input AND is_output
+SELECT count() FROM system.formats WHERE is_input AND NOT is_output
+SELECT name FROM system.formats WHERE is_input AND NOT is_output
+
+What format do we miss in ClickHouse?
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexey Milovidov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Financial Functions</h2>
+
+<p>&mdash; <b>financialInternalRateOfReturn</b> (IRR)</p>
+<p>&mdash; <b>financialInternalRateOfReturnExtended</b> (XIRR)</p>
+<p>&mdash; <b>financialNetPresentValue</b> (NPV)</p>
+<p>&mdash; <b>financialNetPresentValueExtended</b> (XNPV)</p>
+
+<p>Demo.</p>
+
+<!--
+
+SELECT financialInternalRateOfReturn([-1, 1])
+SELECT financialInternalRateOfReturn([-1, 0, 0, 0, 1])
+SELECT financialInternalRateOfReturn([-1, 0.1, 0.1, 0.1, 0.1 + 1])
+SELECT financialInternalRateOfReturn([-1, 1, 1])
+SELECT financialInternalRateOfReturn([-1, 0.6180339887498948, 1.618033988749895])
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Joanna Hulboj.</p>
+</section>
+
+
+<section class="slide">
+<h2>New Geo Functions</h2>
+
+<p><span style="color: gray;">Since 21.4:
+<br/>&mdash; polygonsIntersectionCartesian
+<br/>&mdash; polygonsIntersectionSpherical
+<br/>&mdash; calculate the intersection and return it as a MultiPolygon.
+</span></p>
+<p>Since 25.7:
+<br/><b style="color: green;">&mdash; polygonsIntersectCartesian
+<br/>&mdash; polygonsIntersectSpherical</b>
+<br/>&mdash; check if polygons intersect and return 0 or 1.
+</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Paul Lamb.</p>
+</section>
+
+<section class="slide">
+<h2>New Geo Functions</h2>
+
+<p><code style="font-size: 14pt; margin-top: -1em; line-height: 1.5;">:) SELECT [[(0, 0), (0, 1), (1, 1), (1, 0)]]::Polygon AS poly,
+          wkt(poly), hex(<b style="color: green;">wkb(poly)</b>)
+
+Row 1:
+──────
+poly:           [[(0,0),(0,1),(1,1),(1,0)]]
+wkt(poly):      POLYGON((0 0,0 1,1 1,1 0,0 0))
+hex(<b style="color: green;">wkb(poly)</b>): 010300000001000000040000000000000000000000000000000000000
+00000000000000000000000000000F03F000000000000F03F000000000000F03F00000000
+0000F03F0000000000000000
+</code></p>
+
+<p><b>wkb</b> &mdash; write a geometry data in "<b>W</b>ell-<b>K</b>nown <b>B</b>inary" format.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Konstantin Vedernikov.</p>
+</section>
+
+<section class="slide">
+<h2>Functions For Color Spaces</h2>
+
+<img style="float: right; width: 40%" src="pictures/oklch.png"/>
+
+<p>Conversions between sRGB and OKLCH:</p>
+<p>&mdash; <b>colorOKLCHToSRGB((l, c, h), gamma)</b>
+<br/>&mdash; <b>colorSRGBToOKLCH((r, g, b), gamma)</b>
+</p>
+
+<p><b>OKLCH</b> &mdash; perceptually uniform color space.</p>
+<p>Useful for: doing arithmetic on colors, blending colors, generating gradients, programmatically choosing colors.</p>
+
+<p>Demo.</p>
+
+<!--
+
+https://adsb.exposed/?dataset=Planes&zoom=6&lat=52.4893&lng=4.6025&query=f3fa6f78cbef2ffb60baafae766e333a
+
+https://adsb.exposed/?dataset=Planes&zoom=6&lat=52.4089&lng=6.1639&query=2ae6768a6083c9fb1517514e61055eb4
+
+https://adsb.exposed/?dataset=Planes&zoom=11&lat=52.2970&lng=4.7794&query=9ba733743fe7e64053f55d92b4ac1fc0
+
+https://adsb.exposed/?dataset=Planes&zoom=11&lat=52.3271&lng=4.7278&query=6ce27658c10bd2071e56b07f8df654e2
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Kirill Kopnev.</p>
+</section>
+
+
+<section class="slide">
+<h2>Colorful Brackets</h2>
+
+<p>In clickhouse-client.</p>
+
+<p>Demo</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Konstantin Bogdanov.</p>
+</section>
+
+<!--
+<section class="slide">
+<h2>A New Compression Codec, SZ3</h2>
+
+<p>ClickHouse supports custom compression codecs, that can be specified on a per-column, per-table, or on a server configuration level.</p>
+
+<p>SZ3 &mdash; is a family of <b>lossy</b> compressors for floating-point data,
+<br>such as scientific measurements and vector embeddings.</p>
+
+<p>Usage: SZ3(algorithm, error_bound_mode, error_bound)
+<br/>The error bound is 1% relative by default or can be explicitly set.</p>
+
+<p>Demo</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Konstantin Vedernikov.</p>
+</section>
+-->
+
+
+<section class="slide">
+<h2>Compressed Numeric Vectors</h2>
+
+<p>A set of functions to create and manipulate <b style="color: green;">Bit-Sliced Indices</b> (BSI)
+<br/>&mdash; compressed representation of <b>sparse vectors</b> of numbers
+<br/>&emsp; (maps from UInt8/16/32 index to a number)</p>
+
+<p>Build the index with aggregate function:
+<br/><span style="font-family: monospace; font-size: 14pt;">SELECT <b>groupNumericIndexedVectorState</b>(idx, val)</span></p>
+<p>Build the index from a map: <span style="font-family: monospace; font-size: 14pt;"><b>numericIndexedVectorBuild</b>(map)</span></p>
+
+<p style="font-family: monospace; font-size: 14pt;"><b>numericIndexedVectorToMap</b>, <b>numericIndexedVectorCardinality</b>, <b>numericIndexedVectorAllValueSum</b>, <b>numericIndexedVectorGetValue</b>, <b>numericIndexedVectorPointwiseAdd/Subtract/Multiply/Equal/Less/</b>...</p>
+
+<p>Applications: calculating metrics for A/B testing experiments in Tencent.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: FriendLey.</p>
+</section>
+
+<section class="slide">
+<h2>Compressed Numeric Vectors</h2>
+
+<p>A set of functions to create and manipulate <b style="color: green;">Bit-Sliced Indices</b> (BSI)
+<br/>&mdash; compressed representation of <b>sparse vectors</b> of numbers
+<br/>&emsp; (maps from UInt8/16/32 index to a number)</p>
+
+<p>Applications: calculating metrics for A/B testing experiments in Tencent.</p>
+
+<p>Demo.</p>
+
+<!--
+
+-- a normal table
+--------------------
+DROP TABLE IF EXISTS metric_raw;
+CREATE TABLE metric_raw(segment_id UInt32, value UInt32)
+ENGINE = MergeTree()
+ORDER BY segment_id;
+
+DROP TABLE IF EXISTS expose_raw;
+CREATE TABLE expose_raw(segment_id UInt32, offset UInt32)
+ENGINE = MergeTree()
+ORDER BY segment_id;
+
+INSERT INTO metric_raw
+SELECT number, rand32(number) % 16
+FROM numbers(1e8);
+
+INSERT INTO expose_raw
+SELECT number, rand32(number + 1) % 10
+FROM numbers(1e8);
+
+
+-- BSI tables
+-----------------
+DROP TABLE IF EXISTS metric_bsi;
+CREATE TABLE metric_bsi
+(
+    value_vec AggregateFunction(groupNumericIndexedVectorState, UInt32, UInt32)
+) ENGINE = AggregatingMergeTree
+ORDER BY tuple();
+
+INSERT INTO metric_bsi
+SELECT groupNumericIndexedVectorState(segment_id, value)
+FROM metric_raw;
+
+
+DROP TABLE IF EXISTS expose_bsi;
+CREATE TABLE expose_bsi
+(
+    offset_vec AggregateFunction(groupNumericIndexedVectorState, UInt32, UInt32)
+) ENGINE = AggregatingMergeTree
+ORDER BY tuple();
+
+INSERT INTO expose_bsi
+SELECT groupNumericIndexedVectorState(segment_id, offset)
+FROM expose_raw;
+
+
+-- 3  plain aggregation on join + filter benchmark
+----------------------------------------------------
+SELECT sum(m.value) FROM metric_raw AS m
+INNER JOIN expose_raw AS e ON e.segment_id = m.segment_id
+WHERE e.offset BETWEEN 2 AND 5
+FORMAT Null;
+
+
+-- 4  vector benchmark
+------------------------
+WITH
+    (SELECT finalizeAggregation(value_vec)  FROM metric_bsi) AS metric_vec,
+    (SELECT finalizeAggregation(offset_vec) FROM expose_bsi) AS offset_vec,
+    numericIndexedVectorPointwiseMultiply(
+        numericIndexedVectorPointwiseGreaterEqual(offset_vec, 2),
+        numericIndexedVectorPointwiseLessEqual(offset_vec, 5)
+    ) AS mask_vec
+SELECT numericIndexedVectorAllValueSum(
+       numericIndexedVectorPointwiseMultiply(metric_vec, mask_vec))
+FORMAT Null;
+
+-- 5  compare size
+-------------------
+SELECT table AS tbl,
+  formatReadableSize(sum(bytes_on_disk)) AS on_disk,
+  formatReadableSize(sum(data_uncompressed_bytes)) AS uncompressed
+FROM system.parts
+WHERE active
+  AND table IN ('metric_raw','expose_raw','metric_bsi','expose_bsi')
+GROUP BY tbl
+ORDER BY tbl;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: FriendLey.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back9.jpg); background-size: cover;">
+<h2><span style="color: black;"><span class="hilite">Boring Security Features</span></h2>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">READ and WRITE grants for external data</h2>
+
+<p>In 25.6 and before:</p>
+<p><code>GRANT S3 ON *.* TO user</code></p>
+
+<p>In 25.7:</p>
+<p><code style="font-size: 12pt; line-height: 1.5;"><span style="color: gray;">$ cat config.d/read_write_grants.yaml</span>
+access_control_improvements:
+    enable_read_write_grants: true
+</code></p>
+<p><code>GRANT READ, WRITE ON S3 TO user</code></p>
+
+<p>Allows for limiting reads or writes to external data sources<br/>such as S3, URL, File, etc.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Artem Brustovetskii.</p>
+</section>
+
+<section class="slide">
+<h2>Parameterized CREATE USER query</h2>
+
+<p><code style="font-size: 16pt; line-height: 1.5;">SET param_username = 'test123';
+CREATE USER '{username:Identifier}';</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Diskein.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back3.jpg); background-size: cover;">
+<h2><span style="color: black;"><span class="hilite">Performance Improvements</span></h2>
+</section>
+
+<section class="slide">
+<h2>Speed-up For Simple Aggregations</h2>
+
+<p>If a query contains only <b>count()</b> aggregate function,
+<br/>it will use an optimized code path.</p>
+
+<p>Example:
+<code style="font-size: 14pt; line-height: 1.5; margin-top: 0.5em;">SELECT RegionID, <b>count()</b>
+FROM hits
+GROUP BY RegionID
+ORDER BY count() DESC LIMIT 10</code></p>
+
+<pre>25.6: <b style="color: red;">42 ms</b>, 2.39 billion rows/s.
+25.7: <b style="color: green;">32 ms</b>, 3.11 billion rows/s.</pre>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Amos Bird.</p>
+</section>
+
+
+<section class="slide">
+<h2>Asynchronous Logging</h2>
+
+<p><code style="font-size: 12pt; line-height: 1.5;"><span style="color: gray;">$ cat config.d/logger_async.yaml</span>
+logger:
+    <b>async</b>: true  <span style="color: gray;"># This is the default in 25.7, but can be disabled</span>
+</code></p>
+
+<p>Logging no longer blocks for writing, which improves the speed when logging to terminal, or to a slow disk, especially for short queries.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">clickhouse-benchmark --query "
+    SELECT count() FROM hits WHERE AdvEngineID != 0"
+</code></p>
+
+<pre>25.6: <b style="color: red;">225</b> QPS, 14.5 billion rows/sec.
+25.7: <b style="color: green;">255</b> QPS, 16.4 billion rows/sec.</pre>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Raúl Marín.</p>
+</section>
+
+<section class="slide">
+<h2>Optimizations For JOINs</h2>
+
+<p>Low-level optimizations for hash join:</p>
+
+<p>&mdash; optimizations for RIGHT and FULL JOIN</p>
+<p>&mdash; optimizations for JOIN with multiple conditions with OR</p>
+<p>&mdash; optimizations to make INNER JOIN as fast as the IN operator</p>
+<p>&mdash; more precise memory allocations for the result</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Nikita Taranov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Distributed INSERT SELECT is the default</h2>
+
+<p>When inserting from Distributed table to another Distributed table on the same cluster, both the SELECT and INSERT pipeline will be run in parallel on all machines.</p>
+
+<p>If <b>enable_parallel_replicas</b> is set, when inserting from Replicated table to another Replicated table on the same cluster, it will be parallelized across the machines as well.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Igor Nikonov.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back4.jpg); background-size: cover;">
+<h2 style="font-size: 32pt; margin-left: -1em;"><span class="hilite">Something Interesting</span></h2>
+</section>
+
+<section class="slide">
+<h2>Lightweight Updates</h2>
+
+<p>Full-featured UPDATE statement:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">UPDATE my_table
+SET col1 = val1, col2 = val2, ...
+WHERE <i>condition</i>
+
+UPDATE hits SET Title = 'Updated Title'
+WHERE EventDate = today();
+
+UPDATE wikistat SET hits = hits + 1, time = now()
+WHERE path = 'ClickHouse';
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Anton Popov.</p>
+</section>
+
+<section class="slide">
+<h2>Lightweight Updates</h2>
+
+<p>Supported for <b>MergeTree</b>, <b>ReplacingMergeTree</b>, <b>CollapsingMergeTree</b>,
+<br>including <b>Replicated</b> tables.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">CREATE TABLE hits
+(...) ENGINE = MergeTree
+SETTINGS <b style="color: green;">enable_block_number_column</b> = 1,
+         <b style="color: green;">enable_block_offset_column</b> = 1;
+
+SET allow_experimental_lightweight_update = 1;
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Anton Popov.</p>
+</section>
+
+<section class="slide">
+<h2>Lightweight Updates</h2>
+
+<p>Performance of an UPDATE is similar to
+<br/>INSERT SELECT with the same columns and conditions.</p>
+
+<p>UPDATE creates a <i>patch part</i> referencing the modified records.
+<br/>Patch parts are applied on read and during background merges.</p>
+
+<p>SELECTs performance after an update:</p>
+<img style="width: 100%" src="pictures/lwu2.png"/>
+
+<p><b style="color: green;">Two times</b> faster than on-the-fly mutations.
+<br/>Only <b style="color: green;">20%</b> overhead compared to fully updated data.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Anton Popov.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/updates.png) center/contain no-repeat;">
+</section>
+
+<section class="slide">
+<h2>Lightweight Updates</h2>
+
+<p>Performance of UPDATEs:</p>
+<img style="width: 80%" src="pictures/lwu1.png"/>
+</section>
+
+<section class="slide">
+<h2>Lightweight Updates</h2>
+
+<p>Bonus:</p>
+<pre>SET <b>lightweight_delete_mode</b> = 'lightweight_update';</pre>
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Anton Popov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Inserts Into Iceberg</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">CREATE TABLE iceberg_table_s3 ENGINE = IcebergS3(...);
+INSERT INTO iceberg_table_s3 VALUES (...);</code></p>
+
+<p>Since version <b style="color: green;">25.7</b>, we support inserts into existing Iceberg tables!</p>
+
+<p>Demo</p>
+
+<!--
+
+./clickhouse-server
+
+SHOW CREATE TABLE iceberg_table_s3;
+SELECT * FROM default.iceberg_table_s3;
+SET allow_experimental_insert_into_iceberg = 1;
+INSERT INTO iceberg_table_s3 VALUES (83653, 'Read iceberg data files by field ids');
+SELECT * FROM default.iceberg_table_s3;
+
+-->
+
+<p style="color: gray;">In the next releases:
+<br/>&mdash; creating new Iceberg tables;<br/>&mdash; creating Iceberg tables in data-lake catalogs;<br/> &mdash; background merges for Iceberg.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Konstantin Vedernikov.</p>
+</section>
+
+<section class="slide">
+<h2>More Features For Iceberg</h2>
+
+<p>Support for schema evolution with <b>complex data types</b>.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Konstantin Vedernikov.</p>
+
+<p>Support for <b>compressed</b> metadata.json files.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexander Sapin.</p>
+
+<p>Reading data files by column ids to support <b>renamed columns</b>.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Konstantin Vedernikov.</p>
+</section>
+
+<section class="slide">
+<h2>Even More Iceberg</h2>
+
+<p>Since version <b style="color: green;">25.7</b>, ClickHouse works with<br/><b>Databricks-managed</b> Iceberg tables.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">CREATE DATABASE unity_iceberg_preview
+ENGINE = DataLakeCatalog('https://dbc-0514751c-5c15.cloud.databricks.com/
+api/2.1/unity-catalog/<b style="color: green;">iceberg-rest</b>')
+SETTINGS catalog_type = 'rest', catalog_credential = '...',
+    warehouse = '...', oauth_server_uri = '...',
+    auth_scope = 'all-apis,sql'</code></p>
+
+<p>Demo</p>
+
+<!--
+
+CREATE DATABASE unity_iceberg_preview
+ENGINE = DataLakeCatalog('https://dbc-0514751c-5c15.cloud.databricks.com/api/2.1/unity-catalog/iceberg-rest')
+SETTINGS catalog_type = 'rest', catalog_credential = '695cefe8-614a-4a97-a140-46018db8c7ef:dosef2dd6253dd0223f9959011c9a98d81f2', warehouse = 'byoc_databricks', oauth_server_uri = 'https://dbc-0514751c-5c15.cloud.databricks.com/oidc/v1/token', auth_scope = 'all-apis,sql';
+
+USE unity_iceberg_preview;
+
+SHOW TABLES;
+
+SELECT
+    pickup_zip,
+    avg(fare_amount) AS avg_fare
+FROM `default.nyctaxi`
+GROUP BY pickup_zip
+ORDER BY avg_fare DESC
+LIMIT 10;
+
+-->
+</section>
+
+
+<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
+<h2><span class="hilite">Bonus</span></h2>
+</section>
+
+<section class="slide" style="background: url(pictures/back10.jpg); background-size: cover;">
+<h2><span style="color: black;"><span class="hilite">Guest Talk</span></h2>
+</section>
+
+
+<section class="slide">
+<h2>Integrations</h2>
+<p><b>ClickPipes</b> supports logging of errors into system tables</p>
+<p><b>Confluent Cloud</b> now has a fully managed connector ClickHouse connector</p>
+<p><b>Kafka Connect</b> introduced support for <b>JSON</b> data type</p>
+<p><b>Airbyte</b> ClickHouse destination v2 released</p>
+<p><b>MySQL CDC</b> in ClickPipes is in public beta</p>
+</section>
+
+<section class="slide" style="background: url(pictures/mysql.png) center/contain no-repeat;">
+</section>
+
+<section class="slide" style="background: url(pictures/wing.jpg); background-size: cover;">
+<h2>Meetups</h2>
+<p style="line-height: 1.5">
+<span class="hilite">&mdash; 🇯🇵 Tokyo, July 29</span>
+<br/><span class="hilite">&mdash; 🇮🇩 Jakarta, Aug 6</span>
+<br/><span class="hilite">&mdash; 🇰🇷 Seoul, Aug 7</span>
+<br/><span class="hilite">&mdash; 🇵🇭 Manila, Aug 13</span>
+<br/><span class="hilite">&mdash; 🇮🇱 Tel Aviv, Sept 9</span>
+<br/><span class="hilite">&mdash; 🇦🇪 Dubai, Sept 16</span>
+</p>
+</section>
+
+
+
+<section class="slide">
+<h2>Reading Corner 📖</h2>
+
+<img style="float: right; width: 30%; margin-right: -3em; image-rendering: pixelated; margin-top: -1em;" src="pictures/blog.png"/>
+<p><a href="https://clickhouse.com/blog/">https://clickhouse.com/blog/</a></p>
+
+<p style="line-height: 1.5;">
+<br/>&mdash; How we built <b>fast UPDATEs</b> in ClickHouse;
+<br/>&mdash; Customer stories: <b>OpenAI</b>, <b>Anthropic</b>, <b>Tesla</b>
+<br/>&mdash; ClickHouse's secure remote <b>MCP</b> server
+<br/>&mdash; How we made <b>MySQL CDC</b>
+<br/>&mdash; <b>LLM observability</b> with ClickHouse
+<br/>&mdash; <b>Agentic</b> analytics with Pydantic
+</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back8.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
+<h2 style="color: white; margin-left: -1em;">Q&amp;A</a></h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+
