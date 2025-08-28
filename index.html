@@ -84,7 +84,7 @@
 
     try {
       const response = await fetch(
-        "https://api.github.com/repos/ClickHouse/clickhouse-presentations/contents" +
+        "https://api.github.com/repos/ClickHouse/clickhouse-presentations/contents/" +
         (params.path || "/")
       );
       const data = await response.json();
