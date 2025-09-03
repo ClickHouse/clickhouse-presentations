@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Power of Small Optimizations</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+        code { display: block; white-space: pre; background-color: #EEE; }
+   </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>Power of Small Optimizations</h1>
+    </header>
+
+    <section class="slide" id="cover">
+        <h1 style="margin-top: 150px">Power of Small Optimizations</h1>
+    </section>
+
+    <section class="slide">
+        <h2>About me</h2>
+
+        <p>Maksim, database management systems developer.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Stories</h2>
+
+        <p>1. Concurrency.</p>
+        <p>2. High-level optimizations.</p>
+        <p>3. Low-level optimizations.</p>
+        <p>4. Algorithms.</p>
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">Concurrency</h1>
+    </section>
+
+    <section class="slide">
+        <h2>CPU Underutilization</h2>
+
+        <p>CPU underutilization in one of Tinybird biggest clusters.</p>
+        <img style="width: 100%;" src="pictures/context_lock_cpu_average_1.jpg"/>
+    </section>
+
+    <section class="slide">
+        <h2>ContextLockWait</h2>
+
+        <p>After 1 year during similar indicent we spot that <b>ContextLockWait</b> async profile event periodically increased ...</p>
+        <img style="width: 100%; height: 60%;" src="pictures/context_lock_events.jpg"/>
+    </section>
+
+    <section class="slide">
+        <h2>Stack Traces</h2>
+
+        <p>During indident we periodically dumped all stack traces to understand if all threads are blocked on lock inside Context using <b>system.stack_trace</b>.</p>
+
+        <code style="font-size:10pt;">WITH arrayMap(x -> demangle(addressToSymbol(x)), trace) AS all
+SELECT thread_name, thread_id, query_id, arrayStringConcat(all, '\n') AS res
+FROM <b>system.stack_trace</b> LIMIT 1 FORMAT Vertical;
+        </code>
+
+        <code style="font-size:10pt;">Row 1:
+──────
+thread_name: clickhouse-serv
+thread_id:   125441
+query_id:
+res:         pthread_cond_wait
+std::__1::condition_variable::wait(std::__1::unique_lock<std::__1::mutex>&)
+BaseDaemon::waitForTerminationRequest()
+DB::Server::main(/*arguments*/)
+Poco::Util::Application::run()
+DB::Server::run()
+Poco::Util::ServerApplication::run(int, char**)
+mainEntryClickHouseServer(int, char**)
+main
+__libc_start_main
+_start
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Profile Events</h2>
+
+        <p>Per query profile events:</p>
+
+        <code style="font-size:10pt;">...
+
+M(<b>GlobalThreadPoolJobs</b>,
+  "Counts the number of jobs that have been pushed to the global thread pool.",
+  ValueType::Number) \
+
+M(<b>GlobalThreadPoolLockWaitMicroseconds</b>,
+  "Total time threads have spent waiting for locks in the global thread pool.",
+  ValueType::Microseconds) \
+
+M(<b>GlobalThreadPoolJobWaitTimeMicroseconds</b>,
+  "Measures the elapsed time from when a job is scheduled in the thread pool to when it is picked up
+  for execution by a worker thread. This metric helps identify delays in job processing, indicating
+  the responsiveness of the thread pool to new tasks.",
+  ValueType::Microseconds) \
+
+M(<b>LocalThreadPoolLockWaitMicroseconds</b>,
+  "Total time threads have spent waiting for locks in the local thread pools.",
+   ValueType::Microseconds) \
+
+...
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>ContextLockWaitMicroseconds</h2>
+
+        <p>We added <b>ContextLockWaitMicroseconds</b> event to <b>ProfileEvents</b> in <a href="https://github.com/ClickHouse/ClickHouse/pull/55029">pull request</a>.</p>
+
+        <code style="font-size:10pt;">...
+
+M(ContextLock,
+    "Number of times the lock of Context was acquired or tried to acquire. This is global lock.",
+    ValueType::Number) \
+
+M(<b>ContextLockWaitMicroseconds</b>,
+    "Context lock wait time in microseconds",
+    ValueType::Microseconds) \
+
+...
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Benchmark ContextLock wait time</h2>
+
+        <p style="margin-bottom: 8px;">Example query:</p>
+        <code style="font-size:10pt;">SELECT UserID, count(*) FROM (SELECT * FROM hits_clickbench LIMIT 10) GROUP BY UserID
+0 rows in set. Elapsed: 0.005 sec.</code>
+        <p style="font-size: 8pt;"></p>
+        <p style="margin-bottom: 8px;">Run benchmark:</p>
+<code style="font-size:10pt;">clickhouse-benchmark --query="SELECT UserID, count(*) FROM (SELECT * FROM hits_clickbench LIMIT 10)
+GROUP BY UserID" --concurrency=200</code>
+        <p style="font-size: 8pt;"></p>
+        <p style="margin-bottom: 8px;">Check results:</p>
+<code style="font-size:10pt;">SELECT quantileExact(0.5)(lock_wait_milliseconds), max(lock_wait_milliseconds) FROM
+(
+    SELECT (ProfileEvents['ContextLockWaitMicroseconds'] / 1000.0) AS lock_wait_milliseconds
+    FROM system.query_log WHERE lock_wait_milliseconds > 0
+)
+
+┌─<b>quantileExact(0.5)(lock_wait_milliseconds)</b>─┬─<b>max(lock_wait_milliseconds)</b>──┐
+│                                     <b>17.452</b> │                      <b>382.326</b> │
+└────────────────────────────────────────────┴──────────────────────────────┘</code>
+    </section>
+
+    <section class="slide">
+        <h2>Concurrency</h2>
+
+        <img style="width: 100%;" src="pictures/context_lock_context_architecture.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Concurrency</h2>
+
+        <p><b>ContextSharedPart</b> is responsible for storing and providing access to global shared objects that are shared between all sessions and queries, for example: Thread pools,
+            Server paths, Global trackers, Clusters information.</p>
+
+        <p><b>Context</b> is responsible for storing and providing access to query or session-specific objects, for example: query settings, query caches, query current database.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Concurrency</h2>
+
+        <p>During query execution, ClickHouse can create a lot of Contexts because each subquery in ClickHouse can have unique settings. For example:</p>
+        <code style="font-size:10pt;">SELECT id, value
+FROM (
+    SELECT id, value
+    FROM test_table
+    SETTINGS max_threads = 16
+)
+WHERE id > 10
+SETTINGS max_threads = 32
+        </code>
+
+        <p>A large number of low-latency, concurrent queries with many subqueries will create a lot of <b>Contexts</b> per query, and the problem becomes even bigger.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Concurrency</h2>
+
+        <img style="width: 100%;" src="pictures/context_lock_context_architecture.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Concurrency</h2>
+
+        <p>The problem was that a single mutex was used for most of the synchronization between <b>Context</b> and <b>ContextSharedPart</b>, even when we worked with objects local to <b>Context</b>.<p>
+
+    </section>
+
+    <section class="slide">
+        <h2>Concurrency</h2>
+
+        <p>We did a big refactoring, replacing a single global mutex with two read-write mutexes. One global read-write mutex for <b>ContextSharedPart</b>
+            and one local read-write mutex for each <b>Context</b>.</p>
+        <p>We used read-write mutexes because most of the time we do a lot
+            of concurrent reads (for example read settings or some path) and rarely concurrent writes.</p>
+        <p>In many places, we completely got rid of synchronization where it was used for initialization and used <b>call_once</b> for objects that are initialized only once.</p>
+        <p><a href="https://github.com/ClickHouse/ClickHouse/pull/55121">https://github.com/ClickHouse/ClickHouse/pull/55121</a></p>
+    </section>
+
+    <section class="slide">
+        <h2>Concurrency</h2>
+
+        <img style="width: 100%;" src="pictures/context_lock_context_architecture_after_refactoring.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Concurrency</h2>
+
+        <p><b>ContextSharedPart</b> and <b>Context</b> both contain a lot of fields and it is very hard to properly split synchronization between them manually.</p>
+        <p>We added clang Thread Safety Analysis annotations to all fields <a href="https://clang.llvm.org/docs/ThreadSafetyAnalysis.html">https://clang.llvm.org/docs/ThreadSafetyAnalysis.html</a></p>
+
+        <code style="font-size:14pt;">clang -c -Wthread-safety example.cpp</code>
+        <p style="font-size: 10pt;"></p>
+        <p><a href="https://github.com/ClickHouse/ClickHouse/pull/55278">https://github.com/ClickHouse/ClickHouse/pull/55278</a></p>
+    </section>
+
+    <section class="slide">
+        <h2>Performance Improvements</h2>
+
+        <p>Benchmark:</p>
+        <code style="font-size: 12pt;">clickhouse benchmark -r --ignore-error \
+--concurrency=500 \
+--timelimit 600 \
+--connect_timeout=20 &lt; queries.txt</code>
+
+        <p style="font-size: 10pt;"></p>
+
+        <p>Results:<br>Before ~200 QPS. After ~600 QPS (<b>~3x better</b>).<br>
+            Before CPU utilization of only ~20%. After ~60% (<b>~3x better</b>).<br>
+            Before median query time 1s. After ~0.6s (<b>~2x better</b>).<br>
+            Before slowest queries took ~75s. After ~6s (<b>~12x better</b>).
+        </p>
+    </section>
+
+    <section class="slide">
+        <h2>Performance Improvements</h2>
+
+        <p>We also were able to fully utilize ClickHouse instance with <b>--concurrency=1000</b>.</p>
+
+        <p>Results:<br>
+            ~1,000 QPS<br>
+            ~95-96% CPU utilization<br>
+        </p>
+
+        <p>More information about this optimization
+            can be found in our blog <a href="https://www.tinybird.co/blog-posts/clickhouse-lock-contention">Resolving a year-long ClickHouse lock contention</a>.</p>
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">High-level optimizations</h1>
+    </section>
+
+    <section class="slide">
+        <h2>High-level optimizations</h2>
+
+        <p>In ClickHouse, as in most other SQL databases, query execution is divided into multiple stages:</p>
+        <p>1. Query parsing.</p>
+        <p>2. Query analysis.</p>
+        <p>3. Build and optimize a logical query plan.</p>
+        <p>4. Build and optimize a physical query plan.</p>
+        <p>5. Execute physical query plan.</p>
+        <p>One of the most important places for high level optimizations is Query Plan optimization logic.</p>
+    </section>
+
+    <section class="slide">
+        <h2>JOIN predicate pushdown</h2>
+
+        <p>Let's take a look at the following query plan:</p>
+        <code style="font-size: 12pt;">EXPLAIN
+SELECT * FROM test_table_1 AS lhs
+INNER JOIN test_table_2 AS rhs ON <b>lhs.id = rhs.id</b>
+WHERE <b>test_table_1.id = 5</b>
+SETTINGS optimize_move_to_prewhere = 0
+
+┌─explain──────────────────────────────────────────────────────────────────────┐
+│ Expression ((Project names + (Projection + )))                               │
+│   Join (JOIN FillRightFirst)                                                 │
+│     <b>Filter (( + (JOIN actions + Change column names to column identifiers)))</b> │
+│       ReadFromMergeTree (default.test_table_1)                               │
+│     Expression ((JOIN actions + Change column names to column identifiers))  │
+│       ReadFromMergeTree (default.test_table_2)                               │
+└──────────────────────────────────────────────────────────────────────────────┘</code>
+    </section>
+
+    <section class="slide">
+        <h2>JOIN predicate pushdown</h2>
+
+        <p>Problem was that simple version of predicate pushdown optimization was used for JOINs.</p>
+        <p>It did not consider equivalence classes of JOINed columns (that is, equivalent columns after the JOIN is performed).</p>
+
+        <p>In <a href="https://github.com/ClickHouse/ClickHouse/pull/61216">pull request</a>, we introduced a more complex analysis of predicates
+            that uses equivalence classes and can transform predicates that are applied
+            to one side of JOIN to predicates that can be applied to another side of JOIN.</p>
+
+        <p>In addition, the predicate will be split into different parts and only safe parts will be pushed down, if necessary.</p>
+    </section>
+
+    <section class="slide">
+        <h2>JOIN predicate pushdown</h2>
+
+        <p>Let's take a look at query plan of the same query as before after the optimization:</p>
+        <code style="font-size: 12pt;">EXPLAIN
+SELECT * FROM test_table_1 AS lhs
+INNER JOIN test_table_2 AS rhs ON <b>lhs.id = rhs.id</b>
+WHERE <b>test_table_1.id = 5</b>
+SETTINGS optimize_move_to_prewhere = 0
+
+┌─explain──────────────────────────────────────────────────────────────────────┐
+│ Expression ((Project names + (Projection + )))                               │
+│   Join (JOIN FillRightFirst)                                                 │
+│     <b>Filter (( + (JOIN actions + Change column names to column identifiers)))</b> │
+│       ReadFromMergeTree (default.test_table_1)                               │
+│     <b>Filter (( + (JOIN actions + Change column names to column identifiers)))</b> │
+│       ReadFromMergeTree (default.test_table_2)                               │
+└──────────────────────────────────────────────────────────────────────────────┘</code>
+        <p>Now, the predicate is pushed to both the LEFT and RIGHT sides of the JOIN.</p>
+    </section>
+
+    <section class="slide">
+        <h2>JOIN predicate pushdown</h2>
+
+        <p>Performance improvement is potentially infinite, easily up to 100x-200x. Here is performance tests results from CI:</p>
+
+        <img style="width: 80%; margin: 0 auto; display: block;" src="pictures/join_predicate_push_down_equivalent_classes.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>JOIN OUTER to INNER</h2>
+
+        <p>In <a href="https://github.com/ClickHouse/ClickHouse/pull/62907">pull request</a>, we introduced another optimization that allows ClickHouse to automatically convert an OUTER JOIN to an INNER JOIN
+            if the predicate after JOIN filters all non-joined rows with default values.</p>
+
+        <p>This technique allows for additional optimization opportunities because after the JOIN is converted from OUTER to INNER,
+            we can apply predicate pushdown in more scenarios.</p>
+    </section>
+
+    <section class="slide">
+        <h2>JOIN OUTER to INNER</h2>
+
+        <p>Let's take a look at the following query plan before the optimization:</p>
+        <code style="font-size: 12pt;">EXPLAIN actions = 1
+SELECT * FROM test_table_1 AS lhs
+LEFT JOIN test_table_2 AS rhs ON lhs.id = rhs.id
+WHERE test_table_2.id = 5
+
+┌─explain─────────────────────────────────────────────┐
+│ Expression ((Project names + Projection))           │
+│   Filter ((WHERE + DROP unused columns after JOIN)) │
+│     Join (JOIN FillRightFirst)                      │
+│     Type: <b>LEFT</b>                                      │
+│     Strictness: ALL                                 │
+│     Algorithm: HashJoin                             │
+│     Clauses: [(__table1.id) = (__table2.id)]        │
+│     ...                                             │
+└─────────────────────────────────────────────────────┘</code>
+    </section>
+
+    <section class="slide">
+        <h2>JOIN OUTER to INNER</h2>
+
+        <p>After optimization, the query plan is:</p>
+        <code style="font-size: 12pt;">EXPLAIN actions = 1
+SELECT * FROM test_table_1 AS lhs
+LEFT JOIN test_table_2 AS rhs ON lhs.id = rhs.id
+WHERE test_table_2.id = 5
+
+┌─explain────────────────────────────────────────┐
+│ Expression ((Project names + (Projection + ))) │
+│   Join (JOIN FillRightFirst)                   │
+│   Type: <b>INNER</b>                                  │
+│   Strictness: ALL                              │
+│   Algorithm: HashJoin                          │
+│   Clauses: [(__table1.id) = (__table2.id)]     │
+│   ...                                          │
+└────────────────────────────────────────────────┘</code>
+    </section>
+
+    <section class="slide">
+        <h2>JOIN predicate pushdown</h2>
+
+        <p>Performance improvement is potentially infinite, easily up to 100x-200x. Here is performance tests results from CI:</p>
+
+        <img style="width: 80%; margin: 0 auto; display: block;" src="pictures/join_outer_to_inner.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Query plan optimization</h2>
+
+        <p>In general all such query plan optimizations work great with each other, so when one optimization is added it can improve performance of a huge range
+            of queries not only by itself, but also with combination with other optimizations.</p>
+        <p>OUTER to INNER JOIN conversion -> more possibilities for JOIN predicate pushdown</p>
+        <p>More information about this optimizations
+            can be found in our blog <a href="https://www.tinybird.co/blog-posts/clickhouse-joins-improvements">ClickHouse JOINs... 100x faster</a>.</p>
+    </section>
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">Low-level optimizations</h1>
+    </section>
+
+    <section class="slide">
+        <h2>Low-level optimizations</h2>
+
+        <p>In December 2023, during the development of some ClickHouse features, when I ran some queries that read a lot of String columns,</p>
+        <p>I noticed in the <b>perf-top</b> and flame graphs that we can spend around 20-40% of query execution time on strings deserialization.</p>
+        <p>I knew that string deserialization place was already heavily optimized in ClickHouse, but I decided to dig deeper.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Low-level optimizations</h2>
+
+        <p>In <b>perf-top</b>, I saw something like this:</p>
+
+        <code style="font-size: 10pt;">Samples: 1M of event 'cycles', 4000 Hz, Event count (approx.): 756969039682 lost: 0/0 drop: 0/17041
+Overhead  Shared Object                   Symbol
+  39.00%  clickhouse                      <b>[.] DB::deserializeBinarySSE2&lt;1&gt;</b>
+  15.12%  clickhouse                      [.] DB::PODArrayBase&lt;1ul, 4096ul&gt;::resize&lt;&gt;
+  13.57%  clickhouse                      [.] DB::PODArrayDetails::byte_size
+   9.36%  clickhouse                      [.] LZ4::(anonymous namespace)::decompressImpl&lt;16ul, true&gt;
+   4.36%  [kernel]                        [k] copy_user_generic_string
+   2.60%  clickhouse                      [.] DB::FunctionStringOrArrayToT::executeImpl
+   2.55%  clickhouse                      [.] CityHash_v1_0_2::CityHash128WithSeed
+   2.31%  clickhouse                      [.] LZ4::(anonymous namespace)::decompressImpl&lt;16ul, false&gt;
+   1.40%  clickhouse                      [.] memcpy
+   1.15%  clickhouse                      [.] DB::findExtremeImplAVX2
+   0.52%  [kernel]                        [k] filemap_get_read_batch
+   0.52%  clickhouse                      [.] LZ4::(anonymous namespace)::decompressImpl&lt;8ul, true&gt;
+   0.40%  clickhouse                      [.] LZ4::(anonymous namespace)::decompressImpl&lt;32ul, false&gt;
+        </code>
+    </section>
+
+
+    <section class="slide">
+        <h2>Low-level optimizations</h2>
+
+        <p>Most of the time is spent in <b>DB::deserializeBinarySSE2</b>, and it is expected. What is not expected that we see
+        <b>PODArray::resize</b> and <b>PODArray::byte_size</b> methods. If you check the <b>DB::deserializeBinarySSE2</b> assembly,
+        you can notice that the <b>PODArray::resize</b> function is called from it, and that function call is not inlined.</p>
+
+        <code style="font-size: 10pt;">...
+
+0.32 │    │  inc    %r13
+1.25 │    │  mov    %r13,(%rax)
+5.19 │    │  add    $0x8,%rax
+0.02 │    │  mov    %rax,0x8(%rbp)
+0.23 │    │  mov    0x30(%rsp),%r12
+0.36 │    │  mov    %r12,%rdi
+0.14 │    │  mov    %r13,%rsi
+2.67 │    │→ <b>callq  DB::PODArrayBase&lt;1ul, 4096ul, Allocator&lt;false, false&gt;, 63ul, 64ul&gt;::resize&lt;&gt;</b>
+2.95 │    │  mov    0x28(%rsp),%rdx
+1.70 │    │  test   %rdx,%rdx
+1.51 │    │↑ je     51
+0.00 │    │  lea    0x11(%r15),%rax
+
+...</code>
+    </section>
+
+
+    <section class="slide">
+        <h2>Low-level optimizations</h2>
+
+        <p>If we check the <b>PODArray::resize</b> assembly, we will notice it calls <b>PODArray::byte_size</b> function
+            and we can also see that <b>PODArray::resize</b> function call overhead is high.</p>
+
+        <code style="font-size: 10pt;">...
+
+ 0.10 │104:   mov   $0x1,%esi
+ 0.71 │       mov   %r14,%rdi
+ 5.92 │     → <b>callq DB::PODArrayDetails::byte_size</b>
+ 5.63 │       add   %r12,%rax
+ 0.10 │       mov   %rax,0x8(%rbx)
+30.30 │       pop   %rbx
+ 0.76 │       pop   %r12
+ 1.96 │       pop   %r13
+ 4.42 │       pop   %r14
+ 2.89 │       pop   %r15
+11.24 │     ← retq
+
+...
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Low-level optimizations</h2>
+
+        <p>In C++ code <b>deserializeBinarySSE2</b> function looked like this:</p>
+
+<code style="font-size: 8pt;">void deserializeBinarySSE2(ColumnString::Chars & data, ColumnString::Offsets & offsets, ReadBuffer & istr, size_t limit)
+{
+    size_t offset = data.size();
+    for (size_t i = 0; i &lt; limit; ++i)
+    {
+        if (istr.eof())
+            break;
+
+        UInt64 size;
+        readVarUInt(size, istr);
+        ...
+
+        <b>data.resize(offset);</b>
+
+        if (size)
+        {
+#ifdef __SSE2__
+            /// An optimistic branch in which more efficient copying is possible.
+            if (offset + 16 * UNROLL_TIMES &lt;= data.capacity() &&
+                istr.position() + size + 16 * UNROLL_TIMES &lt;= istr.buffer().end())
+            {
+                ...
+            }
+            else
+#endif
+            {
+                istr.readStrict(reinterpret_cast&lt;char*&gt;(&data[offset - size - 1]), size);
+            }
+        }
+
+        data[offset - 1] = 0;
+    }
+}</code>
+    </section>
+
+    <section class="slide">
+        <h2>Low-level optimizations</h2>
+
+        <p>In this specific function, we work with <b>PODArray</b> as just a characters buffer, and we can manually control
+            the resize process and resize buffer with some constant resize factor, for example, 2.</p>
+        <p>We also use the <b>resize_exact</b> function to reduce memory allocation size.
+            So inside the deserialization loop, we replace:</p>
+
+<code style="font-size: 12pt;">data.resize(offset);</code>
+
+with:
+
+<code style="font-size: 12pt;">if (unlikely(offset &gt; data.size()))
+    data.resize_exact(roundUpToPowerOfTwoOrZero(std::max(offset, data.size() * 2)));</code>
+    </section>
+
+    <section class="slide">
+        <h2>Performance improvements</h2>
+
+        <p>As a result, we have such performance improvement for a query that I used for the optimization test. Around <b>20%</b> improvement.</p>
+
+        <p>Before:</p>
+<code style="font-size: 12pt;">SELECT max(length(value)) FROM test_table FORMAT Null
+
+0 rows in set. Elapsed: 0.855 sec. Processed 1.50 billion rows, 19.89 GB
+(1.75 billion rows/s., 23.27 GB/s.)
+Peak memory usage: 1.24 MiB.</code>
+
+        <p style="font-size: 10pt;"></p>
+        <p>After:</p>
+<code style="font-size: 12pt;">SELECT max(length(value)) FROM test_table FORMAT Null
+
+0 rows in set. Elapsed: 0.691 sec. Processed 1.50 billion rows, 19.89 GB
+(2.17 billion rows/s., 28.79 GB/s.)
+Peak memory usage: 1.17 MiB.</code>
+    </section>
+
+    <section class="slide">
+        <h2>Performance improvements</h2>
+
+        <p>Results of performance tests from ClickHouse CI:</p>
+
+<table style="font-size: 10pt;">
+    <thead>
+        <tr>
+            <th>Query</th>
+            <th>Old (s)</th>
+            <th>New (s)</th>
+            <th>Ratio of speedup(-) or slowdown(+)</th>
+            <th>Relative difference (new - old) / old</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>SELECT count() FROM empty_strings WHERE NOT ignore(s)</td>
+            <td>0.449</td>
+            <td>0.27</td>
+            <td>-1.662x</td>
+            <td><b>-0.399</b></td>
+        </tr>
+        <tr>
+            <td>select anyHeavy(OpenstatSourceID) from hits_100m_single where OpenstatSourceID != '' group by intHash32(UserID) % 1000000 FORMAT Null</td>
+            <td>0.088</td>
+            <td>0.066</td>
+            <td>-1.328x</td>
+            <td><b>-0.247</b></td>
+        </tr>
+        <tr>
+            <td>select anyHeavy(OpenstatCampaignID) from hits_100m_single where OpenstatCampaignID != '' group by intHash32(UserID) % 1000000 FORMAT Null</td>
+            <td>0.088</td>
+            <td>0.066</td>
+            <td>-1.32x</td>
+            <td><b>-0.243</b></td>
+        </tr>
+        <tr>
+            <td>SELECT count() FROM hits_100m_single WHERE NOT ignore(format('{}Hello{}', MobilePhoneModel, PageCharset))</td>
+            <td>0.321</td>
+            <td>0.28</td>
+            <td>-1.147x</td>
+            <td><b>-0.129</b></td>
+        </tr>
+        <tr>
+            <td>SELECT str FROM test_full_10 FORMAT Null</td>
+            <td>0.074</td>
+            <td>0.058</td>
+            <td>-1.282x</td>
+            <td><b>-0.22</b></td>
+        </tr>
+        <tr>
+            <td>SELECT count() FROM hits_100m_single WHERE NOT ignore(substring(PageCharset, 1, 2))</td>
+            <td>0.135</td>
+            <td>0.116</td>
+            <td>-1.16x</td>
+            <td><b>-0.138</b></td>
+        </tr>
+    </tbody>
+</table>
+    </section>
+
+    <section class="slide">
+        <h2>Performance improvements</h2>
+
+        <p>As a result, this optimization improved performance for queries that spend a lot of execution time on string deserialization by <b>10-20%</b> on average.</p>
+        <p>For some queries, even for <b>60%</b>.</p>
+
+        <p><a href="https://github.com/ClickHouse/ClickHouse/pull/57717">https://github.com/ClickHouse/ClickHouse/pull/57717</a></p>
+    </section>
+
+
+    <section class="slide">
+        <h1 style="margin-top: 150px;">Algorithms</h1>
+    </section>
+
+    <section class="slide">
+        <h2>Abstractions and Algorithms</h2>
+
+        <p>There is no silver bullet, or best algorithm for any task.</p>
+        <p>Try to choose the fastest possible algorithm/algorithms for <b>your specific task</b>.</p>
+        <p>Performance must be evaluated on real data.</p>
+        <p>Most of the algorithms are affected by data distribution.</p>
+    </section>
+
+    <section class="slide">
+        <h2>MergeTree</h2>
+
+        <p>MergeTree is default ClickHouse table engine, stores sorted columns data in parts that are periodically merged.</p>
+        <p>Data is sorted by PRIMARY KEY.</p>
+        <p>Primary key sparse index is used to improve performance of SELECT queries.</p>
+        <p>Additionally allows to partition data by PARTITION KEY.</p>
+        <p>Simillar to LSM tree, but simpler. For example DELETEs, UPDATEs are not supported without data rewrite.</p>
+        <p><a href="https://clickhouse.com/docs/engines/table-engines/mergetree-family/mergetree">MergeTree documentation</a></p>
+    </section>
+
+    <section class="slide">
+        <h2>MergeTree FINAL</h2>
+
+        <p>MergeTree is actually a family of table engines. There are ReplacingMergeTree, AggregatingMergeTree, SummingMergeTree, etc.</p>
+        <p>Each engine provides special logic that is applied to data during merge process.</p>
+        <p>Allows to perform deduplication, UPDATEs, aggregation, summation.</p>
+        <p>FINAL can be specified to apply this special logic during SELECT query after reading data from table.</p>
+        <code style="font-size:16pt;">SELECT * FROM table FINAL;</code>
+    </section>
+
+    <section class="slide">
+        <h2>MergeTree FINAL example</h2>
+
+        <p>Let's create a ReplacingMergeTree table and insert some data:</p>
+
+<code style="font-size: 12pt;">CREATE TABLE test_table (id UInt64, value String)
+ENGINE=<b>ReplacingMergeTree</b> ORDER BY id;
+
+INSERT INTO test_table VALUES (0, 'Value_initial');
+INSERT INTO test_table VALUES (0, 'Value_updated');
+</code>
+
+<p style="margin: 8px;">Without FINAL:</p>
+
+<code style="font-size: 12pt;">SELECT id, value FROM test_table;
+
+┌─id─┬─value─────────┐
+│  0 │ Value_updated │
+│  0 │ Value_initial │
+└────┴───────────────┘
+</code>
+
+<p style="margin: 8px;">With FINAL:</p>
+
+<code style="font-size: 12pt;">SELECT * FROM test_table FINAL;
+
+┌─id─┬─value─────────┐
+│  0 │ Value_updated │
+└────┴───────────────┘
+</code>
+    </section>
+
+
+    <section class="slide">
+        <h2>MergeTree FINAL</h2>
+
+        <p>Problem was that during SELECT query we need to read all requested data from table, apply FINAL logic to all this data before returning result from reading stage.</p>
+        <p>Applying FINAL logic to a lot of data is very slow, because of huge decrease in parallelization of reading stage.</p>
+        <p>Special FINAL logic can be very CPU intensive and additional data copying is required, logic is very simillar to Merge stage of MergeSort algorithm.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Skip FINAL logic partitions</h2>
+
+        <p>In <a href="https://github.com/ClickHouse/ClickHouse/pull/58218">pull request</a>, we added optimization to skip FINAL logic between partitions
+            if MergeTree PARTITION KEY contains columns from PRIMARY KEY.</p>
+
+        <p>Example table:</p>
+        <code style="font-size: 16pt;">CREATE TABLE test_table_partitioned (id UInt64, value String)
+ENGINE=ReplacingMergeTree
+ORDER BY id
+PARTITION BY id % 10;</code>
+    </section>
+
+    <section class="slide">
+        <h2>Skip FINAL logic between partitions</h2>
+
+        <p>Performance improvement is potentially infinite, easily up to 20x-30x. Here is performance tests results from CI:</p>
+
+        <img style="width: 100%;" src="pictures/merge_tree_final_skip_between_partitions.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>FINAL analyze primary key ranges</h2>
+
+        <p>In another <a href="https://github.com/ClickHouse/ClickHouse/pull/35961">pull request</a> we introduced optimization that
+            adds PRIMARY KEY ranges analysis to apply FINAL only to those ranges where PRIMARY KEY intersects and skip for all other ranges.</p>
+        <p>Implementation is very simillar to <a href="https://en.wikipedia.org/wiki/Sweep_line_algorithm">Sweep line algorithm</a>, with additional ClickHouse specific implementation details.</p>
+        <p>In case when amount of duplicate values with same primary key is low, performance will be almost the same as without FINAL.</p>
+    </section>
+
+    <section class="slide">
+        <h2>FINAL analyze primary key ranges</h2>
+
+        <p>Performance improvement is potentially infinite, easily up to 20x-30x. Here is performance tests results from CI:</p>
+
+        <img style="width: 100%;" src="pictures/merge_tree_final_ranges_analysis.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Conclusion</h2>
+
+        <p>Sometimes, you can achieve significant performance improvement not only by using some high-level complex optimizations
+            but also by using better algorithms and data structures for your specific tasks or by small source code level optimizations.</p>
+
+        <p>Blog post <a href="https://maksimkita.com/blog/power-of-small-optimizations.html">https://maksimkita.com/blog/power-of-small-optimizations.html</a></p>
+    </section>
+
+    <section class="slide">
+        <h2>Questions?</h2>
+    </section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
