@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse For AI</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 20pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         table, tr, td { border: 0; }
+         .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse For AI</h1>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/title.jpg); background-size: cover; background-position: center;">
+        <img src="pictures/yellow-logo.svg" style="width: 8%; position: absolute; right: 25px; top: 20px;" />
+        <h1 style="margin-top: 0px; margin-left: -50px; line-height: 150%; font-size: 42pt;">ClickHouse For AI</h1>
+    </section>
+
+<section class="slide">
+<h2>About Me</h2>
+<p>&mdash; I'm not an ML/AI expert.</p>
+<p>&mdash; I like ClickHouse.</p>
+<p style="margin-top: 2em;">So, when I do AI &mdash; I do it in ClickHouse!</p>
+</section>
+
+<section class="slide">
+<h2>What Can We Do?</h2>
+<p>&mdash; run AI models inside ClickHouse.</p>
+<p>&mdash; <b style="color: green;">inference</b>, not training.</p>
+<p>&mdash; apply ClickHouse for semantic search.</p>
+</section>
+
+<section class="slide">
+<h2>User Defined Functions</h2>
+<p><code style="font-size: 16pt; line-height: 1.5;">-- user defined regular functions:
+<b style="color: green;">SELECT myFunction(args)</b>
+
+-- user defined table functions:
+SELECT * FROM executable('script', (SELECT ...))
+
+-- user defined dictionary sources:
+CREATE DICTIONARY my_dict ... ENGINE = Executable('script')
+SELECT dictGet('my_dict', 'attr', key);
+</code></p>
+</section>
+
+<section class="slide">
+<h2>User Defined Functions</h2>
+<p>1. SQL User Defined Functions:</p>
+<p><code style="font-size: 16pt; line-height: 1.5;">CREATE FUNCTION <b>countSpaces</b> AS
+  (str) -> length(str) - length(replaceAll(str, ' ', ''));
+
+SELECT <b>countSpaces</b>('Hello, world!');</code></p>
+<p>&mdash; work for simple expressions;
+<br/>&mdash; no recursion, no complex logic;
+<br/>&mdash; lightweight and easy to use;
+</p>
+<p style="color: gray;">Not suitable for ML.</p>
+</section>
+
+<section class="slide">
+<h2>Executable User Defined Functions</h2>
+<p>2. Executable UDFs:</p>
+<p><code style="font-size: 16pt; line-height: 1.5;">cat /var/lib/clickhouse/user_scripts/countSpaces.py
+
+#!/usr/bin/python3
+
+import sys
+
+for arg in sys.stdin:
+    print(arg.count(' '))
+</code></p>
+</section>
+
+<section class="slide">
+<h2>Executable User Defined Functions</h2>
+<p>2. Executable UDFs:</p>
+<p><code style="font-size: 16pt; line-height: 1.5;">cat /etc/clickhouse-server/my_function.yaml
+
+function:
+    type: executable
+    name: countSpaces
+    format: TabSeparated
+    command: 'countSpaces.py'
+    return_type: UInt32
+    argument:
+        type: String
+</code></p>
+</section>
+
+<section class="slide">
+<h2>Executable User Defined Functions</h2>
+<p>A script is run for every block of data.
+<br/>The block of function arguments is written into stdin of the script.<br/>
+The block of returned values is read from the stdout of the script.</p>
+<p>Nice stuff:</p>
+<p>&mdash; batching: the script is run for a block of (65k rows by default);</p>
+<p>&mdash; parallelism: if a query is processing by multiple threads,
+<br/>&emsp; multiple scripts will be run in parallel;</p>
+<p>&mdash; configuration is reloaded in runtime;</p>
+</section>
+
+<section class="slide">
+<h2>User Defined Functions</h2>
+<p><p><code style="font-size: 16pt; line-height: 1.5;">SELECT countSpacesSQL(district) FROM uk_price_paid;
+-- 1.30 billion rows/s.
+
+SELECT countSpacesExecutable(district) FROM uk_price_paid;
+-- 40.70 million rows/s.
+</code></p>
+<p>&mdash; allow any programming languages;
+<br/>&mdash; run in isolated process;
+<br/>&mdash; slower due to data marshalling;
+</p>
+<p style="color: green;">Maybe suitable for ML?</p>
+</section>
+
+<section class="slide">
+<h2>Pooling</h2>
+<p>type: executable
+<br/>&mdash; launch the script for every block of data, wait for it to finish.</p>
+
+<p>type: executable_pool
+<br/>&mdash; launch the script, keep it running indefinitely,
+<br/>&emsp; pipe the blocks and read the results.</p>
+
+<p>Avoids initialization cost.
+<br/>Allows to limit the number of concurrent processes.</p>
+</section>
+
+<section class="slide">
+<h2>Pooling</h2>
+<table>
+    <thead>
+        <th>executable</th>
+        <th style="padding-left: 1em;">executable_pool</th>
+    </thead>
+    <tr>
+        <td style="background-color: #FEE;">
+<pre>#!/usr/bin/python3
+
+import sys
+
+for arg in sys.stdin:
+    print(arg.count(' '))</pre>
+        </td>
+        <td style="background-color: #EFE; padding-left: 1em;">
+<pre>#!/usr/bin/python3
+
+import sys
+
+for arg in sys.stdin:
+    print(arg.count(' '))
+    <b style="color: green;">sys.stdout.flush()</b></pre>
+        </td>
+    </tr>
+    <tr>
+        <td>40.70 million rows/s.</td>
+        <td>402.77 million rows/s.</td>
+    </tr>
+</table>
+</section>
+
+<section class="slide">
+<h2>Chunking</h2>
+<table>
+    <thead>
+        <th>send_chunk_header: 0</th>
+        <th style="padding-left: 1em;">send_chunk_header: 1</th>
+    </thead>
+    <tr>
+        <td style="background-color: #FEE; padding-right: 2em;">
+<pre style="font-size: 16pt; line-height: 1.25;">#!/usr/bin/python3
+
+import sys
+
+for arg in sys.stdin:
+    print(arg.count(' '))
+    sys.stdout.flush()</pre>
+        </td>
+        <td style="background-color: #EFE; padding-left: 1em;">
+<pre style="font-size: 16pt; line-height: 1.25;">#!/usr/bin/python3
+
+import sys
+
+for <b style="color: green;">chunk_size</b> in sys.stdin:
+    <b style="color: green;">for i in range(0, int(chunk_size)):</b>
+        arg = sys.stdin.readline()
+        print(arg.count(' '))
+    sys.stdout.flush()</pre>
+        </td>
+    </tr>
+    <tr>
+        <td>402.77 million rows/s.</td>
+        <td>663.06 million rows/s.</td>
+    </tr>
+</table>
+</section>
+
+<section class="slide">
+<h2>Executable User Defined Functions</h2>
+<p>How to achieve the maximum performance?</p>
+<p>&mdash; pooling;</p>
+<p>&mdash; chunking;</p>
+<p>&mdash; use a good serialization format<br/>&emsp; (Arrow, RowBinary, Native);</p>
+<p>&mdash; write them in Rust?</p>
+<p>Then, maybe, they will work almost as fast as native functions.</p>
+<p style="color: green;">Good news: ML models are slow!</p>
+</section>
+
+<section class="slide">
+<h2>Running ML Models</h2>
+<p>Let's do <b>semantic text search</b> with <b>vector embeddings</b>.</p>
+<p>What is semantic search?</p>
+<p>&mdash; classic text search finds documents containing the search terms<br/>&emsp; (in various forms);</p>
+<p>&mdash; semantic text search finds documents on the requested topic,<br/>&emsp; similar to the request;</p>
+</section>
+
+<section class="slide">
+<h2>Running ML Models</h2>
+<p>Let's do <b>semantic text search</b> with <b>vector embeddings</b>.</p>
+<p>What is a vector embedding?</p>
+<p>&mdash; a function to transform anything to a vector<br/>
+&emsp; (e.g., 1024 floating point numbers)</p>
+<p>&emsp; in a way that the <b style="color: green;">distance</b> in the vector space
+<br/>&emsp; corresponds to the <b style="color: green;">similarity</b> of the objects.</p>
+</section>
+
+<section class="slide">
+<h2>Running ML Models</h2>
+<p><code style="white-space: pre-wrap; font-size: 10px; margin-top: -3em;"><span style="font-size: 14pt;">embedding('Migrating from Redshift to ClickHouse') =</span>
+
+[-0.018794611, -0.10135632, -0.008416179, -0.003053078, 0.009970683, 0.029340643, 0.017656777, -0.012812201, -0.04267699, -0.065484576, 0.034646545, -0.0057870983, -0.04671521, -0.019327724, -0.015623599, 0.02375245, -0.0048829876, 0.0035244937, -0.01839906, -0.0392176, -0.05388988, -0.06356651, -0.04919048, 0.013618819, 0.008696082, -0.019914653, -0.056700975, -0.003560135, -0.03030403, -0.07131638, 0.0014971796, -0.0024865938, 0.004797256, -0.04198271, 0.025843944, 0.020475548, 0.008692618, 0.0069535174, -0.022993507, -0.03331557, 0.008456933, -0.0974944, 0.019772585, 0.01574187, -0.015960375, 0.034920573, -0.009634752, 0.03712878, 0.03125524, 0.061169676, -0.08752963, 0.03554987, -0.050015427, 0.0030298673, 0.07356158, 0.08845, 0.01256974, 0.009207524, 0.056420222, -0.0825368, 0.012189393, -0.01911374, -0.111099206, -0.014426991, 0.081424005, -0.046716757, -0.048692696, -0.031949632, 0.0066986415, -0.0051757065, -0.053236343, -0.005979313, 0.017049754, -0.06841707, -0.03941601, -0.10868248, 0.05847336, 0.013278365, 0.06486488, -0.026402805, 0.054373335, -0.058932405, -0.15573016, 0.034794558, 0.070108704, 0.06418213, -0.024746628, 0.005113531, -0.055603188, -0.029645089, -0.04942918, -0.060099166, 0.035622552, 0.032984015, -0.014438862, 0.041185748, -0.06563826, -0.046539802, 0.0467558, 0.057365406, 0.014162517, -0.01028139, -0.020767206, -0.05844752, -0.07188353, -0.0881792, 0.008850948, 0.061340105, -0.02912755, -0.049787134, 0.06641608, -0.08008779, 0.028104106, -0.036501247, -0.030951925, -0.040119674, -0.058974538, -0.008584918, 0.027690448, -0.0012243515, 0.09091185, 0.020879624, -0.009881093, 0.03971421, 0.030080719, -0.08370404, 0.038699962, -3.7141243e-33, 0.019902462, -0.002892327, -0.0643733, -0.0087321205, 0.07349018, 0.035470992, -0.08068089, 0.0013493473, -0.05063622, -0.029585026, 0.043210037, 0.027467716, -0.085351944, -0.08192309, -0.008996416, -0.083097585, -0.034040287, 0.086139545, -0.046081267, -0.0057814447, 0.015995564, 0.049952213, -0.07331358, 0.025475632, 0.056292363, 0.0048445775, -0.03932318, -0.038239025, 0.047847576, 0.06364443, -0.031832382, 0.09628346, -0.12683775, 0.029400548, -0.018368775, -0.018967548, -0.07124415, -0.08374248, -0.028400922, 0.012461781, -0.02404763, -0.009283942, -0.07714339, 0.004512156, 0.047032695, -0.0035798, 0.11426916, -0.02337521, 0.010208374, 0.07670468, 0.043528724, -0.07646113, 0.0025396943, -0.047184125, 0.0338294, -0.06416095, -0.00042031624, -0.010749539, 0.027453328, 0.0864387, -0.03201863, 0.015764663, 0.06208733, -0.002425244, 0.03497008, 0.047188338, 0.06860094, 0.017184587, -0.067094706, 0.09301243, 0.016365038, -0.060592614, 0.037918825, -0.012967657, 0.06667841, -0.07087725, -0.009328909, 0.067778945, -0.016633643, -0.015517663, -0.040345114, -0.04479366, -0.020803079, 0.020371366, 0.049587477, -0.028267913, 0.015915336, 0.053725958, -0.079594955, -0.05656508, -0.008498003, -0.015300088, 0.031173645, -0.02033938, -0.10310069, 1.8049247e-33, -0.014695554, -0.014884777, -0.045368932, 0.058436655, -0.014272679, 0.09500289, -0.0075146747, -0.02828559, -0.023641795, 0.049961492, 0.018615004, 0.010015122, 0.022714185, 0.029915608, -0.010182244, -0.028071953, 0.1510614, -0.020448057, -0.10917505, 0.011250396, 0.07319596, -0.08689226, -0.078973055, 0.102066465, 0.033587087, 0.031146122, 0.08093104, 0.071011014, -0.013235186, 0.020600509, -0.052801818, 0.01604443, -0.105417706, -0.029470628, 0.013439919, 0.14454779, 0.0033343444, 0.018965105, -0.1217737, -0.009239991, 0.057643, -0.0014266407, 0.018065311, 0.06855501, -0.012283208, 0.033619173, -0.06458325, 0.15403256, -0.024234641, 0.037667178, 0.0029081814, -0.008026726, 0.014210503, -0.018378358, -0.098472446, 0.098442666, 0.040010024, 0.0019647519, 0.032937385, 0.020225776, -0.0129629485, -0.09515203, -0.020507924, 0.03336564, -0.010296994, -0.08077208, 0.030586923, 0.03792527, -0.0055978433, 0.073805235, 0.08160005, -0.007797624, 0.039763384, -0.0060498803, -0.032214824, -0.009910541, 0.118376575, 0.02646019, 0.06541959, -0.049936164, -0.011263205, 0.014314782, 0.14711487, 0.021194953, 0.07219691, 0.0054692347, -0.039785236, 0.025047362, 0.06813753, -0.016719209, -0.043902513, 0.015833952, 0.041757032, 0.0023859565, -0.03087196, -1.6792349e-8, 0.032918565, 0.054664887, 0.022984855, -0.001784205, 0.03869973, 0.009639706, 0.052105732, 0.042682756, -0.0144954175, 0.03269192, 0.021402638, -0.012701361, 0.02858599, 0.048221774, 0.09557133, 0.05347039, -0.049039707, -0.034563504, -0.03320876, 0.07315706, -0.0009071523, 0.030292658, 0.06048565, 0.02232915, -0.009273142, 0.07219228, 0.0016734924, 0.019176092, 0.06034924, -0.035639755, 0.024132041, 0.044183273, -0.058469053, -0.008273776, -0.12040543, -0.024615223, -0.010892365, 0.07916546, -0.0334839, -0.08385493, 0.037566517, -0.005130384, -0.038926966, 0.00790842, -0.091658205, -0.029719071, -0.03664468, -0.08450681, 0.0491831, 0.0036977227, -0.020039985, 0.079547286, -0.031664558, -0.05766205, 0.073701106, -0.009330889, 0.00088349637, -0.029372832, -0.012294614, 0.027812673, 0.09069941, 0.051271655, -0.047118437, 0.087151855]</code></p>
+</section>
+
+<section class="slide">
+<h2>Semantic Search</h2>
+<p>Let's use Hacker News comments dataset.</p>
+<p>&mdash; 30 000 000 text comments, 7 GB compressed;</p>
+<p>First step: generate vector embeddings for every title + comment.</p>
+</section>
+
+<section class="slide">
+    <video style="width: 100%;"><source src="video/size.mp4" type="video/mp4"></video>
+</section>
+
+<section class="slide">
+<h2>Text Embeddings With Transformers</h2>
+<p><code style="font-size: 16px;">#!/usr/bin/python3
+
+import sys
+import json
+from sentence_transformers import SentenceTransformer
+
+model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+
+for size in sys.stdin:
+    <span style="color: green;"># Collect a batch of inputs to process at once</span>
+    texts = []
+    for row in range(0, int(size)):
+        texts.append(sys.stdin.readline())
+
+    <span style="color: green;"># Run the model and obtain vectors</span>
+    embeddings = model.encode(texts)
+
+    <span style="color: green;"># Output the vectors</span>
+    for vector in embeddings:
+        print(json.dumps(vector.tolist()))
+
+    sys.stdout.flush()
+</code></p>
+</section>
+
+<section class="slide">
+<h2>Text Embeddings With Transformers</h2>
+<p><code style="font-size: 16px; line-height: 1.25;"><span style="color: gray;">cat embed_function.yaml</span>
+
+function:
+    name: embed
+    type: executable_pool
+    pool_size: 2
+    send_chunk_header: true
+    format: TabSeparated
+    command: 'embed.py'
+    argument:
+        type: String
+    return_type: Array(Float32)
+    max_command_execution_time: 1000
+    command_read_timeout: 100000
+</code></p>
+
+<p><code style="font-size: 16px; line-height: 1.25;">printf '1\nHello, world\n' |
+  sudo -u clickhouse /var/lib/clickhouse/user_scripts/embed.py</code></p>
+</section>
+
+<section class="slide">
+    <video style="width: 100%;"><source src="video/embed1.mp4" type="video/mp4"></video>
+</section>
+
+<!--
+
+CREATE TABLE hackernews_embeddings
+(
+    `id` UInt32,
+    `deleted` UInt8,
+    `type` Enum8('story' = 1, 'comment' = 2, 'poll' = 3, 'pollopt' = 4, 'job' = 5),
+    `by` LowCardinality(String),
+    `time` DateTime,
+    `text` String,
+    `dead` UInt8,
+    `parent` UInt32,
+    `poll` UInt32,
+    `kids` Array(UInt32),
+    `url` String,
+    `score` Int32,
+    `title` String,
+    `parts` Array(UInt32),
+    `descendants` Int32,
+    `vector` Array(Float32)
+)
+ENGINE = MergeTree
+ORDER BY id
+SETTINGS index_granularity = 128;
+
+SET max_block_size = 4096;
+
+INSERT INTO hackernews_embeddings SELECT *, embed(decodeXMLComponent(title || '\n\n' || text)) FROM hackernews;
+
+-->
+
+<section class="slide">
+<h2>Text Embeddings With Transformers</h2>
+<table>
+<tr><td>CPU, c6a.32xlarge</td><td>265 rows/sec</td></tr>
+<tr><td>GeForce GTX 1660</td><td>550 rows/sec</td></tr>
+<tr><td>GPU, g5.4xlarge</td><td>2200 rows/sec</td></tr>
+<tr><td>GPU, 3080 TI</td><td>3500 rows/sec</td></tr>
+
+<tr style="color: gray;"><td>GPU, A100</td><td>???</td></tr>
+<tr style="color: gray;"><td>TPU, AWS Inferentia</td><td>???</td></tr>
+</table>
+</section>
+
+<section class="slide">
+    <video style="width: 100%;"><source src="video/insert.mp4" type="video/mp4"></video>
+</section>
+
+<section class="slide">
+<h2>Tricks</h2>
+<p>SET max_block_size = 128..4096;
+<br/>&mdash; GPU might not benefit from larger batches;</p>
+
+<p>type: executable_pool
+<br/>&mdash; to keep the loaded model in-memory;</p>
+
+<p>send_chunk_header: 1
+<br/>&mdash; to provide batches to the model;</p>
+
+<p>pool_size: 2..4
+<br/>&mdash; the script is parallelized internally;
+<br/>&emsp; but running multiple scripts in parallel can exhaust the GPU memory;</p>
+</section>
+
+<section class="slide">
+<h2>How To Use The Vectors?</h2>
+<p>Distance functions: <b>L2Distance</b>, L2SquaredDistance, cosineDistance, L1Distance, LpDistance, dotProduct, ...</p>
+<p>Brute-force search:
+<p><code style="line-height: 1.25;">WITH embed('ClickHouse is fast') AS target
+SELECT id, text FROM hackernews
+ORDER BY <b style="color: green;">L2SquaredDistance(vector, target)</b> LIMIT 10</code></p>
+<p>&mdash; find nearest comments to "ClickHouse is fast"</p>
+</section>
+
+<section class="slide">
+    <video style="width: 100%;"><source src="video/search1.mp4" type="video/mp4"></video>
+</section>
+
+<section class="slide">
+    <video style="width: 100%;"><source src="video/nvtop.mp4" type="video/mp4"></video>
+</section>
+
+<section class="slide">
+<h2>Optimizations</h2>
+<p style="margin-top: -1em;">Quantization to BFloat16</p>
+<img style="width: 80%;" src="pictures/bfloat16.png" />
+<p><code style="font-size: 14pt; line-height: 1.25;">ALTER TABLE hackernews_embeddings
+MODIFY COLUMN vector CODEC(ZSTD);
+
+ALTER TABLE hackernews_embeddings
+UPDATE vector = arrayMap(x ->
+  reinterpretAsFloat32(bitAnd(reinterpretAsUInt32(x), 0xFFFF0000)),
+  vector)
+WHERE 1;</code></p>
+</section>
+
+<section class="slide">
+    <video style="width: 100%;"><source src="video/search2.mp4" type="video/mp4"></video>
+</section>
+
+<section class="slide">
+<h2>Optimizations</h2>
+<p>Pre-filtering by distance threshold:</p>
+<p><code style="line-height: 1.25;">SELECT ... WHERE distance &lt; 0.5
+ORDER BY distance LIMIT 100</code></p>
+
+<p>Using lower index granularity:</p>
+<p><code>SETTINGS index_granularity = 128</code></p>
+</section>
+
+<section class="slide">
+<h2>Vector Indices</h2>
+<p>Index types:</p>
+<p class="cloud"><span>IVF</span><span>PQ</span><br/><span>Annoy</span><span>HNSW</span></p>
+<p>Libraries:</p>
+<p class="cloud"><span>Faiss</span><span>HNSW</span><br/><span>nmslib</span><span>Annoy</span><span>DiskANN</span><br/><span>ScaNN</span><span>FalcoNN</span></p>
+</section>
+
+<section class="slide">
+<h2>Vector Indices</h2>
+<p>We will build our own!</p>
+<p>Directly in ClickHouse,
+<br/>using the existing tools.</p>
+</section>
+
+<section class="slide">
+<h2>Random Projections</h2>
+<p>or random space partitions.</p>
+
+<p>Partition the space by N random hyperplanes.</p>
+
+<p>For every point in space assign a bitmask (of N bits),
+<br/>where n-th bit encodes &mdash; at which side
+<br/>of the corresponding hyperplane the point is located.</p>
+
+<p><b>How to choose hyperplanes?</b></p>
+<p>&mdash; take a pair of random points from the dataset, and take a hyperplane
+<br/>separating these two points, orthogonal to the vector between them.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/projections.png) no-repeat black; background-size: contain; background-position: center;">
+</section>
+
+<section class="slide">
+<h2>Random Projections</h2>
+<p><code style="font-size: 14pt; line-height: 1.25; margin-top: -1em;">CREATE TABLE planes (      <span style="color: gray;">-- hyperplane equation:</span>
+    normal Array(Float32), <span style="color: gray;">-- (v - offset) ⋅ normal = 0</span>
+    offset Array(Float32)
+) ENGINE = MergeTree ORDER BY ();
+
+INSERT INTO planes SELECT
+    arrayMap((x, y) -> (x - y), v1, v2) AS normal,
+    arrayMap((x, y) -> ((x + y) / 2), v1, v2) AS offset
+FROM (SELECT
+        min(vector) AS v1,
+        max(vector) AS v2
+    FROM (SELECT vector
+        FROM hackernews_embeddings
+        ORDER BY rand() ASC
+        LIMIT 256)
+    GROUP BY intDiv(rowNumberInAllBlocks(), 2));</code></p>
+</section>
+
+<section class="slide">
+<h2>Random Projections</h2>
+<p><code style="font-size: 14pt; line-height: 1.25; margin-top: -1em;">CREATE TABLE hackernews_embeddings_indexed
+(
+    ...
+    `vector` Array(Float32),
+    <b style="color: green;">`bits` UInt128</b> <span style="color: gray;">-- this is our index</span>
+)
+ENGINE = MergeTree
+ORDER BY bits
+SETTINGS index_granularity = 128;</code></p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">INSERT INTO hackernews_embeddings_indexed SELECT ...
+arraySum((normal, offset, bit) ->
+    bitShiftLeft(toUInt128(
+        arraySum((vec_i, normal_i, offset_i) ->
+            ((vec_i - offset_i) * normal_i), vector, normal, offset) > 0),
+        bit),
+    normals, offsets, range(num_bits)) AS bits</code></p>
+</section>
+
+<section class="slide">
+<h2>Random Projections</h2>
+<p>Hamming distance on space-partition bitmasks<br/><b style="color: green;">correlates with the original distance</b>.</p>
+<p>We can use this distance instead of reading the original vectors,<br/>and it is <b style="color: green;">much faster</b>.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">WITH ... AS target
+SELECT id, text FROM hackernews
+ORDER BY <b style="color: green;">bitCount(bitXor(bits, target))</b> LIMIT 10</code></p>
+
+<p>But if we do it, the <b style="color: red;">relevance suffers too much</b>.</p>
+</section>
+
+<section class="slide">
+<h2>Random Projections</h2>
+<p>Solution: filter by approximate distance,
+<br/>but sort by the original distance function.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT
+    bitCount(bitXor(bits, index)) AS distance_approx,
+    L2SquaredDistance(vector, target) AS distance_real,
+    'https://news.ycombinator.com/item?id=' || id::String AS url,
+    title, text
+FROM hackernews_embeddings_indexed
+<b style="color: green;">PREWHERE distance_approx &lt;= 50</b>
+ORDER BY distance_real LIMIT 100
+</code></p>
+</section>
+
+<section class="slide">
+    <video style="width: 100%;"><source src="video/approx.mp4" type="video/mp4"></video>
+</section>
+
+<section class="slide">
+<h2>Tricks</h2>
+<p>Order your table by the bitmask &mdash; to make an implicit index.</p>
+<p>Lower the index_granularity and max_block_size to help with filtering.</p>
+<p>Disable the optimize_trivial_insert_select setting.</p>
+</section>
+
+<section class="slide" style="background: black;">
+<img src="pictures/dogs.png" style="width: 100%; margin-top: -0.75em;" />
+</section>
+
+<section class="slide">
+<h2>Takeaways</h2>
+<p>Specialized vector databases exist: <br/><span style="color: gray;">MyScale, Pinecone, Milvus, Zilliz, Weaviate, Qdrant, Vespa, Marqo, Chroma...</span></p>
+<p>Who cares?</p><p>&mdash; ClickHouse is always the best :)</p>
+<p>ClickHouse:
+<br/>&mdash; runs your models as UDFs;
+<br/>&mdash; supports vector data types and vector operations;
+<br/>&mdash; works for any data size, not limited by memory or a single machine;
+<br/>&mdash; pre-filtering and post-filtering, precise and approximate search;
+<br/>&mdash; combines analytics and search;
+</p>
+</section>
+
+
+<!--
+
+AI inference
+Semantic search
+
+AI model inference is just a function
+
+UDFs in ClickHouse
+
+SQL vs executable
+UDF, UDTF, UD dictionaries
+
+A simple Python script: configuration
+SYSTEM RELOAD FUNCTIONS
+
+Pooling, Chunking
+Docker, Firecracker, remote service
+
+Parallel and distributed
+Speed comparison: native, C++, Python
+Speed comparison: formats through Python
+
+Embeddings - what is that?
+
+Making a function for embeddings.
+
+CPU, GPU, AWS
+nvtop
+pool_size
+max_block_size
+
+Running on Hacker News
+
+Full text search
+Full vector search
+
+Vector operations
+Quantization to BFloat16
+
+Vector indices
+
+Hand-made random-projection index
+
+Approximate search
+
+Machine translation
+Speech
+
+-->
+
+<section class="slide" style="background: url(pictures/final.jpg); background-size: cover; background-position: center;">
+<h2>Q&amp;A</h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+

@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 25.6 Call</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+         .slide table tr:not(:last-of-type)>* { background: none; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 25.6 Call</h1>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/back1.jpg); background-size: cover;">
+        <h1 style="margin-top: 25px; line-height: 110%; font-size: 56pt; color: white; text-shadow: black 1px 0 10px; text-align: center;">ClickHouse Release 25.6</h1>
+    </section>
+
+<section class="slide">
+<h2>ClickHouse release 25.6</h2>
+<p>1. (50 min) What's new in ClickHouse 25.6.</p>
+<p>3. (10 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back2.jpg); background-size: cover;">
+<h2><span class="hilite">Release 25.6</span></h2>
+<p><span class="hilite">ClickHouse Summer Release.</span></p>
+<p><span class="hilite">— 25 new features 🌸</span></p>
+<p><span class="hilite">— 32 performance optimizations 🦋</span></p>
+<p><span class="hilite">— 105 bug fixes 🐝</span></p>
+</section>
+<!--
+
+Small
+
+bech32Encode/Decode
+WKB
+CoalescingMergeTree
+Disks for databases
+Writes to Merge tables
+Single snapshot in a query
+timeSeries functions
+JSON in Parquet
+system.codecs
+split tokenizer
+
+Performance
+
+Workload scheduler for concurrent queries
+Parallel blocks marshalling
+Bloom filters performance
+Multi-projections filtering
+
+Main
+
+Time/Time64
+lag/lead
+chdig
+
+Bonus
+
+front page
+WASM Lexer
+Birdwatching
+
+Integrations
+
+New Terraform provider
+
+Bonus
+
+Distributed Cache
+OpenHouse Presentations
+ClickStack
+ClickHouse Government
+
+Reading
+
+Coffeeshop Benchmark
+Observability
+FIX data
+OpenHouse
+ClickStack
+MCP
+
+-->
+
+<section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
+<h2><span class="hilite">Small And Nice Features</span></h2>
+</section>
+
+<section class="slide">
+<h2>system.codecs</h2>
+
+<p>ClickHouse uses <b>codecs</b> for data compression and encryption.</p>
+<p>Codecs in ClickHouse can be applied on a per-column, per-table level,
+<br/>or based on data size or TTL.</p>
+
+<p>The new system table, <b>codecs</b> provides introspection and embedded documentation for them.</p>
+
+<p>Demo.</p>
+
+<!--
+
+SELECT * FROM system.codecs FORMAT Vertical
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Jimmy Aguilar Mena.</p>
+</section>
+
+
+<section class="slide">
+<h2>Functions For Bitcoin Addresses</h2>
+
+<p><b>Bech32</b> &mdash; an encoding for Bitcoin addresses based on base32.</p>
+
+<p>Example: <span style="font-family: monospace; font-size: 80%;"><span style="color: green;">bc</span><span style="color: gray;">1</span><span style="color: brown;">qc7slrfxkknqcq2jevvvkdgvrt8080852dfjewde450xdlk4ugp7s</span><span style="color: blue;">zw5tk9</span></span></p>
+
+<p>Two new functions:
+<br/>&mdash; <b>bech32Encode(hrp, payload)</b> &mdash; returns the encoded address;
+<br/>&mdash; <b>bech32Decode(address)</b> &mdash; returns a tuple of the human-readable part and the payload;
+</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: George Larionov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Functions For Well-Known Binary</h2>
+
+<p><b>WKT</b> (Well-Known Text) and <b>WKB</b> (Well-Known Binary)
+<br/>&mdash; are standard formats for representing geometry data.</p>
+
+<p><b>20.5</b>: Data types for geometry: Point, Ring, Polygon, MultiPolygon...</p>
+<p><b>21.4</b>: Functions for <b>WKT</b>: wkt, readWKTPoint, readWKTPolygon...</p>
+<p><b>25.5</b>: Reading <b>WKB</b> from Parquet</p>
+<p><b style="color: green;">25.6</b>: Functions for <b>WKB</b></p>
+
+<p>Demo.</p>
+
+<!--
+
+SELECT name, alias_to FROM system.functions WHERE name ILIKE '%WKB%';
+
+SELECT
+    readWKBPolygon(base64Decode('AQMAAAABAAAACQAAALU3+MJk6hJAQYLix5gjSkC1N/jCZOoSQB6n6EguN0pAyJi7lpCPE0Aep+hILjdKQIMvTKYKRhRAHqfoSC43SkCDL0ymCkYUQM3MzMzMLEpAFK5H4XoUFEApXI/C9ShKQM3MzMzMzBNAhetRuB4lSkBmZmZmZmYTQEGC4seYI0pAtTf4wmTqEkBBguLHmCNKQA==')) AS poly,
+    toTypeName(poly),
+    wkt(poly)
+
+Query id: 7ae538d8-e21e-4cda-b1c4-570cc2aef18a
+
+Row 1:
+──────
+poly:             [[(4.7289,52.2781),(4.7289,52.4311),(4.8902,52.4311),(5.0684,52.4311),(5.0684,52.35),(5.02,52.32),(4.95,52.29),(4.85,52.2781),(4.7289,52.2781)]]
+toTypeName(poly): Polygon
+wkt(poly):        POLYGON((4.7289 52.2781,4.7289 52.4311,4.8902 52.4311,5.0684 52.4311,5.0684 52.35,5.02 52.32,4.95 52.29,4.85 52.2781,4.7289 52.2781))
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Konstantin Vedernikov.</p>
+</section>
+
+<section class="slide">
+<h2>Single Snapshot For SELECT</h2>
+
+<p>ClickHouse has certain transactional (<b>ACID</b>) guarantees for queries.</b>
+
+<p>When SELECT reads from a table, it takes a <b>snapshot</b> of a table at the moment of query analysis. This snapshot is not affected by concurrently running INSERT/ALTER/DELETE/DROP queries.</p>
+
+<p><b style="color: red;">25.5</b>: snapshots are acquired for different subqueries
+<br/>and table usages in a query.</p>
+<p><b style="color: green;">25.6</b>: a single snapshot across all table usages
+<br/>when <b>enable_shared_storage_snapshot_in_query</b> is set.</p>
+
+<p>Demo.</p>
+
+<!--
+
+CREATE TABLE t (x UInt64) ENGINE = MergeTree ORDER BY ();
+SET max_block_size = 1, min_insert_block_size_bytes = 1, min_insert_block_size_rows = 1;
+INSERT INTO t SELECT * FROM system.numbers;
+
+yes "WITH (SELECT max(x) FROM t) AS a, (SELECT 0 + max(x) FROM t) AS b SELECT a = b ? 'Ok' : format('{} != {}', a, b);" | head -n1000 | clickhouse-client --enable_shared_storage_snapshot_in_query=1
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Amos Bird.</p>
+</section>
+
+<!--
+<section class="slide">
+<h2>Writing To Merge Tables</h2>
+
+<p style="margin-top: -1em;"><b>Merge</b> is a table engine that provides a unified view over a set of tables:</p>
+<p><code style="font-size: 16pt;">CREATE TABLE t ENGINE = <b>Merge</b>(database, '^table_regexp_\d+$')</code></p>
+
+<p>In previous ClickHouse versions, <b>Merge</b> tables only allowed SELECTs.</p>
+
+<p>Since version <b style="color: green;">25.6</b>, it's possible to do INSERTs into <b>Merge</b> tables:</p>
+
+<p style="line-height: 1.5"><code style="font-size: 16pt;">ENGINE = <b>Merge</b>(database, '^table_\d+$', <b style="color: green;">auto</b>)</code>&mdash; will write to the latest (by the lexicographical order) table.</p>
+<p style="line-height: 1.5"><code style="font-size: 16pt;">ENGINE = <b>Merge</b>(database, '^table_\d+$', <b style="color: green;">table_123</b>)</code>&mdash; will write to the explicitly specified table.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Anton Ivashkin.</p>
+</section>
+-->
+
+<section class="slide">
+<h2>JSON In Parquet</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">SELECT '{"database": "ClickHouse", "is_it_good": true}'::JSON AS data
+INTO OUTFILE 'test.parquet'</code></p>
+
+<p><b style="color: green;">ClickHouse</b> has first-class support for JSON with column-oriented storage.</p>
+<p><b>Parquet</b> does not have full support for JSON,<br/>it stores JSON as a string with annotation.</p>
+
+<p><b style="color: red;">25.5</b>: a string with JSON annotation in Parquet is read as String.</p>
+<p><b style="color: green;">25.6</b>: a string with JSON annotation in Parquet is read as JSON,
+<br/>and JSON from ClickHouse is written to Parquet with a proper annotation.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Nihal Z. Miaji.</p>
+</section>
+
+
+<section class="slide">
+<h2>A New Tokenizer</h2>
+
+<p>Function <b>tokens</b> splits a string into parts.</p>
+<p>It supports different tokenization algorithms:</p>
+<p><code>SELECT tokens('Hello, world!');
+SELECT tokens('Hello, world!', 'default');
+SELECT tokens('Hello, world!', <b style="color: green;">'split'</b>);</code></p>
+<p>Version <b style="color: green;">25.6</b> introduces a new algorithm, <b>split</b>, good for logs.</p>
+
+<p>Demo</p>
+
+<!--
+
+SELECT tokens('2025.06.26 08:21:54.688227 [ 3654609 ] {} <Debug> system.query_metric_log (a2f54a1b-6cc0-49be-9dc2-337379073de5): Removed 5 old parts', 'default');
+
+SELECT tokens('2025.06.26 08:21:54.688227 [ 3654609 ] {} <Debug> system.query_metric_log (a2f54a1b-6cc0-49be-9dc2-337379073de5): Removed 5 old parts', 'split');
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Elmi Ahmadov, Robert Schulze.</p>
+</section>
+
+
+<section class="slide">
+<h2>Functions For PromQL</h2>
+
+<p>ClickHouse does not (yet) support PromQL.</p>
+<p>The implementation is in progress, and we need functions to support<br/>all its capabilities.</p>
+
+<p>New aggregate functions in <b>25.6</b>:
+<br/>
+<b>timeSeriesInstantDeltaToGrid</b>,
+<b>timeSeriesInstantRateToGrid</b>,
+<b>timeSeriesRateToGrid</b>,
+<b>timeSeriesResampleToGridWithStaleness</b>,
+<b>timeSeriesDeltaToGrid</b>,
+<b>timeSeriesLastTwoSamples</b>
+</p>
+
+<p><code style="font-size: 14pt; line-height: 1.5">SELECT timeSeriesDeltaToGrid(
+    start_ts, end_ts, step_seconds, window_seconds)(timestamp, value)</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexander Gololobov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Custom Disks For Databases</h2>
+
+<p><b>Disk</b> &mdash; is a filesystem abstraction in ClickHouse,
+<br/>allowing to store tables data in a remote object storage
+<br/>(S3, GCS, Azure, HDFS, static web servers...).</p>
+
+<p>ClickHouse <b style="color: green;">25.6</b> allows to store not only tables' data,
+<br/>but also <b>databases metadata</b> on custom disks!</p>
+
+<p>Needed to manage databases on stateless servers.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Note: these databases cannot be shared between multiple servers.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Tuan Pham Anh.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
+<h2><span style="color: black;"><span class="hilite">Improvements for Data Lakes</span></h2>
+</section>
+
+
+<section class="slide">
+<h2>System Table "iceberg_history"</h2>
+
+<p>A new system table containing information about available snapshots
+<br/>of all Iceberg tables.</p>
+<p>Plays nicely with the time travel feature.</p>
+
+<p>Demo</p>
+
+<!--
+
+CREATE TABLE iceberg_table
+ENGINE = IcebergS3('s3://timetravelclickhouse/test', 'AKIA...', '...');
+
+SELECT count(*) FROM iceberg_table AS iceberg_table;
+
+SELECT * FROM system.iceberg_history;
+
+SELECT count(*) FROM iceberg_table AS iceberg_table SETTINGS iceberg_snapshot_id = 7670355786252116484;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Smita Kulkarni.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back3.jpg); background-size: cover;">
+<h2><span style="color: black;"><span class="hilite">Performance Improvements</span></h2>
+</section>
+
+<section class="slide">
+<h2>Speed-up For Distributed Queries</h2>
+
+<p>By parallelization of the work for serialization and compression
+<br/>of the blocks sent over the network.</p>
+
+<p>Example:
+<code style="font-size: 14pt; line-height: 1.5; margin-top: 0.5em;">SELECT SearchPhrase, count() AS c FROM hits WHERE SearchPhrase != ''
+GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10</code></p>
+
+<!--
+
+SELECT SearchPhrase, count() AS c FROM remote('127.0.0.{1,2}', default.hits) WHERE SearchPhrase != '' GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10
+
+-->
+
+<p><b style="color: red;">25.5</b>: 0.601 sec.
+<br/><b style="color: green;">25.6</b>: 0.322 sec.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Nikita Taranov.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Workload Scheduler For Concurrent Queries</h2>
+
+<p style="margin-top: -1em;">The workload scheduler already supports many resource types:
+<br/>CPU usage, disk reads and writes.</p>
+<p>The new resource type, QUERY, allows scheduling by the number of concurrently running queries:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; white-space: pre-wrap;">CREATE RESOURCE query (QUERY);
+CREATE WORKLOAD all;
+CREATE WORKLOAD production IN all SETTINGS max_concurrent_threads = 100,
+    max_queries_per_second = 10, max_burst_queries = 20;
+CREATE WORKLOAD analytics IN production
+    SETTINGS max_concurrent_threads = 60, weight = 9;
+CREATE WORKLOAD ingestion IN production;
+SET workload = 'analytics';
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Sergei Trifonov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Optimization For Bloom Filter Index</h2>
+
+<p>By optimizing the integer division operation:</p>
+
+<img style="width: 80%;" src="pictures/bloom_filter.png"/>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Delyan Kratunov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Filtering By Multiple Projections</h2>
+
+<p><code style="font-size: 16pt; line-height: 1.25;">CREATE TABLE t (
+    a String,
+    b UInt64,
+    c Int32,
+    PROJECTION p_b (SELECT * <b style="color: green;">ORDER BY b</b>),
+    PROJECTION p_c (SELECT * <b style="color: blue;">ORDER BY c</b>)
+) <b style="color: teal;">ORDER BY a</b>;
+
+SELECT * FROM t WHERE <b style="color: teal;">a = 'Hello'</b> AND <b style="color: green;">b > 123</b> AND <b style="color: blue;">c &lt; 456</b>;
+</code></p>
+
+<p>What projection the query should use?</p>
+<p>&mdash; it should analyze all of them on the fly!</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Amos Bird.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back4.jpg); background-size: cover;">
+<h2 style="font-size: 32pt; margin-left: -1em;"><span class="hilite">Something Interesting</span></h2>
+</section>
+
+<section class="slide">
+<h2>Time Data Type</h2>
+
+<p>New data types, <b>Time</b> and <b>Time64</b>, representing relative time.</p>
+
+<p><code style="line-height: 1.5;">SELECT '123:45:07'::<b>Time</b>;
+SELECT '-123:45:07.123456'::<b>Time64(6)</b>;
+SELECT now()::<b>Time</b>;</code></p>
+
+<p>For compatibility with other SQL DBMS.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Yarik Briukhovetskyi.</p>
+</section>
+
+<section class="slide">
+<h2>chdig</h2>
+
+<p>A command-line tool for ClickHouse monitoring and diagnostic.</p>
+<p style="color: gray;">Written in <b>Rust</b> &mdash; the best language for terminal applications!</p>
+
+<p>Demo</p>
+
+<!--
+
+clickhouse-benchmark --query "SELECT sum(cityHash64(*)) FROM hits"
+ch dig
+
+# queries
+# logs
+# flamegraphs
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Azat Khuzhin.</p>
+</section>
+
+<section class="slide">
+<h2>Window Functions lag/lead</h2>
+
+<p><code>lag(x, <span style="color: gray">[</span>offset<span style="color: gray">]</span>, <span style="color: gray">[</span>default<span style="color: gray">]</span>)
+  OVER (<span style="color: gray">[</span>PARTITION BY grouping_column<span style="color: gray">]</span>
+        <span style="color: gray">[</span>ORDER BY sorting_column<span style="color: gray">]</span>
+      <span style="color: gray">| [</span> window_name<span style="color: gray">]</span>)</code></p>
+
+<p>ClickHouse already has better functions <b>lagInFrame</b>, <b>leadInFrame</b>.</p>
+
+<p>But the simpler <b>lag</b>/<b>lead</b> functions are needed for SQL compatibility.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Dmitry Novik.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
+<h2><span class="hilite">Bonus</span></h2>
+</section>
+
+<section class="slide" style="background-color: black;">
+<h2 style="color: white;">Integrations</h2>
+<p style="color: white; margin-top: -1em;">A new Terraform provider:</p>
+<img style="width: 90%; margin-top: -1em;" src="https://clickhouse.com/uploads/Terraform_5c3b11375a.png">
+</section>
+
+<section class="slide">
+<h2>A New ClickHouse Website</h2>
+<p style="font-size: 150%;"><a href="http://localhost:8123/">http://localhost:8123/</a></p>
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>ClickHouse Lexer Library</h2>
+<p>A small library (6 KB) for C and WASM that tokenizes ClickHouse queries.</p>
+<p>Can be embedded into JavaScript:</p>
+<p><code style="overflow-x: scroll; font-size: 12pt; line-height: 1.25;">const lexer_base64 = "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R3JBAXENBAJAIAJBAWoiCSADTw0AIAktAAAiBUEwayEBIAcEQCABQf8BcUEKSSAFQcEAa0EGSXINASAFQeEAa0EGTw0HDAELIAFB/wFxQQlLDQYLIAMgCUYNBAsgBiACQQFqIgI2AgBBACEIIAIgA0kNAAsMAgsgBiACQQFqIgI2AgBBACEIIAIgA0cNAAsLIAJBAWoiASADTw0AIAItAAAhBQJAIAcEQCAFQSByQfAARw0CDAELIAVBIHJB5QBHDQELIAYgATYCAAJAIAJBAmogA08NAAJAIAEtAABBK2sOAwABAAELIAYgAUEBaiIBNgIAIAEgA08NAgtBASECA0AgAS0AACIFQTBrQf8BcUEKTwRAIAIgBUHfAEdyQQFxDQMgAUEBaiICIANPDQMgAi0AAEEwa0H/AXFBCUsNAwsgBiABQQFqIgE2AgBBACECIAEgA0cNAAsMAQsgAiEBCwJ/AkACQCABIANPDQAgAS0AACICQd8ARiACQTBrQf8BcUEKSXJFIAJB3wFxQcEAa0H/AXFBGUtxDQAgAUEBaiEFA0AgBiAFIgE2AgAgASADTw0CIAFBAWohBSABLQAAIgdBMGshAiAHQd8ARiACQf8BcUEKSXIgB0HfAXFBwQBrQf8BcUEaSXINAAsgAUEBawwCCyAAIAE2AggMCgsgAUEBawshAwJAIAEgBE0NACAEQQFrIQYDQCAGQQFqIgYtAAAiAkEkRiACQd8ARnIgAkEwa0H/AXFBCklyRSACQd8BcUHBAGtB/wFxQRpPcUUEQCADIAZLDQEMAgsLIAAgATYCCCAAIAQ2AgQgAEEvOgAADwsMCQsgBiAEQQJqIgE2AgACQCABIANGDQADQCABLQAAQQpGDQEgAUEBaiIBIANHDQALIAMhAQsLIAAgATYCCCAAIAQ2AgQgAEEBOgAACyAGIAE2AgAPCyAAIAE2AgggACAENgIEIABBADoAAA8LIAAgBEEBaiIANgIIDAILIAAgBEECaiIANgIIDAELIAAgATYCCCAAIAQ2AgQgAEEoOgAADwsgBiAANgIADwsgACAENgIEIABBAzoAAA8LIAAgATYCCCAAIAQ2AgQgAEECOgAACyUAIABBADoAECAAIAM2AgwgACACNgIIIAAgATYCBCAAIAE2AgALNgEBfyMAQRBrIgMkACADQQRqIAAQASABIAMoAgg2AgAgAiADKAIMNgIAIAMtAAQgA0EQaiQACwcAIABBAUsLBwAgAEEnSwsHACAAQSdGCwsIAQBBgAgLARQAeQlwcm9kdWNlcnMBDHByb2Nlc3NlZC1ieQEFY2xhbmdZMjAuMC4wZ2l0IChnaXRAZ2l0aHViLmNvbTpsbHZtL2xsdm0tcHJvamVjdC5naXQgNmNiYzY0ZWQ5MjJjYzY5YmMyOTJkMzk0YmE1YzY4MWZhMzA5ZjQwNCkAaw90YXJnZXRfZmVhdHVyZXMGKw9tdXRhYmxlLWdsb2JhbHMrE25vbnRyYXBwaW5nLWZwdG9pbnQrC2J1bGstbWVtb3J5KwhzaWduLWV4dCsPcmVmZXJlbmNlLXR5cGVzKwptdWx0aXZhbHVl";
+
+const binary = atob(lexer_base64);
+const bytes = new Uint8Array(binary.length);
+
+for (let i = 0; i &lt; binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+}
+
+lexer_module = await WebAssembly.instantiate(bytes);
+</code></p>
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/birds.png); background-size: cover;">
+<h2 style="color: white;"><span style="background: rgba(0, 0, 0, 0.5)">Visualizations On The Map</span></h2>
+
+<p style="color: white;"><span style="background: rgba(0, 0, 0, 0.5)">Example with the eBird dataset:</span></p>
+<p style="color: white;"><span style="background: rgba(0, 0, 0, 0.5)"><a href="https://adsb.exposed/?dataset=Birds&amp;zoom=4&amp;lat=51.9713&amp;lng=16.9629&amp;query=d371c3fd21c4362a8172b4e243640155">https://adsb.exposed/?dataset=Birds</a></span></p>
+</section>
+
+<section class="slide" style="background: url(pictures/openhouse.jpg); background-size: cover;">
+<h2><span style="color: white; background: rgba(0,0,0,0.5); padding: 0.25em 0.5em;">https://clickhouse.com/openhouse</span></h2>
+</section>
+
+<section class="slide" style="background: url(pictures/clickstack.png); background-size: cover;">
+</section>
+
+<section class="slide" style="background: url(https://clickhouse.com/uploads/Blog_caches_003_5834a2afa1.png) no-repeat center / contain; background-color: black;">
+</section>
+
+<section class="slide">
+<h2>ClickHouse Government</h2>
+<p>ClickHouse, delivered as a solution that
+<br/>handles the complexities of government networks.</p>
+<p>Self-managed on AWS within any government network
+<br/>(<b>FedRAMP</b>, <b>IL2, 4, 5, 6</b>).</p>
+<p>Access <b>NIST 800-53</b> (Risk Management Framework)
+<br/>compliance documentation and robust <b>FIPS 140-3</b> support.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/wing.jpg); background-size: cover;">
+<h2>Meetups</h2>
+<p>
+<span class="hilite">&mdash; 🇺🇸 Denver, June 26</span>
+<br/><span class="hilite">&mdash; 🇮🇳 Bangalore, June 27</span>
+<br/><span class="hilite">&mdash; 🇦🇺 Perth, July 2</span>
+<br/><span class="hilite">&mdash; 🇺🇸 Atlanta, July 8</span>
+<br/><span class="hilite">&mdash; 🇺🇸 Philadelphia, July 10</span>
+<br/><span class="hilite">&mdash; 🇺🇸 Los Gatos, July 10</span>
+<br/><span class="hilite">&mdash; 🇺🇸 New York, July 15</span>
+</p>
+</section>
+
+
+
+<section class="slide">
+<h2>Reading Corner 📖</h2>
+
+<img style="float: right; width: 30%; margin-right: -3em; image-rendering: pixelated; margin-top: -1em;" src="pictures/blog.png"/>
+<p><a href="https://clickhouse.com/blog/">https://clickhouse.com/blog/</a></p>
+
+<p style="line-height: 1.5;"><br/>&mdash; <b>OpenAI</b> and <b>Anthropic</b>'s journey with ClickHouse
+<br/>&mdash; The case of <i>quadrillion</i> rows in <b>Tesla</b>
+<br/>&mdash; Observability without OTel and Prometheus
+<br/>&mdash; How we built Distributed Cache
+<br/>&mdash; "Coffeeshop Benchmark" &mdash; ClickHouse vs. Snowflake and Databricks
+<br/>&mdash; Building agents with ClickHouse MCP
+<br/>&mdash; <b>Langfuse</b> &mdash; A new data stack for modern LLM applications
+</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back8.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
+<h2 style="color: white; margin-left: -1em;">Q&amp;A</a></h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+

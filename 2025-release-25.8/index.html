@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 25.8 Call</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+         .slide table tr:not(:last-of-type)>* { background: none; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 25.8 Call</h1>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/back1.jpg); background-size: cover;">
+        <h1 style="margin-top: 25px; line-height: 110%; font-size: 56pt; color: white; text-shadow: black 1px 0 10px; text-align: center;">ClickHouse Release 25.8 LTS</h1>
+    </section>
+
+<section class="slide">
+<h2>ClickHouse release 25.8 LTS</h2>
+<p>1. (55 min) What's new in ClickHouse 25.8.</p>
+<p>2. (5 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back2.jpg); background-size: cover;">
+<h2><span class="hilite">Release 25.8</span></h2>
+<p><span class="hilite">ClickHouse LTS Release.</span></p>
+<p><span class="hilite">— 45 new features 🌻</span></p>
+<p><span class="hilite">— 47 performance optimizations 🐝</span></p>
+<p><span class="hilite">— 119 bug fixes 🐝</span></p>
+</section>
+<!--
+
+Small
+
+_table virtual column
+External disks for temporary data
+Arrow Flight
+PostgreSQL protocol completeness with COPY support
+SYSTEM RESTORE DATABASE REPLICA
+Writes with hive-style partitioning
+Hash output format
+
+Security
+
+Grants for S3 URL patterns
+S3 auth with IAM roles
+OAuth for GCP
+Views defined by temporary users
+
+Performance
+
+Parquet reader v3
+Azure is no shit
+Secondary indices are used in the right order
+Faster subcolumns in compact parts
+Faster regexps
+Faster JOINs when the r.h.s. is unique
+Faster GROUP BY
+
+Main
+
+PromQL
+Lightweight updates is Beta
+Positional and Condition deletes
+Delete from Iceberg
+Iceberg and Delta Lake improvements
+All catalogs are Beta
+Vector similarity search is GA
+Binary quantization
+Correlated subqueries are Beta
+Vector search in GA + binary quantization
+
+Integrations
+
+MongoDB CDC is in Private Preview https://clickhouse.com/docs/integrations/clickpipes/mongodb
+Vertical Scaling for streaming ClickPipes to adjust the instance type for suitable workload https://clickhouse.com/docs/cloud/manage/billing/overview#what-are-the-clickpipes-public-prices
+Azure Blob Storage connector is GA
+Postgres CDC: compatibility with ClickHouse JSON
+Published AWS Glue connector https://clickhouse.com/blog/clickhouse-connector-aws-glue
+
+Python client:
+enhanced SQLAlchemy 2
+performance improvements with Arrow-backed DataFrames
+
+Bonus
+
+ClickStack in ClickHouse Cloud
+DeltaLake CDC open-source
+
+Reading
+
+Comparison of LLM chat UIs
+Agentic BI in Slack
+
+
+
+-->
+
+<section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
+<h2><span class="hilite">Small And Nice Features</span></h2>
+</section>
+
+<section class="slide">
+<h2>Virtual Column _table Everywhere</h2>
+
+<!--
+
+CREATE TABLE a (s String) ORDER BY ();
+CREATE TABLE b (s String) ORDER BY ();
+INSERT INTO a VALUES ('Hello');
+INSERT INTO b VALUES ('World');
+SELECT *, _table FROM merge('^(a|b)$');
+SELECT *, _table FROM a UNION ALL SELECT *, _table FROM b;
+
+-->
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE a (s String) ORDER BY ();
+CREATE TABLE b (s String) ORDER BY ();
+INSERT INTO a VALUES ('Hello');
+INSERT INTO b VALUES ('World');
+
+<span style="color: gray;">-- This already worked:</span>
+SELECT *, <b>_table</b> FROM merge('^(a|b)$');
+
+<span style="color: gray;">-- This is new in 25.8:</span>
+SELECT *, <b style="color: green;">_table</b> FROM a UNION ALL SELECT *, <b style="color: green;">_table</b> FROM b;
+
+   ┌─s─────┬─_table─┐
+1. │ Hello │ a      │
+2. │ World │ b      │
+   └───────┴────────┘
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Xiaozhe Yu.</p>
+</section>
+
+
+<section class="slide">
+<h2>External Disks For Temporary Data</h2>
+
+<p>Queries with large GROUP BY, ORDER BY or JOIN operations may use<br/>disk space for temporary data when it does not fit in memory.</p>
+
+<p>Before version 25.8, ClickHouse could only use local types of disks<br/>for temporary data.</p>
+
+<p>Since <b style="color: green;">25.8</b>, any disk type is suitable for temporary data, even <b>S3</b>,
+<br/>which is especially useful for ephemeral, disk-less machines.</p>
+
+<p>Bonus: temporary data is automatically compressed!</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Azat Khuzhin.</p>
+</section>
+
+
+<section class="slide">
+<h2>Integration With Arrow Flight 🧪</h2>
+
+<p><b>Arrow Flight</b> &mdash; a protocol for data exchange in the Apache Arrow<br/>format over GRPC.</p>
+<p>Good for column-oriented databases as it keeps the data in the column representation
+(similar to the ClickHouse native protocol).</p>
+
+<p>Now ClickHouse can query other Arrow Flight <b>data sources</b>
+<br/>with the <b>arrowflight</b> table function.</p>
+
+<p>And ClickHouse can work as an Arrow Flight <b>server</b> by itself.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: zakr600, Vitaly Baranov.</p>
+</section>
+
+<section class="slide">
+<h2>Integration With Arrow Flight 🧪</h2>
+
+<p>Arrow Flight <b>server</b> in ClickHouse.</p>
+<p><code style="font-size: 14pt; line-height: 1.5;"><span style="color: gray;">$ cat config.d/flight.yaml</span>
+
+arrowflight_port: 6379
+arrowflight:
+    enable_ssl: true
+    ssl_cert_file: '/etc/clickhouse-server/cert.pem'
+    ssl_key_file: '/etc/clickhouse-server/key.pem'
+</code></p>
+
+<p>Supports both <b>put</b> and <b>get</b> commands.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: zakr600, Vitaly Baranov.</p>
+</section>
+
+<section class="slide">
+<h2>Integration With Arrow Flight 🧪</h2>
+
+<p>Arrow Flight <b>client</b> in ClickHouse.</p>
+<p><code style="font-size: 14pt; line-height: 1.5;">SELECT * FROM <b style="color: green;">arrowflight</b>('localhost:6379', 'dataset');
+</code></p>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">CREATE TABLE table_name
+ENGINE = <b style="color: green;">ArrowFlight</b>('localhost:6379', 'dataset');
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: zakr600, Vitaly Baranov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Hash Output Format</h2>
+
+<p>Want to quickly calculate a checksum of the query result?</p>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">:) SELECT number FROM numbers(10) FORMAT <b style="color: green;">Hash</b>
+
+c1df5386c5a4dfee17eee0e351914c83
+</code></p>
+
+<p>Returns a 128-bit hash value, order sensitive.</p>
+
+<p>Use-case: check that the query returns the same result.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Robert Schulze.</p>
+</section>
+
+
+<section class="slide">
+<h2>Writes With Hive-Style Partitioning</h2>
+
+<p>Allows splitting data by directories, representing the values of partition key.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">CREATE TABLE test (year UInt16, country String, counter UInt8)
+ENGINE = AzureBlobStorage(account_name = 'devstoreaccount1', ...,
+    format = 'Parquet', <b style="color: green">partition_strategy = 'hive'</b>)
+PARTITION BY (year, country);</code></p>
+
+<p>The new <b>partition_strategy</b> parameter allows to switch between
+<br/>the 'hive' or the old, 'wildcard' modes.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Arthur Passos.</p>
+</section>
+
+
+<section class="slide">
+<h2>Writes With Hive-Style Partitioning</h2>
+
+<p>Allows splitting data by directories, representing the values of partition key.</p>
+
+<p><code style="font-size: 12pt; line-height: 1.25; margin: 0 -3em;">:) INSERT INTO test VALUES (2020, 'Zimbabwe', 1), (2021, 'Brazil', 2);
+:) SELECT _path, * FROM test;
+
+   ┌─_path───────────────────────────────────────────────────────┬─year─┬─country──┬─counter─┐
+1. │ data/year=2020/country=Zimbabwe/7351305360873664512.parquet │ 2020 │ Zimbabwe │       1 │
+2. │ data/year=2021/country=Brazil/7351305360894636032.parquet   │ 2021 │ Brazil   │       2 │
+   └─────────────────────────────────────────────────────────────┴──────┴──────────┴─────────┘
+</code></p>
+
+<p>Bonus:
+<br/>&mdash; you can decide whether to write partition columns into data files;
+<br/>&mdash; <b>hive</b> partition_strategy also makes partition columns available in SELECTs;
+</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Arthur Passos.</p>
+</section>
+
+
+<section class="slide">
+<h2>Protocol Compatibility</h2>
+
+<p>ClickHouse is a multi-protocol server. It implements:
+<br/>&mdash; native TCP protocol;
+<br/>&mdash; HTTP(s) REST API; ODBC and JDBC drivers;
+<br/>&mdash; GRPC protocol;
+<br/>&mdash; Arrow Flight protocol;
+<br/>&mdash; ZooKeeper protocol;
+<br/>&mdash; <b>MySQL</b> wire protocol;
+<br/>&mdash; <b>PostgreSQL</b> wire protocol;
+</p>
+
+<p>Now, PostgreSQL protocol supports COPY command,
+<br/>and MySQL protocol implements the information tables
+<br/>that are necessary for the C# MySQL client to work with ClickHouse.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Konstantin Vedernikov.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">SYSTEM RESTORE DATABASE REPLICA</h2>
+
+<p>A command, similar to SYSTEM RESTORE REPLICA,
+<br/>but for Replicated databases.</p>
+
+<p>Makes it possible to re-create the metadata in Keeper from the local state,
+<br/>for the case when Keeper was damaged or lost.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Konstantin Morozov.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back9.jpg); background-size: cover;">
+<h2><span style="color: black;"><span class="hilite">Boring Security Features</span></h2>
+</section>
+
+<section class="slide">
+<h2>Grants For Specific URLs in S3</h2>
+
+<p>In 25.6 and before:</p>
+<p><code>GRANT S3 ON *.* TO user</code></p>
+
+<p>In 25.7:</p>
+<p><code>GRANT READ, WRITE ON S3 TO user</code></p>
+
+<p>In 25.8:</p>
+<p><code>GRANT READ ON S3(<b style="color: green;">'s3://foo/.*'</b>) TO user</code></p>
+
+<p>Allows a limited usage of S3 buckets and prevents data exfiltration.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Artem Brustovetskii.</p>
+</section>
+
+
+<section class="slide">
+<h2>Using custom IAM roles with S3</h2>
+
+<p><code style="font-size: 16pt; line-height: 1.5;">SELECT * FROM s3('s3://mybucket/path.csv', CSVWithNames,
+    extra_credentials(<b style="color: green;">role_arn</b> =
+'arn:aws:iam::111111111111:role/ClickHouseAccessRole-001'))</code></p>
+
+<p>Until recently the feature was only available in <b>ClickHouse Cloud</b>.
+<br/>Since 25.8 it is available for all ClickHouse users.</p>
+
+<p>Bonus: GCP authentication with OAuth is also available in 25.8!</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back3.jpg); background-size: cover;">
+<h2><span style="color: black;"><span class="hilite">Performance Improvements</span></h2>
+</section>
+
+<section class="slide">
+<h2>Parquet Reader v3 🧪</h2>
+
+<p>A new, faster implementation of Parquet from scratch!</p>
+
+<img style="width: 100%" src="pictures/parquet1.png" />
+<div style="float: right;">
+<p style="color: gray; font-size: 14pt;">Developer: Michael Kolupaev.</p>
+<p style="margin-top: 3em;">Demo</p>
+</div>
+<img style="height: 50%" src="pictures/parquet2.png" />
+
+<!--
+
+ch
+SELECT * FROM 'hits.parquet' WHERE URL LIKE '%google%' ORDER BY EventTime LIMIT 10;
+SET input_format_parquet_use_native_reader_v3 = 1;
+SELECT * FROM 'hits.parquet' WHERE URL LIKE '%google%' ORDER BY EventTime LIMIT 10;
+
+-->
+
+</section>
+
+
+<section class="slide">
+<h2>Speculative Retries For Azure</h2>
+
+<img style="width: 50%;" src="pictures/azure1.png" />
+<img style="width: 50%" src="pictures/azure2.png" />
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexander Sapin.</p>
+</section>
+
+<section class="slide">
+<h2>Speculative Retries For Azure</h2>
+
+<p>The problem: <span style="color: red;">rare spikes of latencies</span> up to 5 sec, 10 sec, 15 sec, ...</p>
+<p>The reason: AWS S3 and Azure are complex distributed systems with their own shenanigans.</p>
+
+<p>This problem was solved for AWS and GCP a few years ago with:
+<br/>&mdash; using multiple connections to multiple endpoints;
+<br/>&mdash; rotating endpoints for better distribution of the load;
+<br/>&mdash; running a second request as soon as there is a soft timeout;
+<br/>&mdash; do many retries aggressively;</p>
+</section>
+
+<section class="slide">
+<h2>Speculative Retries For Azure</h2>
+
+<p>The problem: <span style="color: red;">rare spikes of latencies</span> up to 5 sec, 10 sec, 15 sec, ...</p>
+
+<p>Problem solved:
+<ol><li>Replacing the HTTP client in Azure SDK to our implementation.
+</li><li>Reusing the same logic of aggressive retries as for AWS S3.</li></ol></p>
+
+<p>Results:</p>
+<p>&mdash; <span style="color: green;">no more latency spikes!</span></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexander Sapin.</p>
+</section>
+
+
+<section class="slide">
+<h2>Faster Filtering By Secondary Indices</h2>
+
+<p>Example:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">CREATE TABLE test
+(
+    time DateTime,
+    user UInt16,
+    text String,
+    INDEX ix1(user) TYPE set(1000) GRANULARITY 5,
+    INDEX ix2(text) TYPE bloom_filter GRANULARITY 10
+)
+ORDER BY time;</code></p>
+
+<p>How to decide in which order read and apply indices?</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Maruth Goyal.</p>
+</section>
+
+<section class="slide">
+<h2>Faster Filtering By Secondary Indices</h2>
+
+<p>How to decide in which order read and apply indices?</p>
+
+<p>Since 25.8, indices are read and applied in the order of their sizes,
+<br/>which means <b style="color: green;">lightweight indices first</b>.</p>
+
+<p>The sizes are measured by compressed data on disk,
+<br/>and the decision is done for each part individually.</p>
+
+<p>So we have a chance to filter data with less cost!
+<br/>Adding a heavy index to a table does not affect queries<br/>that filter the most by another, light index.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Maruth Goyal.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back4.jpg); background-size: cover;">
+<h2 style="font-size: 32pt; margin-left: -1em;"><span class="hilite">Something Interesting</span></h2>
+</section>
+
+<section class="slide">
+<h2>Lightweight Updates Are Beta</h2>
+
+<p>Full-featured UPDATE statement:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">UPDATE my_table
+SET col1 = val1, col2 = val2, ...
+WHERE <i>condition</i>
+
+UPDATE hits SET Title = 'Updated Title'
+WHERE EventDate = today();
+
+UPDATE wikistat SET hits = hits + 1, time = now()
+WHERE path = 'ClickHouse';
+</code></p>
+
+<p>Experimental in 25.7. <span style="color: green;">Beta in <b>25.8</b></span>.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Anton Popov.</p>
+</section>
+
+<section class="slide">
+<h2>Correlated Subqueries Are Beta</h2>
+
+<p style="margin-top: -1em;">&mdash; are subqueries that depend on the columns from the outer scope.</p>
+<p><code style="font-size: 14pt; line-height: 1.25; white-space: pre-wrap;">SELECT * FROM users AS <b style="color: brown;">u1</b> WHERE EXISTS <span style="color: blue;">(
+    SELECT * FROM users2 AS u2 WHERE <b style="color: brown;">u1.age</b> = u2.age)</span>
+</code></p>
+
+<p>They can appear in many different contexts: EXISTS, IN, scalar...</p>
+<p>In <b>25.4</b> we supported correlated subqueries inside the <b>WHERE</b> clause with the <b>EXISTS</b> operator.</p>
+<p>In <b style="color: green;">25.5</b> we support <b style="color: green;">scalar correlated subqueries</b> inside the <b>WHERE</b> clause
+<br/>and correlated subqueries <b style="color: green;">inside SELECT</b>!</p>
+
+<p>Now it is enough to cover the <b>TPC-H</b> test suite without modifying queries.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Dmitry Novik.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back4.jpg); background-size: cover;">
+<h2 style="font-size: 32pt; margin-left: -1em;"><span class="hilite">Data Lakes</span></h2>
+</section>
+
+<section class="slide">
+<h2>Data Lakes Improvements</h2>
+<p>Support for <b style="color: green;">positional</b> and <b style="color: green;">equality deletes</b> in Iceberg.</p>
+<p>This works with the <b style="color: green;">ALTER DELETE</b> statement.</p>
+<p><b style="color: green;">Writes into Iceberg</b> are supported with REST and Glue catalogs.</p>
+<p>CREATE TABLE can <b style="color: green;">create a new Iceberg</b> table, rather than just attaching.</p>
+<p>Support for <b style="color: green;">DROP TABLE</b> for Iceberg in REST and Glue catalogs.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Konstantin Vedernikov.</p>
+</section>
+
+<section class="slide">
+<h2>Improvements For Delta Lake</h2>
+<p>Support for <b style="color: green;">writes into Delta Lake</b> tables.</p>
+<p><b style="color: green;">Time travel</b> support for Delta Lake tables.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Konstantin Vedernikov.</p>
+</section>
+
+<section class="slide" style="background: black;">
+<img style="width: 90%;" src="pictures/iceberg.jpg"/>
+</section>
+
+<!--
+<section class="slide">
+<h2 style="font-size: 32pt;">Iceberg-Managed Tables in Unity Catalog</h2>
+
+<p>Now ClickHouse has full support for "uniform" tables
+<br/>with the Unity catalog.</p>
+
+<p>Demo</p>
+
+SHOW CREATE TABLE demo
+Now let's insert some data:
+INSERT INTO demo VALUES (1), (2), (3);
+Let's check what our table looks like:
+SELECT *
+FROM demo
+
+Query id: 0bd88134-616e-47f5-a6f1-9e330006ff5c
+
+   ┌─c1─┐
+1. │  1 │
+2. │  2 │
+3. │  3 │
+   └────┘
+
+3 rows in set. Elapsed: 0.143 sec.
+We forgot to add some columns:
+ALTER TABLE demo ADD column c2 Nullable(String);
+Ok let's add one row:
+INSERT INTO demo VALUES (4, 'Delta Kernel');
+
+INSERT INTO demo FORMAT Values
+
+Query id: 09ca8a80-f3da-4eaa-afe3-13e68311d907
+
+Ok.
+
+1 row in set. Elapsed: 0.308 sec.
+Ok so now we have 4 rows and only one with two columns:
+SELECT *
+FROM demo
+
+Query id: 18abb953-ec56-4212-a2e2-ef6a77b10c41
+
+   ┌─c1─┬─c2───────────┐
+1. │  4 │ Delta Kernel │
+2. │  1 │ ᴺᵁᴸᴸ         │
+3. │  2 │ ᴺᵁᴸᴸ         │
+4. │  3 │ ᴺᵁᴸᴸ         │
+   └────┴──────────────┘
+
+4 rows in set. Elapsed: 0.310 sec.
+Let's try to update the old one:
+ALTER TABLE demo
+    (UPDATE c2 = 'Equality delete' WHERE c1 = 1)
+
+Query id: f22986c0-0263-4942-b909-1cf5d3155ca8
+
+Ok.
+
+0 rows in set. Elapsed: 0.560 sec.
+And let's also update row number 2:
+ALTER TABLE demo
+    (UPDATE c2 = 'Time Travel' WHERE c1 = 2)
+
+Query id: f2298650-0263-4942-b909-1cf5d3155ca8
+
+Ok.
+
+0 rows in set. Elapsed: 0.560 sec.
+Wait? Time travel, let's check our Iceberg history:
+SELECT *
+FROM system.iceberg_history
+WHERE `table` = 'demo'
+ORDER BY made_current_at ASC
+
+Query id: a1ea93be-8658-48aa-a875-f1cbbd6172fd
+
+   ┌─database─┬─table─┬─────────made_current_at─┬─snapshot_id─┬────────────parent_id─┬─is_current_ancestor─┐
+1. │ default  │ demo  │ 2025-08-27 02:07:07.083 │   737434738 │ 18446744073709551615 │                   1 │
+2. │ default  │ demo  │ 2025-08-27 02:14:26.870 │   781148062 │            737434738 │                   1 │
+3. │ default  │ demo  │ 2025-08-27 02:16:13.962 │   730433804 │            781148062 │                   1 │
+4. │ default  │ demo  │ 2025-08-27 02:16:14.092 │  1518148320 │            730433804 │                   1 │
+5. │ default  │ demo  │ 2025-08-27 02:17:32.563 │   847294289 │           1518148320 │                   1 │
+6. │ default  │ demo  │ 2025-08-27 02:17:32.682 │   771482402 │            847294289 │                   1 │
+   └──────────┴───────┴─────────────────────────┴─────────────┴──────────────────────┴─────────────────────┘
+
+6 rows in set. Elapsed: 0.204 sec.
+Let's go back to our previous state, before time travel was added:
+SELECT *
+FROM demo
+SETTINGS iceberg_snapshot_id = 847294289
+
+Query id: bcd01847-107c-4aa4-a92a-0607231fd85c
+
+   ┌─c1─┬─c2──────────────┐
+1. │  1 │ Equality delete │
+2. │  2 │ ᴺᵁᴸᴸ            │
+3. │  3 │ ᴺᵁᴸᴸ            │
+4. │  4 │ Delta Kernel    │
+   └────┴─────────────────┘
+
+</section>
+-->
+
+<section class="slide">
+<h2>Data Lake Catalogs Are Beta</h2>
+
+<p>ClickHouse supports database engines for:</p>
+<p>&mdash; Unity catalog (since 25.3);</p>
+<p>&mdash; REST catalog (since 24.12);</p>
+<p>&mdash; Glue catalog (since 25.3);</p>
+<p>&mdash; Hive Metastore catalog (since 25.5);</p>
+
+<p>Now all data lakes catalogs are promoted from experimental to <b style="color: green;">beta</b>.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
+<h2><span class="hilite">Bonus</span></h2>
+</section>
+
+
+<section class="slide">
+<h2>Integrations</h2>
+<p><b>MongoDB CDC</b> is in Private Preview</p>
+<p><b>Vertical scaling</b> for streaming ClickPipes<br/>to adjust the instance type for suitable workload</p>
+<p><b>Azure Blob Storage</b> connector in ClickPipes is GA</p>
+<p><b>Postgres CDC</b>: compatibility with the JSON data type</p>
+<p>ClickHouse has the official <b>AWS Glue connector</b></p>
+<p>Improvements for Python client: perf of Arrow DataFrames</p>
+</section>
+
+<section class="slide" style="background: black;">
+<h2 style="color: white;">ClickStack in ClickHouse Cloud</h2>
+
+<img style="width: 100%;" src="pictures/clickstack.png"/>
+<!--
+
+https://console.clickhouse-staging.com/services/2195d48c-c09d-4646-b64b-5bcd86086069/dashboards
+
+-->
+</section>
+
+<section class="slide" style="background: url(pictures/wing.jpg); background-size: cover;">
+<h2>Meetups</h2>
+<p style="line-height: 1.5">
+<span class="hilite">&mdash; 🇨🇦 Toronto, Sept 3</span>
+<br/><span class="hilite">&mdash; 🇮🇳 Gurgaon/Delhi, Sept 4</span>
+<br/><span class="hilite">&mdash; 🇺🇸 Raleigh, Sept 4</span>
+<br/><span class="hilite">&mdash; 🇺🇸 New York AI, Sept 9</span>
+<br/><span class="hilite">&mdash; 🇮🇱 Tel Aviv, Sept 9</span>
+<br/><span class="hilite">&mdash; 🇹🇭 Bangkok, Sept 16</span>
+<br/><span class="hilite">&mdash; 🇦🇪 Dubai, Sept 16</span>
+<br/><span class="hilite">&mdash; 🇺🇸 Boston, Sept 16</span>
+<br/><span class="hilite">&mdash; 🇮🇳 Pune, Sept 20</span>
+<br/><span class="hilite">&mdash; 🇮🇳 Madrid, Sept 30</span>
+</p>
+</section>
+
+
+
+<section class="slide">
+<h2>Reading Corner 📖</h2>
+
+<img style="float: right; width: 30%; margin-right: -3em; image-rendering: pixelated; margin-top: -1em;" src="pictures/blog.png"/>
+<p><a href="https://clickhouse.com/blog/">https://clickhouse.com/blog/</a></p>
+
+<p style="line-height: 1.5;">
+<br/>&mdash; Comparison of LLM chat UIs
+<br/>&mdash; Agentic BI in Slack with ClickHouse MCP
+<br/>&mdash; Observability in <b>Character.AI</b> with ClickStack
+<br/>&mdash; <b>Text search</b> in ClickHouse
+<br/>&mdash; Can LLMs replace on call SREs today?
+</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back8.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
+<h2 style="color: white; margin-left: -1em;">Q&amp;A</a></h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+

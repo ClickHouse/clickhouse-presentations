@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 25.5 Call</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+         .slide table tr:not(:last-of-type)>* { background: none; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 25.5 Call</h1>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/back3.jpg); background-size: cover;">
+        <h1 style="margin-top: 25px; line-height: 110%; font-size: 56pt; color: yellow; text-shadow: black 1px 0 10px; text-align: center;">ClickHouse Release 25.5</h1>
+    </section>
+
+<section class="slide">
+<h2>ClickHouse release 25.5</h2>
+<p>1. (50 min) What's new in ClickHouse 25.5.</p>
+<p>3. (10 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back1.jpg); background-size: cover;">
+<h2><span class="hilite">Release 25.5</span></h2>
+<p><span class="hilite">ClickHouse Spring/Summer Release.</span></p>
+<p><span class="hilite">— 15 new features 🌸</span></p>
+<p><span class="hilite">— 23 performance optimizations 🦋</span></p>
+<p><span class="hilite">— 64 bug fixes 🐝</span></p>
+</section>
+<!--
+
+Small
+
+stringBytesUniq, stringBytesEntropy
+sparseGrams
+base32
+Default table in clickhouse-local
+Geo types in Parquet
+TRUNCATE LIKE
+_part_starting_offset
+
+Data Lakes
+
+Iceberg History
+Iceberg version hint
+icebergHash, icebergBucketTransform
+Hive Metastore
+
+Performance
+
+Skip indices and FINAL
+Speed-up of secondary indices
+Marks for substreams
+PREWHERE for subcolumns
+Consistent hashing for -Cluster table functions
+
+Main
+
+All Correlated subqueries
+Time/Time64
+
+Bonus
+
+Vector search is Beta
+
+
+Integrations
+
+
+
+Bonus
+
+AgentHouse
+Foursquare
+OpenHouse
+
+
+Reading
+
+Dashboard
+Lazy Materialization
+ClickHouse and Parquet
+MySQL CDC
+Chartmetric
+BAML
+Wallarm
+Flock Safety
+Real Estate Analytics
+
+-->
+
+<section class="slide" style="background: url(pictures/back2.jpg); background-size: cover;">
+<h2><span class="hilite">A Few Small Features</span></h2>
+</section>
+
+<section class="slide">
+<h2>String Entropy</h2>
+
+<p>Two new functions:
+<br/>&mdash; <b>stringBytesUniq</b> &mdash; the number of distinct bytes in a string;
+<br/>&mdash; <b>stringBytesEntropy</b> &mdash; Shannon's entropy of the distribution of bytes;
+</p>
+
+<p>Determine how random the string is.</p>
+
+<p><code style="font-size: 15pt; line-height: 1.25; white-space: pre-wrap;">SELECT round(stringBytesEntropy(randomString(10000)), 2) AS res
+
+   ┌──res─┐
+1. │ 7.98 │ <span style="color: gray;">-- close to 8 bit per character</span>
+   └──────┘
+</code></p>
+
+<p>Demo.</p>
+
+<!--
+
+WITH 'AAAAB3NzaC1yc2EAAAADAQABAAACAQDpLXuIqHzvviq3+iWmg35OV0U4xMsa6U1yY7ZHkD6kBvlxwv/N7eu3/yz27MEHhZIxdn4DFel3Jq6n1TQ4gNicjm+rQe/64O9tgF3RYmnQ3WLMTUnmxSEGTb9rRjisxUaooO+qs3wYIWxEMG4UWrZNLjQ9mcUIkYYOm/tOkW0CKatd3YaBnEEkv17YwQgCZz6b+v+pKZZ1utP8PX5Mk8YWH8FewL3jZfvVK//CB0ls1MK8gCienySm+KRT4gin3JG2vhaxYOsvj2IvXNwVvChQnjboDH/UyfySUZnszLKW2XkqNLx6h/c0eyoMj0qewo1zsNVpldiQFvkFoyfKxDipDEzhnuktRZDgitqotIzrusezYmPFI/vPCtZMDxkrEfYDqQEBZLmbmxqg1nkvwk04ECUvxvIoo8dK0HhTqrdiKPaY/YLCUjUXEwwsHK5Sx8KEtqsMzgR+NGhv+Nu8oh3ByrrTVUzvwu1IEJIeFfG4SFME6Je28pz7q8NL6RzCfP/MAzp2AfvJp8yxsGXgyUOvnLvWucWohje0QnOHd6nXeNnoI8Tch94sV142c0Quf+snga0cj+wrjyYOVZpWjJ5gHUEyxMpo7kheFLSPupFjUUR8sTlcBDIPXHlcTwpKdM51ZmxE5DLPbdDAm528cTpLxfLOI5+nsLqIjCBQQezsAQ==' AS key SELECT stringBytesUniq(key), stringBytesEntropy(key), stringBytesUniq(base64Decode(key)), stringBytesEntropy(base64Decode(key))
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Sachin Kumar Singh.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Functions For Base32</h2>
+
+<p><b>base32Encode</b>, <b>base32Decode</b> &mdash; use the RFC-4648 alphabet</p>
+
+<p><code style="font-size: 15pt; line-height: 1.25; white-space: pre-wrap;">:) WITH 'ClickHouse is a good database' AS s
+   SELECT base32Encode(s),
+          base58Encode(s),
+          base64Encode(s)
+
+Row 1:
+──────
+base32Encode(s): INWGSY3LJBXXK43FEBUXGIDBEBTW633EEBSGC5DBMJQXGZI=
+base58Encode(s): 44Xce2JCNL96kJGtfCgHPpV4axarmE3843VSYYAQ
+base64Encode(s): Q2xpY2tIb3VzZSBpcyBhIGdvb2QgZGF0YWJhc2U=
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Joanna Hulboj.</p>
+</section>
+
+<section class="slide">
+<h2>SparseGrams</h2>
+
+<p>An extension to <b>ngrams</b> that deterministically adds a small amount of longer <span style="color: green;">infrequent substrings</span> to the set of ngrams.</p>
+
+<p>New functions: <b>sparseGrams</b>, <b>sparseGramsUTF8</b>,<br/><b>sparseGramsHashes</b>, <b>sparseGramsHashesUTF8</b>.
+
+<p>Demo.</p>
+
+<!--
+
+WITH 'ClickHouse is a good database' AS s SELECT ngrams(s, 3)
+WITH 'ClickHouse is a good database' AS s SELECT sparseGrams(s, 3)
+WITH 'ClickHouse is a good database' AS s, sparseGrams(s, 3) AS sparse, ngrams(s, 3) AS dense SELECT length(dense), length(sparse)
+WITH 'ClickHouse is a good database' AS s, sparseGrams(s, 3) AS sparse, ngrams(s, 3) AS dense SELECT arrayJoin(arrayFilter(x -> NOT has(dense, x), sparse))
+WITH 'ClickHouse is a good database' AS s, sparseGrams(s, 3) AS sparse, ngrams(s, 3) AS dense SELECT arrayJoin(sparse) AS token ORDER BY length(token)
+WITH 'ClickHouse is a good database' AS s SELECT sparseGramsHashes(s, 3)
+
+-->
+
+<p>It is an elegant algorithm to accelerate text and code search.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Konstantin Vedernikov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Geo Types in Parquet</h2>
+
+<p>Parquet files can contain a WKB-encoded geometry data.</p>
+<p>In previous ClickHouse versions, this data was recognized as a binary string.</p>
+
+<p>Since version 25.5, it is inferred as <b>Point</b>, <b>LineString</b>, <b>MultiLineString</b>, <b>Polygon</b> or <b>MultiPolygon</b> types in ClickHouse.</p>
+
+<p>Demo.</p>
+
+<!--
+
+ch
+SELECT * FROM s3('s3://fsq-os-places-us-east-1/release/dt=2025-04-08/places/parquet/places-00000.zstd.parquet') LIMIT 1
+
+~/work/ClickHouse/programs/server/clickhouse-24.12
+SELECT * FROM s3('s3://fsq-os-places-us-east-1/release/dt=2025-04-08/places/parquet/places-00000.zstd.parquet') LIMIT 1
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Konstantin Vedernikov.</p>
+</section>
+
+<section class="slide">
+<h2>Implicit Table In clickhouse-local</h2>
+
+<p>When processing files from stdin, the <b>FROM</b> clause can be omitted:</p>
+
+<p><code style="font-size: 15pt; line-height: 1.25; white-space: pre-wrap;">ch -q "<span style="color: navy;">name, price + tax ORDER BY 2 DESC</span>" &lt; data.csv
+ch -q "<span style="color: navy;">arrayJoin(members.login), org_name</span>" &lt; data.json
+ch -q "<span style="color: navy;">arrayJoin(json.members.login), json.org_name</span>
+" --input-format JSONAsObject &lt; data.json</code></p>
+
+<p><b>SELECT</b> can be omitted as well.</p>
+
+<p>This makes <b>clickhouse-local</b> a (faster and richer) replacement of <b>jq</b>.</p>
+
+<p>Demo.</p>
+
+<!--
+
+ch --query "file" < compile_commands.json | less
+ch --query "extract(file, '\w+$')" < compile_commands.json | less
+ch "extract(file, '\w+$'), count() GROUP BY 1 ORDER BY 2 DESC" --format Pretty < compile_commands.json
+ch "extract(file, '\w+$'), count() GROUP BY 1 ORDER BY 2 DESC" --output-format Pretty < compile_commands.json
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>TRUNCATE ALL TABLES LIKE</h2>
+
+<p>Now the query <b>TRUNCATE ALL TABLES FROM db</b>
+<br/>can be clarified: <b>TRUNCATE ALL TABLES FROM db <span style="color: green;">LIKE '%pattern%'</span></b></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Yarik Briukhovetskyi.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
+<h2><span style="color: black;"><span class="hilite">Improvements for Data Lakes</span></h2>
+</section>
+
+
+<section class="slide">
+<h2>Support For Partitions By Buckets</h2>
+
+<p>For partition pruning of <b>Iceberg</b> tables.</p>
+<p>Example: an Iceberg table in AWS Athena:</p>
+
+<p><code style="font-size: 15pt; line-height: 1.25; white-space: pre-wrap;">CREATE TABLE iceberg_benchmark.bucket_partitioned
+(
+  watchid bigint,
+  javaenable int,
+  title string,
+...
+) PARTITIONED BY (<b style="color: green;">bucket(50, watchid)</b>)
+TBLPROPERTIES ('table_type'='iceberg');</code></p>
+
+<p>is split into <b>50</b> buckets by the hash of <b>watchid</b>.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Dan Ivanik.</p>
+</section>
+
+<section class="slide">
+<h2>Support For Partitions By Buckets</h2>
+
+<p><code style="font-size: 15pt; line-height: 1.25; white-space: pre-wrap;">SELECT watchid
+FROM "iceberg_benchmark.bucket_partitioned"
+WHERE watchid = 8005433341155183383
+LIMIT 10</code></p>
+
+<p>ClickHouse 25.4: <b style="color: red;">51.2 sec</b>.</p>
+<p>ClickHouse 25.5: <b style="color: green;">1.3 sec</b>.</p>
+
+<p>Plus two new functions, <b>icebergHash</b> and <b>icebergBucketTransform</b>.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Dan Ivanik.</p>
+</section>
+
+<section class="slide">
+<h2>Hive Metastore Catalog</h2>
+
+<p>Now ClickHouse has support for <i>every</i> data catalog:</p>
+<p>&mdash; 24.12: REST</p>
+<p>&mdash; 25.3: Unity</p>
+<p>&mdash; 25.3: Glue</p>
+<p style="color: green;">&mdash; 25.5: <b>Hive Metastore</b></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Konstantin Vedernikov.</p>
+</section>
+
+<!--
+<section class="slide">
+<h2>System Table "iceberg_history"</h2>
+
+<p>A new system table containing information about available snapshots
+<br/>of all Iceberg tables.</p>
+<p>Plays nicely with the time travel feature.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Smita Kulkarni.</p>
+</section>
+-->
+
+<section class="slide">
+<h2>Support For "Version Hint"</h2>
+
+<p>Iceberg tables may contain a <b>version-hint.text</b> pointing to the actual snapshot. So it can be used instead of finding the latest metadata file.</p>
+
+<p>A table-level setting, <b style="color: green;">iceberg_use_version_hint</b> to complete the existing <b style="color: gray">iceberg_metadata_file_path</b>, <b style="color: gray">iceberg_metadata_table_uuid</b>, <b style="color: gray">iceberg_recent_metadata_file_by_last_updated_ms_field</b>.
+
+<p>Helps using tables with concurrent updates, without the help of a data catalog*</p>
+
+<p style="color: gray; font-size: 14pt;">* yes, everything around Iceberg ecosystem is complicated and brittle. Sorry about that.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Arnaud Briche.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
+<h2><span style="color: black;"><span class="hilite">Performance Improvements</span></h2>
+</section>
+
+<section class="slide">
+<h2>Secondary Indices With FINAL</h2>
+
+<p>ClickHouse allows tables to perform data transformations during background merges.</p>
+
+<p>E.g., <b>ReplacingMergeTree</b> does deduplication,
+<br/><b>AggregatingMergeTree</b> does aggregation.</p>
+
+<p>If a SELECT query has the <b>FINAL</b> modifier after a table,
+<br/>it performs <b>merge on SELECT</b>.</p>
+
+<p>The problem: secondary indices couldn't skip ranges of data on SELECT,
+<br/>because this data can affect the query result due to the merge.</p>
+</section>
+
+<section class="slide">
+<h2>Secondary Indeces With FINAL</h2>
+
+<p>The problem: secondary indices couldn't skip ranges of data on SELECT,
+<br/>because this data can affect the query result due to the merge.</p>
+
+<p>Filtering with secondary indices can be enabled with the setting:
+<br/><b>use_skip_indexes_if_final</b>, which allows to filter the data,
+<br/>but also may <span style="color: brown;">skip some of the updates</span>.</p>
+
+<p>A new option in ClickHouse 25.5, <b style="color: green;">use_skip_indexes_if_final_exact_mode</b>
+<br/>&mdash; takes care about all the updates by reading extra ranges after filtering.</p>
+
+<p>Demo.</p>
+
+<!--
+
+SHOW CREATE TABLE hackernews_history
+
+ALTER TABLE hackernews_history ADD INDEX idx_by (by) TYPE bloom_filter(0.01);
+ALTER TABLE hackernews_history MATERIALIZE INDEX idx_by;
+
+SET use_query_condition_cache = 0;
+
+SELECT count() FROM hackernews_history WHERE by = 'pradeepchhetri'
+Elapsed: 0.021 sec. Processed 1.31 million rows
+
+SELECT count() FROM hackernews_history FINAL WHERE by = 'pradeepchhetri'
+Elapsed: 0.194 sec. Processed 47.21 million rows
+
+SET use_query_condition_cache = 0, use_skip_indexes_if_final = 1;
+SELECT count() FROM hackernews_history FINAL WHERE by = 'pradeepchhetri'
+Elapsed: 0.068 sec. Processed 6.01 million rows
+
+SET use_query_condition_cache = 0, use_skip_indexes_if_final = 1, use_skip_indexes_if_final_exact_mode = 1;
+SELECT count() FROM hackernews_history FINAL WHERE by = 'pradeepchhetri'
+Elapsed: 0.068 sec. Processed 6.01 million rows
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Shankar Iyer.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back8.jpg); background-size: cover;">
+<h2 style="font-size: 32pt; margin-left: -1em;"><span class="hilite">Something Interesting</span></h2>
+</section>
+
+<section class="slide">
+<h2>Correlated Subqueries: More Types</h2>
+
+<p style="margin-top: -1em;">&mdash; are subqueries that depend on the columns from the outer scope.</p>
+<p><code style="font-size: 14pt; line-height: 1.25; white-space: pre-wrap;">SELECT * FROM users AS <b style="color: brown;">u1</b> WHERE EXISTS <span style="color: blue;">(
+    SELECT * FROM users2 AS u2 WHERE <b style="color: brown;">u1.age</b> = u2.age)</span>
+</code></p>
+
+<p>They can appear in many different contexts: EXISTS, IN, scalar...</p>
+<p>In <b>25.4</b> we supported correlated subqueries inside the <b>WHERE</b> clause with the <b>EXISTS</b> operator.</p>
+<p>In <b style="color: green;">25.5</b> we support <b style="color: green;">scalar correlated subqueries</b> inside the <b>WHERE</b> clause
+<br/>and correlated subqueries <b style="color: green;">inside SELECT</b>!</p>
+
+<p>Now it is enough to cover the <b>TPC-H</b> test suite without modifying queries.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Dmitry Novik.</p>
+</section>
+
+<section class="slide">
+<h2>Vector Search Is Beta</h2>
+
+<p><b>22.9</b> &mdash; experimental version</p>
+<p style="color: gray; font-size: 14pt;">Introduced by Arthur Filatenkov, Vladimir Makarov, Danila Mishin,
+Nikita Vasilenko, Alexander Piachonkin, Nikita Evsiukov, Hakob Sagatelyan.</p>
+
+<p><b>23.8</b> &mdash; integration with the USearch library</p>
+<p style="color: gray; font-size: 14pt;">Introduced by Davit Vardanyan.</p>
+
+<p><b>25.1</b> &mdash; faster vector indices</p>
+<p style="color: gray; font-size: 14pt;">By Robert Schulze, Michael Kolupaev.</p>
+
+<p><b style="color: green;">25.5</b> &mdash; beta</p>
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Shankar Iyer, Robert Schulze.</p>
+</section>
+
+<section class="slide">
+<h2>Vector Search Is Beta</h2>
+
+<p>Support for pre-filtering and post-filtering modes.</p>
+
+<p>SET <b>vector_search_filter_strategy</b> = auto|postfilter|prefilter</p>
+
+<p>Determines how to filter data for hybrid search.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Shankar Iyer.</p>
+</section>
+
+
+<section class="slide">
+<h2>Integrations</h2>
+
+<p><b>ClickPipes</b> supports <b>Azure Blob Storage</b> in private preview.</b></p>
+
+<p><b>dbt</b> v1.9.0 added a <b>microbatch</b> strategy.
+<br/>and support for <b>column-level TTL</b>.</p>
+
+<p><b>Java</b> client speeds up insertion with the new <b>RowBinaryWriter</b>.</p>
+
+<p><b>Grafana</b> integration v4.9.0 added suggestions in the SQL editor,
+<br/>as well as SQL formatter.
+<br/>Better support for traces: added kind, status, instrumentation library, links, events and state data.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
+<h2><span class="hilite">Bonus</span></h2>
+</section>
+
+<section class="slide">
+<h2>AgentHouse</h2>
+
+<p style="font-size: 150%;"><a href="https://llm.clickhouse.com/">https://llm.clickhouse.com/</a></p>
+<p>A chat agent connected to ClickHouse demo datasets
+<br/>using the ClickHouse MCP server.</p>
+<p>The ClickHouse MCP server also works with your databases!</p>
+
+<!-- How has the ClickHouse popularity grown in 2025? -->
+</section>
+
+<section class="slide" style="background: url(pictures/foursquare.png); background-size: cover;">
+<h2 style="color: white;"><span style="background: rgba(0, 0, 0, 0.5)">Visualizations On The Map</span></h2>
+
+<p style="color: white;"><span style="background: rgba(0, 0, 0, 0.5)">Example with the Foursquare dataset:</span></p>
+<p style="color: white;"><span style="background: rgba(0, 0, 0, 0.5)"><a href="https://adsb.exposed/?dataset=Places&amp;zoom=5&amp;lat=52.3085&amp;lng=5.8008&amp;query=7c5e396ef56770ed633faf666a2073a2">https://adsb.exposed/?dataset=Places</a></span></p>
+
+</section>
+
+<section class="slide" style="background: url(pictures/openhouse.png); background-size: cover;">
+</section>
+
+
+<section class="slide" style="background: url(pictures/wing.jpg); background-size: cover;">
+<h2>Meetups</h2>
+<p>
+
+<span class="hilite">&mdash; 🇯🇵 Tokyo, June 5</span>
+<br/><span class="hilite">&mdash; 🇨🇾 Cyprus, June 10</span>
+<br/><span class="hilite">&mdash; 🇺🇸 Washington DC, June 12</span>
+<br/><span class="hilite">&mdash; 🇮🇱 Tel Aviv, June 17</span>
+<br/><span class="hilite">&mdash; 🇺🇸 Atlanta, July 8</span>
+<br/><span class="hilite">&mdash; 🇺🇸 New York, July 15</span>
+</p>
+<p><span class="hilite">I will be in person on some of these meetups :)</span></p>
+</section>
+
+
+
+<section class="slide">
+<h2>Reading Corner 📖</h2>
+
+<img style="float: right; width: 30%; margin-right: -3em; image-rendering: pixelated; margin-top: 1em;" src="pictures/blog.png"/>
+<p><a href="https://clickhouse.com/blog/">https://clickhouse.com/blog/</a></p>
+
+<p style="line-height: 1.5;">&mdash; Dashboard In ClickHouse Cloud
+<br/>&mdash; ClickHouse and Parquet
+<br/>&mdash; How we made MySQL CDC
+<br/>&mdash; Chartmetric &mdash; music artists analytics
+<br/>&mdash; BoundaryML &mdash; how to make AI structured
+<br/>&mdash; Wallarm, Flock Safety, Real Estate Analytics
+</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back4.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
+<h2 style="color: white; margin-left: -1em;">Q&amp;A</a></h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+

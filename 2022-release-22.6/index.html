@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 22.6 Webinar</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         table, tr, td { border: 0; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 22.6 Webinar</h1>
+    </header>
+    <section class="slide" id="cover">
+        <img src="https://presentations.clickhouse.com/original_website/logo.svg" style="width: 15%; position: absolute; right: 20px; bottom: 20px;" />
+        <h1 style="margin-top: 80px; line-height: 150%; color: black; font-size: 64pt">ClickHouse<br/>Release 22.6</h1>
+    </section>
+
+<section class="slide">
+<h2>Release 22.6 Webinar</h2>
+<p>1. (45 min) What's new in ClickHouse 22.6.</p>
+<p>2. (15 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: linear-gradient(to bottom, #46CDFD, #FEE269);">
+<div style="float: right; font-size: 500%; line-height: 1.25">🌤</div>
+<h2>Release 22.6</h2>
+<p>ClickHouse "summer" release.</p>
+<p style="margin-top: 2em;">— 19 new features</p>
+<p>— 27 performance optimizations</p>
+</section>
+
+<section class="slide">
+<h2>GROUPING Function</h2>
+<p>Used with ROLLUP, CUBE or GROUPING SETS.</p>
+<p>To distinguish different sets.</p>
+<p style="font-size: 95%;"><code>SELECT k, <b>GROUPING(k)</b> FROM table GROUP BY k <b>WITH ROLLUP</b></code></p>
+<p>(demo)</p>
+<p style="margin-top: 5em; color: gray; font-size: 14pt;">Developer: Dmitriy Novik.</p>
+</section>
+
+<!--
+
+SELECT toYear(date) AS year, county, town, count(), avg(price) FROM uk_price_paid GROUP BY year, county, town WITH ROLLUP ORDER BY count() DESC LIMIT 100
+
+SELECT toYear(date) AS year, county, town, GROUPING(year), GROUPING(county), GROUPING(town), count(), avg(price) FROM uk_price_paid GROUP BY year, county, town WITH ROLLUP ORDER BY count() DESC LIMIT 100
+
+SELECT toYear(date) AS year, county, town, GROUPING(town), GROUPING(year), count(), avg(price) FROM uk_price_paid GROUP BY GROUPING SETS ((year), (county, town)) ORDER BY count() DESC LIMIT 100
+-->
+
+<section class="slide">
+<h2>New JSON Formats</h2>
+<p>— JSONColumns<br/>
+— JSONCompactColumns<br/>
+— JSONColumnsWithMetadata</p>
+<p>(demo)</p>
+</section>
+
+<!--
+SELECT time::INT AS t, sum(hits) AS v FROM wikistat WHERE path = 'ClickHouse' GROUP BY t ORDER BY t LIMIT 10 FORMAT JSONColumns
+SELECT time::INT AS t, sum(hits) AS v FROM wikistat WHERE path = 'ClickHouse' GROUP BY t ORDER BY t LIMIT 10 FORMAT JSONCompactColumns
+SELECT time::INT AS t, sum(hits) AS v FROM wikistat WHERE path = 'ClickHouse' GROUP BY t ORDER BY t LIMIT 10 FORMAT JSONColumnsWithMetadata
+-->
+
+<section class="slide">
+<p>Let's write some JavaScript... <a href="https://github.com/leeoniya/uPlot/">https://github.com/leeoniya/uPlot/</a></p>
+<code style="margin-left: -80px; margin-right: -80px; font-size: 16pt; line-height: 1.1;">async function chart() {
+    const opts = {
+        width: 800,
+        height: 400,
+        series: [ { label: "time" },
+                  { label: "pageviews", stroke: "#8DF" } ] };
+
+    const response = await fetch(
+        "<a href="https://play.clickhouse.com/play?user=play">https://play.clickhouse.com/?user=play</a>",
+        { method: "POST", body: `
+            <span style="color: green;">SELECT toStartOfDay(time, 'Europe/Amsterdam')::INT AS t,
+                   sum(hits)::INT AS v
+            FROM wikistat
+            WHERE path = 'ClickHouse' GROUP BY t ORDER BY t
+            FORMAT <b>JSONCompactColumns</b></span>` });
+
+    const data = await response.json();
+    let uplot = new uPlot(opts, data, document.getElementById('chart'));
+}</code>
+</section>
+
+<section class="slide">
+<h2>New JSON Formats</h2>
+<div id="chart" style="margin-top: -1em;"></div>
+</section>
+
+<link rel="stylesheet" href="style/uPlot.min.css">
+<script src="js/uPlot.iife.min.js"></script>
+
+<script>
+async function chart()
+{
+    const opts = {
+        width: 800,
+        height: 400,
+        series: [ { label: "time" },
+                  { label: "pageviews", stroke: "#8DF" } ] };
+
+    const response = await fetch(
+        "https://play.clickhouse.com/?user=play",
+        { method: "POST", body: `
+            SELECT toStartOfDay(time, 'Europe/Amsterdam')::INT AS t, sum(hits)::INT AS v
+            FROM wikistat WHERE path = 'ClickHouse' GROUP BY t ORDER BY t
+            FORMAT JSONCompactColumns` });
+
+    const data = await response.json();
+    let uplot = new uPlot(opts, data, document.getElementById('chart'));
+}
+
+chart();
+</script>
+
+<section class="slide">
+<h2>Query Tracing With OpenTelemetry</h2>
+<p>Did you know?</p>
+<p>— ClickHouse has support for Open Telemetry</p>
+<p>— data is collected in the <b>system.opentelemetry_span_log</b> table</p>
+<p>— easy to visualize with Jaeger or Zipkin</p>
+<p style="color: green;">— detailed instrumentation since 22.6!</p>
+<p style="margin-top: 2em;">The problem: it is too detailed...</p>
+<p>A query can generate ~ 1 mln spans.</p>
+</section>
+
+<!--
+SET opentelemetry_start_trace_probability = 1
+
+SELECT
+    repo_name,
+    uniq(actor_login) AS total_stars,
+    uniqIf(actor_login, actor_login IN
+    (
+        SELECT actor_login
+        FROM github_events
+        WHERE (event_type = 'WatchEvent') AND (repo_name IN ('ClickHouse/ClickHouse', 'yandex/ClickHouse'))
+    )) AS clickhouse_stars,
+    round(clickhouse_stars / total_stars, 2) AS ratio
+FROM github_events
+WHERE (event_type = 'WatchEvent') AND (repo_name NOT IN ('ClickHouse/ClickHouse', 'yandex/ClickHouse'))
+GROUP BY repo_name
+HAVING total_stars >= 100
+ORDER BY ratio DESC
+LIMIT 50
+
+SELECT trace_id, count(), max((start_time_us / 1000000)::DateTime) FROM system.opentelemetry_span_log GROUP BY trace_id ORDER BY count() DESC;
+
+SELECT tuple (parent_span_id, attribute['clickhouse.thread_id'] || attribute['thread_number'] as thread_id)::Tuple(parent_span_id UInt64, thread_id String) as group, operation_name, start_time_us, finish_time_us, sipHash64(operation_name) as color, attribute
+           FROM system.opentelemetry_span_log
+           WHERE trace_id = '2d0b8d5f-6575-738a-f022-9f4a6a06d8ae'
+           ORDER BY group ASC
+           FORMAT JSON SETTINGS output_format_json_named_tuples_as_objects = 1;
+-->
+
+<section class="slide">
+<h2>Query Tracing With OpenTelemetry</h2>
+<img src="pictures/trace.png" style="width: 100%" />
+<p style="color: gray; font-size: 14pt;">utils/trace_visualizer, developer: Sergei Trifonov.</p>
+</section>
+
+<section class="slide">
+<h2>Query Tracing With OpenTelemetry</h2>
+<img src="pictures/trace2.png" style="width: 100%; margin-top: -1em;" />
+<p style="color: gray; font-size: 14pt;">utils/trace_visualizer, developer: Sergei Trifonov.</p>
+</section>
+
+<section class="slide">
+<h2>FPC Codec</h2>
+<p>FPC — a codec for floating point compression.</p>
+<p style="color: gray;">"High Throughput Compression of Double-Precision Floating-Point Data"<br/>— Martin Burtscher and Paruj Ratanaworabhan,<br/>School of Electrical and Computer Engineering,<br/>Cornell University, Ithaca, NY</p>
+<p style="color: gray; font-size: 14pt;">Developer: Mikhail Guzov.</p>
+<p>(demo)</p>
+</section>
+
+<!--
+SELECT count() FROM system.asynchronous_metric_log
+DESCRIBE TABLE system.asynchronous_metric_log
+
+SELECT toStartOfHour(event_time) AS t, round(avg(value), 2) AS v, bar(v, 0, 10, 100) FROM system.asynchronous_metric_log WHERE event_date >= yesterday() AND event_time >= now() - INTERVAL 1 WEEK AND metric = 'LoadAverage1' GROUP BY t ORDER BY t
+
+SELECT name, data_compressed_bytes, data_uncompressed_bytes, data_uncompressed_bytes / data_compressed_bytes AS ratio FROM system.columns WHERE table = 'asynchronous_metric_log'
+
+CREATE TABLE nonreplicated.asynchronous_metric_log2 (`event_date` Date CODEC(Delta(2), ZSTD(1)), `event_time` DateTime CODEC(Delta(4), ZSTD(1)), `metric` LowCardinality(String) CODEC(ZSTD(1)), `value` Float64) ENGINE = MergeTree ORDER BY (metric, event_date, event_time)
+
+CREATE TABLE nonreplicated.asynchronous_metric_log3 (`event_date` Date CODEC(Delta(2), ZSTD(1)), `event_time` DateTime CODEC(Delta(4), ZSTD(1)), `metric` LowCardinality(String) CODEC(ZSTD(1)), `value` Float64 CODEC(ZSTD(3))) ENGINE = MergeTree ORDER BY (metric, event_date, event_time)
+
+CREATE TABLE nonreplicated.asynchronous_metric_log4 (`event_date` Date CODEC(Delta(2), ZSTD(1)), `event_time` DateTime CODEC(Delta(4), ZSTD(1)), `metric` LowCardinality(String) CODEC(ZSTD(1)), `value` Float64 CODEC(FPC)) ENGINE = MergeTree ORDER BY (metric, event_date, event_time)
+
+CREATE TABLE nonreplicated.asynchronous_metric_log5 (`event_date` Date CODEC(Delta(2), ZSTD(1)), `event_time` DateTime CODEC(Delta(4), ZSTD(1)), `metric` LowCardinality(String) CODEC(ZSTD(1)), `value` Float64 CODEC(FPC, LZ4)) ENGINE = MergeTree ORDER BY (metric, event_date, event_time)
+
+CREATE TABLE nonreplicated.asynchronous_metric_log6 (`event_date` Date CODEC(Delta(2), ZSTD(1)), `event_time` DateTime CODEC(Delta(4), ZSTD(1)), `metric` LowCardinality(String) CODEC(ZSTD(1)), `value` Float64 CODEC(FPC, ZSTD(3))) ENGINE = MergeTree ORDER BY (metric, event_date, event_time)
+
+CREATE TABLE nonreplicated.asynchronous_metric_log7 (`event_date` Date CODEC(Delta(2), ZSTD(1)), `event_time` DateTime CODEC(Delta(4), ZSTD(1)), `metric` LowCardinality(String) CODEC(ZSTD(1)), `value` Float64 CODEC(Gorilla)) ENGINE = MergeTree ORDER BY (metric, event_date, event_time)
+
+CREATE TABLE nonreplicated.asynchronous_metric_log8 (`event_date` Date CODEC(Delta(2), ZSTD(1)), `event_time` DateTime CODEC(Delta(4), ZSTD(1)), `metric` LowCardinality(String) CODEC(ZSTD(1)), `value` Float64 CODEC(Gorilla, ZSTD(3))) ENGINE = MergeTree ORDER BY (metric, event_date, event_time)
+
+
+SET max_insert_threads = 48
+INSERT INTO nonreplicated.asynchronous_metric_log2 SELECT * FROM system.asynchronous_metric_log
+INSERT INTO nonreplicated.asynchronous_metric_log3 SELECT * FROM system.asynchronous_metric_log
+INSERT INTO nonreplicated.asynchronous_metric_log4 SELECT * FROM system.asynchronous_metric_log
+INSERT INTO nonreplicated.asynchronous_metric_log5 SELECT * FROM system.asynchronous_metric_log
+INSERT INTO nonreplicated.asynchronous_metric_log6 SELECT * FROM system.asynchronous_metric_log
+INSERT INTO nonreplicated.asynchronous_metric_log7 SELECT * FROM system.asynchronous_metric_log
+INSERT INTO nonreplicated.asynchronous_metric_log8 SELECT * FROM system.asynchronous_metric_log
+INSERT INTO nonreplicated.asynchronous_metric_log9 SELECT * FROM system.asynchronous_metric_log
+INSERT INTO nonreplicated.asynchronous_metric_log10 SELECT * FROM system.asynchronous_metric_log
+
+SELECT table, name, data_compressed_bytes, data_uncompressed_bytes, data_uncompressed_bytes / data_compressed_bytes AS ratio FROM system.columns WHERE table LIKE 'asynchronous_metric_log%' ORDER BY name, table
+-->
+
+<section class="slide">
+<h2>Non-Constant LIKE and match</h2>
+<pre style="font-size: 16pt; line-height: 1.5">SELECT DISTINCT repo_name, title
+FROM github_events
+WHERE title ILIKE (
+  repo_name LIKE '%ClickHouse%' ? '%fast%' : '%slow%')
+AND repo_name IN ('ClickHouse/ClickHouse', 'elastic/elasticsearch')</pre>
+
+<p style="margin-top: 2em; color: gray; font-size: 14pt;">Now I can put LIKE inside LIKE and looks like you're going to like it.</p>
+
+<p style="margin-top: 5em; color: gray; font-size: 14pt;">Developer: Robert Schulze.</p>
+</section>
+
+<section class="slide">
+<h2>INSERT INTO ZooKeeper</h2>
+<pre style="font-size: 16pt; line-height: 1.5">INSERT INTO system.zookeeper (name, path, value)
+VALUES ...</pre>
+<p>Creates new persistent nodes in ZooKeeper.</p>
+<p>Batch INSERTs will create multiple nodes in transaction.</p>
+<p style="margin-top: 5em; color: gray">Please don't mess with ZooKeeper and don't use this feature.</p>
+<p style="color: gray; font-size: 14pt;">Developer: Han Fei.</p>
+</section>
+
+<section class="slide">
+<h2>Parametric Executable UDF</h2>
+<pre>SELECT my_function('hello')(x)</pre>
+<p>Parameters will be substituted to the command template:</p>
+<pre>./myprogram --xyz {param:String}</pre>
+<pre>./myprogram --xyz 'hello'</pre>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Note: only allowed for direct "exec" without a shell interpreter.<br/>Because the interpretation of escape sequences inside string literals<br/>in shell interpeter is different than in SQL.</p>
+<p style="color: gray; font-size: 14pt;">Developer: Maksim Kita.</p>
+</section>
+
+<section class="slide">
+<h2>clickhouse-disks Tool</h2>
+<pre><b>clickhouse-disks</b> \
+  --config-file ... \
+  --disk ... \
+  list|read|write|remove|link|copy <i>path</i></pre>
+<p>A tool for introspection and operations on ClickHouse VFS</p>
+<p>Can manipulate files on object storage (S3, HDFS, Azure, Web)</p>
+<p style="color: gray; margin-top: 3em; font-size: 14pt;">Developer: Artyom Yurkov.</p>
+</section>
+
+<section class="slide">
+<h2>Performance Improvements</h2>
+<p>A ton of optimizations for <b>AArch64</b> with ARM NEON!</p>
+<p>(Apple M1, AWS Graviton...)</p>
+<p>Almost all low-level vector instructions, LZ4 and ZSTD optimizations,<br/>UTF-8 handling, string functions and sorting, etc, etc...</p>
+<p style="color: green;">Now, AArch64 is a first-class citizen of ClickHouse!</p>
+<p style="color: gray; margin-top: 3em; font-size: 14pt;">Developer: Daniel Kutenin (Google), Alexandra Pilipyuk.</p>
+</section>
+
+<section class="slide">
+<img style="margin-left: -70px; height: 90%" src="pictures/arm1.jpg" />
+</section>
+<section class="slide">
+<img style="margin-left: -90px; height: 90%" src="pictures/arm2.jpg" />
+</section>
+<section class="slide">
+<img style="margin-left: -70px; height: 90%" src="pictures/arm3.jpg" />
+</section>
+<section class="slide">
+<img style="margin-left: -95px; height: 90%" src="pictures/arm4.jpg" />
+</section>
+
+<section class="slide">
+<h2>Performance Improvements</h2>
+<p>By the way... AArch64 builds got proper stack traces.</p>
+<p>(exceptions, system.stack_trace, query profiler)</p>
+<p style="color: gray; margin-top: 3em; font-size: 14pt;">Developer: Maksim Kita.</p>
+</section>
+
+<section class="slide">
+<h2>Performance Improvements</h2>
+<p>Optimize <b>COALESCE</b>.</p>
+<p>Optimize <b>multiIf</b> with single branch.</p>
+<p>Optimize functions <b>L1/L2/Lp/Linf</b> Distances and Norms.</p>
+<p>Optimize <b>number comparison.</b></p>
+<p>Optimize <b>hasAll</b> with AVX-512.</p>
+<p>Optimize <b>greatCircleAngle</b>, <b>greatCircleDistance</b>, <b>geoDistance</b>.</p>
+<p style="color: gray; margin-top: 3em; font-size: 14pt;">Developer: Maksim Kita, Anton Popov, Alexander Gololobov.</p>
+</section>
+
+<section class="slide">
+<img style="height: 90%" src="pictures/optimize.jpg" />
+</section>
+
+<section class="slide">
+<h2>Performance Performance</h2>
+<p>Optimize <b>ORDER BY with LIMIT</b>.</p>
+<p>Optimize <b>ORDER BY</b> with single column.</p>
+<p>Optimize <b>INSERT</b> into MergeTree with composite ORDER key.</p>
+<p>Optimize <b>dictGetChildren</b>, <b>dictGetDescendants</b>.</p>
+<p>Optimize cleanup stage of queries with large <b>GROUP BY</b>.</p>
+<p>Optimize <b>background CPU usage</b> of large number of tables.</p>
+<p style="color: gray; margin-top: 3em; font-size: 14pt;">Developer: Maksim Kita, Nikita Taranov.</p>
+</section>
+
+<section class="slide">
+<h2>Improvements Improvements</h2>
+<p><b>Cold queries</b> from MergeTree will start faster.<br/>
+— developer: Anton Kozlov, CloudFlare.</p>
+
+<p>Avoid <b>VFS cache</b> thrashing.<br/>
+— developer: Han Shukai, ICT Beijing.</p>
+
+<p>Move cases for condition pushdown into <b>JOIN</b>.<br/>
+— developer: Amos Bird, ICT Beijing.</p>
+
+<p>Filtering reads from s3/hdfs/etc with <b>_file</b> and <b>_path</b>.<br/>
+— developer: Amos Bird, ICT Beijing.</p>
+
+<p>Less copying in <b>compression loop</b>.<br/>
+— developer: Jasper Zhu, Intel.</p>
+</section>
+
+<section class="slide">
+<h2>Faster INSERT</h2>
+<p><code>CREATE TABLE hits_insert_test
+(UserID UInt64, EvenTime DateTime, WatchID UInt64)
+ENGINE = MergeTree ORDER BY (UserID, EventTime);
+
+INSERT INTO hits_insert_test
+SELECT UserID, EventTime, WatchID
+FROM hits_100m_obfuscated;
+</code></p>
+<p>Before:<br/>
+0 rows in set. Elapsed: <b style="color: red;">10.945 sec</b>. Processed 100.00 million rows, 2.00 GB (9.14 million rows/s., 182.73 MB/s.)</p>
+<p>After:<br/>
+0 rows in set. Elapsed: <b style="color: green;">7.562 sec</b>. Processed 100.00 million rows, 2.00 GB (13.22 million rows/s., 264.48 MB/s.)</p>
+</section>
+
+
+<section class="slide">
+<h2>Integrations</h2>
+<p>ClickHouse <b>Go Driver</b> now supported by ClickHouse, Inc.</p>
+<p>— added support for JSON data type;</p>
+<p>— added support for insertion of structs and maps;</p>
+<p>On the way: merging clickhouse-go and go-faster/ch<br/>
+will add a low-level API with performance boost.</p>
+<p style="color: gray; margin-top: 3em; font-size: 14pt;">Developer: Dale McDiarmid, Anton Popov.</p>
+</section>
+
+<section class="slide">
+<h2>Integrations</h2>
+<p>Official integration with <b>dbt</b>, passed the test suite, better perf...
+<br/>— developer: Dmitriy Sokolov + Guy Kohen, Dale McDiarmid.</p>
+
+<p>Official integration with <b>Airbyte</b>, improved for dbt :)
+<br/>— developer: Mark Zitnik.</p>
+</section>
+
+<section class="slide">
+<h2>What's Next</h2>
+<p>Extended Federated Queries:</p>
+<p>— querying Redis, MongoDB, Cassandra<br/>and external ZooKeeper clusters with table functions;</p>
+</section>
+
+<section class="slide">
+<h2>What's Next</h2>
+<svg style="float: right; margin-right: -50px; margin-top: 150px;" version="1.1" baseProfile="tiny" xmlns="http://www.w3.org/2000/svg" width="200" height="200">
+<rect shape-rendering="optimizeSpeed"  x="0" y="0" width="200" height="200" fill="white" />
+<rect shape-rendering="optimizeSpeed"  x="13" y="13" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="19" y="13" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="25" y="13" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="31" y="13" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="37" y="13" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="43" y="13" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="49" y="13" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="61" y="13" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="67" y="13" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="85" y="13" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="97" y="13" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="115" y="13" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="121" y="13" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="145" y="13" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="151" y="13" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="157" y="13" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="163" y="13" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="169" y="13" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="175" y="13" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="181" y="13" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="13" y="19" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="49" y="19" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="73" y="19" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="85" y="19" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="115" y="19" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="121" y="19" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="127" y="19" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="145" y="19" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="181" y="19" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="13" y="25" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="25" y="25" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="31" y="25" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="37" y="25" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="49" y="25" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="67" y="25" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="79" y="25" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="85" y="25" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="91" y="25" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="97" y="25" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="103" y="25" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="109" y="25" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="127" y="25" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="145" y="25" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="157" y="25" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="163" y="25" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="169" y="25" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="181" y="25" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="13" y="31" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="25" y="31" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="31" y="31" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="37" y="31" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="49" y="31" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="67" y="31" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="73" y="31" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="91" y="31" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="103" y="31" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="109" y="31" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="115" y="31" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="127" y="31" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="133" y="31" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="145" y="31" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="157" y="31" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="163" y="31" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="169" y="31" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="181" y="31" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="13" y="37" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="25" y="37" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="31" y="37" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="37" y="37" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="49" y="37" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="67" y="37" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="73" y="37" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="85" y="37" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="103" y="37" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="109" y="37" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="121" y="37" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="127" y="37" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="145" y="37" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="157" y="37" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="163" y="37" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="169" y="37" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="181" y="37" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="13" y="43" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="49" y="43" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="73" y="43" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="79" y="43" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="97" y="43" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="121" y="43" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="145" y="43" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="181" y="43" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="13" y="49" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="19" y="49" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="25" y="49" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="31" y="49" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="37" y="49" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="43" y="49" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="49" y="49" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="61" y="49" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="73" y="49" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="85" y="49" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="97" y="49" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="109" y="49" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="121" y="49" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="133" y="49" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="145" y="49" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="151" y="49" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="157" y="49" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="163" y="49" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="169" y="49" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="175" y="49" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="181" y="49" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="61" y="55" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="73" y="55" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="79" y="55" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="85" y="55" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="91" y="55" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="103" y="55" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="127" y="55" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="13" y="61" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="19" y="61" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="31" y="61" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="37" y="61" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="49" y="61" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="73" y="61" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="97" y="61" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="109" y="61" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="145" y="61" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="181" y="61" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="13" y="67" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="19" y="67" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="25" y="67" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="37" y="67" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="43" y="67" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="55" y="67" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="61" y="67" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="79" y="67" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="85" y="67" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="103" y="67" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="115" y="67" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="121" y="67" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="127" y="67" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="139" y="67" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="151" y="67" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="157" y="67" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="169" y="67" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="175" y="67" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="13" y="73" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="25" y="73" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="37" y="73" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="49" y="73" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="55" y="73" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="79" y="73" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="91" y="73" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="97" y="73" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="103" y="73" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="109" y="73" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="115" y="73" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="121" y="73" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="151" y="73" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="157" y="73" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="169" y="73" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="19" y="79" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="31" y="79" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="37" y="79" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="55" y="79" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="97" y="79" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="103" y="79" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="109" y="79" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="115" y="79" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="121" y="79" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="127" y="79" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="139" y="79" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="145" y="79" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="151" y="79" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="163" y="79" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="181" y="79" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="13" y="85" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="19" y="85" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="25" y="85" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="43" y="85" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="49" y="85" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="61" y="85" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="67" y="85" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="73" y="85" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="85" y="85" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="103" y="85" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="109" y="85" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="127" y="85" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="133" y="85" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="145" y="85" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="151" y="85" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="181" y="85" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="13" y="91" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="31" y="91" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="55" y="91" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="61" y="91" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="79" y="91" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="85" y="91" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="91" y="91" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="97" y="91" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="103" y="91" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="109" y="91" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="115" y="91" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="121" y="91" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="127" y="91" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="145" y="91" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="151" y="91" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="157" y="91" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="163" y="91" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="169" y="91" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="175" y="91" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="181" y="91" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="19" y="97" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="25" y="97" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="31" y="97" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="43" y="97" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="49" y="97" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="61" y="97" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="67" y="97" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="91" y="97" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="97" y="97" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="103" y="97" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="115" y="97" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="127" y="97" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="133" y="97" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="139" y="97" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="145" y="97" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="157" y="97" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="169" y="97" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="181" y="97" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="31" y="103" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="37" y="103" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="43" y="103" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="73" y="103" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="79" y="103" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="85" y="103" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="109" y="103" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="127" y="103" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="151" y="103" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="157" y="103" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="169" y="103" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="181" y="103" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="13" y="109" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="19" y="109" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="37" y="109" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="49" y="109" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="79" y="109" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="91" y="109" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="97" y="109" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="127" y="109" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="133" y="109" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="139" y="109" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="163" y="109" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="13" y="115" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="31" y="115" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="43" y="115" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="55" y="115" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="91" y="115" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="103" y="115" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="115" y="115" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="127" y="115" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="157" y="115" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="169" y="115" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="175" y="115" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="13" y="121" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="19" y="121" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="31" y="121" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="37" y="121" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="43" y="121" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="49" y="121" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="55" y="121" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="61" y="121" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="67" y="121" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="79" y="121" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="103" y="121" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="109" y="121" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="115" y="121" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="127" y="121" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="157" y="121" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="163" y="121" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="181" y="121" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="13" y="127" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="19" y="127" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="31" y="127" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="55" y="127" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="61" y="127" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="67" y="127" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="73" y="127" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="91" y="127" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="109" y="127" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="127" y="127" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="145" y="127" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="163" y="127" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="169" y="127" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="13" y="133" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="19" y="133" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="25" y="133" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="49" y="133" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="73" y="133" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="85" y="133" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="97" y="133" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="109" y="133" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="115" y="133" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="133" y="133" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="139" y="133" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="145" y="133" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="151" y="133" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="157" y="133" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="163" y="133" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="169" y="133" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="175" y="133" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="61" y="139" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="79" y="139" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="91" y="139" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="97" y="139" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="103" y="139" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="133" y="139" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="157" y="139" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="163" y="139" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="13" y="145" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="19" y="145" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="25" y="145" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="31" y="145" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="37" y="145" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="43" y="145" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="49" y="145" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="67" y="145" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="73" y="145" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="79" y="145" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="97" y="145" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="103" y="145" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="109" y="145" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="121" y="145" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="127" y="145" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="133" y="145" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="145" y="145" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="157" y="145" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="163" y="145" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="13" y="151" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="49" y="151" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="79" y="151" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="97" y="151" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="103" y="151" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="109" y="151" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="115" y="151" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="127" y="151" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="133" y="151" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="157" y="151" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="175" y="151" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="181" y="151" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="13" y="157" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="25" y="157" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="31" y="157" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="37" y="157" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="49" y="157" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="61" y="157" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="67" y="157" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="73" y="157" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="79" y="157" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="103" y="157" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="109" y="157" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="127" y="157" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="133" y="157" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="139" y="157" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="145" y="157" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="151" y="157" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="157" y="157" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="163" y="157" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="181" y="157" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="13" y="163" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="25" y="163" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="31" y="163" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="37" y="163" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="49" y="163" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="61" y="163" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="67" y="163" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="79" y="163" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="91" y="163" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="109" y="163" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="121" y="163" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="139" y="163" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="175" y="163" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="181" y="163" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="13" y="169" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="25" y="169" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="31" y="169" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="37" y="169" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="49" y="169" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="73" y="169" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="103" y="169" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="133" y="169" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="139" y="169" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="151" y="169" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="157" y="169" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="169" y="169" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="175" y="169" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="181" y="169" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="13" y="175" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="49" y="175" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="61" y="175" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="67" y="175" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="73" y="175" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="79" y="175" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="85" y="175" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="103" y="175" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="145" y="175" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="151" y="175" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="163" y="175" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="169" y="175" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="181" y="175" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="13" y="181" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="19" y="181" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="25" y="181" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="31" y="181" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="37" y="181" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="43" y="181" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="49" y="181" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="61" y="181" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="67" y="181" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="79" y="181" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="91" y="181" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="121" y="181" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="127" y="181" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="133" y="181" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="145" y="181" width="6" height="6" fill="black" />
+<rect shape-rendering="optimizeSpeed"  x="157" y="181" width="6" height="6" fill="black" /></svg>
+<p>Roadmap <b>2022</b> is published:</p>
+<p><a href="https://github.com/ClickHouse/ClickHouse/issues/32513">https://github.com/ClickHouse/ClickHouse/issues/32513</a></p>
+<p>&mdash; open for discussions.</p>
+<p>... all great stuff is discussed there, don't miss.</p>
+</section>
+
+
+<section class="slide">
+<h2>Q&amp;A</h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+

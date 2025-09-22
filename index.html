@@ -4,6 +4,7 @@
   <title>clickhouse-presentations</title>
   <meta http-equiv="Content-Security-Policy"
     content="default-src data: 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self' api.github.com ; img-src 'self' data:; style-src 'self' 'unsafe-inline';base-uri 'self';form-action 'self';">
+  <meta name="google-site-verification" content="av5f5NWK2LviDFxJAo3cy0v4ZU5OOi8i98ntGKF25SI" />
   <link href="favicon.ico" rel="icon" type="image/x-icon">
 </head>
 
@@ -14,9 +15,7 @@
     </h1>
     <hr />
     <p>
-      Presentation materials about ClickHouse, open-source column-oriented
-      database management system that allows generating analytical data reports
-      in real time.
+      Presentations about ClickHouse, an open-source real-time analytics database management system.
     </p>
     <p>
       <a href="https://github.com/ClickHouse/ClickHouse">Main repository</a>
@@ -85,7 +84,7 @@
 
     try {
       const response = await fetch(
-        "https://api.github.com/repos/ClickHouse/clickhouse-presentations/contents" +
+        "https://api.github.com/repos/ClickHouse/clickhouse-presentations/contents/" +
         (params.path || "/")
       );
       const data = await response.json();
@@ -106,16 +105,19 @@
         const anchor = document.createElement("a");
 
         if (el.type === "file") {
-          if (el.name.endsWith(".md")) {
-            anchor.setAttribute(
-              "href",
-              el.path.split(".").slice(0, -1).join(".")
-            );
-          } else {
-            anchor.setAttribute("href", el.download_url);
-          }
+          anchor.setAttribute("href", el.download_url);
         } else if (el.type === "dir") {
           anchor.setAttribute("href", "?path=" + encodeURIComponent(el.path));
+        }
+
+        // The folder naming schema was changed in the meantime. New folders
+        // start with a year number, e.g. 2020-meetup-paris.
+        // The renamed-from folders are retained to keep outside links alive but
+        // they only contain a HTML forward to // their renamed-to folder. We
+        // also grey out old links so it becomes more clear. Do this only for
+        // the top-level index.html (!params.path).
+        if (!params.path && !(/^\d/.test(el.name))) {
+            anchor.setAttribute("style", "color:grey")
         }
 
         anchor.textContent = el.name;

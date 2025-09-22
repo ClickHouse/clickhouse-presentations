@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 25.3 Call</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+         .slide table tr:not(:last-of-type)>* { background: none; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 25.3 Call</h1>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/back1.jpg); background-size: cover;">
+        <h1 style="margin-top: 10px; line-height: 110%; font-size: 56pt; color: white; text-shadow: black 1px 0 10px; text-align: center;">ClickHouse Release 25.3 LTS</h1>
+    </section>
+
+<section class="slide">
+<h2>Release 25.3 Call</h2>
+<p>1. (45 min) What's new in ClickHouse 25.3 LTS.</p>
+<p>2. (10 min) Guest Talk.</p>
+<p>3. (5 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back9.jpg); background-size: cover;">
+<h2><span class="hilite">Release 25.3</span></h2>
+<p><span class="hilite">ClickHouse LTS Release.</span></p>
+<p><span class="hilite">— 18 new features 🌷</span></p>
+<p><span class="hilite">— 13 performance optimizations ☀️</span></p>
+<p><span class="hilite">— 48 bug fixes ☘️</span></p>
+</section>
+<!--
+
+Small
+
+estimateCompressionRatio
+arraySymmetricDifference
+keccak256
+Non-constant CASE
+
+Performance
+
+Query condition cache
+Userspace page cache
+Proactive mark cache eviction
+Faster JIT
+Faster min/max
+Faster arraySort
+
+Main
+
+Automatic Cluster functions
+SSH protocol
+JSON is production ready
+Unity, Glue catalogs
+
+Guest Talk
+
+
+
+Bonus
+
+HyperDX
+
+Integrations
+
+Official connector for Tableau
+
+Reading
+
+A Linux Kernel debugging story
+Optimizing Bluesky
+How we built BYOC
+Solarwinds on BYOC
+Poolside
+Astronomer
+Postgres data modeling tips
+
+-->
+
+<section class="slide" style="background: url(pictures/back3.jpg); background-size: cover;">
+<h2><span class="hilite">A Few Small Functions</span></h2>
+</section>
+
+<section class="slide">
+<h2>estimateCompressionRatio</h2>
+
+<p>An aggregate function that compresses a stream of records, counts bytes,
+<br/>and ignores the result, giving the compression ratio.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; white-space: pre-wrap; margin-right: -2em;"><span style="color: gray;">-- default codec:</span>
+:) SELECT <b style="color: green;">estimateCompressionRatio(URL)</b> FROM hits
+
+<span style="color: gray;">-- another codec:</span>
+:) SELECT <b style="color: green;">estimateCompressionRatio('ZSTD(3)')(URL)</b> FROM hits;
+:) SELECT <b style="color: green;">estimateCompressionRatio('Delta, ZSTD(3)')(EventTime)</b> FROM hits;
+
+<span style="color: gray;">-- a codec and block size:</span>
+:) SELECT <b style="color: green;">estimateCompressionRatio('ZSTD(3)', 65536)(URL)</b> FROM hits;
+</code></p>
+
+<p>Demo</p>
+
+<!--
+
+SELECT estimateCompressionRatio(URL) FROM hits;
+
+SELECT name, data_compressed_bytes, data_uncompressed_bytes, data_uncompressed_bytes / data_compressed_bytes AS ratio FROM system.columns WHERE database = 'default' AND table = 'hits' ORDER BY data_compressed_bytes DESC;
+
+SELECT estimateCompressionRatio('ZSTD')(URL) FROM hits;
+SELECT estimateCompressionRatio('ZSTD(3)')(URL) FROM hits;
+SELECT estimateCompressionRatio('ZSTD(6)')(URL) FROM hits;
+
+SELECT estimateCompressionRatio(EventTime) FROM hits;
+SELECT estimateCompressionRatio('ZSTD(3)')(EventTime) FROM hits;
+SELECT estimateCompressionRatio('Delta, ZSTD(3)')(EventTime) FROM hits;
+SELECT estimateCompressionRatio('DoubleDelta, ZSTD(3)')(EventTime) FROM hits;
+SELECT estimateCompressionRatio('Gorilla, ZSTD(3)')(EventTime) FROM hits;
+SELECT estimateCompressionRatio('T64, ZSTD(3)')(EventTime) FROM hits;
+
+SELECT estimateCompressionRatio('ZSTD')('Hello') FROM numbers(1000000);
+SELECT estimateCompressionRatio('ZSTD')(rand()) FROM numbers(1000000);
+
+SELECT CounterID, count(), estimateCompressionRatio('ZSTD')(URL) AS ratio, bar(ratio, 1, 20, 50) FROM hits GROUP BY CounterID ORDER BY count() DESC LIMIT 25;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Tariq Almawash.</p>
+</section>
+
+
+<section class="slide">
+<h2>arraySymmetricDifference</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25; white-space: pre-wrap;">:) WITH
+    [1, 2, 3] AS a,
+    [2, 3, 4] AS b
+SELECT
+    arrayUnion(a, b) AS u,
+    arrayIntersect(a, b) AS i,
+    <b style="color: green;">arraySymmetricDifference(a, b)</b> AS diff,
+    arrayJaccardIndex(a, b) AS similarity,
+    arrayFilter(x -> (NOT has(i, x)), u) AS another_diff
+
+┌─u─────────┬─i─────┬─<b style="color: green;">diff</b>──┬─similarity─┬─another_diff─┐
+│ [3,2,1,4] │ [2,3] │ [1,4] │        0.5 │ [1,4]        │
+└───────────┴───────┴───────┴────────────┴──────────────┘
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Filipp Abapolov.</p>
+</section>
+
+<section class="slide">
+<h2>keccak256</h2>
+
+<p>A modern and secure cryptographic hash function.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; white-space: pre-wrap;">:) SELECT hex(<b style="color: green;">keccak256</b>('ClickHouse'))
+
+┌─hex(keccak256('ClickHouse'))─────────────────────────────────────┐
+│ E50BCD489117263EFF31D66D4AC3862BC98C2A34795834D56ECB237DAF88DC12 │
+└──────────────────────────────────────────────────────────────────┘
+</code></p>
+
+<p>This is the Etherium variant, and it is different than SHA-3,
+<br/>while using the same algorithm family.</p>
+
+<p>See also: <b>BLAKE3</b>, which is about 5..10 times faster and similarly safe.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Arnaud Briche.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
+<h2><span style="color: black;"><span class="hilite">Performance Improvements</span></h2>
+</section>
+
+<section class="slide">
+<h2>Query Condition Cache</h2>
+
+<p>With the Query Condition Cache, ClickHouse will remember,
+<br/>which <b style="color: green;">ranges of granules</b> in data parts satisfy the condition in WHERE,
+<br/>and reuse this information as an <b style="color: green;">ephemeral index</b> for subsequent queries.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.5; white-space: pre-wrap;">SET use_query_condition_cache = 1;
+</code></p>
+
+<p>Demo.</p>
+
+<!--
+
+SELECT count() FROM hits WHERE URL LIKE '%clickh%';
+
+SET use_query_condition_cache = 1;
+
+SELECT count() FROM hits WHERE URL LIKE '%clickh%';
+SELECT count() FROM hits WHERE URL LIKE '%clickh%';
+
+SELECT CounterID, count() FROM hits WHERE URL LIKE '%clickh%' GROUP BY CounterID ORDER BY count() DESC;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: ZhongYuanKai.</p>
+</section>
+
+
+<section class="slide">
+<h2>Userspace Page Cache</h2>
+
+<p>A different way of caching on top of remote filesystems:</p>
+<p>
+ <table style="font-size: 14pt;">
+  <tr>
+   <th>Filesystem Cache (disk with type = cache)</th>
+   <th>Userspace Page Cache <b style="color: green;">(new!)</b></th>
+  </tr>
+  <tr>
+   <td style="background-color: #EEE;">
+    &mdash; Writes data on the local filesystem.
+    <br/>&mdash; Takes disk space (but can be configured on tmpfs)
+    <br/>&mdash; Survives server restart.
+    <br/>&mdash; Both on-disk and in-memory (OS page cache).
+    <br/>&mdash; Does not show up in the server's memory usage.
+   </td>
+   <td style="background-color: #FED;">
+    &mdash; Present only in memory.
+    <br/>&mdash; Does not depend on the filesystem.
+    <br/>&mdash; Does not survive server restart.
+    <br/>&mdash; Shows up in the server's memory usage.
+    <br/><b style="color: green;">&mdash; Good for disk-less servers!</b>
+   </td>
+  </tr>
+ </table>
+</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Michael Kolupaev.</p>
+</section>
+
+<section class="slide">
+<h2>Userspace Page Cache</h2>
+
+<p>Configure it on the server:</p>
+<p><code style="font-size: 14pt; line-height: 1.25; white-space: pre-wrap;">$ cat config.d/page_cache.yaml
+
+page_cache_max_size: 100G
+</code></p>
+
+<p style="color: gray; font-size: 14pt;">It will use up to the specified amount of memory,<br/>but will evict memory whenever required for other server needs.</p>
+
+<p>Enable its usage on the query-level:</p>
+<p><code style="font-size: 14pt; line-height: 1.25; white-space: pre-wrap;">SET use_page_cache_for_disks_without_file_cache = 1;
+</code></p>
+
+<p>Demo</p>
+
+<!--
+
+CREATE TABLE hits_web
+(
+    WatchID BIGINT NOT NULL, JavaEnable SMALLINT NOT NULL, Title TEXT NOT NULL, GoodEvent SMALLINT NOT NULL, EventTime TIMESTAMP NOT NULL, EventDate Date NOT NULL, CounterID INTEGER NOT NULL, ClientIP INTEGER NOT NULL, RegionID INTEGER NOT NULL, UserID BIGINT NOT NULL, CounterClass SMALLINT NOT NULL, OS SMALLINT NOT NULL, UserAgent SMALLINT NOT NULL, URL TEXT NOT NULL, Referer TEXT NOT NULL, IsRefresh SMALLINT NOT NULL, RefererCategoryID SMALLINT NOT NULL, RefererRegionID INTEGER NOT NULL, URLCategoryID SMALLINT NOT NULL, URLRegionID INTEGER NOT NULL, ResolutionWidth SMALLINT NOT NULL, ResolutionHeight SMALLINT NOT NULL, ResolutionDepth SMALLINT NOT NULL, FlashMajor SMALLINT NOT NULL, FlashMinor SMALLINT NOT NULL, FlashMinor2 TEXT NOT NULL, NetMajor SMALLINT NOT NULL, NetMinor SMALLINT NOT NULL, UserAgentMajor SMALLINT NOT NULL, UserAgentMinor VARCHAR(255) NOT NULL, CookieEnable SMALLINT NOT NULL, JavascriptEnable SMALLINT NOT NULL, IsMobile SMALLINT NOT NULL, MobilePhone SMALLINT NOT NULL, MobilePhoneModel TEXT NOT NULL, Params TEXT NOT NULL, IPNetworkID INTEGER NOT NULL, TraficSourceID SMALLINT NOT NULL, SearchEngineID SMALLINT NOT NULL, SearchPhrase TEXT NOT NULL, AdvEngineID SMALLINT NOT NULL, IsArtifical SMALLINT NOT NULL, WindowClientWidth SMALLINT NOT NULL, WindowClientHeight SMALLINT NOT NULL, ClientTimeZone SMALLINT NOT NULL, ClientEventTime TIMESTAMP NOT NULL, SilverlightVersion1 SMALLINT NOT NULL, SilverlightVersion2 SMALLINT NOT NULL, SilverlightVersion3 INTEGER NOT NULL, SilverlightVersion4 SMALLINT NOT NULL, PageCharset TEXT NOT NULL, CodeVersion INTEGER NOT NULL, IsLink SMALLINT NOT NULL, IsDownload SMALLINT NOT NULL, IsNotBounce SMALLINT NOT NULL, FUniqID BIGINT NOT NULL, OriginalURL TEXT NOT NULL, HID INTEGER NOT NULL, IsOldCounter SMALLINT NOT NULL, IsEvent SMALLINT NOT NULL, IsParameter SMALLINT NOT NULL, DontCountHits SMALLINT NOT NULL, WithHash SMALLINT NOT NULL, HitColor CHAR NOT NULL, LocalEventTime TIMESTAMP NOT NULL, Age SMALLINT NOT NULL, Sex SMALLINT NOT NULL, Income SMALLINT NOT NULL, Interests SMALLINT NOT NULL, Robotness SMALLINT NOT NULL, RemoteIP INTEGER NOT NULL, WindowName INTEGER NOT NULL, OpenerName INTEGER NOT NULL, HistoryLength SMALLINT NOT NULL, BrowserLanguage TEXT NOT NULL, BrowserCountry TEXT NOT NULL, SocialNetwork TEXT NOT NULL, SocialAction TEXT NOT NULL, HTTPError SMALLINT NOT NULL, SendTiming INTEGER NOT NULL, DNSTiming INTEGER NOT NULL, ConnectTiming INTEGER NOT NULL, ResponseStartTiming INTEGER NOT NULL, ResponseEndTiming INTEGER NOT NULL, FetchTiming INTEGER NOT NULL, SocialSourceNetworkID SMALLINT NOT NULL, SocialSourcePage TEXT NOT NULL, ParamPrice BIGINT NOT NULL, ParamOrderID TEXT NOT NULL, ParamCurrency TEXT NOT NULL, ParamCurrencyID SMALLINT NOT NULL, OpenstatServiceName TEXT NOT NULL, OpenstatCampaignID TEXT NOT NULL, OpenstatAdID TEXT NOT NULL, OpenstatSourceID TEXT NOT NULL, UTMSource TEXT NOT NULL, UTMMedium TEXT NOT NULL, UTMCampaign TEXT NOT NULL, UTMContent TEXT NOT NULL, UTMTerm TEXT NOT NULL, FromTag TEXT NOT NULL, HasGCLID SMALLINT NOT NULL, RefererHash BIGINT NOT NULL, URLHash BIGINT NOT NULL, CLID INTEGER NOT NULL,
+    PRIMARY KEY (CounterID, EventDate, UserID, EventTime, WatchID)
+)
+ENGINE = MergeTree
+SETTINGS table_disk = 1, disk = disk(type = web, readonly = 1, endpoint = 'https://clickhouse-datasets-web.s3.us-east-1.amazonaws.com/store/c44/c449dfbf-ba06-4d13-abec-8396559eb955/');
+
+SELECT CounterID, count() FROM hits_web GROUP BY CounterID ORDER BY count() DESC LIMIT 10;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Michael Kolupaev.</p>
+</section>
+
+<section class="slide">
+<h2>Active Eviction Of Mark Cache</h2>
+<p>In previous versions, the mark cache will grow up to the maximum size
+<br/>over time, collecting data that is no longer needed.</p>
+
+<p>In <b style="color: green;">25.3</b>, entries for old data parts are removed proactively.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Alexey Milovidov.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
+<h2 style="font-size: 32pt; margin-left: -1em;"><span class="hilite">Something Interesting</span></h2>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Automatic Parallelization For External Data</h2>
+
+<p>Processing a bunch of external files on the current machine:</p>
+<p><code style="font-size: 14pt; line-height: 1.25; white-space: pre-wrap;">:) SELECT uniq(text) FROM <b>s3</b>('s3://my_bucket/data/*');
+</code></p>
+
+<p>Processing a bunch of external files on a distributed cluster:</p>
+<p><code style="font-size: 14pt; line-height: 1.25; white-space: pre-wrap;">:) SELECT uniq(text) FROM <b>s3Cluster</b>(default, 's3://my_bucket/data/*');
+</code></p>
+
+<p>Now the distributed processing is set up automatically:</p>
+<p><code style="font-size: 14pt; line-height: 1.25; white-space: pre-wrap;">SET <b style="color: green;">parallel_replicas_for_cluster_engines = 1</b>, <span style="color: gray;">-- enabled by default</span>
+    cluster_for_parallel_replicas = 'default',
+    enable_parallel_replicas = 1,
+    max_parallel_replicas = 100;</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Konstantin Bogdanov.</p>
+</section>
+
+<section class="slide">
+<h2>SSH Interface</h2>
+
+<p>ClickHouse server supports many interfaces:
+<br/>&mdash; native;
+<br/>&mdash; HTTP;
+<br/>&mdash; GRPC;
+<br/>&mdash; MySQL compatibility;
+<br/>&mdash; PostgreSQL compatibility;
+<br/>&mdash; ZooKeeper;
+</p>
+
+<p>Now it also implements the <b>SSH</b> protocol,
+<br/>so any SSH client can connect to it directly.</p>
+
+<p>Demo</p>
+
+<!--
+
+cat config.d/ssh.yaml
+
+CREATE USER milovidov IDENTIFIED WITH ssh_key BY KEY `AAAAB3NzaC1yc2EAAAADAQABAAACAQDpLXuIqHzvviq3+iWmg35OV0U4xMsa6U1yY7ZHkD6kBvlxwv/N7eu3/yz27MEHhZIxdn4DFel3Jq6n1TQ4gNicjm+rQe/64O9tgF3RYmnQ3WLMTUnmxSEGTb9rRjisxUaooO+qs3wYIWxEMG4UWrZNLjQ9mcUIkYYOm/tOkW0CKatd3YaBnEEkv17YwQgCZz6b+v+pKZZ1utP8PX5Mk8YWH8FewL3jZfvVK//CB0ls1MK8gCienySm+KRT4gin3JG2vhaxYOsvj2IvXNwVvChQnjboDH/UyfySUZnszLKW2XkqNLx6h/c0eyoMj0qewo1zsNVpldiQFvkFoyfKxDipDEzhnuktRZDgitqotIzrusezYmPFI/vPCtZMDxkrEfYDqQEBZLmbmxqg1nkvwk04ECUvxvIoo8dK0HhTqrdiKPaY/YLCUjUXEwwsHK5Sx8KEtqsMzgR+NGhv+Nu8oh3ByrrTVUzvwu1IEJIeFfG4SFME6Je28pz7q8NL6RzCfP/MAzp2AfvJp8yxsGXgyUOvnLvWucWohje0QnOHd6nXeNnoI8Tch94sV142c0Quf+snga0cj+wrjyYOVZpWjJ5gHUEyxMpo7kheFLSPupFjUUR8sTlcBDIPXHlcTwpKdM51ZmxE5DLPbdDAm528cTpLxfLOI5+nsLqIjCBQQezsAQ==` TYPE `ssh-rsa`
+
+GRANT SELECT ON *.* TO milovidov
+
+ssh -p9022 localhost
+
+SELECT SearchPhrase, count() FROM hits WHERE SearchPhrase != '' GROUP BY 1 ORDER BY 2 DESC LIMIT 10
+
+SELECT count() FROM numbers(1e12)
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: George Gamezardashvili, Nikita Mikhailov.</p>
+</section>
+
+<section class="slide">
+<h2>JSON Is Production Ready</h2>
+
+<p>The new data types, <b>Variant</b>, <b>Dynamic</b>, and <b>JSON</b>
+<br>are production-ready in <b style="color: green;">25.3</b>!</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Pavel Kruglov.</p>
+</section>
+
+<section class="slide">
+<h2>JSON Data Type</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE test (time DateTime, data <b style="color: green;">JSON</b>) ORDER BY time;
+</code></p>
+
+<p>How it works:</p>
+<p>&mdash; Analyzes the JSON and infers data types for every path.</p>
+<p>&mdash; Stores every path and every distinct type as a subcolumn.</p>
+<p>&mdash; Uses efficient representations for sparse subcolumns.</p>
+
+<p style="color: green;">It enables fast column-oriented storage and queries
+<br/>on arbitrary <b>semistructured data</b>!</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Pavel Kruglov.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/jsonbench.png); background-size: cover;">
+</section>
+
+<section class="slide">
+<h2>AWS Glue Catalog</h2>
+
+<p>A database engine to represent Iceberg tables:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE DATABASE demo_catalog ENGINE = <b style="color: green;">DataLakeCatalog</b>
+SETTINGS catalog_type = <b style="color: green;">'glue'</b>, region = 'us-west-2',
+    aws_access_key_id = 'AKIA...', aws_secret_access_key = '...';
+
+SHOW TABLES FROM demo_catalog;
+SELECT * FROM "demo_catalog"."db.table";
+</code></p>
+
+<p>Demo</p>
+
+<!--
+
+# Create the catalog
+
+CREATE DATABASE demo_catalog
+ENGINE = DataLakeCatalog
+SETTINGS catalog_type = 'glue', region = 'us-west-2', aws_access_key_id = 'AKIA...', aws_secret_access_key = '...'
+
+USE demo_catalog;
+
+SHOW TABLES;
+
+SHOW CREATE TABLE `iceberg-benchmark.hitsiceberg`;
+
+SELECT
+    count(),
+    uniq(userid)
+FROM `iceberg-benchmark.hitsiceberg`
+WHERE (eventdate >= '2013-07-14') AND (eventdate <= '2013-07-15')
+SETTINGS use_iceberg_partition_pruning = 1;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexander Sapin.</p>
+</section>
+
+<section class="slide">
+<h2>Unity Catalog</h2>
+
+<p>It can represent <b>Delta Lake</b> tables and <b>Iceberg</b> tables in the "uniform" mode:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE DATABASE unity_demo
+ENGINE = <b style="color: green;">DataLakeCatalog</b>(
+    'https://endpoint.cloud.databricks.com/api/2.1/unity-catalog')
+SETTINGS catalog_type = <b style="color: green;">'unity'</b>,
+    warehouse = 'workspace', catalog_credential = '...'
+
+SHOW TABLES FROM unity_demo;
+SELECT * FROM "unity_demo"."db.table";
+</code></p>
+
+<p>Demo</p>
+
+<!--
+
+CREATE DATABASE unity_demo
+ENGINE = DataLakeCatalog('https://dbc-e2f4da9f-a4fe.cloud.databricks.com/api/2.1/unity-catalog')
+SETTINGS warehouse = 'workspace', catalog_credential = '...', catalog_type = 'unity';
+
+USE my_unity_catalog;
+
+SHOW TABLES;
+
+SHOW CREATE TABLE `demo.fake_user`;
+
+SELECT avg(age) FROM `demo.fake_user`;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexander Sapin.</p>
+</section>
+
+
+<section class="slide">
+<h2>Guest Talk</h2>
+<p><b>Stanley Chukwuemeke</b>, SA at AWS</p>
+</section>
+
+<section class="slide">
+<h2>Every Data Lake Catalog</h2>
+<p>In ClickHouse:</p>
+<p>&mdash; REST (24.12)</p>
+<p style="color: green;">&mdash; Glue (25.3)</p>
+<p style="color: green;">&mdash; Unity (25.3)</p>
+<p style="color: gray;">&mdash; Hive metastore;</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
+<h2><span class="hilite">Bonus</span></h2>
+</section>
+
+<section class="slide" style="background: url(pictures/hyperdx.gif); background-size: cover;">
+</section>
+
+<section class="slide">
+<h2>Integrations</h2>
+
+<p>Support for server-side parameters in the <b>Rust driver</b>,
+<br/>support for the <b>Variant</b> data type, and for reading arbitrary formats.</p>
+<p>Email notifications for <b>Postgres connector</b> in ClickPipes.</p>
+<p><b>Metabase</b>: fixes for WITH inside a CTE.</p>
+<p><b>ODBC driver</b>: resolved tech debt.</p>
+<p>Updates for <b>Node.JS</b> and <b>Go</b> drivers.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/wing.jpg); background-size: cover;">
+<h2>Meetups</h2>
+<p>
+<span class="hilite">&mdash; 🇮🇳 Delhi, March 22</span>
+<br/><span class="hilite">&mdash; 🇭🇺 Budapest, March 25</span>
+<br/><span class="hilite">&mdash; 🇺🇸 Boston, March 25</span>
+<br/><span class="hilite">&mdash; 🇧🇷 São Paulo, March 25</span>
+<br/><span class="hilite">&mdash; 🇮🇱 Tel Aviv, March 26</span>
+<br/><span class="hilite">&mdash; 🇺🇸 New York, March 26</span>
+<br/><span class="hilite">&mdash; 🇺🇸 Washington DC, March 27</span>
+<br/><span class="hilite">&mdash; 🇦🇺 Sydney, March 31</span>
+<br/><span class="hilite">&mdash; 🇳🇴 Oslo, April 8</span>
+<br/><span class="hilite">&mdash; 🇬🇧 London, May 14</span>
+</p>
+<p><span class="hilite">I will be in person on some of these meetups :)</span></p>
+</section>
+
+
+<section class="slide">
+<h2>Reading Corner 📖</h2>
+
+<img style="float: right; width: 30%; margin-right: -3em; image-rendering: pixelated; margin-top: 1em;" src="pictures/blog.png"/>
+<p><a href="https://clickhouse.com/blog/">https://clickhouse.com/blog/</a></p>
+
+<p style="line-height: 1.5;">&mdash; A Linux Kernel debugging story 👻
+<br/>&mdash; Optimizing Queries For Bluesky 🦋
+<br/>&mdash; How we built BYOC
+<br/>&mdash; Solarwinds on BYOC
+<br/>&mdash; How Poolside uses ClickHouse
+<br/>&mdash; Astronomer also uses ClickHouse
+<br/>&mdash; Postgres data modeling tips
+<br/>&mdash; Input Format Matchup
+<br/>&mdash; Agent-Facing Analytics
+</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back8.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
+<h2 style="color: white; margin-left: -1em;">Q&amp;A</a></h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+

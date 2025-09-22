@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 24.12 Webinar</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+         .slide table tr:not(:last-of-type)>* { background: none; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 24.12 Webinar</h1>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/back1.jpg); background-size: cover;">
+        <h1 style="margin-top: 10px; line-height: 110%; font-size: 56pt; color: white; text-shadow: black 1px 0 10px; text-align: center;">ClickHouse Release 24.12</h1>
+    </section>
+
+<section class="slide">
+<h2>Release 24.12 Webinar</h2>
+<p>1. (40 min) What's new in ClickHouse 24.12.</p>
+<p>2. (15 min) Guest Talk.</p>
+<p>2. (5 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back2.jpg); background-size: cover;">
+<h2><span class="hilite">Release 24.12</span></h2>
+<p><span class="hilite">ClickHouse Christmas Release.</span></p>
+<p><span class="hilite">— 16 new features 🎁</span></p>
+<p><span class="hilite">— 16 performance optimizations ⛸️</span></p>
+<p><span class="hilite">— 36 bug fixes ⛄</span></p>
+</section>
+<!--
+
+Small
+
+translate to delete characters
+Setting HTTP headers
+Cache for primary key, loading, prewarm
+Settings are sent from the server
+automatic spilling to disk
+LIKE for Enum
+IN with unknown Enum elements
+? extended table aliases
+
+
+Experimental Features
+
+Reverse primary key
+
+
+Performance
+
+Parallel hash join by default
+JOIN reordering
+Extracting common expressions in conditions
+Bonus: Non-equi JOINs by default
+Sorting of LowCardinality
+argMin/argMax
+Deserialization of aggregate functions
+Faster parallel replicas
+Faster restoration from backups
+Faster materialized views
+Faster merge tables
+
+Main
+
+Schema evolution for Iceberg
+Iceberg REST catalog
+
+Guest talk
+
+Bonus
+
+Variant, Dynamic, JSON types are in beta
+Subcolumns as keys
+ALTER from Object to JSON
+
+
+Integrations
+
+
+Bonus
+
+Strategic partnership with AWS
+
+Reading
+
+Strategic partnership with AWS
+Medallion architecture
+Product analytics
+Query optimizations
+From BigQuery to ClickHouse
+Our re:Invent announcements
+
+
+-->
+
+<section class="slide" style="background: url(pictures/back3.jpg); background-size: cover;">
+<h2><span class="hilite">Small Features 🎁</span></h2>
+</section>
+
+<section class="slide">
+<h2>Extended Table Aliases 🍬</h2>
+
+<p>Table aliases can redefine column names:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; white-space: pre-wrap;">SELECT a, b FROM
+(
+  SELECT number, number * 2 FROM numbers(10)
+) AS <b style="color: green;">x(a, b)</b>;
+
+CREATE VIEW <b style="color: green;">my_view(a, b)</b> AS SELECT 1, 2;
+
+WITH <b style="color: green;">t(a, b)</b> AS (SELECT 1, 2)
+SELECT a, b FROM t;
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Yarik Briukhovetskyi.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Function `translate` Can Delete Characters</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25; white-space: pre-wrap;">:) SELECT translate('ClickHouse', 'HCc', 'm')
+<span style="color: gray;">-- change H to m and delete characters C and c:</span>
+
+   ┌─res──────┐
+1. │ likhouse │
+   └──────────┘
+</code></p>
+
+<p>And the <b>translateUTF8</b> function is also supported.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Shuai Xu.</p>
+</section>
+
+<section class="slide">
+<h2>Setting Custom HTTP Headers 🍭</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25; white-space: pre-wrap;">:) CREATE OR REPLACE VIEW pictures AS SELECT '...' AS img;
+
+:) CREATE USER viewer SETTINGS <b style="color: green;">http_response_headers =
+    $${'Content-Type': 'image/svg+xml'}$$</b>;
+
+:) GRANT SELECT ON pictures TO viewer;
+</code></p>
+
+<p>Use-cases:
+<br/>&mdash; control over client-side caching;
+<br/>&mdash; content-disposition for downloadable files;
+<br/>&mdash; controlling the content-type;
+</p>
+
+<p>Demo</p>
+
+<!--
+
+http://localhost:8123/?default_format=RawBLOB&query=SELECT%20%27%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2254%22%20height%3D%2248%22%20viewBox%3D%220%200%209%208%22%3E%20%3Cstyle%3E%20.o{fill%3A%23fc0}%20.r{fill%3A%23f00}%20%3C%2Fstyle%3E%20%3Cpath%20class%3D%22r%22%20d%3D%22M0%2C7%20h1%20v1%20h-1%20z%22%2F%3E%20%3Cpath%20class%3D%22o%22%20d%3D%22M0%2C0%20h1%20v7%20h-1%20z%22%2F%3E%20%3Cpath%20class%3D%22o%22%20d%3D%22M2%2C0%20h1%20v8%20h-1%20z%22%2F%3E%20%3Cpath%20class%3D%22o%22%20d%3D%22M4%2C0%20h1%20v8%20h-1%20z%22%2F%3E%20%3Cpath%20class%3D%22o%22%20d%3D%22M6%2C0%20h1%20v8%20h-1%20z%22%2F%3E%20%3Cpath%20class%3D%22o%22%20d%3D%22M8%2C3.25%20h1%20v1.5%20h-1%20z%22%2F%3E%20%3C%2Fsvg%3E%27
+
+http://localhost:8123/?default_format=RawBLOB&http_response_headers=%7b%27Content-Type%27:%27image/svg%2bxml%27%7d&query=SELECT%20%27%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2254%22%20height%3D%2248%22%20viewBox%3D%220%200%209%208%22%3E%20%3Cstyle%3E%20.o{fill%3A%23fc0}%20.r{fill%3A%23f00}%20%3C%2Fstyle%3E%20%3Cpath%20class%3D%22r%22%20d%3D%22M0%2C7%20h1%20v1%20h-1%20z%22%2F%3E%20%3Cpath%20class%3D%22o%22%20d%3D%22M0%2C0%20h1%20v7%20h-1%20z%22%2F%3E%20%3Cpath%20class%3D%22o%22%20d%3D%22M2%2C0%20h1%20v8%20h-1%20z%22%2F%3E%20%3Cpath%20class%3D%22o%22%20d%3D%22M4%2C0%20h1%20v8%20h-1%20z%22%2F%3E%20%3Cpath%20class%3D%22o%22%20d%3D%22M6%2C0%20h1%20v8%20h-1%20z%22%2F%3E%20%3Cpath%20class%3D%22o%22%20d%3D%22M8%2C3.25%20h1%20v1.5%20h-1%20z%22%2F%3E%20%3C%2Fsvg%3E%27
+
+CREATE OR REPLACE VIEW pictures AS SELECT '<svg xmlns="http://www.w3.org/2000/svg" width="54" height="48" viewBox="0 0 9 8"> <style> .o{fill:#fc0} .r{fill:#f00} </style> <path class="r" d="M0,7 h1 v1 h-1 z"/> <path class="o" d="M0,0 h1 v7 h-1 z"/> <path class="o" d="M2,0 h1 v8 h-1 z"/> <path class="o" d="M4,0 h1 v8 h-1 z"/> <path class="o" d="M6,0 h1 v8 h-1 z"/> <path class="o" d="M8,3.25 h1 v1.5 h-1 z"/> </svg>' AS img;
+
+CREATE USER viewer SETTINGS http_response_headers = $${'Content-Type': 'image/svg+xml'}$$;
+GRANT SELECT ON pictures TO viewer;
+
+http://localhost:8123/?user=viewer&default_format=RawBLOB&query=SELECT%20*%20FROM%20pictures
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Cache For Primary Keys 🍯</h2>
+
+<p>2024 &mdash; a whole lot of optimizations for primary keys:</p>
+
+<p style="color: gray;">24.2: Lazy loading of the primary key
+<br/>24.2: Optimizing primary key's memory usage
+<br/>24.3: Skip useless columns in the primary key
+<br/>24.4: SYSTEM UNLOAD PRIMARY KEY</p>
+
+<p>24.12: primary key for tables' parts can be managed by an LRU cache:</p>
+<p><code style="font-size: 14pt; line-height: 1.25; white-space: pre-wrap;">ALTER TABLE t MODIFY SETTING <b>primary_key_lazy_load = 1</b>,
+                             <b style="color: green;">use_primary_key_cache = 1</b>,
+                             <b style="color: green;">prewarm_primary_key_cache = 1;</b></code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Anton Popov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Cache For Primary Keys 🍯</h2>
+
+<img src="pictures/quadrillion.png" style="float: right; height: 80%;">
+<p>What for?</p>
+<p>&mdash; Tables with over quadrillion records on a cluster with shared storage.</p>
+</section>
+
+<section class="slide">
+<h2>Client Receives Settings From Server</h2>
+
+<p>Client-related settings, such as formatting and parsing options, can be specified on the server-side.</p>
+<p><b>clickhouse-client</b> will receive and apply these settings.</p>
+
+<p>Demo</p>
+<!--
+
+CREATE OR REPLACE TABLE test (d DateTime) ENGINE = Memory;
+INSERT INTO test VALUES ('Mon, Dec 16 2024 23:55');
+SET date_time_input_format = 'best_effort';
+INSERT INTO test VALUES ('Mon, Dec 16 2024 23:55');
+
+CREATE USER demo SETTINGS date_time_input_format = 'best_effort';
+GRANT INSERT ON test TO demo;
+
+clickhouse-client --user demo
+INSERT INTO test VALUES ('Mon, Dec 16 2024 23:55');
+-->
+</section>
+
+<section class="slide">
+<h2>Automatic Spilling To Disk 🍮</h2>
+<p>ClickHouse supports using disk as a scratch storage when there is not enough memory to perform GROUP BY or ORDER BY.</p>
+<p>This is available since <b>2015</b>, controlled by the settings <b>max_bytes_before_external_group_by</b>, <b>max_bytes_before_external_sort</b>.</p>
+<p>It is also configured by default in ClickHouse Cloud with static thresholds.</p>
+<p><b style="color: green;">Now it can be automatic!</b></p>
+
+<p>Demo</p>
+
+<!--
+
+ch
+
+ATTACH TABLE hits UUID 'c449dfbf-ba06-4d13-abec-8396559eb955'
+(
+    `WatchID` BIGINT NOT NULL,
+    `JavaEnable` SMALLINT NOT NULL,
+    `Title` TEXT NOT NULL,
+    `GoodEvent` SMALLINT NOT NULL,
+    `EventTime` TIMESTAMP NOT NULL,
+    `EventDate` Date NOT NULL,
+    `CounterID` INTEGER NOT NULL,
+    `ClientIP` INTEGER NOT NULL,
+    `RegionID` INTEGER NOT NULL,
+    `UserID` BIGINT NOT NULL,
+    `CounterClass` SMALLINT NOT NULL,
+    `OS` SMALLINT NOT NULL,
+    `UserAgent` SMALLINT NOT NULL,
+    `URL` TEXT NOT NULL,
+    `Referer` TEXT NOT NULL,
+    `IsRefresh` SMALLINT NOT NULL,
+    `RefererCategoryID` SMALLINT NOT NULL,
+    `RefererRegionID` INTEGER NOT NULL,
+    `URLCategoryID` SMALLINT NOT NULL,
+    `URLRegionID` INTEGER NOT NULL,
+    `ResolutionWidth` SMALLINT NOT NULL,
+    `ResolutionHeight` SMALLINT NOT NULL,
+    `ResolutionDepth` SMALLINT NOT NULL,
+    `FlashMajor` SMALLINT NOT NULL,
+    `FlashMinor` SMALLINT NOT NULL,
+    `FlashMinor2` TEXT NOT NULL,
+    `NetMajor` SMALLINT NOT NULL,
+    `NetMinor` SMALLINT NOT NULL,
+    `UserAgentMajor` SMALLINT NOT NULL,
+    `UserAgentMinor` VARCHAR(255) NOT NULL,
+    `CookieEnable` SMALLINT NOT NULL,
+    `JavascriptEnable` SMALLINT NOT NULL,
+    `IsMobile` SMALLINT NOT NULL,
+    `MobilePhone` SMALLINT NOT NULL,
+    `MobilePhoneModel` TEXT NOT NULL,
+    `Params` TEXT NOT NULL,
+    `IPNetworkID` INTEGER NOT NULL,
+    `TraficSourceID` SMALLINT NOT NULL,
+    `SearchEngineID` SMALLINT NOT NULL,
+    `SearchPhrase` TEXT NOT NULL,
+    `AdvEngineID` SMALLINT NOT NULL,
+    `IsArtifical` SMALLINT NOT NULL,
+    `WindowClientWidth` SMALLINT NOT NULL,
+    `WindowClientHeight` SMALLINT NOT NULL,
+    `ClientTimeZone` SMALLINT NOT NULL,
+    `ClientEventTime` TIMESTAMP NOT NULL,
+    `SilverlightVersion1` SMALLINT NOT NULL,
+    `SilverlightVersion2` SMALLINT NOT NULL,
+    `SilverlightVersion3` INTEGER NOT NULL,
+    `SilverlightVersion4` SMALLINT NOT NULL,
+    `PageCharset` TEXT NOT NULL,
+    `CodeVersion` INTEGER NOT NULL,
+    `IsLink` SMALLINT NOT NULL,
+    `IsDownload` SMALLINT NOT NULL,
+    `IsNotBounce` SMALLINT NOT NULL,
+    `FUniqID` BIGINT NOT NULL,
+    `OriginalURL` TEXT NOT NULL,
+    `HID` INTEGER NOT NULL,
+    `IsOldCounter` SMALLINT NOT NULL,
+    `IsEvent` SMALLINT NOT NULL,
+    `IsParameter` SMALLINT NOT NULL,
+    `DontCountHits` SMALLINT NOT NULL,
+    `WithHash` SMALLINT NOT NULL,
+    `HitColor` CHAR NOT NULL,
+    `LocalEventTime` TIMESTAMP NOT NULL,
+    `Age` SMALLINT NOT NULL,
+    `Sex` SMALLINT NOT NULL,
+    `Income` SMALLINT NOT NULL,
+    `Interests` SMALLINT NOT NULL,
+    `Robotness` SMALLINT NOT NULL,
+    `RemoteIP` INTEGER NOT NULL,
+    `WindowName` INTEGER NOT NULL,
+    `OpenerName` INTEGER NOT NULL,
+    `HistoryLength` SMALLINT NOT NULL,
+    `BrowserLanguage` TEXT NOT NULL,
+    `BrowserCountry` TEXT NOT NULL,
+    `SocialNetwork` TEXT NOT NULL,
+    `SocialAction` TEXT NOT NULL,
+    `HTTPError` SMALLINT NOT NULL,
+    `SendTiming` INTEGER NOT NULL,
+    `DNSTiming` INTEGER NOT NULL,
+    `ConnectTiming` INTEGER NOT NULL,
+    `ResponseStartTiming` INTEGER NOT NULL,
+    `ResponseEndTiming` INTEGER NOT NULL,
+    `FetchTiming` INTEGER NOT NULL,
+    `SocialSourceNetworkID` SMALLINT NOT NULL,
+    `SocialSourcePage` TEXT NOT NULL,
+    `ParamPrice` BIGINT NOT NULL,
+    `ParamOrderID` TEXT NOT NULL,
+    `ParamCurrency` TEXT NOT NULL,
+    `ParamCurrencyID` SMALLINT NOT NULL,
+    `OpenstatServiceName` TEXT NOT NULL,
+    `OpenstatCampaignID` TEXT NOT NULL,
+    `OpenstatAdID` TEXT NOT NULL,
+    `OpenstatSourceID` TEXT NOT NULL,
+    `UTMSource` TEXT NOT NULL,
+    `UTMMedium` TEXT NOT NULL,
+    `UTMCampaign` TEXT NOT NULL,
+    `UTMContent` TEXT NOT NULL,
+    `UTMTerm` TEXT NOT NULL,
+    `FromTag` TEXT NOT NULL,
+    `HasGCLID` SMALLINT NOT NULL,
+    `RefererHash` BIGINT NOT NULL,
+    `URLHash` BIGINT NOT NULL,
+    `CLID` INTEGER NOT NULL
+)
+ENGINE = MergeTree
+PRIMARY KEY (CounterID, EventDate, UserID, EventTime, WatchID)
+SETTINGS disk = disk(type = cache, path = '/tmp/clickhouse/', max_size = '16G', disk = disk(type = web, endpoint = 'https://clickhouse-datasets-web.s3.us-east-1.amazonaws.com/'));
+
+SELECT URL, uniq(UserID) AS u FROM hits GROUP BY URL ORDER BY u DESC LIMIT 10;
+
+SET max_memory_usage_for_user = '5G';
+
+SELECT URL, uniq(UserID) AS u FROM hits GROUP BY URL ORDER BY u DESC LIMIT 10;
+
+SET max_bytes_ratio_before_external_group_by = 0.5, max_bytes_ratio_before_external_sort = 0.5;
+
+SELECT URL, uniq(UserID) AS u FROM hits GROUP BY URL ORDER BY u DESC LIMIT 10;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Azat Khuzhin.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt">Usability For Enums 🍫</h2>
+<p>LIKE operator is supported for Enums:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; white-space: pre-wrap;">:) CREATE TABLE test (x Enum('Hello', 'World')) ENGINE = Memory
+:) INSERT INTO test VALUES ('World')
+:) SELECT * FROM test WHERE x LIKE '%or%'
+
+   ┌─x─────┐
+1. │ World │
+   └───────┘
+
+<span style="color: gray;">-- 24.11:
+-- Code: 43. DB::Exception: Illegal type Enum8('Hello' = 1, 'World' = 2) of argument of function like: In scope SELECT * FROM test WHERE x LIKE '%or%'. (ILLEGAL_TYPE_OF_ARGUMENT)</span>
+</code></p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developers: ZhangLiStar.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt">Usability For Enums 🍫</h2>
+<p>Equality and IN operators accept unknown values:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; white-space: pre-wrap;">:) CREATE TABLE test (x Enum('Hello', 'World')) ENGINE = Memory
+:) INSERT INTO test VALUES ('World')
+:) SELECT * FROM test WHERE x IN ('Goodbye', 'World')
+
+   ┌─x─────┐
+1. │ World │
+   └───────┘
+
+<span style="color: gray;">-- 24.11:
+-- Code: 691. DB::Exception: Unknown element 'Goodbye' for enum: while converting 'Goodbye' to Enum8('Hello' = 1, 'World' = 2). (UNKNOWN_ELEMENT_OF_ENUM)</span>
+</code></p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developers: ZhangLiStar.</p>
+</section>
+
+
+<section class="slide">
+<h2>Experimental Features</h2>
+</section>
+
+<section class="slide">
+<h2>Reverse Table Ordering ✨</h2>
+
+<p><code style="font-size: 18pt; line-height: 1.25; white-space: pre-wrap;">CREATE TABLE ... ENGINE = MergeTree
+ORDER BY (EventDate <b style="color: green;">DESC</b>, CounterID, UserID)
+SETTINGS <b>allow_experimental_reverse_key = 1</b>;
+</code></p>
+
+<p>When most of your queries will use the reverse order.</p>
+
+<p>Demo</p>
+
+<!--
+
+CREATE TABLE hits (CounterID UInt32, EventTime DateTime, UserID UInt64, URL String) ENGINE = MergeTree ORDER BY (CounterID, UserID);
+SET max_insert_threads = 16;
+INSERT INTO hits SELECT CounterID, EventTime, UserID, URL FROM url('https://clickhouse-public-datasets.s3.amazonaws.com/hits_compatible/hits.parquet');
+CREATE TABLE hits_asc (CounterID UInt32, EventTime DateTime, UserID UInt64, URL String) ENGINE = MergeTree ORDER BY (EventTime, CounterID, UserID);
+CREATE TABLE hits_desc (CounterID UInt32, EventTime DateTime, UserID UInt64, URL String) ENGINE = MergeTree ORDER BY (EventTime DESC, CounterID, UserID) SETTINGS allow_experimental_reverse_key = 1;
+INSERT INTO hits_asc SELECT * FROM hits;
+INSERT INTO hits_desc SELECT * FROM hits;
+
+SELECT EventTime, URL FROM hits ORDER BY EventTime DESC, URL ASC LIMIT 10;
+SELECT EventTime, URL FROM hits_asc ORDER BY EventTime DESC, URL ASC LIMIT 10;
+SELECT EventTime, URL FROM hits_desc ORDER BY EventTime DESC, URL ASC LIMIT 10;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Amos Bird.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back4.jpg); background-size: cover;">
+<h2><span style="color: black;"><span class="hilite">Performance Improvements</span></h2>
+</section>
+
+<section class="slide">
+<h2>Parallel Hash Join By Default 🛷</h2>
+
+<p>Both sides of JOIN are parallelized, with no to minimal memory overhead.
+<br/>It does not harm even for short queries, and we made it as the default.</p>
+
+<p>TPC-H, SF-100, Q3: <b style="color: red;">53</b> sec -> <b style="color: green;">2.6</b> sec.</p>
+<p>TPC-H, SF-100, Q7: <b style="color: red;">94</b> sec -> <b style="color: green;">21</b> sec.</p>
+
+<p>Demo</b>
+
+<!--
+
+CREATE TABLE nation (
+    n_nationkey  Int32,
+    n_name       String,
+    n_regionkey  Int32,
+    n_comment    String)
+ORDER BY (n_nationkey);
+
+CREATE TABLE region (
+    r_regionkey  Int32,
+    r_name       String,
+    r_comment    String)
+ORDER BY (r_regionkey);
+
+CREATE TABLE part (
+    p_partkey     Int32,
+    p_name        String,
+    p_mfgr        String,
+    p_brand       String,
+    p_type        String,
+    p_size        Int32,
+    p_container   String,
+    p_retailprice Decimal(15,2),
+    p_comment     String)
+ORDER BY (p_partkey);
+
+CREATE TABLE supplier (
+    s_suppkey     Int32,
+    s_name        String,
+    s_address     String,
+    s_nationkey   Int32,
+    s_phone       String,
+    s_acctbal     Decimal(15,2),
+    s_comment     String)
+ORDER BY (s_suppkey);
+
+CREATE TABLE partsupp (
+    ps_partkey     Int32,
+    ps_suppkey     Int32,
+    ps_availqty    Int32,
+    ps_supplycost  Decimal(15,2),
+    ps_comment     String)
+ORDER BY (ps_partkey, ps_suppkey);
+
+CREATE TABLE customer (
+    c_custkey     Int32,
+    c_name        String,
+    c_address     String,
+    c_nationkey   Int32,
+    c_phone       String,
+    c_acctbal     Decimal(15,2),
+    c_mktsegment  String,
+    c_comment     String)
+ORDER BY (c_custkey);
+
+CREATE TABLE orders  (
+    o_orderkey       Int32,
+    o_custkey        Int32,
+    o_orderstatus    String,
+    o_totalprice     Decimal(15,2),
+    o_orderdate      Date,
+    o_orderpriority  String,
+    o_clerk          String,
+    o_shippriority   Int32,
+    o_comment        String)
+ORDER BY (o_orderkey);
+
+CREATE TABLE lineitem (
+    l_orderkey       Int32,
+    l_partkey        Int32,
+    l_suppkey        Int32,
+    l_linenumber     Int32,
+    l_quantity       Decimal(15,2),
+    l_extendedprice  Decimal(15,2),
+    l_discount       Decimal(15,2),
+    l_tax            Decimal(15,2),
+    l_returnflag     String,
+    l_linestatus     String,
+    l_shipdate       Date,
+    l_commitdate     Date,
+    l_receiptdate    Date,
+    l_shipinstruct   String,
+    l_shipmode       String,
+    l_comment        String)
+ORDER BY (l_orderkey, l_linenumber);
+
+INSERT INTO nation SELECT * FROM s3('https://clickhouse-datasets.s3.amazonaws.com/h/1/nation.tbl', NOSIGN, CSV) SETTINGS format_csv_delimiter = '|', input_format_defaults_for_omitted_fields = 1, input_format_csv_empty_as_default = 1;
+INSERT INTO region SELECT * FROM s3('https://clickhouse-datasets.s3.amazonaws.com/h/1/region.tbl', NOSIGN, CSV) SETTINGS format_csv_delimiter = '|', input_format_defaults_for_omitted_fields = 1, input_format_csv_empty_as_default = 1;
+INSERT INTO part SELECT * FROM s3('https://clickhouse-datasets.s3.amazonaws.com/h/1/part.tbl', NOSIGN, CSV) SETTINGS format_csv_delimiter = '|', input_format_defaults_for_omitted_fields = 1, input_format_csv_empty_as_default = 1;
+INSERT INTO supplier SELECT * FROM s3('https://clickhouse-datasets.s3.amazonaws.com/h/1/supplier.tbl', NOSIGN, CSV) SETTINGS format_csv_delimiter = '|', input_format_defaults_for_omitted_fields = 1, input_format_csv_empty_as_default = 1;
+INSERT INTO partsupp SELECT * FROM s3('https://clickhouse-datasets.s3.amazonaws.com/h/1/partsupp.tbl', NOSIGN, CSV) SETTINGS format_csv_delimiter = '|', input_format_defaults_for_omitted_fields = 1, input_format_csv_empty_as_default = 1;
+INSERT INTO customer SELECT * FROM s3('https://clickhouse-datasets.s3.amazonaws.com/h/1/customer.tbl', NOSIGN, CSV) SETTINGS format_csv_delimiter = '|', input_format_defaults_for_omitted_fields = 1, input_format_csv_empty_as_default = 1;
+INSERT INTO orders SELECT * FROM s3('https://clickhouse-datasets.s3.amazonaws.com/h/1/orders.tbl', NOSIGN, CSV) SETTINGS format_csv_delimiter = '|', input_format_defaults_for_omitted_fields = 1, input_format_csv_empty_as_default = 1;
+INSERT INTO lineitem SELECT * FROM s3('https://clickhouse-datasets.s3.amazonaws.com/h/1/lineitem.tbl', NOSIGN, CSV) SETTINGS format_csv_delimiter = '|', input_format_defaults_for_omitted_fields = 1, input_format_csv_empty_as_default = 1;
+
+SELECT
+    l_orderkey,
+    sum(l_extendedprice * (1 - l_discount)) AS revenue,
+    o_orderdate,
+    o_shippriority
+FROM
+    customer,
+    orders,
+    lineitem
+WHERE
+    c_mktsegment = 'BUILDING'
+    AND c_custkey = o_custkey
+    AND l_orderkey = o_orderkey
+    AND o_orderdate < DATE '1995-03-15'
+    AND l_shipdate > DATE '1995-03-15'
+GROUP BY
+    l_orderkey,
+    o_orderdate,
+    o_shippriority
+ORDER BY
+    revenue DESC,
+    o_orderdate;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Nikita Taranov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Automatic JOIN Reordering 🎿</h2>
+
+<p>Using estimations of table sizes.</p>
+
+<p>Controlled by the setting <b>query_plan_join_swap_table</b>
+<br/>and enabled by default.</p>
+
+<p>Demo</p>
+
+<!--
+
+SELECT 100.00 * sum(
+    CASE
+    WHEN p_type LIKE 'PROMO%'
+    THEN l_extendedprice * (1 - l_discount)
+    ELSE 0 END) / sum(l_extendedprice * (1 - l_discount)) AS promo_revenue
+FROM part, lineitem
+WHERE l_partkey = p_partkey;
+
+SET query_plan_join_swap_table = 0;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Vladimir Cherkasov.</p>
+</section>
+
+<section class="slide">
+<h2>Optimization Of JOIN Expressions 🎆</h2>
+
+<p>SET <b style="color: green;">optimize_extract_common_expressions</b> = 1;</p>
+
+<p><code>JOIN ... ON (<b style="color: green;">a=b</b> AND x) OR (<b style="color: green;">a=b</b> AND y) OR (<b style="color: green;">a=b</b> AND z)
+JOIN ... ON <b style="color: green;">a=b</b> AND (x OR y OR z)</code></p>
+<p>Allows using less number of hash tables and better conditions push-down.</p>
+
+<p>Demo</p>
+
+<!--
+
+SELECT
+    sum(l_extendedprice * (1 - l_discount)) AS revenue
+FROM
+    lineitem,
+    part
+WHERE
+    (
+        p_partkey = l_partkey
+        AND p_brand = 'Brand#12'
+        AND p_container in ('SM CASE', 'SM BOX', 'SM PACK', 'SM PKG')
+        AND l_quantity >= 1 AND l_quantity <= 1 + 10
+        AND p_size BETWEEN 1 AND 5
+        AND l_shipmode in ('AIR', 'AIR REG')
+        AND l_shipinstruct = 'DELIVER IN PERSON'
+    )
+    OR
+    (
+        p_partkey = l_partkey
+        AND p_brand = 'Brand#23'
+        AND p_container in ('MED BAG', 'MED BOX', 'MED PKG', 'MED PACK')
+        AND l_quantity >= 10 AND l_quantity <= 10 + 10
+        AND p_size BETWEEN 1 AND 10
+        AND l_shipmode in ('AIR', 'AIR REG')
+        AND l_shipinstruct = 'DELIVER IN PERSON'
+    )
+    OR
+    (
+        p_partkey = l_partkey
+        AND p_brand = 'Brand#34'
+        AND p_container in ('LG CASE', 'LG BOX', 'LG PACK', 'LG PKG')
+        AND l_quantity >= 20 AND l_quantity <= 20 + 10
+        AND p_size BETWEEN 1 AND 15
+        AND l_shipmode in ('AIR', 'AIR REG')
+        AND l_shipinstruct = 'DELIVER IN PERSON'
+    )
+SETTINGS optimize_extract_common_expressions = 1
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: János Benjamin Antal.</p>
+</section>
+
+<section class="slide">
+<h2>Non-Equi JOINs Supported By Default</h2>
+
+<p><code style="line-height: 1.25;"><span style="color: gray;">-- Equi join</span>
+SELECT t1.*, t2.* FROM t1 JOIN t2 ON t1.key = t2.key;
+
+<span style="color: gray;">-- Non-equi joins</span>
+SELECT t1.*, t2.* FROM t1 JOIN t2 ON t1.key <b style="color: green;">!=</b> t2.key;
+SELECT t1.*, t2.* FROM t1 JOIN t2 ON t1.key <b style="color: green;">></b> t2.key;
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Vladimir Cherkasov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Faster Inserts Of LowCardinality Strings</h2>
+
+<img src="pictures/low_cardinality.png" style="width: 100%;">
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Alexander Gololobov.</p>
+</section>
+
+<section class="slide">
+<h2>Faster argMin/argMax ⛷️</h2>
+
+<p><b>argMax(c_arg, c_max)</b></p><p>&mdash; an aggregate function, that<br/>&emsp; returns the value of <b>c_arg</b> when the value of <b>c_max</b> is maximal.</p>
+<p>Up to <b style="color: green;">10%</b> performance increase for primitive types, such as integers.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Alexander Sapin.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
+<h2><span class="hilite">Something Interesting</span></h2>
+</section>
+
+<section class="slide">
+<h2>Guest Talk</h2>
+<p>From the creators of Iceberg 🧊</p>
+</section>
+
+<section class="slide">
+<h2>Iceberg REST Catalog 🧊</h2>
+<p><code style="font-size: 12pt; line-height: 1.5; margin-left: -3em; margin-right: -4em;">CREATE DATABASE unity_demo
+ENGINE = <b style="color: green;">Iceberg</b>('https://dbc-55555555-5555.cloud.databricks.com/api/2.1/unity-catalog/iceberg')
+SETTINGS
+  catalog_type = <b style="color: green;">'rest'</b>,
+  catalog_credential = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee:...',
+  warehouse = 'unity',
+  oauth_server_uri = 'https://dbc-55555555-5555.cloud.databricks.com/oidc/v1/token',
+  auth_scope = 'all-apis,sql';
+
+SHOW TABLES FROM unity_demo;
+SELECT * unity_demo."webinar.test";
+</code></p>
+<p>Compatible with Unity, Polaris.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Kseniia Sumarokova.</p>
+</section>
+
+<section class="slide" style="background-color: black;">
+<img src="pictures/iceberg1.png" style="width: calc(100% + 200px); margin-left: -100px; margin-right: -100px;">
+</section>
+
+<section class="slide" style="background-color: black;">
+<img src="pictures/iceberg2.png" style="width: calc(100% + 200px); margin-left: -100px; margin-right: -100px;">
+</section>
+
+<section class="slide" style="background-color: black;">
+<img src="pictures/iceberg3.png" style="width: calc(100% + 200px); margin-left: -100px; margin-right: -100px;">
+</section>
+
+<section class="slide" style="background-color: black;">
+<img src="pictures/iceberg4.png" style="width: calc(100% + 200px); margin-left: -100px; margin-right: -100px;">
+</section>
+
+<section class="slide" style="background-color: black;">
+<img src="pictures/iceberg5.png" style="width: calc(100% + 200px); margin-left: -100px; margin-right: -100px;">
+</section>
+
+<section class="slide">
+<h2>Iceberg REST Catalog 🧊</h2>
+<p>Compatible with Unity, Polaris.</p>
+<p>Demo.</p>
+<!--
+
+SET allow_experimental_database_iceberg = 1;
+
+CREATE DATABASE unity_demo
+ENGINE = Iceberg('https://dbc-516f4d78-42c9.cloud.databricks.com/api/2.1/unity-catalog/iceberg')
+SETTINGS catalog_type = 'rest', catalog_credential = 'c4c1331f-02cb-4765-9fd9-dccfe6ba2b61:dose0bae8994fa6e9ab22daf2e7ce8c88a1e', warehouse = 'unity', oauth_server_uri = 'https://dbc-516f4d78-42c9.cloud.databricks.com/oidc/v1/token', auth_scope = 'all-apis,sql';
+
+SHOW TABLES FROM unity_demo;
+
+SELECT * FROM unity_demo."webinar.final_demo" LIMIT 10;
+SELECT job_title, count(), avg(age) FROM unity_demo."webinar.final_demo" GROUP BY job_title ORDER BY count() DESC LIMIT 10;
+
+-->
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Kseniia Sumarokova.</p>
+</section>
+
+<section class="slide">
+<h2>Schema Evolution For Iceberg </h2>
+<p>The <b>iceberg</b> table function supports tables with:</p>
+<p>&mdash; columns added or removed over time;</p>
+<p>&mdash; renamed columns;</p>
+<p>&mdash; data types changed between primitive types;</p>
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Dan Ivanik.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
+<h2><span class="hilite">Bonus</span></h2>
+</section>
+
+<section class="slide">
+<h2>Variant, Dynamic, And JSON Types 🍰</h2>
+
+<p>Are promoted from experimental to the <b style="color: green;">beta stage</b>.</p>
+<p>We also backported all fixes to the previous release, <b>24.11</b>.</p>
+
+<p>Read the blog post about the architecture of the <b>JSON</b> data type:
+<br/><a href="https://clickhouse.com/blog/a-new-powerful-json-data-type-for-clickhouse">https://clickhouse.com/blog/a-new-powerful-json-data-type-for-clickhouse</a>.</p>
+
+<p>Now we support ALTER from the deprecated <span style="color: gray;">Object</span> type to <b style="color: green;">JSON</b><br/>to allow easy migrations.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Pavel Kruglov.</p>
+</section>
+
+<section class="slide">
+<h2>Variant, Dynamic, And JSON Types 🍰</h2>
+
+<p>Now we support <b>subcolumns</b> for table's primary key and indices:</p>
+
+<p><code style="line-height: 1.25;">CREATE TABLE log
+(
+    data JSON
+)
+ORDER BY <b style="color: green;">data.time</b>;
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Pavel Kruglov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Integrations</h2>
+
+<p>Postgres CDC in ClickPipes, private preview:
+<br/><a href="https://clickhouse.com/cloud/clickpipes/postgres-cdc-connector">https://clickhouse.com/cloud/clickpipes/postgres-cdc-connector</a></p>
+
+<img src="pictures/cdc.png" style="width: 100%">
+
+<p>Improvements for <b>dbt</b>, <b>Firetran</b>, <b>Kafka</b> integrations
+<br/>as well as for <b>Python</b> and <b>JavaScript</b> connectors.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/wing.jpg); background-size: cover;">
+<h2>Meetups</h2>
+<p>
+<span class="hilite">&mdash; 🇯🇵 Tokyo, Jan 23rd</span>
+<br/><span class="hilite">&mdash; 🇧🇪 FOSDEM, Brussels, Feb 1, 2</span>
+<br/><span class="hilite">&mdash; 🇬🇧 London, Feb 5th</span>
+<br/><span class="hilite">&mdash; 🇦🇪 Dubai, Feb 10th</span>
+</p>
+<p><span class="hilite">I will be in person on some of these meetups :)</span></p>
+</section>
+
+
+<section class="slide">
+<h2>Reading Corner 🧶</h2>
+
+<img style="float: right; width: 30%; margin-right: -3em; image-rendering: pixelated; margin-top: 1em;" src="pictures/blog.png"/>
+<p><a href="https://clickhouse.com/blog/">https://clickhouse.com/blog/</a></p>
+<p style="line-height: 1.5;">&mdash; Strategic partnership with AWS
+<br/>&mdash; Medallion architecture with ClickHouse
+<br/>&mdash; How we built product analytics on ClickHouse
+<br/>&mdash; Query optimizations in ClickHouse
+<br/>&mdash; From BigQuery to ClickHouse
+<br/>&mdash; Our re:Invent announcements
+</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
+<h2 style="color: white; margin-left: -1em;">Q&amp;A</a></h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+

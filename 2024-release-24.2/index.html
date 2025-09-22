@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 24.2 Webinar</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+         .slide table tr:not(:last-of-type)>* { background: none; }
+
+        @keyframes changeColor {
+            0% { color: black; }
+            50% { color: red; }
+            100% { color: black; }
+        }
+
+        .animated {
+            animation: changeColor 15s infinite;
+        }
+</style>
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 24.2 Webinar</h1>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/back1.jpg); background-size: cover;">
+        <h1 style="margin-top: 60px; line-height: 150%; color: yellow; font-size: 56pt; text-shadow: 1px 1px 1px black;">ClickHouse Release 24.2</h1>
+    </section>
+
+<section class="slide">
+<h2>Release 24.2 Webinar</h2>
+<p>1. (40 min) What's new in ClickHouse 24.2.</p>
+<p>2. (10 min) Lightning Talks.</p>
+<p>3. (10 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back2.jpg); background-size: cover;">
+<h2><span class="hilite">Release 24.2</span></h2>
+<p><span class="hilite">ClickHouse Winter Release.</span></p>
+<p><span class="hilite">— 18 new features ☃️</span></p>
+<p><span class="hilite">— 18 performance optimizations ⛷️</span></p>
+<p><span class="hilite">— 49 bug fixes 🧊</span></p>
+</section>
+<!--
+
+Small
+
+groupArrayIntersect
+merge with single argument
+Pretty numbers
+Negative positional arguments
+Backups to Azure
+Quota on log in failures
+Format template configuration
+seriesOutliersTukey
+system.dns_cache
+FORGET PARTITION
+Limit S3 config for users
+LZ4HC(2)
+
+
+Performance
+
+Memory optimization for primary key
+Lazy loading of the primary key
+Vectorize distance and dot product
+Parallel flush for storage Buffer
+Memory optimization for Keeper
+if for Map
+strict aliasing
+
+Main
+
+Definers for Views
+Autodetect formats
+Automatic asynchronous inserts
+
+Integrations
+
+Guest Talk
+
+Grafana v4
+Kafka Connector - complex types (Array, Map), FixedString
+Various PowerBI, Metabase
+dbt, Node.js
+
+Reading
+
+Hybrid Query Execution
+ClickHouse and the Machine Learning Data Layer
+An out-of-the-box CDC solution for ClickHouse
+Exploring Global Internet Speeds using Apache Iceberg and ClickHouse - a picture
+ClickHouse Grafana plugin 4.0 - Leveling up SQL Observability
+
+-->
+
+<section class="slide" style="background: url(pictures/back3.jpg); background-size: cover;">
+<h2><span class="hilite">Small And Nice Features</span></h2>
+</section>
+
+<section class="slide">
+<h2>groupArrayIntersect</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">:) SELECT <b style="color: green;">groupArrayIntersect</b>(arr)
+   FROM
+   (
+       SELECT [1, 2, 3] AS arr
+       UNION ALL
+       SELECT [2, 3, 4]
+   )
+
+┌─groupArrayIntersect(arr)─┐
+│ [3,2]                    │
+└──────────────────────────┘
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Yarik Briukhovetskyi.</p>
+</section>
+
+<section class="slide">
+<h2>groupArrayIntersect</h2>
+
+<p>Let's build our own search index with ClickHouse!</p>
+
+<p>Demo...</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Yarik Briukhovetskyi.</p>
+</section>
+
+<!--
+
+CREATE TABLE hackernews_tokens (token String, id UInt32)
+ENGINE = MergeTree ORDER BY token;
+
+SET optimize_trivial_insert_select = 0, max_block_size = 1000, max_insert_threads = 48;
+
+INSERT INTO hackernews_tokens
+WITH tokens(lowerUTF8(decodeHTMLComponent(text))) AS tokens
+SELECT arrayJoin(tokens) AS token, id FROM hackernews;
+
+SELECT count() FROM hackernews_tokens;
+
+SELECT token, groupArray(id) AS ids FROM hackernews_tokens WHERE token IN ('clickhouse', 'postgresql', 'mysql') GROUP BY token;
+
+SELECT groupArrayIntersect(ids) FROM (SELECT token, groupArray(id) AS ids FROM hackernews_tokens WHERE token IN ('clickhouse', 'postgresql', 'mysql') GROUP BY token);
+
+SELECT arrayJoin(groupArrayIntersect(ids)) FROM (SELECT token, groupArray(id) AS ids FROM hackernews_tokens WHERE token IN ('clickhouse', 'postgresql', 'mysql') GROUP BY token);
+
+SELECT id, decodeHTMLComponent(text) FROM hackernews WHERE id IN (SELECT arrayJoin(groupArrayIntersect(ids)) FROM (SELECT token, groupArray(id) AS ids FROM hackernews_tokens WHERE token IN ('clickhouse', 'postgresql', 'mysql') GROUP BY token))
+
+-->
+
+
+<section class="slide">
+<h2>Negative Positional Arguments</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">:) SELECT SearchEngineID, SearchPhrase, count()
+   FROM hits
+   WHERE SearchPhrase != ''
+   GROUP BY ALL
+   ORDER BY <b style="color: green;">-1</b> DESC
+   LIMIT 5
+
+┌─SearchEngineID─┬─SearchPhrase──────────────┬─count()─┐
+│              2 │ карелки                   │   46258 │
+│              2 │ мангу в зарабей грама     │   18871 │
+│              2 │ смотреть онлайн           │   16905 │
+│              3 │ албатрутдин               │   16748 │
+│              2 │ смотреть онлайн бесплатно │   14909 │
+└────────────────┴───────────────────────────┴─────────┘
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Flynn (ucasFL).</p>
+</section>
+
+<section class="slide">
+<h2>Negative Positional Arguments</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">:) SELECT SearchEngineID, SearchPhrase, count()
+   FROM hits
+   WHERE SearchPhrase != ''
+   GROUP BY ALL
+   ORDER BY <b>count()</b> DESC
+   LIMIT 5
+
+┌─SearchEngineID─┬─SearchPhrase──────────────┬─count()─┐
+│              2 │ карелки                   │   46258 │
+│              2 │ мангу в зарабей грама     │   18871 │
+│              2 │ смотреть онлайн           │   16905 │
+│              3 │ албатрутдин               │   16748 │
+│              2 │ смотреть онлайн бесплатно │   14909 │
+└────────────────┴───────────────────────────┴─────────┘
+</code></p>
+</section>
+
+<section class="slide">
+<h2>Negative Positional Arguments</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">:) SELECT SearchEngineID, SearchPhrase, count() <b>AS c</b>
+   FROM hits
+   WHERE SearchPhrase != ''
+   GROUP BY ALL
+   ORDER BY <b>c</b> DESC
+   LIMIT 5
+
+┌─SearchEngineID─┬─SearchPhrase──────────────┬─────c─┐
+│              2 │ карелки                   │ 46258 │
+│              2 │ мангу в зарабей грама     │ 18871 │
+│              2 │ смотреть онлайн           │ 16905 │
+│              3 │ албатрутдин               │ 16748 │
+│              2 │ смотреть онлайн бесплатно │ 14909 │
+└────────────────┴───────────────────────────┴───────┘
+</code></p>
+</section>
+
+<section class="slide">
+<h2>Pretty Format Is Even Prettier</h2>
+
+<p style="margin-top: -1em;">24.1:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">:) SELECT count() FROM table
+
+┌────count()─┐
+│ 2106592092 │
+└────────────┘</code></p>
+
+<p>24.2:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">:) SELECT count() FROM table
+
+┌────count()─┐
+│ 2106592092 │ <span style="color: gray;">-- 2.11 billion</span>
+└────────────┘</code></p>
+
+<p style="color: gray; font-size: 14pt;">Developer: RogerYK.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Table function merge with a single argument</h2>
+
+<p>Already works:</p>
+<p><code style="font-size: 16pt; line-height: 1.5;">:) SELECT * FROM merge(database, '^events.+_log$')
+
+:) SELECT * FROM merge(currentDatabase(), '^events.+_log$')
+</code></p>
+
+<p>Since 24.2:</p>
+<p><code style="font-size: 16pt; line-height: 1.5;">:) SELECT * FROM <b style="color: green;">merge('^events.+_log$')</b>
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developers: HowePa.</p>
+</section>
+
+<section class="slide">
+<h2>Backups To Azure</h2>
+
+<p>If you use ClickHouse in Microsoft Azure...<br/>
+or if you use it anywhere, but want to have backups on Azure.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.5; margin-right: -1em;">BACKUP TABLE data TO <b style="color: green;">AzureBlobStorage</b>(
+  'AccountName=devstoreaccount1;AccountKey=...;BlobEndpoint=https://...;',
+  'test_container', 'data_backup');
+
+RESTORE TABLE data AS data_restored FROM <b style="color: green;">AzureBlobStorage</b>(
+  'AccountName=devstoreaccount1;AccountKey=...;BlobEndpoint=https://...;',
+  'test_container', 'data_backup');
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developers: Smita Kulkarni.</p>
+<p style="font-size: 14pt;">Private preview of ClickHouse Cloud on Azure: <a href="https://clickhouse.com/cloud/azure-waitlist">https://clickhouse.com/cloud/azure-waitlist</a></p>
+</section>
+
+
+<section class="slide">
+<h2>Inline Template Format</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -3em;">:) SELECT 'Hello' AS a, 'World' AS b
+   FORMAT <b>Template</b>
+   SETTINGS
+      <b style="color: green;">format_template_resultset_format</b> = '&lt;html>&lt;body>${data}&lt;/body>&lt;/html>',
+      <b style="color: green;">format_template_row_format</b> = '&lt;p>${a:Raw}: ${b:Quoted}&lt;/p>';
+
+<span style="color: gray;">&lt;html>&lt;body>&lt;p>Hello: 'World'&lt;/p></span>
+<span style="color: gray;">&lt;/body>&lt;/html></span>
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Shaun Struwig.</p>
+</section>
+
+
+<section class="slide">
+<h2>system.dns_cache</h2>
+
+<p>A new system table.</p>
+
+<p>Demo.</p>
+
+<!--
+
+SELECT comment FROM system.tables WHERE database = 'system' AND table = 'dns_cache';
+SELECT * FROM system.dns_cache WHERE hostname LIKE '%clickhouse%';
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0em;">Developer: Kirill Nikiforov.</p>
+</section>
+
+
+<section class="slide">
+<h2>New Compression Level For LZ4</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -3em;">CREATE TABLE test
+(
+    x String CODEC(<b style="color: green;">LZ4HC(2)</b>),
+    ...
+)
+ENGINE = MergeTree ORDER BY ...;
+</code></p>
+
+<p>Demo.</p>
+<!--
+
+SELECT * FROM uk_price_paid LIMIT 1000000 INTO OUTFILE 'uk.tsv';
+wc -c uk.tsv
+time clickhouse-compressor --codec 'LZ4' < uk.tsv > uk.tsv.lz4
+time clickhouse-compressor --codec 'LZ4HC(1)' < uk.tsv > uk.tsv.lz4_1
+time clickhouse-compressor --codec 'LZ4HC(2)' < uk.tsv > uk.tsv.lz4_2
+time clickhouse-compressor --codec 'LZ4HC(3)' < uk.tsv > uk.tsv.lz4_3
+time clickhouse-compressor --codec 'LZ4HC(4)' < uk.tsv > uk.tsv.lz4_4
+time clickhouse-compressor --codec 'ZSTD' < uk.tsv > uk.tsv.zst
+wc -c uk.tsv*
+for i in uk.tsv.*; do echo $i; time clickhouse-compressor -d < $i > /dev/null; done
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0em;">Developer: Yann Collet.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back4.jpg); background-size: cover;">
+<h2><span class="hilite">Performance Improvements</span></h2>
+</section>
+
+<section class="slide">
+<h2>Memory Usage For Primary Key</h2>
+
+<img style="width: 100%; margin-top: -1em;" src="pictures/pk.png">
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Vectorized Distances And Dot Product:</h2>
+
+<p>Optimized <b>L2Distance</b>, <b>cosineDistance</b>, and <b>dotProduct</b>:
+<br/>&mdash; with FMA instructions in AVX-512;
+<br/>&mdash; and with auto-vectorization for ARM;
+</p>
+
+<p>Example: cosineDistance over 600-dimension vectors of Float32:
+<br/>&mdash; <b style="color: green;">56%</b> performance improvement;</p>
+
+<p>On servers with DDR-4 memory it is memory-bound</p>
+<p>Even higher speed-up on servers with DDR-5.</p>
+<p>Even higher speed-up on Mac.</p>
+
+<p style="color: gray; font-size: 14pt;">Developer: Robert Schulze.</p>
+</code></p>
+</section>
+
+<section class="slide">
+<h2>Parallel Flush For Buffer Tables</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">CREATE TABLE ...
+ENGINE = Buffer(database, table,
+            <b>num_layers</b>,
+            min_time, max_time, min_rows, max_rows, min_bytes, max_bytes)</code></p>
+
+<p>The <b>num_layes</b> parameter defines the number of buffers<br/>and parallelism for INSERTs.</p>
+
+<p>But the moving of data from buffers to the target table <span style="color: red;">was sequential</span>.</p>
+<p><b style="color: green;">Now it is parallel!</b> Result: successful continuous insert of >20 GB/sec of compressed data on a cluster.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexander Sapin.</p>
+</section>
+
+<section class="slide">
+<h2>Optimization For Int8 Data Type</h2>
+
+<p>By forcing C++ compiler to use strict aliasing.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">SELECT sum(number::Int8) FROM numbers(1_000_000_000);</code></p>
+
+<p style="font-family: monospace;">24.1: <b style="color: red;">0.448 sec.</b> (1.99 billion rows/s., 15.95 GB/s.)</p>
+<p style="font-family: monospace;">24.2: <b style="color: green;">0.230 sec.</b> (3.79 billion rows/s., 30.31 GB/s.)</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Raul Marin.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Bonus</h2>
+
+<p>&mdash; Memory usage optimization for ClickHouse Keeper,<br/>&emsp; another ~30% improvement!</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Antonio Andelic.</p>
+
+<p>&mdash; Speed up for ASOF JOIN.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Maksim Kita.</p>
+
+<p>&mdash; Optimization For If With Maps.</p>
+
+<p><code style="font-size: 12pt; line-height: 1.5; margin-right: -2em;">WITH rand32() % 2 as x SELECT if(x, map(1,2,3,4), map(3,4,5,6)) FROM numbers(10000000);</code></p>
+
+<p style="font-family: monospace; font-size: 12pt;">24.1: <b style="color: red;">4.293 sec.</b>
+<br/>24.2: <b style="color: green;">0.411 sec.</b></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: TaiYang-Li.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
+<h2><span class="hilite">Something Interesting</span></h2>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Encapsulation Of Access Control In Views</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">CREATE TABLE table1 (...);
+
+CREATE VIEW <b>view1</b> AS SELECT c1, c2 FROM <b>table1</b> WHERE user = 'Vasya';
+
+SELECT * FROM view1;</code></p>
+
+<p>What access rights are required to read from view1?</p>
+
+<p>By default, it is required to have access for <b>both</b> table1 and view1.</p>
+<p>But if I want to give access to a view,<br/>I also <b style="color: red;">have to</b> give access to the whole table.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Encapsulation Of Access Control In Views</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">CREATE VIEW <b>view1</b> AS SELECT c1, c2 FROM <b>table1</b> WHERE user = 'Vasya';</code></p>
+
+<p>We want to give access to the view without giving access to the table.</p>
+<p>To let the view control access to the subset of data.</p>
+
+<p>Solution: the new <b style="color: green;">SQL SECURITY</b> and <b style="color: green;">DEFINER</b> specifications<br/>for CREATE VIEW queries.</p>
+
+<p>Applicable for ordinary VIEW and MATERIALIZED views</p>
+
+<p style="margin-top: 3em; color: gray; font-size: 14pt;">Developer: Artem Brustovetskii.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Encapsulation Of Access Control In Views</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">CREATE VIEW <b>view1</b>
+<b style="color: green;">[DEFINER = { user | CURRENT_USER }]</b>
+<b style="color: green;">[SQL SECURITY { DEFINER | INVOKER | NONE }]</b>
+AS SELECT c1, c2 FROM <b>table1</b> WHERE user = 'Vasya';</code></p>
+
+<p><b>SQL SECURITY</b>:</p>
+
+<p>&mdash; <b>INVOKER</b>: the access rights for operations inside the view<br/>&emsp; are checked against <b style="color: green;">the user running the query</b>;
+<br/>&mdash; this is equivalent to the default behavior for ordinary views;</p>
+
+<p>&mdash; <b>DEFINER</b>: the access rights for operations inside the view<br/>&emsp; are checked against <b style="color: green;">the defined user</b>;
+<br/>&mdash; this is the new behavior, allowing the view to remember the access rights;</p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Artem Brustovetskii.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Encapsulation Of Access Control In Views</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">-- Alice has access to <b>table1</b> and creates <b>view1</b>:
+
+CREATE VIEW <b>view1</b>
+<b style="color: green;">DEFINER = alice SQL SECURITY DEFINER</b>
+AS SELECT c1, c2 FROM <b>table1</b> WHERE user = 'Bob';
+
+-- She gives access to <b>view1</b> to Bob:
+
+GRANT SELECT ON default.view1 TO bob;
+
+-- Bob does not have access to <b>table1</b> but can use <b>view1</b>,
+-- so view1 will SELECT from table1 on behalf of Alice</b>.
+</code></p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Artem Brustovetskii.</p>
+</section>
+
+
+<section class="slide">
+<h2>Automatic Detection Of Formats</h2>
+
+<p><code style="font-size: 12pt; line-height: 1.25; margin-top: -1em;">$ echo '{"Hello": "world"}' > data1
+$ echo 'Hello,world' > data2
+$ echo -e 'Hello\tworld' > data3
+
+:) SELECT * FROM file('data1') <span style="color: gray;">-- we didn't say it is JSON, but it works!</span>
+┌─Hello─┐
+│ world │
+└───────┘
+
+:) SELECT * FROM file('data2') <span style="color: gray;">-- we didn't say it is CSV, but it works!</span>
+┌─c1────┬─c2────┐
+│ Hello │ world │
+└───────┴───────┘
+
+:) SELECT * FROM file('data3') <span style="color: gray;">-- we didn't say it is TSV, but it works!</span>
+┌─c1────┬─c2────┐
+│ Hello │ world │
+└───────┴───────┘
+</code></p>
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Pavel Kruglov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Adaptive Asynchronous Inserts</h2>
+
+<p>SET async_insert = true;</p>
+<p>&mdash; allows to combine data for insertion from many concurrent clients;
+<br/>&emsp; to support highly concurrent, frequent inserts.</p>
+
+<p>24.1: if there are not many inserts,<br/>they will wait up to the timeout (= 200 ms by default);</p>
+<p style="color: red;">&mdash; In 24.1, infrequent inserts have a higher latency.</p>
+
+<p>Since 24.2: automatically adjusts to the frequency of inserts;</p>
+<p style="color: green;">&mdash; In 24.2, you can enable async_insert and stop worrying.</p>
+
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">Developer: Julia Kartseva.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
+<h2><span class="hilite">Integrations</span></h2>
+</section>
+
+<section class="slide">
+<h2>Lightning Talks</h2>
+</section>
+
+<section class="slide">
+<h2>Integrations</h2>
+<p><b>Grafana plugin v4 released</b></p>
+
+<p>The release of version 4, sees a new philosophy to user interaction where<br/><b>logs</b> and <b>traces</b> become first class citizens in a new query builder experience.</p>
+
+<p><b>Kafka Connector</b>
+<br/>&mdash; support for complex types (Array, Map) and FixedString.</p>
+
+<p>Updates for <b>PowerBI</b> and <b>Metabase</b>.</p>
+
+<p>Enhancements for <b>dbt</b> support and for <b>Node.js</b> driver.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/grafana.png); background-size: cover;">
+</section>
+
+<section class="slide">
+<img style="float: right; margin-top: -1em; margin-right: -4em; width: 40%; image-rendering: pixelated; margin-bottom: -10em;" src="pictures/cloud.png"/>
+<h2>Reading Corner</h2>
+
+<p><a href="https://clickhouse.com/blog/">https://clickhouse.com/blog/</a></p>
+<p style="line-height: 1.5;">&mdash; Hybrid Query Execution;
+<br/>&mdash; A CDC solution for ClickHouse;
+<br/>&mdash; Analyzing Global Internet Speeds;
+<br/>&mdash; Grafana plugin 4.0 - Leveling up SQL Observability;
+</p>
+
+<p>Video Recordings: <a href="https://www.youtube.com/c/ClickHouseDB">https://www.youtube.com/c/ClickHouseDB</a></p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
+<h2 style="color: white;">Q&amp;A</a></h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+

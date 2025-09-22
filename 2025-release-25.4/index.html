@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 25.4 Call</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+         .slide table tr:not(:last-of-type)>* { background: none; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 25.4 Call</h1>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/back3.jpg); background-size: cover;">
+        <h1 style="margin-top: 50px; line-height: 110%; font-size: 56pt; color: yellow; text-shadow: black 1px 0 10px; text-align: center;">ClickHouse Release 25.4</h1>
+    </section>
+
+<section class="slide">
+<h2>ClickHouse "Spring" release 25.4</h2>
+<p>1. (45 min) What's new in ClickHouse 25.4.</p>
+<p>2. (10 min) Guest Talk.</p>
+<p>3. (5 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back1.jpg); background-size: cover;">
+<h2><span class="hilite">Release 25.4</span></h2>
+<p><span class="hilite">ClickHouse Release.</span></p>
+<p><span class="hilite">— 25 new features 🌸</span></p>
+<p><span class="hilite">— 23 performance optimizations 🦋</span></p>
+<p><span class="hilite">— 58 bug fixes 🐝</span></p>
+</section>
+<!--
+
+Small
+
+default_compression_codec
+Persistent databases in clickhouse-local
+Random early drop of queries
+Inline credentials for Kafka
+bind_host for cluster nodes
+
+Performance
+
+Lazy columns
+Filters from WHERE to JOIN
+Sharding for JOINs
+
+Main
+
+Correlated subqueries
+CPU scheduling
+
+Iceberg: time travel
+Iceberg: in-memory cache
+Iceberg: data pruning on min/max
+Delta Lake: on Azure
+Delta Lake: partition pruning
+
+ClickHouse-native data lake
+
+
+Guest Talk
+
+Integrations
+
+Private Link for ClickPipes
+Terraform for ClickPipes
+Prometheus metrics for ClickPipes
+Notifications for ClickPipes
+Mutual TLS
+
+Metabase: now official
+
+Updates to ODBC, JDBC, and Java client.
+
+
+Bonus
+
+SSH protocol (password)
+Observability in ClickHouse Cloud
+OpenHouse
+
+
+Reading
+
+MySQL CDC
+Ruby analytics
+Dash0, Poizon, Last9
+A year of Rust in ClickHouse
+Query Condition Cache
+Make Before Break
+Harvey
+
+-->
+
+<section class="slide" style="background: url(pictures/back2.jpg); background-size: cover;">
+<h2><span class="hilite">A Few Small Features</span></h2>
+</section>
+
+<section class="slide">
+<h2>Default Compression Codec</h2>
+
+<p>For <b>MergeTree</b> tables.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; white-space: pre-wrap; margin-right: -2em;">CREATE TABLE t (
+    time DateTime CODEC(ZSTD(3)), <span style="color: gray;">-- codec on a column level</span>
+    user_id UInt64, <span style="color: gray;">-- this column will use the default codec</span>
+    ...
+) ORDER BY time
+SETTINGS <b style="color: green;">default_compression_codec = 'ZSTD(1)'</b> <span style="color: gray;">-- codec on a table level</span>
+</code></p>
+
+<p style="font-size: 70%; color: gray;">By the way, the default codec can be also specified globally in the server's configuration:</p>
+<p><code style="font-size: 12pt; line-height: 1.25; white-space: pre-wrap; margin-right: -2em;">$ cat config.d/compression.yaml
+compression:
+    case:
+        min_part_size: 1000000000 <span style="color: gray;"># Optional condition</span>
+        method: 'zstd'
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Gvoelfin.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Persistent Databases In clickhouse-local</h2>
+
+<p><code style="font-size: 16pt; line-height: 1.25; white-space: pre-wrap;"><span style="color: gray;"># Use the specified paths for databases
+# instead of a temporary location:</span>
+
+$ ch --path .
+
+<span style="color: gray;"># The database will remain available
+# for subsequent invocations.</span>
+</code></p>
+
+<p>Demo.</p>
+
+<!--
+
+ch --path example
+CREATE TABLE test (s String) ENGINE = MergeTree ORDER BY ();
+INSERT INTO test VALUES ('Hello'), ('world');
+ch --path example
+SELECT * FROM test
+ls -l example
+ls -l example/data/default/test
+ls -l example/data/default/test/all_1_1_0
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Random Early Drop on Overload</h2>
+
+<p>Two new query settings: <b>min_os_cpu_wait_time_ratio_to_throw</b><br/>
+and <b>max_os_cpu_wait_time_ratio_to_throw</b>.</p>
+
+<p>When the ratio between the number of threads waiting for CPU and the number of threads running on CPU is more than the <b>min</b> threshold, the server will start randomly refusing some queries. When it approaches the <b>max</b>, the server will refuse every query.</p>
+
+<p>Implements a <b style="color: green;">gradual degradation</b> to prevent full DoS.</p>
+
+<p>Demo.</p>
+
+<!--
+
+clickhouse-benchmark --concurrency 1000 --query "SELECT max(SHA256(toString(number))) FROM numbers(1e6)" --min_os_cpu_wait_time_ratio_to_throw 0.1 max_os_cpu_wait_time_ratio_to_throw 0.5
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Alexey Katsman, Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Inline Credentials For Kafka</h2>
+
+<p><code style="font-size: 16pt; line-height: 1.25; white-space: pre-wrap;">CREATE TABLE kafka_sasl (key UInt32, value String)
+ENGINE = Kafka
+SETTINGS kafka_broker_list = 'kafka_sasl:19092',
+         kafka_security_protocol = 'sasl_plaintext',
+         kafka_sasl_mechanism = 'SCRAM-SHA-256',
+         <b style="color: green;">kafka_sasl_username = 'Vasya',</b>
+         <b style="color: green;">kafka_sasl_password = 'qwerty',</b>
+         kafka_topic_list = 'topic',
+         kafka_group_name = 'group',
+         kafka_format = 'JSONEachRow';
+</code></p>
+
+<p>No longer necessary to edit configuration files for every new Kafka endpoint.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Christoph Wurm.</p>
+</section>
+
+<section class="slide">
+<h2>Bind Host In the Cluster Configuration</h2>
+
+<p><code style="font-size: 16pt; line-height: 1.25; white-space: pre-wrap;">$ cat config.d/cluster.yaml
+
+remote_servers:
+  default:
+    shard:
+      replica:
+        host: '10.0.0.2'
+        port: 9000
+        <b style="color: green;">bind_host: '10.0.0.1'</b>
+</code></p>
+
+<p>Useful when a server has <b>multiple network interfaces</b> and distributed connections should use one.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Todd Yocum.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
+<h2><span style="color: black;"><span class="hilite">Performance Improvements</span></h2>
+</section>
+
+<section class="slide">
+<h2>Lazy Columns</h2>
+
+<p>Instead of reading data for a column, track the information about what data should be read. Then read the data only when needed.</p>
+
+<p>The column values can be carried around, filtered, but not used in calculations before the latest stages of the query pipeline.</p>
+
+<p>Demo.</p>
+
+<!--
+
+1. Cloud service
+
+SET query_plan_optimize_lazy_materialization = 1, query_plan_max_limit_for_lazy_materialization = 100, compatibility = '25.5', read_through_distributed_cache = 0, use_page_cache_with_distributed_cache = 0, enable_filesystem_cache = 1;
+
+SET query_plan_optimize_lazy_materialization = 1;
+SELECT view_count, like_count, dislike_count, title FROM youtube ORDER BY view_count DESC LIMIT 10;
+
+SET query_plan_optimize_lazy_materialization = 0;
+SELECT view_count, like_count, dislike_count, title FROM youtube ORDER BY view_count DESC LIMIT 10;
+
+2. https://play.clickhouse.com/play?user=play#U0VMRUNUIGRvbWFpbiwgY29udGVudCBGUk9NIG1pbmljcmF3bCBPUkRFUiBCWSByYW5rIExJTUlUIDEw
+
+SELECT domain, content FROM minicrawl ORDER BY rank LIMIT 10
+SELECT domain, content FROM minicrawl ORDER BY rank LIMIT 10 SETTINGS query_plan_optimize_lazy_materialization = 0;
+
+SELECT * FROM system.text_log_0 ORDER BY event_time_microseconds DESC LIMIT 10 SETTINGS query_plan_optimize_lazy_materialization = 0;
+SELECT * FROM system.text_log_0 ORDER BY event_time_microseconds DESC LIMIT 10 SETTINGS query_plan_optimize_lazy_materialization = 1;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Xiaozhe Yu.</p>
+</section>
+
+<section class="slide">
+<h2>Merging Filters For Optimizing JOINs</h2>
+
+<p>I couldn't believe it didn't work before...</p>
+
+<p>Demo.</p>
+
+<!--
+
+ch
+CREATE TABLE users (uid Int16, name String, age Int16) ENGINE=MergeTree() ORDER BY age;
+INSERT INTO users SELECT 1 as uid, 'Max' as name, number as age FROM numbers_mt(10000);
+
+SET query_plan_merge_filter_into_join_condition = 0;
+SELECT * FROM (SELECT * FROM users u1 INNER JOIN users u2 ON 1) WHERE age = u2.age;
+SET query_plan_merge_filter_into_join_condition = 1;
+SELECT * FROM (SELECT * FROM users u1 INNER JOIN users u2 ON 1) WHERE age = u2.age;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Dmitry Novik.</p>
+</section>
+
+<section class="slide">
+<h2>Dynamic Sharding For JOINs</h2>
+
+<p>If you JOIN two MergeTree tables by their primary keys (or their prefixes),<br/>
+it will create independent lanes in the query pipeline dedicated to the ranges of the primary keys, so the work is paralellized better.</p>
+
+<p>Demo.</p>
+
+<!--
+
+clickhouse-client
+SHOW CREATE TABLE hits;
+
+SELECT count() FROM hits h1 INNER JOIN hits h2 ON h1.CounterID = h2.CounterID AND h1.EventDate = h2.EventDate AND h1.UserID = h2.UserID AND h1.URL = h2.Referer;
+
+SET query_plan_join_shard_by_pk_ranges = 1;
+
+SELECT count() FROM hits h1 INNER JOIN hits h2 ON h1.CounterID = h2.CounterID AND h1.EventDate = h2.EventDate AND h1.UserID = h2.UserID AND h1.URL = h2.Referer;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Nikolai Kochetov.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
+<h2 style="font-size: 32pt; margin-left: -1em;"><span class="hilite">Something Interesting</span></h2>
+</section>
+
+<section class="slide">
+<h2>Correlated Subqueries</h2>
+
+<p>&mdash; are subqueries that depend on the columns from the outer scope.</p>
+<p><code style="font-size: 14pt; line-height: 1.25; white-space: pre-wrap;">SELECT * FROM users AS <b style="color: brown;">u1</b> WHERE EXISTS <span style="color: blue;">(
+    SELECT * FROM users2 AS u2 WHERE <b style="color: brown;">u1.age</b> = u2.age)</span>
+</code></p>
+
+<p>They can appear in many different contexts: EXISTS, IN, scalar...</p>
+<p>Now we support correlated subqueries
+<br/>inside the <b>WHERE</b> clause with the <b style="color: green;">EXISTS</b> operator!</p>
+
+<p>Demo.</p>
+
+<!--
+
+CREATE TABLE users (uid Int16, name String, age Int16) ENGINE=Memory;
+INSERT INTO users VALUES (1231, 'John', 33);
+INSERT INTO users VALUES (6666, 'Ksenia', 48);
+INSERT INTO users VALUES (8888, 'Alice', 50);
+
+CREATE TABLE users2 (uid Int16, name String, age Int16) ENGINE=Memory;
+INSERT INTO users2 VALUES (1231, 'John', 33);
+
+SELECT * FROM users u1
+WHERE EXISTS (
+  SELECT * FROM users2 u2
+  WHERE u1.age = u2.age
+);
+
+SELECT *
+FROM users AS u1
+WHERE (age = 50) OR exists((
+    SELECT *
+    FROM users2 AS u2
+    WHERE u1.age = u2.age
+    UNION ALL
+    SELECT *
+    FROM users2 AS u2
+    WHERE u1.age != u2.age
+))
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Dmitry Novik.</p>
+</section>
+
+<section class="slide">
+<h2>CPU Workload Scheduler</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25; white-space: pre-wrap; margin-top: -1em;">CREATE RESOURCE cpu (MASTER THREAD, WORKER THREAD);
+CREATE WORKLOAD all;
+CREATE WORKLOAD admin IN all SETTINGS max_concurrent_threads = 10;
+CREATE WORKLOAD production IN all SETTINGS max_concurrent_threads = 100;
+CREATE WORKLOAD analytics IN production
+    SETTINGS max_concurrent_threads = 60, weight = 9;
+CREATE WORKLOAD ingestion IN production;
+
+SET workload = 'analytics';
+</code></p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; white-space: pre-wrap;">CREATE RESOURCE worker_cpu (WORKER THREAD);
+CREATE RESOURCE master_cpu (MASTER THREAD);
+CREATE WORKLOAD all
+    SETTINGS max_concurrent_threads = 100 FOR worker_cpu,
+             max_concurrent_threads = 1000 FOR master_cpu;</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Sergei Trifonov.</p>
+</section>
+
+<section class="slide">
+<h2>Time Travel For Iceberg Tables</h2>
+
+<p>Allows querying tables as of a certain time in the past.</p>
+
+<p>Demo</p>
+
+<!--
+SET allow_experimental_database_glue_catalog = 1;
+
+CREATE DATABASE glue
+ENGINE = DataLakeCatalog
+SETTINGS catalog_type = 'glue', region = 'us-west-2', aws_access_key_id = 'AKIA...', aws_secret_access_key = '...';
+
+USE glue;
+
+SELECT count() FROM "iceberg_benchmark.time_travel";
+
+SELECT count()
+FROM `iceberg_benchmark.time_travel`
+SETTINGS iceberg_timestamp_ms = 1742497721135;
+
+SELECT count()
+FROM 'iceberg_benchmark.time_travel'
+SETTINGS iceberg_snapshot_id = 7670355786252116484;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Brett Hoerner, Dan Ivanik.</p>
+</section>
+
+<section class="slide">
+<h2>Metadata Cache For Iceberg</h2>
+<p>Avoid reading the same metadata and manifest files.</p>
+
+<p>Demo</p>
+
+<!--
+
+SELECT
+    traficsourceid,
+    searchengineid,
+    advengineid,
+    multiIf((searchengineid = 0) AND (advengineid = 0), referer, '') AS src,
+    url AS Dst,
+    COUNT(*) AS pageviews
+FROM `iceberg_benchmark.hitsdailypartitioned`
+WHERE (counterid = 62) AND (eventdate >= '2013-07-01') AND (eventdate <= '2013-07-31') AND (isrefresh = 0)
+GROUP BY
+    traficsourceid,
+    searchengineid,
+    advengineid,
+    src,
+    Dst
+ORDER BY pageviews DESC
+LIMIT 1000, 10;
+
+SELECT * FROM system.events WHERE name LIKE 'Iceberg%';
+
+SELECT count(), uniq(userid) FROM `iceberg_benchmark.hitsdailypartitioned`;
+
+SELECT * FROM system.events WHERE name LIKE 'Iceberg%';
+
+SELECT count() FROM `iceberg_benchmark.hitsdailypartitioned`;
+SELECT count() FROM `iceberg_benchmark.hitsdailypartitioned` SETTINGS use_iceberg_metadata_files_cache = 0;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Han Fei.</p>
+</section>
+
+<section class="slide">
+<h2>Partition Pruning For Delta Lake</h2>
+
+<p>To enable partition pruning, switch to the new implementation:</p>
+<p><code style="font-size: 14pt; line-height: 1.25; white-space: pre-wrap;">SELECT *
+FROM deltaLake('s3://unitycatalogdemobucket/delta_hits_partitioned/', '...', '...', SETTINGS <b style="color: green;">allow_experimental_delta_kernel_rs = 1</b>)
+WHERE CounterID = 62
+  AND EventDate >= '2013-07-14' AND EventDate &lt;= '2013-07-15'
+GROUP BY EventDate ORDER BY EventDate
+</code></p>
+
+<p>Before: <b style="color: red;">18.486</b> sec.
+<br/>After: <b style="color: green;">4.389</b> sec.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Ksenia Sumarokova.</p>
+</section>
+
+<section class="slide">
+<h2>Something Else...</h2>
+
+<p>Support for <b>Delta Lake</b> on <b>Azure</b> Blob Storage.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Smita Kulkarni.</p>
+</section>
+
+<section class="slide">
+<h2>Data Lakes From MergeTree Tables</h2>
+
+<p>MergeTree tables on read-only disks can <b>refresh</b> their state and load new data parts, if they appear <b>in the background</b>.</p>
+
+<p>This lets you run <b>unlimited number of readers</b> on top of externally hosted, continuously updating datasets.</p>
+
+<p>Good for data sharing and publishing.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Data Lakes From MergeTree Tables</h2>
+
+<p style="margin-top: -1em;"><code style="font-size: 12pt; line-height: 1.25;"><span style="color: gray;">-- there should be a single writer (at most):</span>
+CREATE TABLE writer (...) ORDER BY ()
+SETTINGS table_disk = true,
+  disk = disk(
+      type = object_storage,
+      object_storage_type = s3,
+      endpoint = 'https://mybucket.s3.us-east-1.amazonaws.com/data/',
+      metadata_type = plain_rewritable);
+
+<span style="color: gray;">-- there could be unlimited number of readers in any locations:</span>
+CREATE TABLE reader (...) ORDER BY ()
+SETTINGS table_disk = true, <b style="color: green;">refresh_parts_interval = 1</b>,
+  disk = disk(
+      <b style="color: green;">readonly = true</b>,
+      type = object_storage,
+      object_storage_type = s3,
+      endpoint = 'https://mybucket.s3.us-east-1.amazonaws.com/data/',
+      metadata_type = plain_rewritable);
+</code></p>
+
+<p>Demo</p>
+
+<!--
+
+ch
+
+CREATE TABLE hackernews_history UUID '66491946-56e3-4790-a112-d2dc3963e68a'
+(
+    `update_time` DateTime DEFAULT now(),
+    `id` UInt32,
+    `deleted` UInt8,
+    `type` Enum8('story' = 1, 'comment' = 2, 'poll' = 3, 'pollopt' = 4, 'job' = 5),
+    `by` LowCardinality(String),
+    `time` DateTime,
+    `text` String,
+    `dead` UInt8,
+    `parent` UInt32,
+    `poll` UInt32,
+    `kids` Array(UInt32),
+    `url` String,
+    `score` Int32,
+    `title` String,
+    `parts` Array(UInt32),
+    `descendants` Int32
+)
+ENGINE = ReplacingMergeTree(update_time)
+ORDER BY id
+SETTINGS refresh_parts_interval = 60, disk = disk(readonly = true, type = 's3_plain_rewritable', endpoint = 'https://clicklake-test-2.s3.eu-central-1.amazonaws.com/', use_environment_credentials = false);
+
+SELECT count() FROM hackernews_history;
+
+SELECT time, by, text FROM hackernews_history ORDER BY time DESC LIMIT 10;
+
+SELECT count() FROM hackernews_history;
+
+-->
+
+</section>
+
+
+<section class="slide">
+<h2>Guest Talk</h2>
+<p><b>Sai Srirampur</b> and <b>Amogh Bharadwaj</b>, engineers at ClickHouse.</p>
+</section>
+
+<section class="slide">
+<h2>Integrations</h2>
+
+<p>A ton of new features for <b>ClickPipes</b>:</p>
+<p>&mdash; AWS <b>Private Link</b> support;
+<br/>&mdash; managing with ClickHouse <b>Terraform</b> provider;
+<br/>&mdash; <b>Prometheus</b> metrics in the cloud endpoint;
+<br/>&mdash; notifications in Email, Slack, and the UI;
+<br/>&mdash; mutual TLS authentication for Kafka;</p>
+
+<p><b>Metabase</b>: ClickHouse integration is now shipped by default.</p>
+
+<p>Updates to <b>ODBC</b>, <b>JDBC</b>, and <b>Java</b> client.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
+<h2><span class="hilite">Bonus</span></h2>
+</section>
+
+<section class="slide">
+<h2>Bonus</h2>
+
+<p>Try this:</p>
+<p><code style="font-size: 32pt; padding: 1em;"><b>ssh play@play.clickhouse.com</b></code></p>
+
+<p>Thanks to the <b>embedded SSH</b> server, the interactive ClickHouse experience
+is now available from any platform, including Windows, Android, iPad...</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/wing.jpg); background-size: cover;">
+<h2>Meetups</h2>
+<p>
+<span class="hilite">&mdash; 🇺🇸 Denver, April 23</span>
+<br/><span class="hilite">&mdash; 🇺🇸 Austin, May 13</span>
+<br/><span class="hilite">&mdash; 🇬🇧 London, May 14</span>
+<br/><span class="hilite">&mdash; 🇹🇷 Istanbul, May 15</span>
+<br/><span class="hilite">&mdash; 🇨🇳 Shenzhen, May 17</span>
+</p>
+<p><span class="hilite">I will be in person on some of these meetups :)</span></p>
+</section>
+
+<section class="slide" style="background: url(pictures/openhouse.png); background-size: cover;">
+</section>
+
+
+<section class="slide">
+<h2>Reading Corner 📖</h2>
+
+<img style="float: right; width: 30%; margin-right: -3em; image-rendering: pixelated; margin-top: 1em;" src="pictures/blog.png"/>
+<p><a href="https://clickhouse.com/blog/">https://clickhouse.com/blog/</a></p>
+
+<p style="line-height: 1.5;">&mdash; A year of Rust in ClickHouse 🦀
+<br/>&mdash; MySQL CDC 🐬
+<br/>&mdash; Query Condition Cache 🤑
+<br/>&mdash; Lazy Materialization 🏖️
+<br/>&mdash; Make Before Break: how we manage ClickHouse
+<br/>&mdash; Observability: Dash0, Poizon, Last9 💹
+<br/>&mdash; Security: Harvey 👮
+</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back4.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
+<h2 style="color: white; margin-left: -1em;">Q&amp;A</a></h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+

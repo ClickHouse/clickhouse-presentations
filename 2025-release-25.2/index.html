@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 25.2 Call</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+         .slide table tr:not(:last-of-type)>* { background: none; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 25.2 Call</h1>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/back1.jpg); background-size: cover;">
+        <h1 style="margin-top: 10px; line-height: 110%; font-size: 56pt; color: white; text-shadow: black 1px 0 10px; text-align: center;">ClickHouse Release 25.2</h1>
+    </section>
+
+<section class="slide">
+<h2>Release 25.2 Call</h2>
+<p>1. (45 min) What's new in ClickHouse 25.2.</p>
+<p>2. (10 min) Guest Talk.</p>
+<p>3. (5 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back9.jpg); background-size: cover;">
+<h2><span class="hilite">Release 25.2</span></h2>
+<p><span class="hilite">ClickHouse February Release.</span></p>
+<p><span class="hilite">— 12 new features 🧸</span></p>
+<p><span class="hilite">— 15 performance optimizations 🍫</span></p>
+<p><span class="hilite">— 72 bug fixes 💐</span></p>
+</section>
+<!--
+
+Small
+
+subcolumns in DEFAULT and MATERIALIZED
+COW storage policy
+Easy attaching of external tables
+JSONCompactEachRowWithProgress
+Prepared Statements in the Postgres wire protocol
+
+Performance
+
+Parquet bloom filters
+Infer conditions
+Parallel Hash Join is more parallel
+
+Main
+
+DatabaseBackup
+
+Guest Talk
+
+Delta Rust Kernel
+
+Bonus
+
+Web UI navigation
+JSONBench
+Fast Formats
+Kubenetmon
+BYOC
+Roadmap 2025
+
+Integrations
+
+Postgres CDC
+Email notifications
+Virtual columns
+
+Reading
+
+JSONBench
+FOSDEM 2025
+FastFormats
+Data Lakes
+Agent-Facing Analytics
+Memorial Sloan
+JSONBench
+
+-->
+
+<section class="slide" style="background: url(pictures/back3.jpg); background-size: cover;">
+<h2><span class="hilite">Small Features</span></h2>
+</section>
+
+<section class="slide">
+<h2>Subcolumns In DEFAULT expressions</h2>
+
+<p style="color: red; margin-top: -1em;">25.1:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; white-space: pre-wrap;">CREATE TABLE test
+(
+    data JSON
+    time DateTime DEFAULT <span style="color: red;">getSubcolumn(data 'created_at')</span>
+) ORDER BY <b>data.actor_login::String</b>
+</code></p>
+
+<p style="color: green;">25.2:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; white-space: pre-wrap;">CREATE TABLE test
+(
+    data JSON
+    time DateTime DEFAULT <b style="color: green;">data.created_at</b>
+) ORDER BY <b style="color: green;">data.actor_login</b>::String
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Pavel Kruglov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Copy-On-Write Storage Policies</h2>
+
+<p>Allows to <b>instantly attach a snapshot</b> but make the table <b style="color: green;">writable</b>.
+
+<p><code style="font-size: 14pt; line-height: 1.25; white-space: pre-wrap;">$ cat config.d/cow_policy.yaml
+storage_configuration:
+  disks:
+    web:
+      type: web
+      endpoint: 'https://raw.githubusercontent.com/ClickHouse/web-tables-demo/main/web/'
+  policies:
+    cow_policy_multi_disk:
+      volumes:
+        disks:
+          disk:
+          - web      <span style="color: gray;"># a the readonly disk with a snapshot</span>
+          - default  <span style="color: gray;"># a writable disk</span>
+</code></p>
+
+</section>
+
+<section class="slide">
+<h2>Copy-On-Write Storage Policies</h2>
+
+<p>Allows to <b>instantly attach a snapshot</b> but make the table <b style="color: green;">writable</b>.
+
+<p>The table will be based on an external dataset,
+<br/>but modifications are performed locally.</p>
+
+<p>Demo</p>
+
+<!--
+
+CREATE TABLE uk_price_paid UUID 'cf712b4f-2ca8-435c-ac23-c4393efe52f7'
+(
+    price UInt32,
+    date Date,
+    postcode1 LowCardinality(String),
+    postcode2 LowCardinality(String),
+    type Enum8('other' = 0, 'terraced' = 1, 'semi-detached' = 2, 'detached' = 3, 'flat' = 4),
+    is_new UInt8,
+    duration Enum8('unknown' = 0, 'freehold' = 1, 'leasehold' = 2),
+    addr1 String,
+    addr2 String,
+    street LowCardinality(String),
+    locality LowCardinality(String),
+    town LowCardinality(String),
+    district LowCardinality(String),
+    county LowCardinality(String)
+)
+ENGINE = MergeTree
+ORDER BY (postcode1, postcode2, addr1, addr2)
+SETTINGS disk = disk(type = web, endpoint = 'https://raw.githubusercontent.com/ClickHouse/web-tables-demo/main/web/');
+
+SELECT count() FROM uk_price_paid;
+
+SELECT
+    toYear(date) AS year,
+    round(avg(price)) AS price,
+    bar(price, 0, 1000000, 80)
+FROM uk_price_paid
+GROUP BY year
+ORDER BY year ASC;
+
+INSERT INTO uk_price_paid FORMAT JSONEachRow {"price": 123000, "date": "2025-01-01", "type": "terraced"};
+
+cat config.d/cow_policy.yaml
+
+ATTACH TABLE uk_price_paid UUID 'cf712b4f-2ca8-435c-ac23-c4393efe52f7'
+(
+    price UInt32,
+    date Date,
+    postcode1 LowCardinality(String),
+    postcode2 LowCardinality(String),
+    type Enum8('other' = 0, 'terraced' = 1, 'semi-detached' = 2, 'detached' = 3, 'flat' = 4),
+    is_new UInt8,
+    duration Enum8('unknown' = 0, 'freehold' = 1, 'leasehold' = 2),
+    addr1 String,
+    addr2 String,
+    street LowCardinality(String),
+    locality LowCardinality(String),
+    town LowCardinality(String),
+    district LowCardinality(String),
+    county LowCardinality(String)
+)
+ORDER BY (postcode1, postcode2, addr1, addr2)
+SETTINGS storage_policy = 'cow_policy_multi_disk'
+
+SELECT * FROM uk_price_paid WHERE price = 123000 AND date = '2025-01-01';
+INSERT INTO uk_price_paid FORMAT JSONEachRow {"price": 123000, "date": "2025-01-01", "type": "terraced"};
+SELECT * FROM uk_price_paid WHERE price = 123000 AND date = '2025-01-01';
+
+OPTIMIZE TABLE uk_price_paid FINAL;
+
+SELECT * FROM uk_price_paid WHERE price = 123000 AND date = '2025-01-01';
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">See also "table branching": CREATE TABLE t2 <b>CLONE AS</b> t1;</p>
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Azat Khuzhin.</p>
+
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Attaching External Tables Without Databases</h2>
+
+<p>In 25.1 and before, external tables should be located
+<br/>inside a directory structure, as if they are inside the database:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.25; white-space: pre-wrap;">$ ls -lR
+
+./web/<span style="color: red;">store/cf7/cf712b4f-2ca8-435c-ac23-c4393efe52f7</span>:
+
+drwxrwxr-x 2 milovidov milovidov 4096 feb 27 08:25 all_1_27_2
+drwxrwxr-x 2 milovidov milovidov 4096 feb 27 08:25 detached
+-rw-rw-r-- 1 milovidov milovidov    1 feb 27 08:25 format_version.txt
+
+CREATE TABLE uk_price_paid <span style="color: red;">UUID 'cf712b4f-2ca8-435c-ac23-c4393efe52f7'</span>
+(
+ ...
+) ORDER BY (postcode1, postcode2, addr1, addr2)
+SETTINGS disk = disk(type = web, endpoint =
+'https://raw.githubusercontent.com/ClickHouse/web-tables-demo/main/web/');
+</code></p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Attaching External Tables Without Databases</h2>
+
+<p>In <b>25.2</b> you can attach a table, pointing a disk directly to its data directory.</p>
+
+<p><code style="font-size: 13pt; line-height: 1.25; white-space: pre-wrap;">$ ls -lR
+
+./uk_price_paid:
+
+drwxrwxr-x 2 milovidov milovidov 4096 feb 27 08:29 all_1_27_2
+drwxrwxr-x 2 milovidov milovidov 4096 feb 27 08:29 detached
+-rw-rw-r-- 1 milovidov milovidov    1 feb 27 08:29 format_version.txt
+
+CREATE TABLE uk_price_paid
+(
+ ...
+) ORDER BY (postcode1, postcode2, addr1, addr2)
+SETTINGS <b style="color: green;">table_disk = 1</b>, disk = disk(type = web, endpoint =
+'https://raw.githubusercontent.com/ClickHouse/web-tables-demo/table_disk/uk_price_paid/');
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Azat Khuzhin.</p>
+
+<!--
+
+CREATE TABLE uk_price_paid
+(
+    price UInt32,
+    date Date,
+    postcode1 LowCardinality(String),
+    postcode2 LowCardinality(String),
+    type Enum8('other' = 0, 'terraced' = 1, 'semi-detached' = 2, 'detached' = 3, 'flat' = 4),
+    is_new UInt8,
+    duration Enum8('unknown' = 0, 'freehold' = 1, 'leasehold' = 2),
+    addr1 String,
+    addr2 String,
+    street LowCardinality(String),
+    locality LowCardinality(String),
+    town LowCardinality(String),
+    district LowCardinality(String),
+    county LowCardinality(String)
+)
+ENGINE = MergeTree
+ORDER BY (postcode1, postcode2, addr1, addr2)
+SETTINGS table_disk = 1, disk = disk(type = web, endpoint = 'https://raw.githubusercontent.com/ClickHouse/web-tables-demo/table_disk/uk_price_paid/')
+
+-->
+</section>
+
+<section class="slide">
+<h2>JSONCompactEachRowWithProgress</h2>
+
+<p>Needed for <b>streaming events over HTTP</b></p>
+<p style="margin-right: -3em;">Since <b>25.1</b> we have:
+<br/>&mdash; JSONEachRowWithProgress
+<br/>&mdash; JSONStringsEachRowWithProgress
+</p>
+<p style="margin-right: -3em;">Since <b style="color: green">25.2</b>, also:
+<br/>&mdash; JSONCompactEachRowWithProgress
+<br/>&mdash; JSONCompactStringsEachRowWithProgress
+</p>
+
+<p>They stream newline-delimited JSON events, where each event is one of:<br/><b>progress</b>, <b>meta</b>, <b>row</b>, <b>totals</b>, <b>extremes</b>, <b>exception</b>, as soon as they appear.</p>
+
+<!--
+
+https://play.clickhouse.com/
+
+Progress:
+
+SELECT number, sleep(.2) FROM numbers(1e6) WHERE number % 100000 = 123
+
+SELECT count() FROM github_events WHERE actor_login = 'alexey-milovidov'
+SELECT repo_name, firstLine(body) FROM github_events WHERE actor_login = 'alexey-milovidov' AND body != '' AND repo_name NOT LIKE '%ClickHouse%'
+SELECT repo_name, firstLine(body) FROM github_events WHERE actor_login = 'nickitat' AND body != '' AND repo_name NOT LIKE '%ClickHouse%'
+
+Cancellation:
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>JSONCompactEachRowWithProgress</h2>
+
+<p><code style="font-size: 10pt; line-height: 1.25; overflow-x: scroll; margin-top: -1em;">$ curl http://localhost:8123/ -d "SELECT number % 3 AS k, count()
+FROM numbers(1e9) GROUP BY k WITH TOTALS FORMAT JSONCompactEachRowWithProgress"
+
+{"progress":{"read_rows":"74631669","read_bytes":"597053352","total_rows_to_read":"1000000000","elapsed_ns":"100040117"}}
+{"progress":{"read_rows":"151160199","read_bytes":"1209281592","total_rows_to_read":"1000000000","elapsed_ns":"200065327"}}
+{"progress":{"read_rows":"227754138","read_bytes":"1822033104","total_rows_to_read":"1000000000","elapsed_ns":"300115954"}}
+{"progress":{"read_rows":"304348077","read_bytes":"2434784616","total_rows_to_read":"1000000000","elapsed_ns":"400193152"}}
+{"progress":{"read_rows":"380680380","read_bytes":"3045443040","total_rows_to_read":"1000000000","elapsed_ns":"500227569"}}
+...
+{"progress":{"read_rows":"762472713","read_bytes":"6099781704","total_rows_to_read":"1000000000","elapsed_ns":"1000340080"}}
+{"progress":{"read_rows":"838870425","read_bytes":"6710963400","total_rows_to_read":"1000000000","elapsed_ns":"1100394164"}}
+{"progress":{"read_rows":"914548638","read_bytes":"7316389104","total_rows_to_read":"1000000000","elapsed_ns":"1200466502"}}
+{"progress":{"read_rows":"990880941","read_bytes":"7927047528","total_rows_to_read":"1000000000","elapsed_ns":"1300489758"}}
+{"progress":{"read_rows":"1000000000","read_bytes":"8000000000","total_rows_to_read":"1000000000","elapsed_ns":"1312531422"}}
+{"meta":[{"name":"k","type":"UInt8"},{"name":"count()","type":"UInt64"}]}
+{"row":[0, "333333334"]}
+{"row":[1, "333333333"]}
+{"row":[2, "333333333"]}
+{"totals":{"k":0,"count()":"1000000000"}}</code></p>
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexey Milovidov.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Prepared Statements in the PgSQL Protocol</h2>
+
+<p>Did you know? &mdash; ClickHouse supports the PostgreSQL protocol!</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; white-space: pre-wrap;">$ cat config.xml
+<span style="color: gray;">&lt;!-- Compatibility with PostgreSQL protocol. --></span>
+&lt;postgresql_port>9005&lt;/postgresql_port>
+
+$ clickhouse-client
+
+:) CREATE USER pg IDENTIFIED WITH plaintext_password BY 'qwerty'
+:) GRANT SELECT ON default.hits TO pg
+
+$ psql --host 127.0.0.1 --port 9005 --user pg default
+</code></p>
+
+<p>ClickHouse will pretend to be PostgreSQL for you!</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Prepared Statements in the PgSQL Protocol</h2>
+
+<p><code style="font-size: 12pt; line-height: 1.25; white-space: pre-wrap;">$ psql --host 127.0.0.1 --port 9005 --user pg default
+Password for user pg:
+psql (14.15 (Ubuntu 14.15-0ubuntu0.22.04.1), server 25.3.1.1)
+WARNING: psql major version 14, server major version 25.
+         Some psql features might not work.
+Type "help" for help.
+
+default=> <b style="color: green;">PREPARE</b> select_test AS
+default-> SELECT count(), uniq(UserID) FROM hits WHERE CounterID = $1;
+SELECT 0
+default=> <b style="color: green;">EXECUTE</b> select_test (62)
+default-> ;
+ count() | uniq(UserID)
+---------+--------------
+ 738172  | 62292
+(1 row)
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Scanhex12.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
+<h2><span style="color: black;"><span class="hilite">Performance Improvements</span></h2>
+</section>
+
+<section class="slide">
+<h2>Writing Bloom Filters For Parquet</h2>
+
+<p>When exporting to Parquet, ClickHouse writes bloom filters for columns.</p>
+<p>When running queries on Parquet, ClickHouse uses these bloom filters.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.5; white-space: pre-wrap;"><span style="color: gray;">-- bloom filters will be created by default:</span>
+:) SELECT * FROM hits INTO OUTFILE 'hits.parquet';
+<span style="color: gray;">-- you can disable it to save space a little:</span>
+:) SET output_format_parquet_write_bloom_filter = 0;
+:) SELECT * FROM hits INTO OUTFILE 'hits_old.parquet';
+</code></p>
+
+<p>Demo.</p>
+
+<!--
+
+cd ~/work
+ch
+SET input_format_parquet_bloom_filter_push_down = 1;
+SELECT count() FROM 'hits_old.parquet' WHERE UserID = 2077796663926284422;
+SELECT count() FROM 'hits.parquet' WHERE UserID = 2077796663926284422;
+SELECT count() FROM 'hits_old.parquet' WHERE SearchPhrase = 'google';
+SELECT count() FROM 'hits.parquet' WHERE SearchPhrase = 'google'
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Michael Kolupaev.</p>
+</section>
+
+
+<section class="slide">
+<h2>Transitive Conditions Inference</h2>
+
+<p><code style="font-size: 12pt; line-height: 1.5; white-space: pre-wrap; margin-right: -4em;">CREATE TABLE calls
+(
+    start_time DateTime,
+    end_time DateTime,
+    message String
+) ORDER BY <b>end_time</b>;
+
+-- uses the index:
+SELECT uniq(message) FROM calls WHERE end_time >= '2025-08-01';
+-- <span style="color: red;">does not use the index</span>:
+SELECT uniq(message) FROM calls WHERE start_time >= '2025-08-01';
+-- <span style="color: green;">uses the index since <b>25.2</b>:</span>
+SELECT uniq(message) FROM calls WHERE start_time >= '2025-08-01' AND end_time > start_time;
+</code></p>
+
+<!--
+
+INSERT INTO calls SELECT '2024-01-01 01:01:01'::DateTime + number AS start_time, start_time + rand() % 100000 AS end_time, randomPrintableASCII(100) AS message FROM numbers(50000000);
+
+SELECT count() FROM calls;
+SELECT uniq(message) FROM calls WHERE end_time >= '2025-08-01';
+SELECT uniq(message) FROM calls WHERE start_time >= '2025-08-01';
+SELECT uniq(message) FROM calls WHERE start_time >= '2025-08-01' AND end_time > start_time;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: ShiChao Jin.</p>
+</section>
+
+<section class="slide">
+<h2>Parallel Hash JOIN Is Faster</h2>
+
+<img src="pictures/parallel_hash.png" style="height: 75%; margin-top: -2em;"></img>
+<p style="color: gray; font-size: 14pt; margin-top: 0em;">Developer: Nikita Taranov.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
+<h2 style="font-size: 32pt; margin-left: -1em;"><span class="hilite">Something</span><br/><span class="hilite">Interesting</span></h2>
+</section>
+
+<section class="slide">
+<h2>Backup Database Engine</h2>
+<p>To access a backup as a readonly database.</p>
+<p>The backup is attached instantly, without copying the data.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.5; white-space: pre-wrap;">:) BACKUP DATABASE default TO File('backup1');
+:) CREATE DATABASE backup ENGINE = <b style="color: green;">Backup('default', File('backup1'))</b>;
+</code></p>
+
+<p>Works for full and incremental backups, on local and external storages.</p>
+<p>A nice way for packaging and distributing databases!</p>
+
+<!--
+
+CREATE DATABASE backup ENGINE = Backup('default', File('hits'));
+SHOW TABLES FROM backup;
+SELECT count() FROM backup.hits;
+SELECT CounterID, count() FROM backup.hits GROUP BY CounterID ORDER BY count() DESC LIMIT 10;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Maksim Kita.</p>
+</section>
+
+<section class="slide">
+<h2>Partition Pruning For Iceberg</h2>
+<p>SET use_iceberg_partition_pruning = 1;</p>
+
+<p>Demo.</p>
+
+<!--
+
+SET use_iceberg_partition_pruning = 0;
+
+SELECT count(), uniq(userid)
+FROM iceberg('https://hits-dataset.s3.us-west-2.amazonaws.com/hitspartitioned/', 'EXAMPLE', 'EXAMPLE')
+WHERE eventdate BETWEEN '2013-07-14' AND '2013-07-15';
+
+SET use_iceberg_partition_pruning = 1;
+
+SELECT count(), uniq(userid)
+FROM iceberg('https://hits-dataset.s3.us-west-2.amazonaws.com/hitspartitioned/', 'EXAMPLE', 'EXAMPLE')
+WHERE eventdate BETWEEN '2013-07-14' AND '2013-07-15';
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Dan Ivanik.</p>
+</section>
+
+<section class="slide">
+<h2>Integration With The Delta Rust Kernel</h2>
+
+<p>A new implementation of the <b>Delta Lake</b> support in ClickHouse
+<br/>with the help of a library from <b>Databricks</b>.</p>
+
+<p>Version <b style="color: green;">25.2</b> has an early-stage implementation:</p>
+<p><code style="font-size: 14pt; line-height: 1.5; white-space: pre-wrap;">CREATE TABLE t ENGINE = DeltaLake(
+  s3, filename = 'xyz/', url = 'http://minio1:9001/test/')
+SETTINGS allow_experimental_delta_kernel_rs = 1;
+</code></p>
+
+<p style="color: gray;">It brings support for schema evolution, deletions, etc.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Kseniia Sumarokova.</p>
+</section>
+
+<section class="slide">
+<h2>Guest Talk</h2>
+<p><b>Oussama Saoudi</b>, Software Engineer at Databricks</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
+<h2><span class="hilite">Bonus</span></h2>
+</section>
+
+<section class="slide">
+<h2>Database Navigation In the Web UI</h2>
+<p>Demo: <a href="https://play.clickhouse.com/">https://play.clickhouse.com/</a></p>
+</section>
+
+<section class="slide" style="background: url(pictures/jsonbench.png); background-size: cover;">
+</section>
+
+<section class="slide" style="background: url(pictures/fastformats.png); background-size: cover;">
+</section>
+
+<section class="slide">
+<h2 style="font-size: 28pt;">Kubenetmon &mdash; Network Metering for Kubernetes</h2>
+<p><a href="https://github.com/ClickHouse/kubenetmon">https://github.com/ClickHouse/kubenetmon</a></p>
+<p>&mdash; a service we developed to monitor data transfer in <b>ClickHouse Cloud</b></p>
+<p>&mdash; uses <b>ClickHouse</b> for data storage (obviously)</p>
+<p>&mdash; now released in <b style="color: green;">open source</b>!</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Ilia Andreiev.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/byoc.png); background-size: cover;">
+</section>
+
+<section class="slide">
+<a href="https://github.com/ClickHouse/ClickHouse/issues/74046"><img style="width: 100%" src="pictures/roadmap.png"></a>
+</section>
+
+<section class="slide">
+<h2>Integrations</h2>
+
+<p><b>Postgres connector</b> in ClickPipes is in public beta.</p>
+<p><b>ClickPipes</b> supports virtual columns.</p>
+<p><b>ODBC</b> driver improves support for <b>PowerBI</b>.</p>
+<p><b>Java</b> and <b>Go</b> improve support for the <b>JSON</b> data type.</p>
+<p><b>DBT</b> view materialization updates are now atomic.</p>
+<p>Updates for <b>Metabase</b> and <b>Grafana</b>.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/wing.jpg); background-size: cover;">
+<h2>Meetups</h2>
+<p>
+<span class="hilite">&mdash; 🇨🇳 Shanghai, March 1</span>
+<br/><span class="hilite">&mdash; 🇫🇷 Paris, March 4</span>
+<br/><span class="hilite">&mdash; 🇺🇸 Seattle, March 5</span>
+<br/><span class="hilite">&mdash; 🇺🇸 San Francisco, March 19</span>
+<br/><span class="hilite">&mdash; 🇮🇳 Delhi, March 22</span>
+<br/><span class="hilite">&mdash; 🇨🇭 Zurich, March 24</span>
+<br/><span class="hilite">&mdash; 🇭🇺 Budapest, March 25</span>
+<br/><span class="hilite">&mdash; 🇺🇸 Boston, March 25</span>
+<br/><span class="hilite">&mdash; 🇮🇱 Tel Aviv, March 26</span>
+<br/><span class="hilite">&mdash; 🇺🇸 New York, March 26</span>
+<br/><span class="hilite">&mdash; 🇳🇴 Oslo, April 8</span>
+<br/><span class="hilite">&mdash; 🇬🇧 London, May 14</span>
+</p>
+<p><span class="hilite">I will be in person on some of these meetups :)</span></p>
+</section>
+
+
+<section class="slide">
+<h2>Reading Corner 🧶</h2>
+
+<img style="float: right; width: 30%; margin-right: -3em; image-rendering: pixelated; margin-top: 1em;" src="pictures/blog.png"/>
+<p><a href="https://clickhouse.com/blog/">https://clickhouse.com/blog/</a></p>
+
+<p style="line-height: 1.5;">&mdash; ClickHouse Connector For Tableau
+<br/>&mdash; Billion Docs JSON Challenge
+<br/>&mdash; Input Format Matchup
+<br/>&mdash; ClickHouse at FOSDEM 2025: JSON, Fuzzing, DNS
+<br/>&mdash; ClickHouse BYOC
+<br/>&mdash; Climbing the Iceberg with ClickHouse
+<br/>&mdash; Postgres CDC connector for ClickPipes
+<br/>&mdash; Agent-Facing Analytics
+<br/>&mdash; Open-Sourcing Kubenetmon
+</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back8.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
+<h2 style="color: white; margin-left: -1em;">Q&amp;A</a></h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+

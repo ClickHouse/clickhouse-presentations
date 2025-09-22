@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: New Horizons</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: New Horizons</h1>
+    </header>
+    <section class="slide" id="cover" style="background: linear-gradient(to bottom right, rgba(255, 51, 51, 1), rgba(255, 169, 0, 1))">
+        <img src="https://presentations.clickhouse.com/original_website/logo.svg" style="width: 15%; position: absolute; right: 20px; bottom: 20px;" />
+        <h1 style="margin-top: 150px; line-height: 150%; color: white; font-size: 64pt">ClickHouse:<br/>New Horizons</h1>
+    </section>
+
+<section class="slide">
+<h2>The Origins</h2>
+<p>2009 &mdash; first prototype of ClickHouse.</p>
+<p>2012 &mdash; first production usages in Yandex for logs processing.</p>
+<p>2014 &mdash; first production usages in Yandex for public service.</p>
+<p>2014..2015 &mdash; rising adoption in Yandex.</p>
+<p>2016 &mdash; ClickHouse release in <b>open-source</b>.</p>
+</section>
+
+<section class="slide" style="background: url('pictures/highload.png') no-repeat; background-size: 100%;">
+</section>
+
+<section class="slide">
+<h2>The Origins</h2>
+<p>2016..2017 &mdash; first usages outside of Yandex<br/>&mdash; for similar scenarios.</p>
+<p>2018..2019 &mdash; distribution over the world<br/>&mdash; meetups in the US, Europe and <b>China</b>.</p>
+</section>
+
+<section class="slide" style="background: url('pictures/meetups.jpg') no-repeat; background-size: 100%;">
+</section>
+
+<section class="slide">
+<h2>The Origins</h2>
+<p>2020..2021:</p>
+<p>Increased adoption of ClickHouse in large companies.<br/>
+<span style="color: gray;">Due to increase of traffic and shortage of hardware.</span></p>
+<p>ClickHouse appeared in many cloud services.<br/>
+<span style="color: gray;">Alibaba, Tencent, Huawei, Bytedance, JD, Altinity, Yandex, Mail.ru, Sber...</span></p>
+<p>Companies with services around ClickHouse.<br/>
+<span style="color: gray;">Hydrolix, Tinybird, Gigapipe, LogTail...</span></p>
+</section>
+
+<section class="slide" style="background: url('pictures/discussion.jpg') no-repeat; background-size: 100%;">
+<h2 style="color: white; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">ClickHouse, Inc.</h2>
+</section>
+
+<section class="slide">
+<h2>What Is ClickHouse, Inc?</h2>
+<p><b>International, <span style="color: green;">independent</span> company.</b></p>
+<p>Headquarters in Amsterdam.</p>
+<p>Distributed team. We are hiring in Europe, Asia-Pacific and all over the world.</p>
+</section>
+
+<section class="slide">
+<h2>ClickHouse, Inc</h2>
+<p style="margin-top: -1em;"><b>Aaron Katz</b>, CEO - ex. Elastic, Salesforce.</p>
+<p style="margin-top: -1em;"><b>Alexey Milovidov</b>, CTO - ex. Yandex.</p>
+<p style="margin-top: -1em;"><b>Yuri Izrailevsky</b>, President of Engineering - ex. Google, Netflix.</p>
+<div style="float: right; line-height: 0; margin-right: -50px;">
+    <img style="width: 100px;" src="pictures/people1.jpg"/><img style="width: 100px;" src="pictures/people2.jpg"/><img style="width: 100px;" src="pictures/people3.jpg"/><img style="width: 100px;" src="pictures/people4.jpg"/><img style="width: 100px;" src="pictures/people5.jpg"/>
+    <br/><img style="width: 100px;" src="pictures/people6.jpg"/><img style="width: 100px;" src="pictures/people7.jpg"/><img style="width: 100px;" src="pictures/people8.jpg"/><img style="width: 100px;" src="pictures/people9.jpg"/><img style="width: 100px;" src="pictures/people10.jpg"/>
+    <br/><img style="width: 100px;" src="pictures/people11.jpg"/><img style="width: 100px;" src="pictures/people12.jpg"/><img style="width: 100px;" src="pictures/people13.jpg"/><img style="width: 100px;" src="pictures/people14.jpg"/><img style="width: 100px;" src="pictures/people15.jpg"/>
+    <br/><b>...</b>
+</div>
+<img style="width: 50%; margin-left: -50px" src="pictures/founders.webp">
+</section>
+
+<!--
+<section class="slide">
+<h2>ClickHouse Mission</h2>
+<p>1. Make ClickHouse the №1 analytical DBMS in the world.</p>
+<p>2. ... everything else.</p>
+</section>
+-->
+
+<section class="slide">
+<h2>What's New In ClickHouse</h2>
+<p>Season 2021/2022</p>
+</section>
+
+<section class="slide">
+<h2>User Defined Functions and Types</h2>
+<p style="margin-top: -1em;">1. SQL User Defined Functions (since 21.10)</p>
+<code style="line-height: 1.5;">CREATE FUNCTION ch AS (x) -> (exp(x) + exp(-x)) / 2;
+CREATE FUNCTION getRegionName AS (x)
+    -> dictGet('region', 'name', x);</code>
+<p style="margin-top: 1em;">2. Scriptable User Defined Functions (since 21.11)</p>
+<code style="font-size: 14pt; line-height: 1.1">&lt;function>
+  &lt;type>executable&lt;/type>
+  &lt;name><b>myPlus</b>&lt;/name>
+  &lt;return_type>UInt64&lt;/return_type>
+  &lt;argument>&lt;type>UInt64&lt;/type>&lt;/argument>
+  &lt;argument>&lt;type>UInt64&lt;/type>&lt;/argument>
+  &lt;format>TabSeparated&lt;/format>
+  &lt;command><b>awk '{ print $1 + $2 }'</b>&lt;/command>
+  &lt;execute_direct>0&lt;/execute_direct>
+&lt;/function>
+</code>
+</section>
+
+<section class="slide">
+<h2>Support For Semistructured Data</h2>
+<p><b>JSON</b> data type:</p>
+<code>CREATE TABLE games (data JSON) ENGINE = MergeTree;</code>
+<p style="margin-top: 1em;">You can insert arbitrary nested JSONs.</p>
+<p>Types are automatically inferred on INSERT and merge.</p>
+<p>Data is stored in columnar format: columns and subcolumns.</p>
+<p>Query nested data naturally.</p>
+</section>
+
+<section class="slide">
+<h2>Support For Semistructured Data</h2>
+<p style="margin-top: -1em;">Example: NBA games dataset</p>
+
+<code>CREATE TABLE games (data String)
+ENGINE = MergeTree ORDER BY tuple();
+
+SELECT <span style="color: red;">JSONExtractString(data, 'teams', 1, 'name')</span>
+FROM games;</code>
+<p style="margin-top: 0.5em; color: red;">&mdash; 0.520 sec.</p>
+
+<code>CREATE TABLE games (data JSON)
+ENGINE = MergeTree;
+
+SELECT <span style="color: green;">data.teams.name[1]</span> FROM games;</code>
+<p style="margin-top: 0.5em; color: green;">&mdash; 0.015 sec.</p>
+</section>
+
+<section class="slide">
+<h2>Support For Semistructured Data</h2>
+<code style="font-size: 12pt; margin-top: -2em;">DESCRIBE TABLE games
+SETTINGS describe_extend_object_types = 1
+
+name: data
+type: Tuple(                                           &lt;-- inferred type
+    `_id.$oid` String,
+    `date.$date` String,
+    `teams.abbreviation` Array(String),
+    `teams.city` Array(String),
+    `teams.home` Array(UInt8),
+    `teams.name` Array(String),
+    `teams.players.ast` Array(Array(Int8)),
+    `teams.players.blk` Array(Array(Int8)),
+    `teams.players.drb` Array(Array(Int8)),
+    `teams.players.fg` Array(Array(Int8)),
+    `teams.players.fg3` Array(Array(Int8)),
+    `teams.players.fg3_pct` Array(Array(String)),
+    `teams.players.fg3a` Array(Array(Int8)),
+    `teams.players.fg_pct` Array(Array(String)),
+    `teams.players.fga` Array(Array(Int8)),
+    `teams.players.ft` Array(Array(Int8)),
+    `teams.players.ft_pct` Array(Array(String)),
+    `teams.players.fta` Array(Array(Int8)),
+    `teams.players.mp` Array(Array(String)),
+    `teams.players.orb` Array(Array(Int8)),
+    `teams.players.pf` Array(Array(Int8)),
+    `teams.players.player` Array(Array(String)),
+    `teams.players.plus_minus` Array(Array(String)),
+    `teams.players.pts` Array(Array(Int8)),
+    `teams.players.stl` Array(Array(Int8)),
+    `teams.players.tov` Array(Array(Int8)),
+    `teams.players.trb` Array(Array(Int8)),
+    `teams.results.ast` Array(Int8),
+    `teams.results.blk` Array(Int8),
+    `teams.results.drb` Array(Int8),
+    `teams.results.fg` Array(Int8),
+    `teams.results.fg3` Array(Int8),
+    `teams.results.fg3_pct` Array(String),
+    `teams.results.fg3a` Array(Int8),
+    `teams.results.fg_pct` Array(String),
+    `teams.results.fga` Array(Int16),
+    `teams.results.ft` Array(Int8),
+    `teams.results.ft_pct` Array(String),
+    `teams.results.fta` Array(Int8),
+    `teams.results.mp` Array(Int16),
+    `teams.results.orb` Array(Int8),
+    `teams.results.pf` Array(Int8),
+    `teams.results.plus_minus` Array(String),
+    `teams.results.pts` Array(Int16),
+    `teams.results.stl` Array(Int8),
+    `teams.results.tov` Array(Int8),
+    `teams.results.trb` Array(Int8),
+    `teams.score` Array(Int16),
+    `teams.won` Array(Int8))</code>
+</section>
+
+<section class="slide">
+<h2>Support For Semistructured Data</h2>
+<p>Flexible schema.</p>
+<p>You can have columns with strict and flexible schema in one table.</p>
+<p>Queries work <span style="color: green;">as fast as</span> with predefined types!</p>
+<p style="color: gray; margin-top: 5em;">Planned for Q1 2022.</p>
+</section>
+
+<section class="slide">
+<h2>Schema Inference From Formats</h2>
+<p style="margin-top: -1em;">Before:</p>
+<code>clickhouse-local --input-format <b>Parquet</b> \
+  --query 'SELECT * FROM table' \
+  <span style="color: red;">--structure</span> '
+    id UInt32, deleted UInt8,
+    type String, by String, time DateTime,
+    text String, dead UInt8, parent UInt32,
+    poll UInt32, kids Array(UInt32),
+    url String, score Int32, title String,
+    parts Array(UInt32), descendants Int32'
+</code>
+<p style="margin-top: 1em;">After:</p>
+<code>clickhouse-local --input-format <b>Parquet</b> \
+  --query 'SELECT * FROM table'
+</code>
+</section>
+
+<section class="slide">
+<h2>Schema Inference From Formats</h2>
+<p>1. No need to specify schema if data already contains it:<br/>
+Native, Arrow, Parquet, ORC, Avro.</p>
+<p>2. Allow to infer schema from text formats:<br/>
+TSV, CSV, JSONEachRow.</p>
+<p>It works for:</p>
+<p>&mdash; clickhouse-local;
+<br/>&mdash; url;
+<br/>&mdash; file;
+<br/>&mdash; s3.</p>
+<p style="color: gray; margin-top: 1em;">Planned for Q1 2022.</p>
+</section>
+
+<section class="slide">
+<h2>Text Classification and NLP</h2>
+<p style="line-height: 1.5">1. Tokenization, stemming, lemmatization, synonims (21.9..21.11).
+<br/>&mdash; SELECT arrayMap(word -> lemmatize(word), tokens(text)).</p>
+<p>2. Charset and language detection (Q4 2021).</p>
+<p style="line-height: 1.5">3. Semi-duplicate text search (21.1).
+<br/>&mdash; min-hash and sim-hash algorithms.</p>
+</section>
+
+<section class="slide">
+<h2>ZooKeeper Will Go Away</h2>
+<p>1. clickhouse-keeper &mdash; 100% compatible protocol with ZooKeeper.</p>
+<p>&mdash; compressed logs and snapshots;
+<br/>&mdash; no issues with zxid overflow;
+<br/>&mdash; no issues with large packets;
+<br/>&mdash; better memory usage;
+<br/>&mdash; no issues with GC and Java heap;</p>
+<p>2. Can run <b>embedded</b> into clickhouse-server.</p>
+<p>&mdash; no need for a separate process;</p>
+<p style="color: gray">Preproduction stage, planned for Q4 2021.</p>
+</section>
+
+<section class="slide">
+<h2>Asynchronous INSERTs</h2>
+<p>Allow to do many small INSERTS.</p>
+<p>From many concurrent connections.</p>
+<p style="color: green">Without Kafka and Buffer tables!</p>
+<p>Many small INSERTs are combined together<br/>
+and batched in memory.</p>
+<p>Safe by default: every client get response when data is inserted.</p>
+<p style="color: gray;">Available in 21.11-testing</p>
+</section>
+
+<section class="slide">
+<h2>Support For Transactions</h2>
+<p>ClickHouse is not a transactional DBMS, isn't it?</p>
+<p>But we need transactions to:</p>
+<p>&mdash; do atomic INSERTs to multiple partitions;</p>
+<p>&mdash; do atomic INSERTs to multiple tables and materialzied views;</p>
+<p>&mdash; make multiple SELECT queries from one snapshot.</p>
+<p style="color: gray;">Planned for Q2 2022.</p>
+</section>
+
+<section class="slide">
+<h2>Key-Value Data Marts</h2>
+<p>... And Incremental Aggregation In Memory</p>
+<p>Run GROUP BY query continuously.</p>
+<p>Aggregated data is accumulated in memory.</p>
+<p>It can be queried as a table.</p>
+<p>The server can serve key-value requests with Redis protocol.</p>
+<p><span style="color: green;">Example applications:</span>
+<br/>&mdash; realtime antifraud;
+<br/>&mdash; user profiles and personalization.</p>
+<p style="color: gray;">Planned for summer 2022.</p>
+</section>
+
+<section class="slide">
+<h2>Decoupled Storage</h2>
+<p>ClickHouse over S3:</p>
+<p>&mdash; highly concurrent asynchronous reads (21.11);</p>
+<p>&mdash; parallel processing on multiple compute nodes (Q4);</p>
+<p>&mdash; caching in RAM or local disk with node affinity (Q4);</p>
+<p>&mdash; easy coordination of inserts and merges<br/>&emsp; without ReplicatedMergeTree (Q1 2022);</p>
+<p style="color: green;">Lower cost and higher throughput than EBS volumes.</p>
+<p>Bonus: "web" disk for static hosted datasets (21.10).</p>
+</section>
+
+<section class="slide">
+<h2>What Else?</h2>
+<p>Streaming queries:<br/>
+&mdash; GROUP BY and ORDER BY on time frames;<br/>
+&mdash; distributed streams;<br/>
+&mdash; persistent streams;<br/>
+&mdash; subscription to tables and external data streams;
+</p>
+<p>Advanced time series analysis.</p>
+<p>Tamper-proof data storage.</p>
+<p>Embedded ClickHouse.</p>
+<p>ETL and batch jobs.</p>
+</section>
+
+<section class="slide">
+<h2>Thank You!</h2>
+<p>Please:</p>
+<p>&mdash; Use ClickHouse.</p>
+<p>&mdash; 💖 ClickHouse.</p>
+<p>&mdash; Contribute to ClickHouse!</p>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+
