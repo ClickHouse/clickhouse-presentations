@@ -276,10 +276,10 @@ SELECT arrayStringConcat(symbols, '\n') AS s, count() AS c, sum(size) AS size, r
 <section class="slide">
 <h2>Streaming For Secondary Indices</h2>
 
-<p>In <b style="color: red;">24.8</b>: reading and analyzing the index happens before the query starts reading the data,
+<p>In <b style="color: red;">25.8</b>: reading and analyzing the index happens before the query starts reading the data,
 which introduces a noticable delay when using large indices.</p>
 
-<p>In <b style="color: green;">24.9</b>: reading the indices happens together when scanning the data.
+<p>In <b style="color: green;">25.9</b>: reading the indices happens together when scanning the data.
 Queries start faster and can finish earlier, e.g., when LIMIT is reached.</p>
 
 <p><code style="font-size: 18pt; line-height: 1.25;">:) SET use_skip_indexes_on_data_read;
