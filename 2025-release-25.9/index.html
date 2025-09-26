@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 25.9 Call</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+         .slide table tr:not(:last-of-type)>* { background: none; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 25.9 Call</h1>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/back2.jpg); background-size: cover;">
+        <h1 style="margin-top: 25px; line-height: 110%; font-size: 56pt; color: yellow; text-align: center;">ClickHouse Release 25.9</h1>
+    </section>
+
+<section class="slide">
+<h2>ClickHouse release 25.9</h2>
+<p>1. (35 min) What's new in ClickHouse 25.9.</p>
+<p>2. (20 min) Guest Talks.</p>
+<p>3. (5 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back1.jpg); background-size: cover;">
+<h2><span class="hilite">Release 25.9</span></h2>
+<p><span class="hilite">ClickHouse Autumn Release.</span></p>
+<p><span class="hilite">— 25 new features 🍎</span></p>
+<p><span class="hilite">— 22 performance optimizations 🍁</span></p>
+<p><span class="hilite">— 83 bug fixes 🌿</span></p>
+</section>
+<!--
+
+Small
+
+arrayExcept
+isValidASCII
+Boolean settings
+Arrow Flight: SSL and Auth
+Storage class in S3
+system.database_replicas
+New memory profiler
+S3Queue - no duplicates
+
+Performance
+
+use_skip_indexes_on_data_read
+JOIN reordering
+JOIN rewrite when condition on the joined table is false
+
+Main
+
+Text index
+Vector index
+NATS JetStream
+
+Data Lakes
+
+ALTER UPDATE for Iceberg
+DROP TABLE for Iceberg
+system.iceberg_metadata_log
+ORC and Avro for Iceberg
+Unity catalog for Azure
+Distributed INSERT SELECT for data lakes
+
+Integrations
+
+MCP in the Console
+Chat UI in the Console
+
+Bonus
+
+OpenHouse Roadshow
+
+Reading
+
+Optimizing for high-core
+Scaling GROUP BY
+Migrating from TimescaleDB
+Sierra
+SewerAI
+Exabeam
+Lyft
+
+-->
+
+<section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
+<h2><span class="hilite">Small And Nice Features</span></h2>
+</section>
+
+<section class="slide">
+<h2>Boolean Settings</h2>
+
+<p><code style="font-size: 18pt; line-height: 1.5;"><span style="color: gray;">-- 25.8:</span>
+SET use_query_cache = true;
+
+<span style="color: gray;">-- 25.9:</span>
+SET use_query_cache;
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Thraeka.</p>
+</section>
+
+
+<section class="slide">
+<h2>isValidASCII</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">:) SELECT <b style="color: green;">isValidASCII</b>('Hello')
+
+   ┌─isValidASCII('Hello')─┐
+1. │                     1 │
+   └───────────────────────┘
+
+:) SELECT <b style="color: green;">isValidASCII</b>('Привет')
+
+   ┌─isValidASCII('Привет')─┐
+1. │                      0 │
+   └────────────────────────┘
+
+<span style="color: gray;">:) SELECT match('hello', '^[[:ascii:]]*$');
+:) SELECT match('hello', '^[\x00-\x7F]*$');
+:) SELECT arrayAll(c -> ascii(c) &lt; 128, extractAll('hello', '.'));</span>
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Rajat Mohan.</p>
+</section>
+
+
+<section class="slide">
+<h2>arrayExcept</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;"><span style="color: gray">-- 25.8:</span>
+:) SELECT arrayFilter(x -> x NOT IN [1, 3, 5], [1, 2, 3, 4]) AS res
+
+<span style="color: gray">-- 25.9</span>
+:) SELECT arrayExcept([1, 2, 3, 4], [1, 3, 5]) AS res
+
+   ┌─res───┐
+1. │ [2,4] │
+   └───────┘
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Joanna Hulboj.</p>
+</section>
+
+
+<section class="slide">
+<h2>Storage Class Specification For S3</h2>
+
+<p><code style="font-size: 18pt; line-height: 1.5;">CREATE TABLE test (s String)
+ENGINE = S3('s3://mybucket/test.parquet',
+            <b style="color: green;">storage_class_name</b> = 'INTELLIGENT_TIERING');
+
+INSERT INTO test VALUES ('Hello');
+
+<span style="color: gray;">-- works with a table function as well:</span>
+INSERT INTO FUNCTION s3('s3://mybucket/test.parquet',
+            <b style="color: green;">storage_class_name</b> = 'INTELLIGENT_TIERING');
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexander Sapin.</p>
+</section>
+
+
+<section class="slide">
+<h2>system.database_replicas</h2>
+
+<p style="margin-top: -1em;">A new system table to introspect <b>Replicated</b> databases,
+<br/>similar to <b>system.replicas</b> for Replicated tables.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.1;">:) DESCRIBE system.database_replicas
+
+    ┌─name────────────────┬─type───┐
+ 1. │ database            │ String │
+ 2. │ is_readonly         │ UInt8  │
+ 3. │ max_log_ptr         │ Int32  │
+ 4. │ replica_name        │ String │
+ 5. │ replica_path        │ String │
+ 6. │ zookeeper_path      │ String │
+ 7. │ shard_name          │ String │
+ 8. │ log_ptr             │ Int32  │
+ 9. │ total_replicas      │ UInt32 │
+10. │ zookeeper_exception │ String │
+11. │ is_session_expired  │ UInt8  │
+    └─────────────────────┴────────┘
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: -1em;">Developer: Konstantin Morozov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Integration With Arrow Flight 🧪</h2>
+
+<p>Since <b>25.8</b>, ClickHouse can query other Arrow Flight <b>data sources</b>
+<br/>with the <b>arrowFlight</b> table function.</p>
+
+<p>And ClickHouse can work as an Arrow Flight <b>server</b> by itself.</p>
+
+<p>New in <b style="color: green;">25.9</b>: TLS and authentication.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;"><span style="color: gray;">-- without authentication:</span>
+SELECT * FROM arrowFlight('host:port', 'dataset_name');
+
+<span style="color: gray;">-- with authentication:</span>
+SELECT * FROM arrowFlight(
+    'host:port', 'dataset_name', <b style="color: green;">'username', 'password'</b>);
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Vitaly Baranov.</p>
+</section>
+
+<section class="slide">
+<h2>A New Memory Profiler</h2>
+
+<p>ClickHouse already has <b>sampling</b> and <b>watermark</b> memory profilers.</p>
+<p>Now it uses its memory allocator (jemalloc) for <b style="color: green;">consistent sampling</b> of allocations and deallocations.</p>
+<p>It is built in ClickHouse by default and can be used in runtime:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">:) SET jemalloc_enable_profiler;
+:) SET jemalloc_collect_profile_samples_in_trace_log;
+
+<span style="color: gray;">-- after collecting some data</span>
+
+:) SELECT arrayStringConcat(symbols, '\n') AS s, count() AS c,
+       sum(size) AS size, round(size / c) AS avg_size
+   FROM system.trace_log WHERE trace_type = <b style="color: green;">'JemallocSample'</b>
+   GROUP BY s ORDER BY abs(size) DESC LIMIT 20 FORMAT Vertical
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Antonio Andelic.</p>
+</section>
+
+<section class="slide">
+<h2>A New Memory Profiler</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">:) SET jemalloc_enable_profiler;
+:) SET jemalloc_collect_profile_samples_in_trace_log;
+
+<span style="color: gray;">-- analyze the samples:</span>
+:) SELECT arrayStringConcat(symbols, '\n') AS s, count() AS c,
+       sum(size) AS size, round(size / c) AS avg_size
+   FROM system.trace_log WHERE trace_type = <b style="color: green;">'JemallocSample'</b>
+   GROUP BY s ORDER BY abs(size) DESC LIMIT 20 FORMAT Vertical;
+
+<span style="color: gray;">-- create a heap dump:</span>
+:) SYSTEM JEMALLOC FLUSH PROFILE;
+</code></p>
+
+<p>Demo</p>
+
+<!--
+
+SET jemalloc_enable_profiler, jemalloc_collect_profile_samples_in_trace_log;
+SELECT number % 1e6 AS k, count() FROM numbers_mt(5e9) GROUP BY k ORDER BY k LIMIT 100;
+SELECT arrayStringConcat(symbols, '\n') AS s, count() AS c, sum(size) AS size, round(size / c) AS avg_size FROM system.trace_log WHERE trace_type = 'JemallocSample' GROUP BY s ORDER BY abs(size) DESC LIMIT 20 FORMAT Vertical;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Antonio Andelic.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back4.jpg); background-size: cover;">
+<h2><span style="color: black;"><span class="hilite">Performance Improvements</span></h2>
+</section>
+
+<section class="slide">
+<h2>Streaming For Secondary Indices</h2>
+
+<p>In <b style="color: red;">24.8</b>: reading and analyzing the index happens before the query starts reading the data,
+which introduces a noticable delay when using large indices.</p>
+
+<p>In <b style="color: green;">24.9</b>: reading the indices happens together when scanning the data.
+Queries start faster and can finish earlier, e.g., when LIMIT is reached.</p>
+
+<p><code style="font-size: 18pt; line-height: 1.25;">:) SET use_skip_indexes_on_data_read;
+</code></p>
+
+<p>Demo</p>
+
+<!--
+
+SELECT * FROM system.data_skipping_indices ORDER BY data_compressed_bytes DESC LIMIT 10 \G
+
+SELECT count() FROM asynchronous_metric_log_5265492640286358528;
+SHOW TABLE asynchronous_metric_log_5265492640286358528;
+
+SELECT DISTINCT commit_sha FROM asynchronous_metric_log_5265492640286358528 WHERE commit_sha LIKE '%aaaa%';
+SELECT DISTINCT commit_sha FROM asynchronous_metric_log_5265492640286358528 WHERE commit_sha LIKE '%aaaa%' SETTINGS use_skip_indexes_on_data_read;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Amos Bird.</p>
+</section>
+
+
+<section class="slide">
+<h2>JOIN Reordering</h2>
+
+<p>Reordering of the JOIN graph, based on the amount of data to read
+<br/>and on the column-level statistics.</p>
+
+<p><code style="font-size: 18pt; line-height: 1.25;">:) SET query_plan_optimize_join_order_limit = 10;
+:) SET allow_statistics_optimize = 1;
+</code></p>
+
+<p>Demo</p>
+
+<!--
+
+CREATE TABLE big (k UInt64, s String) ORDER BY ();
+CREATE TABLE small (k UInt64, s String) ORDER BY ();
+
+INSERT INTO big SELECT number, 'table 1: ' || number FROM numbers_mt(1e8);
+INSERT INTO small SELECT number * 1000000 AS k, 'table 2: ' || k FROM numbers_mt(1e6);
+
+SELECT k, big.s, small.s FROM small JOIN big USING k SETTINGS query_plan_optimize_join_order_limit = 0;
+SELECT k, big.s, small.s FROM small JOIN big USING k SETTINGS query_plan_optimize_join_order_limit = 10;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Vladimir Cherkasov.</p>
+</section>
+
+<section class="slide">
+<h2>JOIN Reordering</h2>
+
+<p>Reordering of the JOIN graph, based on the amount of data to read
+<br/>and on the column-level statistics.</p>
+
+<p><code style="font-size: 18pt; line-height: 1.25;">:) SET query_plan_optimize_join_order_limit = 10;
+:) SET allow_statistics_optimize = 1;
+</code></p>
+
+<p>Demo (TPC-H with statistics)</p>
+
+<!--
+
+USE tpch_no_stats;
+USE tpch_stats;
+
+SET query_plan_optimize_join_order_limit = 10, allow_statistics_optimize = 1;
+
+SELECT
+    n_name,
+    sum(l_extendedprice * (1 - l_discount)) AS revenue
+FROM
+    customer,
+    orders,
+    lineitem,
+    supplier,
+    nation,
+    region
+WHERE
+    c_custkey = o_custkey
+    AND l_orderkey = o_orderkey
+    AND l_suppkey = s_suppkey
+    AND c_nationkey = s_nationkey
+    AND s_nationkey = n_nationkey
+    AND n_regionkey = r_regionkey
+    AND r_name = 'ASIA'
+    AND o_orderdate >= DATE '1994-01-01'
+    AND o_orderdate < DATE '1994-01-01' + INTERVAL '1' year
+GROUP BY
+    n_name
+ORDER BY
+    revenue DESC;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Vladimir Cherkasov.</p>
+</section>
+
+
+<section class="slide">
+<img style="float: left; height: 95%; margin-left: -30px; padding-right: 30px" src="pictures/tpch.png"/>
+<h2>JOIN Reordering</h2>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Vladimir Cherkasov.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back3.jpg); background-size: cover;">
+<h2 style="font-size: 32pt; margin-left: -1em;"><span class="hilite">Something Interesting</span></h2>
+</section>
+
+<section class="slide">
+<h2>Text Index 🧪</h2>
+
+<p>A full-text search index in ClickHouse!</p>
+<p style="line-height: 1.5">&mdash; In development since 2022
+<br/>&mdash; first prototype in 2023 <span style="color: gray;">(by Harry Lee and Larry Luo)</span>
+<br/>&mdash; <b>now rewritten to make it to production</b>
+<br/>&mdash; remains experimental in 25.9</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developers: Anton Popov, Elmi Ahmadov, Jimmy Aguilar Mena.</p>
+</section>
+
+<section class="slide">
+<h2>Text Index 🧪</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE text_log
+(
+    message String,
+    ...
+    INDEX inv_idx(message)
+        TYPE <b style="color: green;">text</b>(tokenizer = 'default')
+        GRANULARITY 128
+)
+ENGINE = SharedMergeTree ORDER BY id;
+
+SELECT ... WHERE <b style="color: green;">hasToken</b>(message, 'DDLWorker');
+SELECT ... WHERE <b style="color: green;">searchAll</b>(message, ['peak', 'memory']);
+SELECT ... WHERE <b style="color: green;">searchAny</b>(message, tokens('01442_merge_detach_attach'));
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developers: Anton Popov, Elmi Ahmadov, Jimmy Aguilar Mena.</p>
+</section>
+
+<section class="slide">
+<h2>Text Index 🧪</h2>
+
+<p>Demo</p>
+
+<!--
+
+clickhouse-client --connection text_index
+
+USE full_text_search;
+SELECT count() FROM text_log_inverted_index_2;
+SET use_skip_indexes_on_data_read = 1, allow_experimental_full_text_index = 1, max_parallel_replicas = 1, use_query_condition_cache = 0;
+
+SELECT message
+FROM full_text_search.text_log_inverted_index_2
+WHERE searchAll(message, ['peak', 'memory']) LIMIT 10;
+
+SELECT count()
+FROM full_text_search.text_log_inverted_index_2
+WHERE message LIKE '%peak%memory%';
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developers: Anton Popov, Elmi Ahmadov, Jimmy Aguilar Mena.</p>
+</section>
+
+<section class="slide">
+<h2>Vector Index</h2>
+
+<p>In development since 2021. Production-ready since <b style="color: green;">25.8</b>.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -1em;">ALTER TABLE dbpedia
+    ADD INDEX vector_index(vector)
+    TYPE <b style="color: green;">vector_similarity</b>(
+        'hnsw', 'cosineDistance', 1536, 'bf16', 64, 512);
+
+ALTER TABLE dbpedia MATERIALIZE INDEX vector_index;
+
+WITH ... AS reference_vector
+SELECT ... FROM table WHERE ...
+<b>ORDER BY cosineDistance(vector, reference_vector)
+LIMIT 10</b>;
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Shankar Iyer.</p>
+</section>
+
+<section class="slide">
+<h2>Vector Search</h2>
+
+<p><b>22.9</b> &mdash; experimental version</p>
+<p style="color: gray; font-size: 14pt; margin-top: -1em;">Introduced by Arthur Filatenkov, Vladimir Makarov, Danila Mishin,
+Nikita Vasilenko, Alexander Piachonkin, Nikita Evsiukov, Hakob Sagatelyan.</p>
+
+<p><b>23.8</b> &mdash; integration with the USearch library</p>
+<p style="color: gray; font-size: 14pt; margin-top: -1em;">Introduced by Davit Vardanyan.</p>
+
+<p><b>25.1</b> &mdash; faster vector indices</p>
+<p style="color: gray; font-size: 14pt; margin-top: -1em;">By Robert Schulze, Michael Kolupaev.</p>
+
+<p><b style="color: green;">25.5</b> &mdash; beta (prefiltering, postfiltering, rescoring)</p>
+<p style="color: gray; font-size: 14pt; margin-top: -1em;">Developer: Shankar Iyer, Robert Schulze.</p>
+
+<p><b style="color: green;">25.8</b> &mdash; GA (index-only reading, fetch multiplier, binary quantization)</p>
+<p style="color: gray; font-size: 14pt; margin-top: -1em;">Developer: Shankar Iyer.</p>
+</section>
+
+<section class="slide">
+<h2>Vector Index</h2>
+
+<p><b>HNSW</b> algorithm with quantization options (<b>bf16</b>, <b>i8</b>, <b>b1</b>).</p>
+<p>Supports different filtering modes:<br/><b>post-filtering</b> (run ANN search, then apply other filters)<br/>or <b>pre-filtering</b> (apply regular filters, then run ANN across filtered results).</p>
+<p>Supports filtering multiplier<br/>(e.g., find 100 nearest candidates to filter and return 10).</p>
+<p>Avoids reading the data column if not necessarily.</p>
+
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Shankar Iyer.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
+<h2 style="font-size: 32pt; margin-left: -1em;"><span class="hilite">Data Lakes</span></h2>
+</section>
+
+<section class="slide">
+<h2>Data Lakes Improvements</h2>
+
+<p><b>ALTER UPDATE</b> for Iceberg</p>
+<p>An option for <b>DROP TABLE</b> for Iceberg to remove the data</p>
+<p><b>system.iceberg_metadata_log</b></p>
+<p><b>ORC</b> and <b>Avro</b> for Iceberg data files</p>
+<p>Unity catalog on <b>Azure</b></p>
+<p>Distributed INSERT SELECT for data lakes</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developers: Konstantin Vedernikov, Smita Kulkarni.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
+<h2><span class="hilite">Bonus</span></h2>
+</section>
+
+<section class="slide" style="background: url(pictures/back9.jpg); background-size: cover;">
+<h2 style="font-size: 32pt; margin-left: -1em;"><span class="hilite">Guest Talk</span></h2>
+</section>
+
+<section class="slide" style="background: url(pictures/back10.jpg); background-size: cover;">
+<h2 style="font-size: 32pt; margin-left: -1em;"><span class="hilite">One More...</span></h2>
+</section>
+
+<section class="slide">
+<h2>NATS JetStream</h2>
+
+<p>ClickHouse already supports subscribing to NATS!</p>
+<p><b>JetStream</b> &mdash; persistent queues in NATS (similar to Kafka, but simpler).</p>
+
+<p><code style="font-size: 16pt; line-height: 1.25;">CREATE TABLE test.nats (key UInt64, value UInt64)
+ENGINE = NATS
+SETTINGS nats_url = 'nats1:4444',
+         <b style="color: green;">nats_stream</b> = 'test_stream',
+         <b style="color: green;">nats_consumer_name</b> = 'test_consumer',
+         nats_subjects = 'test_subject',
+         nats_format = 'TSV',
+         nats_row_delimiter = '\n';
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Dmitry Novikov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Integrations</h2>
+<p style="margin-top: -1em;"><b>ClickPipes</b></p>
+<p>&mdash; <b>Advanced Settings</b>: full API, UI, and Terraform support
+<br/>&mdash; <b>JSON</b> arrays &amp; multiple JSON Objects
+<br/>&mdash; <b>S3 Unordered Mode</b>: performance for high-volume S3 ingestions
+<br/>&mdash; <b>Postgres CDC</b>: added failover replication slot support and PlanetScale Metal compatibility.
+</p>
+<p><b>Ecosystem</b></p>
+<p>&mdash; Official <b>Flink</b> Connector
+<br/>&mdash; <b>Python</b> 0.9.0 release with SQLAlchemy 2.x support
+<br/>&mdash; <b>Polars</b> integration, and <b>Pandas</b> 1.x/2.x compatibility
+<br/>&mdash; <b>Java</b> client 0.9.2 targeting BI tools like Tableau and DBeaver
+<br/>&mdash; <b>C++</b> client 2.6.0: better handling of numeric data types, external data.
+</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/wing.jpg); background-size: cover;">
+<h2>Meetups</h2>
+<p style="line-height: 1.25">
+<span class="hilite">&mdash; 🇸🇬 Singapore, Sept 25</span>
+<br/><span class="hilite">&mdash; 🇦🇺 Melbourne, Sept 30</span>
+<br/><span class="hilite">&mdash; 🇯🇵 Tokyo, Sept 30</span>
+<br/><span class="hilite">&mdash; 🇪🇸 Madrid, Sept 30</span>
+<br/><span class="hilite">&mdash; 🇪🇸 Barcelona, Oct 1</span>
+<br/><span class="hilite">&mdash; 🇺🇸 San Francisco (Iceberg), Oct 1</span>
+<br/><span class="hilite">&mdash; 🇺🇸 Seattle AI Night, Oct 2</span>
+<br/><span class="hilite">&mdash; 🇨🇭 Zurich, Oct 9</span>
+<br/><span class="hilite">&mdash; 🇺🇸 Chicago, Oct 9</span>
+<br/><span class="hilite">&mdash; 🇬🇧 London, Oct 15</span>
+</p>
+</section>
+
+
+
+<section class="slide">
+<h2>Reading Corner 📖</h2>
+
+<img style="float: right; width: 30%; margin-right: -3em; image-rendering: pixelated; margin-top: -1em;" src="pictures/blog.png"/>
+<p><a href="https://clickhouse.com/blog/">https://clickhouse.com/blog/</a></p>
+
+<p style="line-height: 1.5;">
+<br/>&mdash; Optimizing GROUP BY with parallel replicas
+<br/>&mdash; Optimizing ClickHouse for high-core Intel CPUs
+<br/>&mdash; Cost-efficient Observability
+<br/>&mdash; ClickStack for Next.JS applications
+<br/>&mdash; Migrating data from TimescaleDB using ClickPipes
+<br/>&mdash; Lyft, Exabeam, Ford, SewerAI
+<br/>&mdash; Can LLMs replace on call SREs today?
+</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back8.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
+<h2 style="color: white; margin-left: -1em;">Q&amp;A</a></h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+
