@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 25.10 Call</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+         .slide table tr:not(:last-of-type)>* { background: none; }
+         .cell { font-family: Monospace; width: 1.5em; height: 1.5em; display: inline-block; border: 3px solid white; background-color: lightblue; text-align: center; line-height: 1.3em; }
+         .cell-num { font-family: Monospace; width: 1.5em; height: 1.5em; display: inline-block; border: 3px solid white; background-color: lightgreen; text-align: center; line-height: 1.3em; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 25.10 Call</h1>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/back1.jpg); background-size: cover;">
+        <h1 style="margin-top: 25px; line-height: 110%; font-size: 56pt; color: yellow; text-align: center;">ClickHouse Release 25.10</h1>
+    </section>
+
+<section class="slide">
+<h2>ClickHouse release 25.10</h2>
+<p>1. (55 min) What's new in ClickHouse 25.10.</p>
+<p>2. (5 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
+<h2><span class="hilite">Release 25.10</span></h2>
+<p><span class="hilite">ClickHouse Halloween Release.</span></p>
+<p><span class="hilite">— 20 new features 👻</span></p>
+<p><span class="hilite">— 30 performance optimizations 🔮</span></p>
+<p><span class="hilite">— 103 bug fixes 🎃</span></p>
+</section>
+<!--
+
+Small
+
+Alias tables
+IS NOT DISTINCT FROM
+conv
+LIMIT BY ALL
+Statistics for all columns
+ALTER TABLE REWRITE PARTS
+SYSTEM RECONNECT ZOOKEEPER
+startsWithCaseInsensitive, endsWithCaseInsensitive, ...
+
+Performance
+
+Separate size for String
+Late materialization of skip indices
+Replicated columns
+Bloom filters for JOIN optimizations
+Push down disjunctions
+Splitting large blocks
+Read in order in Iceberg
+
+Main
+
+Negative Limit and Offset
+QBit
+
+Data Lakes
+
+Apache Paimon
+
+Integrations
+
+Bonus
+
+ClickGems
+
+Reading
+
+QBit
+Faster JSON
+170x compression of logs
+Frameworks for building agents
+Tracing agents with ClickStack
+Data lake catalogs
+Laravel
+GitLab
+Netflix
+
+-->
+
+<section class="slide" style="background: url(pictures/back4.jpg); background-size: cover;">
+<h2><span class="hilite">Small And Nice Features</span></h2>
+</section>
+
+<section class="slide">
+<h2>Table Aliases</h2>
+
+<p><code style="font-size: 18pt; line-height: 1.5;">CREATE TABLE my_alias
+ENGINE = <b style="color: green;">Alias</b>(source_table);
+
+CREATE TABLE my_alias
+ENGINE = <b style="color: green;">Alias</b>(source_database, source_table);
+</code></p>
+
+<p>References the existing table and forwards all operations to it
+<br/>(except DROP, DETACH, and RENAME).</p>
+
+<p>Good for migrations, to provide multiple names for a single table.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Kai Zhu.</p>
+</section>
+
+
+<section class="slide">
+<h2>Operator &lt;=></h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">:) SELECT NULL = NULL
+
+0
+
+:) SELECT NULL &lt;=> NULL
+
+1</code></p>
+
+<p>&mdash; equality comparison that treats NULLs as identical.</p>
+<p>Also available as the <b>IS NOT DISTINCT FROM</b> operator.</p>
+<p style="color: gray;">This operator was previously available only for the JOIN ON section.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Simon Michal.</p>
+</section>
+
+
+<section class="slide">
+<h2>conv</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">:) SELECT <b style="color: green;">conv</b>('111', 10, 8)
+
+157
+</code></p>
+
+<p>Convert numbers between different bases (digits are 0..9A..Z).</p>
+<p>Compatible with MySQL.</p>
+<p style="color: gray;">Note: we already have <b>hex</b>/<b>unhex</b> and <b>bin</b>/<b>unbin</b> functions.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: hp77-creator.</p>
+</section>
+
+
+<section class="slide">
+<h2>LIMIT BY ALL</h2>
+
+<p>ClickHouse already supports a LIMIT BY clause,
+<br/>which is an extension to DISTINCT.</p>
+
+<p>Example: <b>LIMIT <span style="color: green;">5</span> BY <span style="color: teal;">country</span></b>
+<br/>&mdash; take only first 5 records for each distinct country.</p>
+
+<p>Can be even combined with LIMIT:
+<br/><b>LIMIT <span style="color: green;">5</span> BY <span style="color: teal;">country</span> LIMIT <span style="color: green;">100</span></b>.</p>
+
+<p>Now you can write <b>LIMIT <span style="color: green;">5</span> BY <span style="color: green;">ALL</span></b>
+<br/>&mdash; take up to 5 duplicate records.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Surya Kant Ranjan.</p>
+</section>
+
+
+<section class="slide">
+<h2>Column Statistics</h2>
+
+<p>Now you can enable statistics for all columns with a table-level setting:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">CREATE TABLE test (...) ORDER BY ()
+SETTINGS <b style="color: green;">auto_statistics_types</b> = 'minmax,uniq,countmin';
+</code></p>
+
+<p>Or with a global configuration:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">$ cat /etc/config.d/merge_tree.yaml
+
+merge_tree:
+    <b style="color: green;">auto_statistics_types</b>: 'minmax,uniq,countmin'
+</code></p>
+
+<p>Statistics are used for <b style="color: green;">automatic JOIN reordering</b>.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Anton Popov.</p>
+</section>
+
+
+<section class="slide">
+<h2>SYSTEM RECONNECT ZOOKEEPER</h2>
+
+<p>A new system query to re-establish a Keeper session.</p>
+
+<p>If the distribution of connections between ClickHouse nodes and Keeper nodes became unbalanced or suboptimal, you can rebalance it with this command.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Pradeep Chhetri.</p>
+</section>
+
+<section class="slide">
+<h2>ALTER TABLE REWRITE PARTS</h2>
+
+<p><code style="font-size: 14pt; line-height: 1;">ALTER TABLE hits <b style="color: green;">REWRITE PARTS</b>;
+
+ALTER TABLE hits <b style="color: green;">REWRITE PARTS</b> IN PARTITION 202501;
+</code></p>
+
+<p>A new mode for the <b>ALTER TABLE</b> query, useful for:</p>
+
+<p>&mdash; re-encrypting the data after changing the encryption key;
+<br/>&mdash; applying changes after modifying settings for physical data layout,
+<br/>&emsp; such as compression block size;</p>
+
+<p>It is faster than the OPTIMIZE query as it does not merge data parts.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Azat Khuzhin.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back2.jpg); background-size: cover;">
+<h2><span style="color: black;"><span class="hilite">Performance Improvements</span></h2>
+</section>
+
+<section class="slide">
+<h2>A new physical layout for String</h2>
+
+<p>The previous layout, <b>default</b>:
+<br/><b>str.bin</b>: <span class="cell-num">5</span><span class="cell">H</span><span class="cell">e</span><span class="cell">l</span><span class="cell">l</span><span class="cell">o</span><span class="cell-num">10</span><span class="cell">C</span><span class="cell">l</span><span class="cell">i</span><span class="cell">c</span><span class="cell">k</span><span class="cell">H</span><span class="cell">o</span><span class="cell">u</span><span class="cell">s</span><span class="cell">e</span></p>
+
+<p>The new layout, <b>with_size_stream</b>:
+<br/><b>str.bin</b>: <span class="cell">H</span><span class="cell">e</span><span class="cell">l</span><span class="cell">l</span><span class="cell">o</span><span class="cell">C</span><span class="cell">l</span><span class="cell">i</span><span class="cell">c</span><span class="cell">k</span><span class="cell">H</span><span class="cell">o</span><span class="cell">u</span><span class="cell">s</span><span class="cell">e</span>
+<br/><b>str.size.bin</b>: <span class="cell-num">5</span><span class="cell-num">10</span></p>
+
+<p><code style="font-size: 16pt; line-height: 1.25;">CREATE TABLE ...
+SETTINGS <b style="color: green;">serialization_info_version</b> = 'with_types',
+         <b style="color: green;">string_serialization_version</b> = 'with_size_stream';
+</code></p>
+
+<p>Demo</p>
+
+<!--
+
+clickhouse-benchmark <<< "SELECT count() FROM hits WHERE URL != ''"
+clickhouse-benchmark <<< "SELECT count() FROM hits2 WHERE URL != ''"
+
+clickhouse-benchmark <<< "SELECT SearchPhrase FROM hits WHERE SearchPhrase <> '' ORDER BY EventTime LIMIT 10;"
+clickhouse-benchmark <<< "SELECT SearchPhrase FROM hits2 WHERE SearchPhrase <> '' ORDER BY EventTime LIMIT 10;"
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Amos Bird.</p>
+</section>
+
+
+<section class="slide">
+<h2>"Replicated" Columns</h2>
+
+<p>What if a block of data multiplies many times during JOIN?</p>
+<p><code style="font-size: 16pt; line-height: 1.5;">SELECT count() FROM hits; <b style="color: green;">-- 100 million</b>
+SELECT count() FROM hits AS t1 INNER JOIN hits AS t2
+    ON t1.ClientIP = t2.ClientIP; <b style="color: red;">-- 40.18 billion</b>
+</code></p>
+
+<p>Now we can do it lazily, without spending memory and CPU!</p>
+
+<p><code style="font-size: 18pt; line-height: 1.25;">:) SET enable_lazy_columns_replication;
+</code></p>
+
+<p>Demo</p>
+
+<!--
+
+SELECT sum(cityHash64(URL)) FROM hits AS t1 INNER JOIN hits AS t2 ON t1.ClientIP = t2.ClientIP;
+SET enable_lazy_columns_replication = 1;
+SELECT sum(cityHash64(URL)) FROM hits AS t1 INNER JOIN hits AS t2 ON t1.ClientIP = t2.ClientIP;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Pavel Kruglov.</p>
+</section>
+
+<section class="slide">
+<h2>Bloom Filters in JOINs</h2>
+
+<p>To speed-up your queries:</p>
+
+<p><code style="font-size: 18pt; line-height: 1.25;">:) SET enable_join_runtime_filters;
+</code></p>
+
+<p>A small filter can be built from one JOIN side and
+<br/>used as "PREWHERE" in another side while reading from the table.</p>
+
+<p>Demo</p>
+
+<!--
+
+USE tpch_stats;
+
+SELECT avg(o_totalprice)
+FROM orders, customer, nation
+WHERE (c_custkey = o_custkey) AND (c_nationkey = n_nationkey) AND (n_name = 'FRANCE')
+SETTINGS enable_join_runtime_filters = 0;
+
+SELECT avg(o_totalprice)
+FROM orders, customer, nation
+WHERE (c_custkey = o_custkey) AND (c_nationkey = n_nationkey) AND (n_name = 'FRANCE')
+SETTINGS enable_join_runtime_filters = 1;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Alexander Gololobov.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Push-down of complex conditions in JOINs</h2>
+
+<p>Let's say we have a combination of conditions for different tables:</p>
+
+<p><code style="font-size: 18pt; line-height: 1.25;">SELECT *
+FROM <b style="color: blue;">n1</b> INNER JOIN <b style="color: brown;">n2</b>
+WHERE (<b style="color: blue;">n1</b>.name = 'FRANCE' AND <b style="color: brown;">n2</b>.name = 'GERMANY')
+   OR (<b style="color: blue;">n1</b>.name = 'GERMANY' AND <b style="color: brown;">n2</b>.name = 'FRANCE');
+</code></p>
+
+<p>This will automatically derive conditions for the left and right tables<br/>
+and push-down these conditions.</p>
+
+<p><code style="font-size: 18pt; line-height: 1.25;">:) SET use_join_disjunctions_push_down;
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Yarik Briukhovetskyi.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Late materialization of secondary indices</h2>
+
+<p>Now you can postpone building the indices from the INSERT time
+<br/>to background merges:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SET <b style="color: green;">exclude_materialize_skip_indexes_on_insert</b>;
+</code></p>
+
+<p>Or even disable building indices during merges:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE t (...)
+SETTINGS <b style="color: green;">materialize_skip_indexes_on_merge</b> = false;
+</code></p>
+
+<p>Or exclude certain (heavy) indices from calculation:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE t (...)
+SETTINGS <b style="color: green;">exclude_materialize_skip_indexes_on_merge</b> = 'vector_a,bf';
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: George Larionov.</p>
+</section>
+
+
+
+<section class="slide" style="background: url(pictures/back3.jpg); background-size: cover;">
+<h2 style="font-size: 32pt; margin-left: -1em;"><span class="hilite">Something Interesting</span></h2>
+</section>
+
+<section class="slide">
+<h2>Negative LIMIT and OFFSET</h2>
+
+<p>Example: get 100 last records, but return them in the ascending order:</p>
+
+<p><code style="font-size: 16pt; line-height: 1.25;"><span style="color: gray;">-- Before 25.10:</span>
+:) SELECT * FROM (
+     SELECT * FROM logs WHERE date = today()
+     ORDER BY time DESC LIMIT 100
+   ) ORDER BY time;
+
+<span style="color: gray;">-- Since 25.10:</span>
+:) SELECT * FROM logs WHERE date = today()
+   ORDER BY time <b style="color: green;">LIMIT -100</b>;
+
+<span style="color: gray;">-- negative pagination: LIMIT -100 OFFSET 100</span>
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Nihal Z. Miaji.</p>
+</section>
+
+
+<section class="slide">
+<h2>QBit Data Type 🧪</h2>
+
+<p>A data type for <b>vector embeddings</b>,
+<br/>that allows tuning the search precision at runtime.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -1em;">CREATE TABLE vectors (
+    id UInt64, name String, ...
+    vec <b style="color: green;">QBit(BFloat16, 1536)</b>
+) ORDER BY ();</code></p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -1em;">SELECT id, name FROM vectors
+ORDER BY <b style="color: green;">L2DistanceTransposed</b>(vector, target, <b style="color: green;">10</b>)
+LIMIT 10;
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Raufs Dunamalijevs.</p>
+</section>
+
+<section class="slide">
+<div style="float: right; width: 60%; height: 110%; margin-right: -100px; margin-top: -20px; background: #1a1a18;">
+<img style="width: 100%;" src="pictures/qbit.jpg"/>
+</div>
+<h2>QBit Data Type 🧪</h2>
+
+<p>It uses a <b>bit-sliced</b> data layout:
+<br/>every number is sliced by bits,
+<br/>e.g., for 1536-dim vector of Float32,
+<br/>we store <b style="color: green;">32 subcolumns</b> with Nth (0..31th) bits from all dimensions.</p>
+
+<p>At the query time, we specify, how many (most significant) bits to take.</p>
+
+<p>For example, we can ask to read
+<br/>only 10 out of 32 bits.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Raufs Dunamalijevs.</p>
+</section>
+
+<section class="slide">
+<h2>QBit Data Type 🧪</h2>
+
+<p style="margin-top: -2em;">Demo</p>
+<p><code style="font-size: 12pt; line-height: 1.25; margin-right: -1em;">CREATE TABLE dbpedia
+(
+  id      String,
+  title   String,
+  text    String,
+  vector  Array(Float32) CODEC(NONE)
+) ENGINE = MergeTree ORDER BY (id);
+
+seq 0 25 | xargs -P4 -I{} clickhouse-client "INSERT INTO dbpedia
+SELECT id, title, text, \"text-embedding-3-large-1536-embedding\"
+FROM url(<span style="color: teal;">'https://huggingface.co/api/datasets/Qdrant/dbpedia-entities-
+openai3-text-embedding-3-large-1536-1M/parquet/default/train/{}.parquet'</span>)
+SETTINGS max_http_get_redirects = 5"
+
+SET allow_experimental_qbit_type = 1;
+ALTER TABLE dbpedia ADD COLUMN qbit <b style="color: green;">QBit(Float32, 1536)</b>;
+ALTER TABLE dbpedia UPDATE qbit = vector WHERE 1;
+</code></p>
+
+<!--
+
+SELECT
+    title,
+    text,
+    COUNT(DISTINCT concept) AS num_concepts_matched,
+    MIN(distance) AS min_distance,
+    AVG(distance) AS avg_distance
+FROM (
+    (
+        SELECT title, text, 'Moon' AS concept,
+               L2Distance(vector, (SELECT vector FROM dbpedia WHERE title = 'Moon')) AS distance
+        FROM dbpedia
+        WHERE title != 'Moon'
+        ORDER BY distance ASC
+        LIMIT 1000
+    )
+    UNION ALL
+    (
+        SELECT title, text, 'Apollo 11' AS concept,
+               L2Distance(vector, (SELECT vector FROM dbpedia WHERE title = 'Apollo 11')) AS distance
+        FROM dbpedia
+        WHERE title != 'Apollo 11'
+        ORDER BY distance ASC
+        LIMIT 1000
+    )
+    UNION ALL
+    (
+        SELECT title, text, 'Space Shuttle' AS concept,
+               L2Distance(vector, (SELECT vector FROM dbpedia WHERE title = 'Space Shuttle')) AS distance
+        FROM dbpedia
+        WHERE title != 'Space Shuttle'
+        ORDER BY distance ASC
+        LIMIT 1000
+    )
+    UNION ALL
+    (
+        SELECT title, text, 'Astronaut' AS concept,
+               L2Distance(vector, (SELECT vector FROM dbpedia WHERE title = 'Astronaut')) AS distance
+        FROM dbpedia
+        WHERE title != 'Astronaut'
+        ORDER BY distance ASC
+        LIMIT 1000
+    )
+    UNION ALL
+    (
+        SELECT title, text, 'Rocket' AS concept,
+               L2Distance(vector, (SELECT vector FROM dbpedia WHERE title = 'Rocket')) AS distance
+        FROM dbpedia
+        WHERE title != 'Rocket'
+        ORDER BY distance ASC
+        LIMIT 1000
+    )
+)
+WHERE title NOT IN ('Moon', 'Apollo 11', 'Space Shuttle', 'Astronaut', 'Rocket')
+GROUP BY title, text
+HAVING num_concepts_matched >= 3
+ORDER BY num_concepts_matched DESC, min_distance ASC
+LIMIT 10;
+
+
+SELECT
+    title,
+    text,
+    COUNT(DISTINCT concept) AS num_concepts_matched,
+    MIN(distance) AS min_distance,
+    AVG(distance) AS avg_distance
+FROM (
+    (
+        SELECT title, text, 'Moon' AS concept,
+               L2DistanceTransposed(qbit, (SELECT vector FROM dbpedia WHERE title = 'Moon'), 5) AS distance
+        FROM dbpedia
+        WHERE title != 'Moon'
+        ORDER BY distance ASC
+        LIMIT 1000
+    )
+    UNION ALL
+    (
+        SELECT title, text, 'Apollo 11' AS concept,
+               L2DistanceTransposed(qbit, (SELECT vector FROM dbpedia WHERE title = 'Apollo 11'), 5) AS distance
+        FROM dbpedia
+        WHERE title != 'Apollo 11'
+        ORDER BY distance ASC
+        LIMIT 1000
+    )
+    UNION ALL
+    (
+        SELECT title, text, 'Space Shuttle' AS concept,
+               L2DistanceTransposed(qbit, (SELECT vector FROM dbpedia WHERE title = 'Space Shuttle'), 5) AS distance
+        FROM dbpedia
+        WHERE title != 'Space Shuttle'
+        ORDER BY distance ASC
+        LIMIT 1000
+    )
+    UNION ALL
+    (
+        SELECT title, text, 'Astronaut' AS concept,
+               L2DistanceTransposed(qbit, (SELECT vector FROM dbpedia WHERE title = 'Astronaut'), 5) AS distance
+        FROM dbpedia
+        WHERE title != 'Astronaut'
+        ORDER BY distance ASC
+        LIMIT 1000
+    )
+    UNION ALL
+    (
+        SELECT title, text, 'Rocket' AS concept,
+               L2DistanceTransposed(qbit, (SELECT vector FROM dbpedia WHERE title = 'Rocket'), 5) AS distance
+        FROM dbpedia
+        WHERE title != 'Rocket'
+        ORDER BY distance ASC
+        LIMIT 1000
+    )
+)
+WHERE title NOT IN ('Moon', 'Apollo 11', 'Space Shuttle', 'Astronaut', 'Rocket')
+GROUP BY title, text
+HAVING num_concepts_matched >= 3
+ORDER BY num_concepts_matched DESC, min_distance ASC
+LIMIT 10;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Raufs Dunamalijevs.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
+<h2 style="font-size: 32pt; margin-left: -1em;"><span class="hilite">Data Lakes</span></h2>
+</section>
+
+<section class="slide">
+<h2>Apache Paimon 🧪</h2>
+
+<p>Now ClickHouse has table functions to query <b>Paimon</b> tables:</p>
+
+<p><code style="font-size: 16pt; line-height: 1.5;">SELECT * FROM <b style="color: green;">paimon</b>('s3://...');</code></p>
+
+<p>We already support <b>Iceberg</b>, <b>Delta Lake</b>, <b>Hudi</b>. Why <b>Paimon</b>? 🤔</p>
+<p>&mdash; because someone uses it.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developers: Jia Qi Tang.</p>
+</section>
+
+<section class="slide">
+<h2>Improvements for Data Lakes</h2>
+
+<h3 style="font-size: 28pt;">Optimization for reading in table order:</h3>
+<p>If <b>Iceberg</b> table is already sorted, SELECT with the corresponding
+<br/>ORDER BY will not require full sorting.</p>
+
+<h3 style="font-size: 28pt;">A log for metadata operations in Delta:</h3>
+<p><b>system.delta_lake_metadata_log</b> provides information about metadata operations with Delta tables, similarly to <b>system.iceberg_metadata_log</b>.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developers: Konstantin Vedernikov.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
+<h2><span class="hilite">Bonus</span></h2>
+</section>
+
+<section class="slide" style="background: url(pictures/gems.png); background-size: cover;">
+<h1 style="color: white; position: absolute; left: 0.5em; bottom: 0.54em; line-height: 1; text-shadow: 5px 5px 5px black;"><span style="background: black; display: inline-block; drop-shadow: 5px 5px 5px black;">clickgems.clickhouse.com</span></h1>
+</section>
+
+<section class="slide" style="background: url(pictures/party.png); background-size: cover;">
+</section>
+
+<section class="slide" style="background: url(pictures/wing.jpg); background-size: cover;">
+<h2>Meetups</h2>
+<p style="line-height: 1.5">
+<span class="hilite">&mdash; 🇪🇪 Tallinn, Oct 30</span>
+<br/><span class="hilite">&mdash; 🇸🇪 Stockholm, Nov 3</span>
+<br/><span class="hilite">&mdash; 🇨🇴 Bogota, November 13</span>
+<br/><span class="hilite">&mdash; 🇦🇺 LaraCon 2025, November 13</span>
+<br/><span class="hilite">&mdash; 🇰🇷 ClickHouse + Dev-Korea Seoul 조인트 밋업, November 18</span>
+<br/><span class="hilite">&mdash; 🇨🇾 Cyprus, November 20</span>
+<br/><span class="hilite">&mdash; 🇺🇸 House Party, The SQL, Dec 2</span>
+</p>
+</section>
+
+<section class="slide">
+<h2>Reading Corner 📖</h2>
+
+<img style="float: right; width: 30%; margin-right: -3em; image-rendering: pixelated; margin-top: -1em;" src="pictures/blog.png"/>
+<p><a href="https://clickhouse.com/blog/">https://clickhouse.com/blog/</a></p>
+
+<p style="line-height: 1.5;">
+&mdash; QBit: vector search with precision at query time
+<br/>&mdash; How we made the JSON data type even faster
+<br/>&mdash; Achieving 170x compression of logs
+<br/>&mdash; 12 frameworks for building agents with ClickHouse
+<br/>&mdash; Tracing agents with ClickStack
+<br/>&mdash; How to query Data Lake catalogs in the Cloud
+<br/>&mdash; Netflix, GitLab, Laravel
+</p>
+</section>
+
+<section class="slide" style="background: url(pictures/openhouse.png); background-size: cover;">
+</section>
+
+<section class="slide" style="background: url(pictures/back8.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
+<h2 style="color: white; margin-left: -1em;">Q&amp;A</a></h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+
