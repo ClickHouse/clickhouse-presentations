@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Фазинг: практические кейсы в ClickHouse</title>
+    <title>Fuzzing: Practical approaches in ClickHouse</title>
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -13,120 +13,120 @@
 </head>
 <body class="shower list">
     <header class="caption">
-        <h1>Фазинг: практические кейсы в ClickHouse</h1>
+        <h1>Fuzzing: Practical approaches in ClickHouse</h1>
     </header>
 
     <section class="slide" id="cover">
-        <h1 style="margin-top: 200px;"><span style="background: rgba(255, 255, 255, 0.75)">Фазинг: практические кейсы<br/>в ClickHouse</span></h1>
+        <h1 style="margin-top: 200px;"><span style="background: rgba(255, 255, 255, 0.75)">Fuzzing: Practical approaches in <br/>ClickHouse</span></h1>
     </section>
 
 <section class="slide">
-<h2>Про что доклад?</h2>
-<p>Не только про C++.</p>
-<p>По большей части не про C++.</p>
+<h2>What is this about?</h2>
+<p>Not only about C++.</p>
+<p>Mostly not about C++.</p>
 </section>
 
 <section class="slide">
-<h2>Фазинг</h2>
-<p>&mdash; это тестирование случайными данными <em>или условиями</em>.</p>
-<p>Есть программа, подаём ей на вход кучу мусора.</p>
-<p>Или заставляем работать в мусорных условиях.</p>
-<p>Проверяем:</p>
+<h2>Fuzzing</h2>
+<p>&mdash; is testing with random data <em>or conditions.</em>.</p>
+<p>First we start with a program, we give it a bunch of garbage as input</p>
+<p>Or forced to work in garbage conditions.</p>
+<p>What we check:</p>
 <p>
-&mdash; программа не падает;<br/>
-&mdash; не зацикливается, не выполняется слишком долго;<br/>
-&mdash; не съедает слишком много памяти;<br/>
-&mdash; внутренние инварианты не нарушаются;<br/>
-&mdash; санитайзеры не находят ошибки.
+&mdash; the program does not crash;<br/>
+&mdash; does not go into loop, and run for too long;<br/>
+&mdash; does not eat up too much memory;<br/>
+&mdash; internal invariants are not violated;<br/>
+&mdash; sanitizers do not find errors.
 </p>
 </section>
 
 <section class="slide">
-<h2>Фазинг</h2>
+<h2>Fuzzing</h2>
 <div style="float: right; text-align: right;">
 <img src="pictures/power.png" style="margin-bottom: -30px;" />
 <br><span style="padding-right: 10px; font-size: 10px;">xkcd.com</span>
 </div>
-<p>&mdash; <b>&laquo;золотая жила&raquo;</b> для поиска багов<br/>
-(там, где фазинг ещё не используют).</p>
+<p>&mdash; <b>A &laquo;gold mine&raquo;</b> for finding bugs<br/>
+(where fuzzing is not yet used).</p>
 
-<p>У вас парсер, конвертер, алгоритм сжатия?<br/>
-И вы ещё не используете фазинг???</p>
+<p>Do you have a parser, converter, compression algorithm?<br/>
+And you don't use fuzzing yet???</p>
 </section>
 
 <section class="slide">
-<h2>Какой бывает фазинг?</h2>
-<img style="float: left; height: 60%; margin-left: -60px; margin-top: -60px; margin-right: 20px;" src="pictures/optimal.webp"/>
-<p>Есть очень много способов делать фазинг.</p>
-<p>Чем больше, тем лучше :)</p>
+<h2>Types of Fuzzing</h2>
+<img style="float: left; height: 60%; margin-left: -60px; margin-top: -60px; margin-right: 20px;" src="pictures/optimal_en.webp"/>
+<p>There are so many ways to do Fuzzing.</p>
+<p>The more, the better :)</p>
 </section>
 
 <section class="slide">
-<h2>Какой бывает фазинг?</h2>
-<p>Неструктурированный:<br/> &mdash; тестирование случайными байтами;</p>
-<p>Структурированный:<br/> &mdash; тестирование случайным<br/>&emsp; структурно-корректным входом.</p>
+<h2>Types of Fuzzing</h2>
+<p> Unstructured:<br/> &mdash; testing with random bytes;</p>
+<p> Structured:<br/> &mdash; testing by a random<br/>&emsp; structurally correct input.</p>
 </section>
 
 <section class="slide">
-<h2>Какой бывает фазинг?</h2>
-<p>&mdash; случайные данные без обратной связи (тупой);</p>
-<p>&mdash; coverage guided (умный);</p>
-<p>&mdash; с логическим выводом (совсем умный).</p>
+<h2>Types of Fuzzing</h2>
+<p>&mdash; random data without feedback (stupid);</p>
+<p>&mdash; coverage guided (smart);</p>
+<p>&mdash; with a logical solvers (very smart).</p>
 </section>
 
 <section class="slide">
-<h2>Какой бывает фазинг?</h2>
-<p>Black box:<br/>&mdash; тестируем готовый бинарник <em>или сервис</em> без изменений;</p>
-<p>С инструментированием:<br/>&mdash; пересобираем программу для тестирования.</p>
+<h2>Types of Fuzzing</h2>
+<p>Black box:<br/>&mdash; we test the finished binary <em>or service</em>  without changes;</p>
+<p>With instrumentation:<br/>&mdash; rebuilding the program for testing purpose.</p>
 </section>
 
 <section class="slide">
-<h2>Какой бывает фазинг?</h2>
-<p>По входным данным:<br/>
-&mdash; подаём программе на вход кучу мусора;</p>
-<p>По настройкам и окружению:<br/>
-&mdash; включаем случайные фиче-флаги;<br/>
-&mdash; меняем системное время (<b>libfaketime</b>) и таймзоны;<br/>
+<h2>Types of Fuzzing</h2>
+<p>By input data:<br/>
+&mdash; we give the program a bunch of garbage as input;</p>
+<p>By settings and environment:<br/>
+&mdash; turn on random feature flags;<br/>
+&mdash; change the system time (<b>libfaketime</b>) and timezones;<br/>
 &mdash; Chaos Monkey;
 </p>
-<p>По способу выполнения программы:<br/>
-&mdash; проверяем случайный порядок выполнения потоков;<br/>
-&mdash; вызываем зависания серверов в распределённой среде.
+<p>By the way the program is executed::<br/>
+&mdash; check the random order of execution of threads;<br/>
+&mdash; we cause hangups of servers in a distributed environment.
 </p>
 </section>
 
 <section class="slide">
-<h2>Какой бывает фазинг?</h2>
-<p>Логический:<br/>
-&mdash; проверяем, что поведение на случайных данных корректно;<br/>
-&mdash; путём сравнения с другой реализацией; сравнения с эталоном; проверки инвариантов.
+<h2>Types of Fuzzing</h2>
+<p>Logical:<br/>
+&mdash; check that the behavior on random data is correct;<br/>
+&mdash; comparisons with another implementation; comparisons with the standard; checking invariants.
 </p>
-<p>Физический:<br/>
-&mdash; результат работы программы не важен;<br/>
-&mdash; проверяем, что программа не падает, санитайзеры не ругаются и т. п.</p>
+<p>Physical:<br/>
+&mdash; the result of the program is not important;<br/>
+&mdash; we check that the program does not crash, sanitizers do not throw error, etc.</p>
 </section>
 
 <section class="slide">
-<h2>Примеры</h2>
-<p>Пример успешного фазинга вручную:<br/>
-&mdash; дети взломали lock screen в Linux Mint:<br/>
+<h2>Examples</h2>
+<p>Example of successful manual fuzzing:<br/>
+&mdash; kids cracked lock screen in Linux Mint:<br/>
 <a href="https://www.zdnet.com/article/linux-mint-fixes-screensaver-bypass-discovered-by-two-kids/">Linux Mint fixes screensaver bypass discovered by two kids</a>.
 </p>
-<p>Пример: ядро Linux, инструмент Syzcaller:<br/>
-&mdash; нашёл больше 3000 багов, 1056 ждут исправления:<br/><a href="https://syzkaller.appspot.com/upstream">https://syzkaller.appspot.com/upstream</a>.</p>
-<p>Пример: Chromium, инструмент ClusterFuzz, больше 20 000 багов!</p>
-<p>Пример где фазинг очень помог бы:<br/>
-&mdash; креш iPhone при отображении<br/>комбинации символов из письменности Телугу:
+<p>Example: Linux kernel, Syzcaller tool:<br/>
+&mdash; Found more than 3000 bugs, 1056 pending fixes:<br/><a href="https://syzkaller.appspot.com/upstream">https://syzkaller.appspot.com/upstream</a>.</p>
+<p>Example: Chromium, ClusterFuzz tool, over 20,000 bugs!</p>
+<p>An example where fuzzing would help a lot:<br/>
+&mdash; iPhone crash when displaying<br/>a combination of characters from the Telugu language:
 <span style="font-size: 300%; position: absolute; margin-top: -60px; margin-left: 30px;">&#x0C1C;&#x0C4D;&#x0C1E;&#x200C;&#x0C3E;</span>
 </p>
 </section>
 
 <section class="slide">
-<h2>Фазеры в ClickHouse</h2>
+<h2>Fuzzing in ClickHouse</h2>
 <img style="float: right;" src="pictures/cat.png" />
-<p>Чем больше фазеров, тем лучше!</p>
-<p>Некоторые из них тупые и&nbsp;примитивные (ad-hoc fuzzer).</p>
-<p>&laquo;Не важно, как выглядит фазер, главное чтобы он ловил баги&raquo;<br/>
+<p>The more fuzzing, the better!</p>
+<p>Some of them are dumb and primitive (ad-hoc fuzzer).</p>
+<p>&laquo;It doesn’t matter what the fuzzer looks like, the main thing is that it catches bugs&raquo;<br/>
 <span style="color: gray;">&mdash; Deng Xiaoping.</span></p>
 
 <p style="color: gray; font-size: 35%; text-align: right; margin-top: 80px;">http://en.naipo.com/Portals/0/web_en/Knowledge_Center/Feature/IPNE_170224_0701.htm</p>
@@ -134,7 +134,7 @@
 
 
 <section class="slide">
-<h2>SQL фазер Олега Алексеенкова</h2>
+<h2>SQL fuzzer by Oleg Alekseenkov</h2>
 
 <code style="font-size: 50%; white-space: pre-wrap; margin-top: -3em;">$expression_cast = {
     'CAST' => sub { my ($state) = @_; '(CAST((' . one_of($state, $expression_cast) . ') AS ' . one_of($state, $type_cast) . '))' },
@@ -163,28 +163,28 @@
 </section>
 
 <section class="slide">
-<h2>SQL фазер Олега Алексеенкова</h2>
+<h2>SQL fuzzer by Oleg Alekseenkov</h2>
 
-<p>Скрипт на Perl, генерирующий SQL запросы<br/> со случайными выражениями.</p>
+<p>Perl script that generates SQL queries<br/> with random expressions.</p>
 
 <p style="margin-top: 1em;"><a href="https://github.com/ClickHouse/ClickHouse/pull/3442">https://github.com/ClickHouse/ClickHouse/pull/3442</a></p>
 
-<p>Что находит?</p>
+<p>What did it find?</p>
 
-<p>&mdash; отсутствие проверки на границы в библиотеке <a href="https://github.com/ClickHouse/ClickHouse/issues/19219">H3</a>.</p>
+<p>&mdash; lack of checking for boundaries in the <a href="https://github.com/ClickHouse/ClickHouse/issues/19219">H3 library</a>.</p>
 
 </section>
 
 <section class="slide">
-<h2>Stress Test Олега Алексеенкова</h2>
+<h2>Stress Test by Oleg Alekseenkov</h2>
 
-<p>Запускает все тесты ClickHouse параллельно,<br/>в случайном порядке, но не проверяет их результат.</p>
-<p>Тесты мешают друг-другу:<br/>создают и удаляют одинаковые таблицы и т. п.</p>
-<p>Запускаем 5 вариантов: с Debug, ASan, MSan, TSan, UBSan.</p>
-<p>Проверяем, что:<br/>
-&mdash; сервер не падает;<br/>
-&mdash; нет дедлоков (зависших запросов);<br/>
-&mdash; сервер может успешно перезапуститься после завершения теста;
+<p>Runs all ClickHouse tests in parallel,<br/>in random order, but does not check their result.</p>
+<p>Tests interfere with each other:<br/>they create and delete identical tables, etc.</p>
+<p>We launch 5 options: with Debug, ASan, MSan, TSan, UBSan.</p>
+<p>We check that:<br/>
+&mdash; the server does not fall;<br/>
+&mdash; no deadlocks (hanging requests);<br/>
+&mdash; the server can successfully restart after the test is completed;
 </p>
 
 <p>
@@ -194,28 +194,28 @@
 </section>
 
 <section class="slide">
-<h2>Stress Test Олега Алексеенкова</h2>
+<h2>Stress Test by Oleg Alekseenkov</h2>
 
-<p style="margin-top: -1em;">Что находит?</p>
+<p style="margin-top: -1em;">What does it find?</p>
 
-<p>&mdash; баги в RocksDB:<br/>
+<p>&mdash; bugs in RocksDB:<br/>
 <a href="https://github.com/facebook/rocksdb/issues/7711">facebook/rocksdb#7711</a> &mdash; race condition;<br/>
 <a href="https://github.com/facebook/rocksdb/issues/7821">facebook/rocksdb#7821</a> &mdash; use after free;<br/>
 <a href="https://github.com/facebook/rocksdb/issues/7778">facebook/rocksdb#7778</a> &mdash; misc.</p>
 
-<p>&mdash; рейсы в NuRaft, rdkafka, AMQP-CPP...</p>
-<p>&mdash; невероятный баг в simdjson: <a href="https://github.com/simdjson/simdjson/issues/169">simdjson/simdjson#169</a>.</p>
-<p>&mdash; рейс в boost? <a href="https://github.com/ClickHouse-Extras/boost/pull/8">ClickHouse-Extras/boost#8</a></p>
-<p>&mdash; баг в LLVM libunwind! <a href="https://bugs.llvm.org/show_bug.cgi?id=48186">https://bugs.llvm.org/show_bug.cgi?id=48186</a></p>
-<p>И конечно много потенциальных и настоящих багов в ClickHouse,<br/>большинство ещё до релиза.</p>
+<p>&mdash; race conditions in NuRaft, rdkafka, AMQP-CPP...</p>
+<p>&mdash; incredible bug in simdjson: <a href="https://github.com/simdjson/simdjson/issues/169">simdjson/simdjson#169</a>.</p>
+<p>&mdash; race condition in boost? <a href="https://github.com/ClickHouse-Extras/boost/pull/8">ClickHouse-Extras/boost#8</a></p>
+<p>&mdash; bug in LLVM libunwind <a href="https://bugs.llvm.org/show_bug.cgi?id=48186">https://bugs.llvm.org/show_bug.cgi?id=48186</a></p>
+<p>And of course, there are many potential and real bugs in ClickHouse,<br/>most of them before the release.</p>
 </section>
 
 <section class="slide">
 <h2>Libfuzzer</h2>
 
-<p>Добавил в ClickHouse <b>Эльдар Заитов</b>.</p>
+<p>Added to ClickHouse by <b>Eldar Zaitov</b>.</p>
 
-<p>libfuzzer &mdash; coverage guided fuzzer, доступный в LLVM/clang.</p>
+<p>libfuzzer &mdash; coverage guided fuzzer available from LLVM/clang.</p>
 
 <pre>-fsanitize=fuzzer,...<br/>-fprofile-instr-generate -fcoverage-mapping</pre>
 
@@ -229,15 +229,15 @@ int <b>LLVMFuzzerTestOneInput</b>(const uint8_t * data, size_t size)
         DB::Token token = lexer.nextToken();
         ...</code>
 
-<p><br/>Рекомендуется подложить &laquo;корпус&raquo; примеров валидных данных.</p>
+<p><br/>It is recommended to enclose a &laquo;corpus&raquo; of examples of valid data.</p>
 </section>
 
 <section class="slide">
 <h2>Libfuzzer</h2>
 
-<p>Что находит?</p>
-<p>Buffer overrun в разжатии данных:<br/> <a href="https://github.com/ClickHouse/ClickHouse/pull/8404">https://github.com/ClickHouse/ClickHouse/pull/8404</a></p>
-<p>Экспоненциальный бэктрекинг в парсере:</p>
+<p>What does it find?</p>
+<p>Buffer overrun in data decompression:<br/> <a href="https://github.com/ClickHouse/ClickHouse/pull/8404">https://github.com/ClickHouse/ClickHouse/pull/8404</a></p>
+<p>Exponential backtracking in the parser:</p>
 
 <code style="font-size: 14pt; white-space: pre-wrap;">SELECT fo,22222?LUTAY(SELECT(NOT CAUTAY(SELECT(NOT CAST(NOTT(NOT CAST(NOT NOT LEfT(NOT coARRAYlumnsFLuTAY(SELECT(NO0?LUTAY(SELECT(NOT CAUTAY(SELECT(NOT CAST(NOTT(NOT CAST(NOT NOT LEfT(NOT coARRAYlumnsFLuTAY(SELECT(NOTAYTAY(SELECT(NOTAYEFAULT(fo,22222?LUTAY(%SELECT(NOT CAST(NOT NOTAYTAY(SELECT(NOTAYEFAULT(fo,22222?LUTAY(SELECT(NOT CAST(NOT NOT (NOe)))))))))))))))))))))))))))))))))</code>
 
@@ -245,118 +245,118 @@ int <b>LLVMFuzzerTestOneInput</b>(const uint8_t * data, size_t size)
 </section>
 
 <section class="slide">
-<h2>Thread Fuzzer Алексея Миловидова</h2>
+<h2>Thread Fuzzer by Alexey Milovidov</h2>
 
-<p style="color: gray; font-size: 75%">Не путать с Thread Sanitizer.</p>
+<p style="color: gray; font-size: 75%">Not to be confused with Thread Sanitizer.</p>
 
-<p>Race conditions воспроизводятся при<br/>специфическом порядке работы потоков.</p>
-<p>Как проверить как можно больше<br/>разных случайных порядков выполнения?</p>
-<p>&mdash; Надо переключать потоки как можно чаще<br/>в случайные моменты времени.</p>
-<p><b>Но как это сделать?</b></p>
+<p>Race conditions are reproduced in<br/>a specific thread order.</p>
+<p>How to test as many different random execution orders as possible?</p>
+<p>&mdash; We need to switch streams as often as possible<br/>at random times.</p>
+<p><b>But how to do that?</b></p>
 </section>
 
 <section class="slide">
-<h2>Thread Fuzzer</h2>
+<h2>Thread Fuzzer by Alexey Milovidov</h2>
 
-<p>1. Ставим сигнал по таймеру: <b>setitimer</b>.</p>
-<p>2. Ставим хуки на функции <b>pthread_mutex_lock</b>, <b>pthread_mutex_unlock</b>.</p>
+<p>1. Set the signal on the timer: <b>setitimer</b>.</p>
+<p>2. Put hooks on <b>pthread_mutex_lock</b>, <b>pthread_mutex_unlock</b> functions.</p>
 
-<p style="margin-top: 2em;">В обработчике подкидываем монетку и делаем:</p>
+<p style="margin-top: 2em;">In the handler, we toss a coin and do:</p>
 <p>1. <b>sched_yield</b>.</p>
-<p>2. <b>sleep</b> на случайное время.</p>
-<p>3. <b>sched_setaffinity</b> на случайный CPU.</p>
+<p>2. <b>sleep</b> for a random time.</p>
+<p>3. <b>sched_setaffinity</b> on a random CPU.</p>
 </section>
 
 <section class="slide">
-<h2>Thread Fuzzer</h2>
+<h2>Thread Fuzzer by Alexey Milovidov</h2>
 
-<p>Прекрасно сочетается с <b>Thread Sanitizer</b> и <b>Stress Test</b>!</p>
-<p>А ещё находит кучу флапающих тестов
-<br/>(рейс кондишены не в программе, а в тестах).</p>
+<p>Works great with <b>Thread Sanitizer</b> and <b>Stress Test</b>!</p>
+<p>And he also finds a bunch of flaky tests
+<br/>(race not in the program but in tests).</p>
 
 <p><a href="https://github.com/ClickHouse/ClickHouse/blob/master/src/Common/ThreadFuzzer.h">https://github.com/ClickHouse/ClickHouse/blob/master/<br/>src/Common/ThreadFuzzer.h, cpp</a></p>
 </section>
 
 
 <section class="slide">
-<h2>AST Fuzzer Александра Кузьменкова</h2>
+<h2>AST Fuzzer by Alexander Kuzmenkov</h2>
 
-<p>В clickhouse-client берём запросы из тестов.<br/>
-Из разобранных запросов берём кусочки AST.<br/>
-Подставляем их случайным образом в другие запросы.<br/>
-Мутируем строковые литералы...</p>
+<p>In clickhouse-client we take requests from regression tests.<br/>
+From parsed requests, we take pieces of AST (Abstract Syntax Tree).<br/>
+We substitute them randomly in other queries.<br/>
+Mutating string literals...</p>
 
-<p>Выполняем... результат не важен, проверяем что сервер не упал.</p>
-<p>Пять вариантов: Debug, ASan, MSan, TSan, UBSan.</p>
+<p>We execute... the result is not important, we check that the server has not crashed.</p>
+<p>Five options to test with: Debug, ASan, MSan, TSan, UBSan.</p>
 
 <code style="white-space: pre-wrap;">SELECT 0.00009999999747378752 * NULL, 1 * -2, 1024, sum(toUInt64(255, 1048576 * 65537, NULL * 100.0000991821289)) FROM (SELECT 1 * 1025, intDiv(number, 1.) AS k, toUInt64('0.0000065536', 255, toUInt64(7 * NULL), NULL * 0.) FROM numbers(2 * 9223372036854775807, toUInt64(10 * 255)) GROUP BY k)</code>
 </section>
 
 
 <section class="slide">
-<h2>AST Fuzzer Александра Кузьменкова</h2>
+<h2>AST Fuzzer by Alexander Kuzmenkov</h2>
 
 <p><a href="https://github.com/ClickHouse/ClickHouse/pull/12111">https://github.com/ClickHouse/ClickHouse/pull/12111</a></p>
 
-<p>Открытие года! Больше 200 issues:</p>
+<p>Discovery of the year! Over 200 issues:</p>
 
 <p><a href="https://github.com/ClickHouse/ClickHouse/issues?q=is%3Aissue+label%3Afuzz">https://github.com/ClickHouse/ClickHouse/issues?q=is%3Aissue+label%3Afuzz</a></p>
 
-<p>Не только баги: краевые случаи, срабатывания UBSan...</p>
+<p>Not only bugs: edge cases, UBSan triggers...</p>
 
 <code style="white-space: pre-wrap;">SELECT bar((greatCircleAngle(100, -1, number, number) - number) * 2, -9223372036854775808, 1023, 100) FROM numbers(1048575);</code>
 
-<p><br/>Ругается UBSan, ASan. Где-то получается NaN -> проходят проверки на границы массива -> buffer overflow.</p>
+<p><br/>Errored in UBSan, ASan tests... Somewhere it turns out NaN -> checks for array boundaries -> buffer overflow.</p>
 </section>
 
 
 <section class="slide">
-<h2>AST Fuzzer Александра Кузьменкова</h2>
+<h2>AST Fuzzer by Alexander Kuzmenkov</h2>
 
-<p>Бонус: агрессивный фазинг новых тестов в pull requests.</p>
-<p>Тестирует новый код на краевые случаи,<br/>даже когда автор об этом не подумал.</p>
+<p>Bonus: Aggressive phasing of new tests in pull requests.</p>
+<p>Tests new code for edge cases,<br/>even when the author didn't think about it.</p>
 
 <img src="pictures/ast_fuzzer.png" />
 </section>
 
 
 <section class="slide">
-<h2>SQLancer &mdash; логический SQL фазер</h2>
+<h2>SQLancer &mdash; logical SQL phaser</h2>
 
-<p>Разработан <b>Manuel Rigger</b> в ETH Zurich.</p>
-<p>Добавил в ClickHouse <b>Илья Яцишин</b>.</p>
+<p>Developed by <b>Manuel Rigger</b> at ETH Zurich.</p>
+<p>Added to ClickHouse by <b>Ilya Yatsishin</b>.</p>
 
-<p>Генерирует случайные корректные SQL запросы и данные.</p>
-<p>Проверяет, что результат совпадает с эталонным не оптимизированным движком запросов, написанным в соответствии со стандартом SQL.</p>
+<p>Generates random valid SQL queries and data.</p>
+<p>Verifies that the result is the same as a reference unoptimized query engine written according to the SQL standard.</p>
 
-<p>Пример:</p>
+<p>Example:</p>
 
 <code style="white-space: pre-wrap;">SELECT t0.c2, t0.c1, t0.c0 FROM t0 WHERE t0.c0 ORDER BY ((t0.c2)>=(t0.c1)), (((- (((t0.c0)>(t0.c0))))) IS NULL) FORMAT TabSeparatedWithNamesAndTypes;</code>
 
-<p><br/>Недостаточная проверка типа столбца в WHERE, segfault.</p>
+<p><br/>Insufficient column type check in WHERE, result in segfault.</p>
 </section>
 
 
 <section class="slide">
-<h2>Фазеры не в ClickHouse</h2>
+<h2>Fuzzers not in ClickHouse</h2>
 
-<p><b>zzuf</b> &mdash; мутирует данные при работе с файлами и сетью.</p>
-<p><b>fuzzgrind</b> &mdash; динамическая трансляция + solver для поиска данных, проходящих условия в машинном коде (проект заброшен).</p>
-<p><b>AFL</b> &mdash; рекомендуется сборка с инструментированием аналогично <b>libfuzzer</b>, но работает снаружи процесса.</p>
-<p><b>Hongfuzz</b> &mdash; поддерживает hardware counters для coverage.</p>
-<p><b>Radamsa</b> &mdash; не фазер, а отдельный мутатор данных.</p>
-<p>Сканеры безопасности сервисов &mdash; тоже фазеры, пример: <b>sqlmap</b>.</p>
+<p><b>zzuf</b> &mdash; mutates data when working with files and the network.</p>
+<p><b>fuzzgrind</b> &mdash; dynamic translation + solver for finding data that passes conditions in machine code (project abandoned).</p>
+<p><b>AFL</b> &mdash; Instrumentation builds are recommended, similar to <b>libfuzzer</b>, but run outside of the process.</p>
+<p><b>Hongfuzz</b> &mdash; supports hardware counters for coverage.</p>
+<p><b>Radamsa</b> &mdash; is not a fuzzer, but a separate data mutator.</p>
+<p>Service security scanners are also phasers, for example:<b> sqlmap</b>.</p>
 </section>
 
 
 
 <section class="slide">
-<h2>Выводы</h2>
-<p><b>Надо использовать фазинг.</b> Какой угодно и побольше.</p>
-<p>Мы используем фазеры в CI &mdash; для pull requests и для коммитов.</p>
+<h2>Conclusion</h2>
+<p><b>You have to use Fuzzing.</b> Everywhere, as much as possible!</p>
+<p>We use fuzzer in CI &mdash; for pull request and for commit.</p>
 
-<p style="margin-top: 3em;">Нужно больше фазеров.</p>
-<p><b style="color: green;">Баги не пройдут!</b></p>
+<p style="margin-top: 3em;">Need more fuzzer.</p>
+<p><b style="color: green;">Bugs shall not pass!</b></p>
 </section>
 
 
