@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse Roadmap 2018..2019</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse Roadmap 2018..2019</h1>
+    </header>
+
+    <section class="slide" id="cover">
+        <h1 style="margin-top: 180px; font-size: 42pt;">ClickHouse Roadmap 2018..2019</h1>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">То, о чём не страшно рассказывать</h2>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">Декабрь 2018</h2>
+        <p><b>LowCardinality</b> типы данных в продакшене.</p>
+        <p>Выбор алгоритма сжатия на уровне отдельных столбцов.</p>
+        <p>Поддержка вычислимых DEFAULT выражений<br/>при импорте JSONEachRow.</p>
+        <p>Поддержка формата <b>Parquet</b> для импорта и экспорта.</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">Январь 2019</h2>
+        <p>Импорт/экспорт данных в <b>HDFS</b> с помощью табличной функции.</p>
+        <p>Импорт/экспорт данных в <b>S3</b> с помощью табличной функции.</p>
+        <p>Возможность добавления новых столбцов<br/>в ключ сортировки MergeTree таблиц.</p>
+        <p>Уменьшение объёма метаданных в ZooKeeper.</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">Февраль 2019</h2>
+        <p>Возможность создания словарей посредством DDL запросов.</p>
+        <p>Адаптивная гранулированность индекса в MergeTree таблицах.</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">То, о чём можно рассказывать с&nbsp;осторожностью</h2>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">Управление правами доступа</h2>
+        <p>Ограничение доступа на уровне таблиц, столбцов и строк<br>(row-level security).</p>
+        <p>Ролевая модель управления доступом (RBAC).</p>
+        <p>Возможность подключения внешней системы<br/>для аутентификации (LDAP, Kerberos).</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">Разделение ресурсов запросами</h2>
+        <p>Настраиваемые пулы ресурсов: доля CPU, IO, Network, RAM.</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">Развитие поддержки JOIN</h2>
+        <p>Несколько JOIN без использования вложенных подзапросов.</p>
+        <p>Merge JOIN для соединения очень больших множеств.</p>
+        <p>Bucket-Shuffle JOIN для оптимизации больших распределённых JOIN.</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">(весна/лето 2019)</h2>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">То, о чём можно рассказывать<br/>только хорошим друзьям</h2>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">Вторичные индексы</h2>
+        <p>Если быть точным &mdash; индексные структуры для пропуска данных.</p>
+        <p>min/max, distinct values, micro bloom-filter.</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">Методы машинного обучения<br/>как агрегатные функции</h2>
+        <p>Возможность создать и применить модель<br/>непосредственно в ClickHouse.</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">ASOF JOIN</h2>
+        <p>Что это такое?</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">Оптимизация ORDER BY и GROUP BY по ключевым столбцам.</h2>
+        <code>SELECT * FROM sensors ORDER BY time DESC LIMIT 10</code>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 26pt;">Расширение возможностей работы с гео-данными</h2>
+        <p>Функции для работы с geohash.</p>
+        <p>Словари полигонов для поиска (запросы вида region by location).</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 26pt;">Продвинутые алгоритмы работы со строками</h2>
+        <p>Алгоритм min-hash для нечёткого поиска полудубликатов.</p>
+        <p>Быстрый матчинг большого количества подстрок.</p>
+        <p>Возможность создания дополнительной стркутуры для ускорения brute-force поиска подстроки в строке.</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">Хранение данных на нескольких разделах</h2>
+        <p>Разделение горячих и холодных данных на SSD и HDD.</p>
+        <p>Возможность использования JBOD.</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">Правильная буферизация для MergeTree</h2>
+        <p>Избавиться от проблем с частыми вставками.</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">(осень/зима 2019)</h2>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">.</h2>
+    </section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+</body>
+</html>

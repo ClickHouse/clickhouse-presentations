@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Обфускация баз данных</title>
+    <title>Database Obfuscation</title>
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -13,30 +13,30 @@
 </head>
 <body class="shower list">
     <header class="caption">
-        <h1>Обфускация баз данных</h1>
+        <h1>Database Obfuscation</h1>
     </header>
     <section class="slide" id="cover" style="background: #FFF url('pictures/title.png') no-repeat; background-size: 100%;">
-        <h1 style="margin-top: 50px; margin-left: -40px; line-height: 150%">Обфускация баз данных</h1>
-        <p style="color: gray; margin-left: 260px; margin-top: 2em;">Алексей Миловидов</p>
+        <h1 style="margin-top: 50px; margin-left: -40px; line-height: 150%">Database Obfuscation</h1>
+        <p style="color: gray; margin-left: 260px; margin-top: 2em;">Alexey Milovidov</p>
     </section>
 
 
 <section class="slide">
-<h2>ClickHouse не тормозит?</h2>
-<p>ClickHouse работает быстро.</p>
-<p>Это известный факт.</p>
-<p>Все и так знают.</p>
+<h2>Is ClickHouse Fast?</h2>
+<p>ClickHouse is fast.</p>
+<p>This is a known fact.</p>
+<p>Everyone knows this.</p>
 </section>
 
 
 <section class="slide">
-<h2>Как мы можем быть в этом уверены?</h2>
-<p>Нужны тесты производительности.</p>
-<p>Мы добавили первые автоматизированные тесты в 2013 году.</p>
-<p>За основу взят набор данных Яндекс.Метрики из 1 млрд просмотров страниц.</p>
-<p>Запросы &mdash; те, которые предполагалось выполнять из интерфейса Яндекс.Метрики.</p>
-<p>Добавили сравнение с другими системами: Vertica, MonetDB.</p>
-<p>Часть функциональных тестов использует тот же набор данных.</p>
+<h2>How Can We Be Sure?</h2>
+<p>We need performance tests.</p>
+<p>We added the first automated tests in 2013.</p>
+<p>Based on Yandex.Metrica dataset of 1 billion page views.</p>
+<p>Queries &mdash; those expected to be executed from the Yandex.Metrica interface.</p>
+<p>Added comparisons with other systems: Vertica, MonetDB.</p>
+<p>Part of functional tests use the same dataset.</p>
 </section>
 
 
@@ -46,112 +46,112 @@
 
 
 <section class="slide">
-<h2>Тесты на закрытых данных</h2>
-<p>В 2013 году ClickHouse только начинал использоваться внутри Яндекса.</p>
-<p>В 2016 году ClickHouse стал open-source<br/>и закрытые тесты стали серьёзной проблемой.</p>
+<h2>Tests on Closed Data</h2>
+<p>In 2013, ClickHouse was just beginning to be used inside Yandex.</p>
+<p>In 2016, ClickHouse became open-source<br/>and closed tests became a serious problem.</p>
 </section>
 
 
 <section class="slide">
-<h2>Тесты на закрытых данных</h2>
-<p>Тесты производительности невоспроизводимы снаружи<br/>&mdash; для их запуска нужны закрытые данные, которые невозможно опубликовать.</p>
-<p>Часть функциональных тестов также недоступна снаружи.</p>
-<p>Тесты производительности не развиваются. Существует потребность в существенном расширении набора тестов производительности, чтобы можно было изолированным образом проверять наличие изменений в скорости работы отдельных деталей системы.</p>
-<p>Тесты производительности не запускаются покоммитно и для pull requests, у внешних разработчиков нет возможности проверить свой код на регрессии производительности.</p>
+<h2>Tests on Closed Data</h2>
+<p>Performance tests are not reproducible externally<br/>&mdash; they require closed data that cannot be published.</p>
+<p>Part of functional tests are also not available externally.</p>
+<p>Performance tests don't evolve. There is a need to significantly expand the performance test suite to check for performance changes in individual system components in isolation.</p>
+<p>Performance tests are not run per-commit and for pull requests, external developers have no way to check their code for performance regressions.</p>
 </section>
 
 
 <section class="slide">
-<h2>Решения</h2>
-<p>Выкинуть старые тесты?</p>
-<p>&mdash; известные бенчмарки:<br/>TPC-H, TPC-DS, <a href="https://clickhouse.com/docs/en/getting_started/example_datasets/star_schema/">Star Schema Benchmark</a>, <a href="https://clickhouse.com/docs/en/getting_started/example_datasets/amplab_benchmark/">AMPLab Big Data Benchmark</a>;</p>
-<p>&mdash; открытые наборы данных:<br/><a href="https://clickhouse.com/docs/en/getting_started/example_datasets/ontime/">Transportation Statistics "Ontime" data</a>; <a href="https://clickhouse.com/docs/en/getting_started/example_datasets/nyc_taxi/">NYC Taxi rides</a>;</p>
-<p>Но:</p>
-<p>&mdash; нужно проверять регрессии производительности на наших запросах;
-<br/>&mdash; нужно сохранить имеющиеся функциональные тесты;
-<br/>&mdash; переписывать тесты &mdash; слишком затратно.</p>
+<h2>Solutions</h2>
+<p>Throw away old tests?</p>
+<p>&mdash; known benchmarks:<br/>TPC-H, TPC-DS, <a href="https://clickhouse.com/docs/en/getting_started/example_datasets/star_schema/">Star Schema Benchmark</a>, <a href="https://clickhouse.com/docs/en/getting_started/example_datasets/amplab_benchmark/">AMPLab Big Data Benchmark</a>;</p>
+<p>&mdash; open datasets:<br/><a href="https://clickhouse.com/docs/en/getting_started/example_datasets/ontime/">Transportation Statistics "Ontime" data</a>; <a href="https://clickhouse.com/docs/en/getting_started/example_datasets/nyc_taxi/">NYC Taxi rides</a>;</p>
+<p>But:</p>
+<p>&mdash; need to check performance regressions on our queries;
+<br/>&mdash; need to preserve existing functional tests;
+<br/>&mdash; rewriting tests is too costly.</p>
 </section>
 
 
 <section class="slide">
 <h2>&nbsp;</h2>
-<p style="font-size: 24pt;">Производительность важно тестировать<br/>на настоящих данных с продакшна!</p>
+<p style="font-size: 24pt;">It's important to test performance<br/>on real production data!</p>
 </section>
 
 
 <section class="slide">
-<h2>Важны настоящие данные</h2>
-<p style="margin-top: -1em;">Пример: если генерировать тестовые данные равномерно-случайно,
-<br/>то данные не будут сжиматься.</p>
-<p>Но сжатие данных &mdash; это важнейшая характеристика для аналитических СУБД.</p>
-<p>Сжатие данных &mdash; это всегда компромисс между скоростью работы и коэффициентом сжатия,
-в котором нет единственно правильного решения.</p>
-<p>Если не учитывать сжатие данных при тестировании производительности, то результаты не имеют смысла.</p>
+<h2>Real Data is Important</h2>
+<p style="margin-top: -1em;">Example: if we generate test data uniformly and randomly,
+<br/>then the data won't compress.</p>
+<p>But data compression is the most important characteristic for analytical databases.</p>
+<p>Data compression is always a trade-off between performance and compression ratio,
+where there is no single correct solution.</p>
+<p>If we don't consider data compression when testing performance, the results are meaningless.</p>
 <p><a href="https://yandex.github.io/clickhouse-presentations/highload_siberia_2018/">https://yandex.github.io/clickhouse-presentations/highload_siberia_2018/</a></p>
 </section>
 
 
 <section class="slide">
-<h2>Важны настоящие данные</h2>
-<p>Вывод:</p>
-<p>Тестовые данные должны обладать<br/>реалистичным коэффициентом сжатия.</p>
+<h2>Real Data is Important</h2>
+<p>Conclusion:</p>
+<p>Test data must have<br/>realistic compression ratios.</p>
 </section>
 
 
 <section class="slide">
-<h2>Важны настоящие данные</h2>
-<p>Пример:</p>
-<p>Пусть нас интересует скорость выполнения запроса:</p>
+<h2>Real Data is Important</h2>
+<p>Example:</p>
+<p>Suppose we're interested in the query performance:</p>
 <code style="line-height: 1.5">SELECT RegionID, <b>uniq(UserID)</b> AS visitors
 FROM test.hits
 <b>GROUP BY RegionID</b>
 ORDER BY visitors DESC
 LIMIT 10</code>
-<p style="margin-top: 1em;">Такой запрос &mdash; типичный для Яндекс.Метрики</p>
+<p style="margin-top: 1em;">Such a query is typical for Yandex.Metrica</p>
 </section>
 
 
 <section class="slide">
-<h2 style="font-size: 32pt;">Что важно для скорости работы запроса?</h2>
-<p>&mdash; какая структура данных используется для расчёта агрегатной функции uniq;</p>
-<p>&mdash; сколько есть разных RegionID;</p>
-<p>&mdash; сколько оперативки будет требовать каждое состояние функции uniq;</p>
-<p>&mdash; важно знать, что количество данных для разных регионов распределено неравномерно (по степенному закону);</p>
-<p>&mdash; а если так &mdash; то нам важно, чтобы состояния агрегатной функции uniq с маленьким количеством значений, использовали мало памяти.</p>
+<h2 style="font-size: 32pt;">What's Important for Query Performance?</h2>
+<p>&mdash; which data structure is used for the uniq aggregate function;</p>
+<p>&mdash; how many different RegionID values exist;</p>
+<p>&mdash; how much memory each uniq function state will require;</p>
+<p>&mdash; it's important to know that the data volume for different regions is distributed unevenly (power law);</p>
+<p>&mdash; and if so &mdash; then it's important that uniq aggregate function states with few values use little memory.</p>
 </section>
 
 
 <section class="slide">
-<h2 style="font-size: 32pt;">Что важно для скорости работы запроса?</h2>
-<p>Если просто использовать <b>HyperLogLog</b>
-<br/>&mdash; получим потребление фиксированного количества памяти
-<br/>для каждого RegionID &mdash; ключа агрегации.</p>
-<p>&mdash; гарантированно низкая производительность.</p>
+<h2 style="font-size: 32pt;">What's Important for Query Performance?</h2>
+<p>If we just use <b>HyperLogLog</b>
+<br/>&mdash; we get fixed memory consumption
+<br/>for each RegionID &mdash; aggregation key.</p>
+<p>&mdash; guaranteed low performance.</p>
 </section>
 
 
 <section class="slide">
-<h2>Важны настоящие данные</h2>
-<p>Вывод:</p>
-<p>Тестовые данные должны репрезентовать свойства<br/>распределения значений в данных:</p>
-<p>&mdash; кардинальности &mdash; количество различных значений в столбцах;</p>
-<p>&mdash; взаимные кардинальности нескольких разных столбцов;</p>
-<p>* но эти требования слегка противоречат анонимизации.</p>
+<h2>Real Data is Important</h2>
+<p>Conclusion:</p>
+<p>Test data must represent distribution properties:</p>
+<p>&mdash; cardinalities &mdash; number of distinct values in columns;</p>
+<p>&mdash; joint cardinalities of multiple columns;</p>
+<p>* but these requirements slightly contradict anonymization.</p>
 </section>
 
 
 <section class="slide">
-<h2>Важны настоящие данные</h2>
-<p>Пример:</p>
-<p>Пусть мы тестируем производительность
-<br/>не аналитической СУБД, а чего-нибудь попроще:
-<br/>например, хэш-таблиц.</p>
-<p>Скорость работы хэш-таблиц зависит от баланса<br/>между качеством и скоростью работы хэш-функции.</p>
+<h2>Real Data is Important</h2>
+<p>Example:</p>
+<p>Suppose we're testing the performance
+<br/>not of an analytical database, but something simpler:
+<br/>for example, hash tables.</p>
+<p>Hash table performance depends on the balance<br/>between quality and speed of the hash function.</p>
 </section>
 
 
 <section class="slide">
-<h2>Важны настоящие данные</h2>
+<h2>Real Data is Important</h2>
 <div style="background-color: #DEF; line-height: 1.25; width: 50%; padding: 10px; border-radius: 25px;">
 um, it's just a trivial test ...
 <br/>clickhouse hashmap takes 10GB
@@ -173,47 +173,47 @@ clickhouse hashmap is faster
 </section>
 
 <section class="slide">
-<h2>Задача</h2>
-<p>Получить данные для тестирования производительности.</p>
-<p>Такой же структуры, как закрытые данные.</p>
-<p>Анонимизированные, пригодные к публикации наружу.</p>
-<p>Но с сохранением важных для тестирования свойств:</p>
-<p>&mdash; коэффициентов сжатия;
-<br/>&mdash; кардинальностей значений;
-<br/>&mdash; свойств вероятностных распределений.
+<h2>The Task</h2>
+<p>Obtain data for performance testing.</p>
+<p>Same structure as the closed data.</p>
+<p>Anonymized, suitable for public release.</p>
+<p>But preserving properties important for testing:</p>
+<p>&mdash; compression ratios;
+<br/>&mdash; value cardinalities;
+<br/>&mdash; probability distribution properties.
 </p>
 </section>
 
 
 <section class="slide">
-<h2>Задача-максимум</h2>
-<p>Сделать инструмент, доступный для внешних людей,<br/>с помощью которого каждый может анонимизировать свой набор данных для публикации.</p>
-<p>Чтобы мы отлаживали и тестировали производительность<br/>на чужих данных, аналогичных продакшну.</p>
-<p>И ещё: на анонимизированные данные<br/>должно быть всё ещё интересно смотреть.</p>
+<h2>Maximum Task</h2>
+<p>Create a tool available to external users,<br/>with which anyone can anonymize their dataset for publication.</p>
+<p>So we can debug and test performance<br/>on other people's data, similar to production.</p>
+<p>And also: anonymized data<br/>should still be interesting to look at.</p>
 </section>
 
 
 <section class="slide">
-<h2>Попытки решения</h2>
+<h2>Solution Attempts</h2>
 </section>
 
 <section class="slide">
-<h2>Явные вероятностные модели</h2>
+<h2>Explicit Probabilistic Models</h2>
 <img style="height: 60%" src="pictures/prob_density.png"/>
 <p style="color: gray; font-size: 8pt;">Wikipedia, public domain (2008)</p>
 </section>
 
 <section class="slide">
-<h2>Явные вероятностные модели</h2>
-<p>&laquo;На глаз&raquo; для каждого столбца выбрать<br/>семейство вероятностных распределений.</p>
-<p>По статистике оценить параметры распределения из этого семейства.</p>
-<p>С помощью полученного распределения генерировать новые данные.</p>
+<h2>Explicit Probabilistic Models</h2>
+<p>&laquo;By eye&raquo; for each column select<br/>a family of probability distributions.</p>
+<p>Estimate the distribution parameters from this family using statistics.</p>
+<p>Generate new data using the obtained distribution.</p>
 </section>
 
 
 <section class="slide">
-<h2>Явные вероятностные модели</h2>
-<p style="margin-top: -1em;">Результат &mdash; скрипт на C++:</p>
+<h2>Explicit Probabilistic Models</h2>
+<p style="margin-top: -1em;">Result &mdash; a C++ script:</p>
 <code style="line-height: 1.5; font-size: 14pt; margin-left: -30px; margin-right: -30px;">EventTime.day(std::discrete_distribution&lt;>({
     0, 0, 13, 30, 0, 14, 42, 5, 6, 31, 17, 0, 0, 0, 0, 23, 10, ...})(random));
 EventTime.hour(std::discrete_distribution&lt;>({
@@ -231,120 +231,120 @@ auto get_random_with_seed = [&amp;]{ return random_with_seed(); };</code>
 
 
 <section class="slide">
-<h2>Явные вероятностные модели</h2>
-<p>Эвристики:</p>
-<p>Для сохранения непрерывности временных рядов, моделируем не само значение, а разность с предыдущим.</p>
-<p>Зависимости между столбцами приходится выписывать в явном виде: например, для генерации IP-адреса использовать хэш от идентификатора посетителя и добавлять немного случайности.</p>
+<h2>Explicit Probabilistic Models</h2>
+<p>Heuristics:</p>
+<p>To preserve continuity of time series, we model not the value itself, but the difference from the previous one.</p>
+<p>Dependencies between columns must be written explicitly: for example, to generate an IP address use a hash of the visitor ID and add some randomness.</p>
 </section>
 
 
 <section class="slide">
-<h2>Явные вероятностные модели</h2>
-<p>Достоинства:</p>
-<p style="color: green;">&mdash; идейная простота;</p>
+<h2>Explicit Probabilistic Models</h2>
+<p>Advantages:</p>
+<p style="color: green;">&mdash; conceptual simplicity;</p>
 
-<p>Недостатки:</p>
-<p style="color: red;">&mdash; трудоёмкость реализации;
-<br/>&mdash; реализованное решение заточено для одного вида данных.</p>
+<p>Disadvantages:</p>
+<p style="color: red;">&mdash; implementation effort;
+<br/>&mdash; the implemented solution is tailored to one type of data.</p>
 
-<p>Таблица "hits" &mdash; более 100 столбцов по состоянию на 2013 год.<br/>Для всех из них надо подобрать модель :(</p>
+<p>The "hits" table has more than 100 columns as of 2013.<br/>All of them need a model :(</p>
 </section>
 
 
 <section class="slide">
-<h2>Явные вероятностные модели</h2>
-<p>Модели можно подбирать автоматически<br/>
-&mdash; best fit из набора моделей + регуляризация.</p>
-<p>Зависимости между данными тоже можно искать автоматически<br/>
-&mdash; считать relative entropy между каждой парой столбцов.</p>
+<h2>Explicit Probabilistic Models</h2>
+<p>Models can be selected automatically<br/>
+&mdash; best fit from a set of models + regularization.</p>
+<p>Dependencies between data can also be found automatically<br/>
+&mdash; calculate relative entropy between each pair of columns.</p>
 
-<p>Всё равно слишком трудоёмко.</p>
+<p>Still too labor-intensive.</p>
 </section>
 
 
 <section class="slide">
-<h2>Нейронные сети</h2>
+<h2>Neural Networks</h2>
 <img style="height: 60%" src="pictures/nn_cat.jpeg" />
 <p style="color: gray; font-size: 8pt;"><a href="https://thiscatdoesnotexist.com/">https://thiscatdoesnotexist.com/</a> (2019)</p>
 </section>
 
 <section class="slide">
-<h2>Нейронные сети</h2>
+<h2>Neural Networks</h2>
 <p>&laquo;The Unreasonable Effectiveness of Recurrent Neural Networks&raquo;</p>
 <p><a href="http://karpathy.github.io/2015/05/21/rnn-effectiveness/">http://karpathy.github.io/2015/05/21/rnn-effectiveness/</a></p>
 
-<p>Задачу взял случайный человек &laquo;с улицы&raquo;
-<br/>&mdash; студент ВШЭ в качестве своего диплома.</p>
+<p>The task was taken by a random person &laquo;from the street&raquo;
+<br/>&mdash; a HSE student for their thesis.</p>
 
-<p>(Для получения набора тестовых данных, подписано NDA).</p>
+<p>(To obtain the test dataset, NDA was signed).</p>
 </section>
 
 
 <section class="slide">
-<h2>Нейронные сети</h2>
-<p>Требуется генерировать структурированные данные, а не просто текст.</p>
-<p>Два способа:</p>
-<p>Можно оставить стуктуру данных фиксированной,<br/> и генерировать только значения &mdash; &laquo;наполнители&raquo;.<br/>Но для этого надо адаптировать код.</p>
-<p>Можно генерировать текстовый дамп. В нём будут невалидные строки, но их можно просто пропускать при загрузке.</p>
+<h2>Neural Networks</h2>
+<p>Need to generate structured data, not just text.</p>
+<p>Two approaches:</p>
+<p>Can keep data structure fixed,<br/> and only generate values &mdash; &laquo;fillers&raquo;.<br/>But this requires code adaptation.</p>
+<p>Can generate text dumps. There will be invalid lines, but they can simply be skipped during loading.</p>
 </section>
 
 
 <section class="slide">
-<h2>Нейронные сети</h2>
-<p>Качество данных на первый взгляд Ок:</p>
+<h2>Neural Networks</h2>
+<p>Data quality at first glance is OK:</p>
 <img style="width: 90%" src="pictures/lstm.jpg"/>
-<p style="color: gray; font-size: 8pt;">Шариф Ринатович Анвардинов, 2018</p>
+<p style="color: gray; font-size: 8pt;">Sharif Rinatovich Anvardinov, 2018</p>
 </section>
 
 
 <section class="slide">
-<h2>Нейронные сети (не работают)</h2>
-<p>Скорость генерации &mdash; примерно <span style="color: red;">100 строк в секунду</span><br/>на одной машине с CPU.</p>
-<p>&mdash; Не успеем сгенерировать дата-сет из 1 млрд строк<br/>до защиты диплома.</p>
-<p>Размер модели &mdash; около гигабайта<br/>
-(после обучения на наборе данных в несколько гигабайт)</p>
-<p>&mdash; Анонимизация данных становится под вопросом.</p>
-<p>Сжатие нейронной сети и ускорение inference
-<br/>&mdash; должно быть возможно, но никто ничего не сделал.</p>
+<h2>Neural Networks (don't work)</h2>
+<p>Generation speed &mdash; approximately <span style="color: red;">100 rows per second</span><br/>on one machine with CPU.</p>
+<p>&mdash; Won't manage to generate a 1 billion row dataset<br/>before thesis defense.</p>
+<p>Model size &mdash; about a gigabyte<br/>
+(after training on a dataset of several gigabytes)</p>
+<p>&mdash; Data anonymization becomes questionable.</p>
+<p>Neural network compression and inference acceleration
+<br/>&mdash; should be possible, but nobody did anything.</p>
 </section>
 
 <section class="slide">
 <img style="float: right; height: 60%;" src="pictures/not_optimal.webp" />
-<h2>Нейронные сети</h2>
-<p>Решение полностью непрактично<br/>...по крайней мере сейчас.</p>
-<p>Человек защитил диплом с отличной оценкой :)</p>
-<p>Код выкинули и больше не использовали.</p>
+<h2>Neural Networks</h2>
+<p>Solution is completely impractical<br/>...at least for now.</p>
+<p>The person defended their thesis with an excellent grade :)</p>
+<p>Code was thrown out and never used again.</p>
 </section>
 
 
 <section class="slide">
-<h2>Мутация сжатых данных</h2>
+<h2>Compressed Data Mutation</h2>
 </section>
 
 <section class="slide">
-<h2>Мутация сжатых данных</h2>
-<p>Нужно сгенерировать данные</p><p>&mdash;у которых коэффициенты сжатия будут<br/>точно такие же, как у исходных данных;</p><p>&mdash;и чтобы данные разжимались с точно такой же скоростью.</p><p>Как это сделать?</p>
+<h2>Compressed Data Mutation</h2>
+<p>Need to generate data</p><p>&mdash;whose compression ratios will be<br/>exactly the same as the original data;</p><p>&mdash;and data decompresses at exactly the same speed.</p><p>How to do this?</p>
 </section>
 
 <section class="slide">
-<h2>Мутация сжатых данных</h2>
-<p>Нужно редактировать байты сжатых данных напрямую!</p>
-<p>Тогда размер сжатых данных не поменяется,<br/> а сами данные поменяются.</p>
-<p>Да ещё и всё быстро работать будет.</p>
+<h2>Compressed Data Mutation</h2>
+<p>Need to edit compressed data bytes directly!</p>
+<p>Then the compressed data size won't change,<br/> but the data itself will change.</p>
+<p>And everything will work fast too.</p>
 </section>
 
 <section class="slide">
-<h2>Мутация сжатых данных</h2>
-<p style="margin-top: -1em;">Допустим, нас интересует только LZ4.</p>
-<p>Данные, сжатые с помощью LZ4, состоят из команд двух видов:
-<br/>&mdash; скопировать следующие N байт как есть (называется "literals");
-<br/>&mdash; повторить N байт, которые были в файле на расстоянии M (называется "match", минимальная длина повторения равна 4).</p>
-<p>В сжатом файле будем оставлять match как есть,<br/>а в literals менять значения байтов.</p>
-<p>В результате после разжатия получим файл, в котором все повторяющиеся последовательности длины не менее 4 так же повторяются и повторяются на таких же расстояниях, но при этом состоят из другого набора байт.</p>
+<h2>Compressed Data Mutation</h2>
+<p style="margin-top: -1em;">Let's say we're only interested in LZ4.</p>
+<p>Data compressed with LZ4 consists of two types of commands:
+<br/>&mdash; copy the next N bytes as is (called "literals");
+<br/>&mdash; repeat N bytes that were in the file at distance M (called "match", minimum repetition length is 4).</p>
+<p>In the compressed file we'll leave matches as is,<br/>but change byte values in literals.</p>
+<p>As a result, after decompression we get a file where all repeating sequences of length 4 or more still repeat and repeat at the same distances, but consist of a different set of bytes.</p>
 </section>
 
 <section class="slide">
-<h2>Мутация сжатых данных</h2>
+<h2>Compressed Data Mutation</h2>
 <p>URL:</p>
 <code style="margin-left: -50px; margin-right: -50px;">http://ljc.she/kdoqdqwpgafe/klwlpm&amp;qw=962788775I0E7bs7OXeAyAx
 http://ljc.she/kdoqdqwdffhant.am/wcpoyodjit/cbytjgeoocvdtclac
@@ -360,41 +360,41 @@ http://ljc.she/kdoqdqwpdtu-Unu-Rjanjna-bbcohu-702130</code>
 </section>
 
 <section class="slide">
-<h2>Мутация сжатых данных</h2>
-<p>Недостатки:</p>
-<p>&mdash; не сохраняются зависимости между столбцами;</p>
-<p>&mdash; в разных сжатых блоках данные преобразуются по-разному;</p>
-<p>&mdash; данные <span style="color: red;">недостаточно анонимизируются</span>.</p>
+<h2>Compressed Data Mutation</h2>
+<p>Disadvantages:</p>
+<p>&mdash; dependencies between columns are not preserved;</p>
+<p>&mdash; data in different compressed blocks is transformed differently;</p>
+<p>&mdash; data <span style="color: red;">is not anonymized enough</span>.</p>
 </section>
 
 
 <section class="slide">
-<h2>Случайные перестановки</h2>
-<p>и не только</p>
+<h2>Random Permutations</h2>
+<p>and more</p>
 </section>
 
 <section class="slide">
-<h2>Случайные перестановки</h2>
+<h2>Random Permutations</h2>
 <p style="margin-top: -1em;"><a href="http://fabiensanglard.net/fizzlefade/">http://fabiensanglard.net/fizzlefade/</a></p>
 <img style="height: 60%" src="pictures/permutation.gif" />
 <p style="color: gray; font-size: 8pt;">Wolfenstein 3D, Id Software, 1992; Fabien Sanglard, 2017</p>
 </section>
 
 <section class="slide">
-<h2>Случайные перестановки</h2>
-<p>Взаимнооднозначное преобразование множества значений,<br/>которое выглядит случайным.</p>
-<p>Пример: Linear-Feedback Shift Register</p>
+<h2>Random Permutations</h2>
+<p>A one-to-one transformation of a set of values,<br/>that looks random.</p>
+<p>Example: Linear-Feedback Shift Register</p>
 <img style="width: 90%; margin-top: -1em;" src="pictures/lfsr.png"/>
 <p style="color: gray; font-size: 8pt;">Wikipedia (KCAuXy4p - Own work), CC0, 2017</p>
 </section>
 
 <section class="slide">
-<h2>Случайные перестановки</h2>
-<p>Может быть составлено из более простых<br/>взаимнооднозначных преобразований.</p>
-<p>Примеры:</p>
-<p>&mdash; умножение на нечётное число с переполнением;
+<h2>Random Permutations</h2>
+<p>Can be composed of simpler<br/>one-to-one transformations.</p>
+<p>Examples:</p>
+<p>&mdash; multiplication by an odd number with overflow;
 <br/>&mdash; xor-shift: x ^= x >> N;
-<br/>&mdash; CRC-N, где N &mdash; число бит аргумента;</p>
+<br/>&mdash; CRC-N, where N is the number of argument bits;</p>
 <p><a href="https://preshing.com/20121224/how-to-generate-a-sequence-of-unique-random-integers/">https://preshing.com/20121224/how-to-generate-a-sequence-of-unique-random-integers/</a></p>
 </section>
 
@@ -408,65 +408,65 @@ http://ljc.she/kdoqdqwpdtu-Unu-Rjanjna-bbcohu-702130</code>
 </section>
 
 <section class="slide">
-<h2>Feistel Network (один раунд)</h2>
-<p style="margin-top: -1em;">1. Биты аргумента разделяются на две половинки:</p>
+<h2>Feistel Network (one round)</h2>
+<p style="margin-top: -1em;">1. Argument bits are split into two halves:</p>
 <code>arg: xxxxyyyy
 <span style="color: green;">arg_l</span>: xxxx
 <span style="color: blue;">arg_r</span>: yyyy</code>
 
-<p style="margin-top: 1em;">2. На место левой половинки ставится правая. А на место правой ставится xor от левой половинки и F(правой половинки):</p>
+<p style="margin-top: 1em;">2. The right half goes to the left position. And the right position gets xor of the left half and F(right half):</p>
 
 <code>res: yyyyzzzz
 <span style="color: blue;">res_l</span> = yyyy = <span style="color: blue;">arg_r</span>
 <span style="color: #F60;">res_r</span> = zzzz = <span style="color: green;">arg_l</span> ^ F(<span style="color: blue;">arg_r</span>)</code>
 
-<p style="margin-top: 1em;">Это преобразование обратимо:<br/>мы можем вычислить F(<span style="color: blue;">res_l</span>) ^ <span style="color: #F60;">res_r</span> и получить <span style="color: green;">arg_l</span>.</p>
+<p style="margin-top: 1em;">This transformation is reversible:<br/>we can compute F(<span style="color: blue;">res_l</span>) ^ <span style="color: #F60;">res_r</span> and get <span style="color: green;">arg_l</span>.</p>
 </section>
 
 <section class="slide">
-<h2>Случайные перестановки</h2>
-<p>Будем использовать случайные перестановки<br/>для преобразования числовых столбцов.</p>
-<p>&mdash; полностью сохраняются кардинальности;</p>
-<p>&mdash; полностью сохраняются взаимные кардинальности;</p>
-<p>&mdash; повторяющиеся значения продолжают повторяться<br/>на таком же расстоянии друг от друга;</p>
-<p>Будем также сохранять порядок величин.</p>
-<p>&mdash; перестановки в пределах одного size class.</p>
+<h2>Random Permutations</h2>
+<p>We'll use random permutations<br/>to transform numeric columns.</p>
+<p>&mdash; cardinalities are fully preserved;</p>
+<p>&mdash; joint cardinalities are fully preserved;</p>
+<p>&mdash; repeating values continue to repeat<br/>at the same distance from each other;</p>
+<p>We'll also preserve order of magnitude.</p>
+<p>&mdash; permutations within one size class.</p>
 </section>
 
 <section class="slide">
-<h2>Марковские модели</h2>
+<h2>Markov Models</h2>
 <p><a href="https://yandex.ru/referats/">https://yandex.ru/referats/</a></p>
-<p>Order-N марковская модель
-<br/>&mdash; определяет вероятность следующего символа по N предыдущим.</p>
-<code style="line-height: 1.1">P(мам<span style="color: red;">а</span> | мам) = 0.9
-P(мам<span style="color: red;">б</span> | мам) = 0.05
-P(мам<span style="color: red;">в</span> | мам) = 0.01
+<p>Order-N Markov model
+<br/>&mdash; defines the probability of the next character given N previous ones.</p>
+<code style="line-height: 1.1">P(mom<span style="color: red;">a</span> | mom) = 0.9
+P(mom<span style="color: red;">b</span> | mom) = 0.05
+P(mom<span style="color: red;">c</span> | mom) = 0.01
 ...</code>
-<p style="margin-top: 1em;">За счёт маленькой памяти генерируют смешные, бредовые тексты.</p>
-<p>Зато работают быстро :)</p>
+<p style="margin-top: 1em;">Due to small memory, they generate funny, nonsensical texts.</p>
+<p>But they work fast :)</p>
 </section>
 
 <section class="slide">
-<h2>Марковские модели</h2>
+<h2>Markov Models</h2>
 <p>Title:</p>
-<p>Модная Пышки — Информер.Ру - национальное ДТП в экспресс фиксика</p>
-<p>призы, пробки в Новостинг. Триалы онлайн ногтях, но не пировод, электрошка кадры со скидкой или - Яндекс.Афиша@Mail.Ru - модные знакомств - интернет-магазин СТРИТБОЛКУ в интернет авто. Одесса) - AUTO.ria.ua Базар автомагнитомник фильмы онлайн бесплатно и видео</p>
+<p>Fashion Donuts - Informer.Ru - national accident in express fixik</p>
+<p>prizes, traffic jams in Newstin. Trials online nails, but not feast, electroshock footage with discount or - Yandex.Afisha@Mail.Ru - fashion dating - online store STREETBALL on internet auto. Odessa) - AUTO.ria.ua Bazar autoradio films online free and video</p>
 </section>
 
 <section class="slide">
-<h2>Марковские модели</h2>
-<p>Сохранение повторяющихся значений:</p>
-<p>Генератор случайных чисел будем инициализировать
-<br/>хэш-функцией исходного значения.</p>
-<p>Одинаковые значения преобразуются в одинаковые.</p>
+<h2>Markov Models</h2>
+<p>Preserving repeating values:</p>
+<p>We'll initialize the random number generator
+<br/>with a hash function of the original value.</p>
+<p>Identical values transform to identical ones.</p>
 </section>
 
 <section class="slide">
-<h2>Марковские модели</h2>
-<p>Сохранение повторяющихся фрагментов значений.</p>
-<p>Мы хотим, чтобы URL'ы, начинающиеся с одинакового домена,
-<br/>после преобразования тоже начинались с одинакового домена,
-<br/>но другого.</p>
+<h2>Markov Models</h2>
+<p>Preserving repeating fragments of values.</p>
+<p>We want URLs starting with the same domain,
+<br/>after transformation to also start with the same domain,
+<br/>but a different one.</p>
 <code>
 https://www.yandex.ru/images/cats/?id=12345
 https://www.yandex.ru/images/cats/?id=67890
@@ -477,9 +477,9 @@ http://ftp.edu.co/cgi-bin/index.phtml#world
 </section>
 
 <section class="slide">
-<h2>Марковские модели</h2>
-<p>Сохранение повторяющихся фрагментов значений.</p>
-<p>Решение: в качестве генератора случайных чисел для выбора следующей буквы, будем использовать хэш от 8-байтового скользящего окна в данных.</p>
+<h2>Markov Models</h2>
+<p>Preserving repeating fragments of values.</p>
+<p>Solution: as the random number generator for choosing the next letter, we'll use a hash of an 8-byte sliding window in the data.</p>
 <code>https://www.yandex.ru/<span style="color: green">images/c</span>ats/?id=12345
                       ^^^^^^^^
 
@@ -492,40 +492,40 @@ http://ftp.google.kz/c<span style="color: red;">g</span><span style="color: gray
 </section>
 
 <section class="slide">
-<h2>Марковские модели</h2>
-<code style="margin-left: -100px; margin-right: -100px;">Проградар-детей беременны отправления или Дачна Невестика и МО | Холодеи. - Плакаты пустить в Аксессуаро
-Проградар-детей бережье — Яндекс.Деньги: Оплатного журнал пять велосипеды на Lore - dfghf — я.ру - недвижимость в Москва) по 473682 объявленов - Продаже Компром
-Проградар-детей бесплатно! в большом ассоте»в Москве - Вышивку — Омский Оплатно в Самые босоножка рост
-Проградар-детей бесплатно! в большом ассоте»в Москве, странспортал
-Проградар-детей бердянский Модов. Рецепт c фотогалерея и прикрыло громной футбола Московье@Mail.Ru - Поиск
-Проградар-детей бережнева продажа Смотрите лучшей цене, сообществе 2010 | Проектиролабор СНОВНЫЕ. Доста
-Проградар-детей бесплатно! в большом ассотруди Цена: 820 0000 км., Таганде квартиры в Санкт-Пет
-Проградар-детей бережный месяцам - DoramaTv.ru - Платья повсему мире. Интернет-продажа авто б.у. и на со скидкой
-Проградар-детей беремховой комн. в 2013 год, болисменной подержанны в Ставропавлины и коляски ->  Магнитаз 80 сотовим.РУ
-Проградар-детей бережена - Официальный форумы Калинин (Украины. Авториа Бакслера Кудрявцева поставка, вакансионны, продаже отеля
-Проградар-детей беременность подробная д. 5, 69, общения W*ойчивом - Яндекс.Карты, дома, какой цены эвакуатор форум игры World of Tanks
-Проградар-детей берец, отечестве и в розовый стр. 2 из кабинет поиск по доровье@Mail.Ru
-Проградар-детей беремени програда в Китая верты Баре, попогода Манику. Записи в Смоленское</code>
+<h2>Markov Models</h2>
+<code style="margin-left: -100px; margin-right: -100px;">Progaradar-children pregnant departures or Dachna Brideica and MO | Freezers. - Posters to enter into Accessories
+Progaradar-children shore — Yandex.Money: Payment journal five bicycles on Lore - dfghf — ya.ru - real estate in Moscow) by 473682 announcements - Sale Comprom
+Progaradar-children free! in large assortment»in Moscow - Embroidery — Omsk Free in Most sandal height
+Progaradar-children free! in large assortment»in Moscow, transport portal
+Progaradar-children berdyansk Fashions. Recipe with photo gallery and covered loud football Muscovy@Mail.Ru - Search
+Progaradar-children pregnant sale Watch best price, community 2010 | Designer MAIN. Delivery
+Progaradar-children free! in large assortment»труди Price: 820 0000 km., Taganda apartments in Saint-Pet
+Progaradar-children pregnant monthly - DoramaTv.ru - Dresses around world. Internet sale auto used and on with discount
+Progaradar-children pregnant room in 2013 year, policemen used in Stavropavlina and strollers ->  Magnetaz 80 cell.RU
+Progaradar-children pregnant - Official forums Kalinin (Ukraine. Avtoria Baksler Kudryavtsev delivery, vacancies, hotel sale
+Progaradar-children pregnancy detailed bld. 5, 69, communication W*oychivom - Yandex.Maps, houses, what price tow truck forum games World of Tanks
+Progaradar-children cap, fatherland and in pink page 2 from cabinet search by health@Mail.Ru
+Progaradar-children pregnancy program in China heights Bar, weather Maniku. Records in Smolensk</code>
 </section>
 
 
 <section class="slide">
-<h2>Результат</h2>
+<h2>Result</h2>
 </section>
 
 <section class="slide">
-<h2>Результат</h2>
-<p>&mdash; собрал всё вместе в утилиту <b>clickhouse-obfuscator</b>;</p>
-<p>&mdash; устанавливается в пакете с clickhouse-client;</p>
-<p>&mdash; внутри &mdash; случайные перестановки и марковские модели;</p>
-<p>&mdash; работает детерминированно, результат параметризован ключом;</p>
-<p>&mdash; подходит для любых табличных данных;</p>
-<p>&mdash; не зависит от ClickHouse &mdash; можно применять для данных любой БД;</p>
-<p>&mdash; работает быстро: на данных из ~ 100 столбцов<br/>~ 10 000 строк в секунду на одном ядре;</p>
+<h2>Result</h2>
+<p>&mdash; put everything together in the <b>clickhouse-obfuscator</b> utility;</p>
+<p>&mdash; installed in the clickhouse-client package;</p>
+<p>&mdash; inside &mdash; random permutations and Markov models;</p>
+<p>&mdash; works deterministically, result is parameterized by a key;</p>
+<p>&mdash; suitable for any tabular data;</p>
+<p>&mdash; doesn't depend on ClickHouse &mdash; can be used for any DB's data;</p>
+<p>&mdash; works fast: on data with ~100 columns<br/>~10,000 rows per second on a single core;</p>
 </section>
 
 <section class="slide">
-<h2>Результат</h2>
+<h2>Result</h2>
 <code style="margin-right: -50px; line-height: 1.5">clickhouse-obfuscator \
     --seed "$(head -c16 /dev/urandom | base64)" \
     --input-format TSV --output-format TSV \
@@ -537,13 +537,13 @@ http://ftp.google.kz/c<span style="color: red;">g</span><span style="color: gray
 </section>
 
 <section class="slide">
-<h2>Результат</h2>
-<p>Данные для функциональных тестов опубликованы:</p>
+<h2>Result</h2>
+<p>Data for functional tests is published:</p>
 <p><a href="https://clickhouse-datasets.s3.yandex.net/hits/tsv/hits_v1.tsv.xz">https://clickhouse-datasets.s3.yandex.net/hits/tsv/hits_v1.tsv.xz</a>
 <br/><a href="https://clickhouse-datasets.s3.yandex.net/visits/tsv/visits_v1.tsv.xz">https://clickhouse-datasets.s3.yandex.net/visits/tsv/visits_v1.tsv.xz</a>
 </p><p><a href="https://clickhouse.com/docs/ru/getting_started/example_datasets/metrica/">https://clickhouse.com/docs/ru/getting_started/example_datasets/metrica/</a></p>
-<p>Не всё так однозначно, но публикация этих данных одобрена.</p>
-<p>Внешние разработчики используют эти данные<br/>для настоящих тестов производительности.</p>
+<p>Not everything is unambiguous, but publication of this data was approved.</p>
+<p>External developers use this data<br/>for real performance tests.</p>
 </section>
 
 <section class="slide">
@@ -559,4 +559,3 @@ http://ftp.google.kz/c<span style="color: red;">g</span><span style="color: gray
     <!--/Video plugin-->
 </body>
 </html>
-

@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse C++ Meetup</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x10.css">
+    
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse C++ Meetup</h1>
+    </header>
+    
+    <section class="slide" id="cover">
+        <h1 style="margin-top: 200px;"><span style="background: rgba(255, 255, 255, 0.75)">Обзор внутреннего устройства ClickHouse</span></h1>
+    </section>
+
+<section class="slide">
+<h2>Основа ClickHouse &mdash; столбцы</h2>
+
+<p>На диске &mdash; столбцы.<br/>
+Данные хранятся по столбцам.</p>
+
+<p>В оперативке &mdash; столбцы.<br/>
+Данные обрабатываются по столбцам.</p>
+</section>
+
+
+<section class="slide">
+<h2>Как хранятся столбцы в оперативке</h2>
+
+<p>В виде кусочков столбцов &mdash; например, 65 536 элементов.</p>
+<p>Размер кусочка &mdash; зависит от многих вещей.</p>
+<p>При SELECT &mdash; см. настройку max_block_size.</p>
+</section>
+
+
+<section class="slide">
+<h2>Как хранятся столбцы в оперативке</h2>
+<p>Представлены в виде объектов с интерфейсом IColumn.</p>
+<p>Варианты &mdash; ColumnVector&lt;T&gt;, ColumnString, ColumnArray...</p>
+
+<p>ColumnVector&lt;T&gt; &mdash; почти как std::vector&lt;T&gt;.<br/>
+Но под интерфейсом IColumn.<br/>
+И вместо std::vector&lt;T&gt; &mdash; PODArray&lt;T&gt; (зачем?).</p>
+</section>
+
+
+<section class="slide">
+<h2>Как хранятся столбцы в оперативке</h2>
+<p>Раньше был std::vector. PODArray &mdash; просто оптимизация.</p>
+
+<p>PODArray:<br/>
+&mdash; нет лишнего memset;<br/>
+&mdash; есть padding 15 байт на конце;<br/>
+&mdash; использует интерфейс аллокатора, отличный от std::allocator, который позволяет иногда делать mremap.</p>
+</section>
+
+
+<section class="slide">
+<h2>Как хранятся столбцы в оперативке</h2>
+
+<p>ColumnString &mdash; из двух компонент:</p>
+
+<p>1. Байты, уложенные подряд.<br/>
+2. Смещения до i+1 строки.</p>
+
+<code>h e l l o \0 w o r l d \0
+6 12</code>
+</section>
+
+
+<section class="slide">
+<h2>Как хранятся столбцы в оперативке</h2>
+
+<p>ColumnConst</p>
+
+<p>Из одного вложенного столбца,<br/>
+содержащего одно значение.</p>
+</section>
+
+
+<section class="slide">
+<h2>Что даёт интерфейс IColumn</h2>
+
+<p>Базовые операции:<br/>
+&mdash; cut &mdash; вырезать часть столбца, для реализации LIMIT;<br/>
+&mdash; filter &mdash; для реализации WHERE;<br/>
+&mdash; compareAt, permute &mdash; для реализации ORDER BY;<br/>
+...</p>
+</section>
+
+
+<section class="slide">
+<h2>Как хранятся столбцы в оперативке</h2>
+
+<p>Владение &mdash; с помощью COWPtr&lt;IColumn&gt;.</p>
+<p>Раньше был std::shared_ptr&lt;IColumn&gt;.</p>
+</section>
+
+
+<section class="slide">
+<h2>Почти все операции immutable</h2>
+
+<p>virtual <b>Ptr</b> filter(const Filter &amp; filt, ssize_t result_size_hint) <b>const</b> = 0;</p>
+
+<p>Вместо модификации содержимого, создают<br/>и возвращают новый объект-столбец.</p>
+
+<p>Это нормально, так как операции "крупные".</p>
+
+<p>Но есть также "мелкие", мутирующие операции.</p>
+</section>
+
+
+<section class="slide">
+<h2>IColumn, за что отвечает:</h2>
+
+<p>&mdash; хранение данных в оперативке;<br/>
+&mdash; общие операции над столбцами.</p>
+
+<h2>IColumn, на что похоже:</h2>
+
+<p>&mdash; Apache Arrow;<br/>
+&mdash; массивы в NumPy;<br/>
+&mdash; массивы APL, J, K.</p>
+</section>
+
+
+<section class="slide">
+<h2>Мотивация</h2>
+
+<p>Изолировать максимально эффективные<br/>внутренние циклы от кода-обвязки.</p>
+<p>Код не обязан быть эффективным целиком.</p>
+<p>Оптимизируемые места должны быть локализуемы.</p>
+
+<p><b>&laquo;векторный движок&raquo;</b></p>
+
+<p>Бонус:<br/>
+&mdash; SIMD инструкции;<br/>
+&mdash; хитрые оптимизации для однородных данных<br/>
+(IColumn::filter, реализация функции LIKE);</p>
+</section>
+
+
+<section class="slide">
+<h2>Типы данных:</h2>
+
+<p>IDataType</p>
+
+<p>&mdash; бинарная сериализация и десериализация в потоки данных;<br/>
+&mdash; один столбец может быть записан в несколько физических потоков, пример: Array(Array(UInt8));<br/>
+&mdash; сериализация и десериализация в текстовом виде для разных форматов данных;<br/>
+&mdash; свойства типа данных;<br/>
+&mdash; полностью immutable: std::shared_ptr&lt;<b>const</b> IDataType&gt;.</p>
+
+<code>  DataTypeUInt32 \ / ColumnUInt32
+                  X
+DataTypeDateTime / \ ColumnConst(ColumnUInt32)</code>
+</section>
+
+
+<section class="slide">
+<h2>Блок (Block)</h2>
+
+<p>Кусочек таблицы: набор из { ColumnPtr, DataTypePtr, name }</p>
+
+<p>Обработка данных в конвейере выполнения запроса<br/>выполняется над блоками.</p>
+
+<p>... здесь есть архитектурная ошибка, которую придётся исправить.</p>
+</section>
+
+
+<section class="slide">
+<h2>Блок (Block)</h2>
+
+<p>Разделить на</p>
+
+<p>Header: набор из { ColumnPtr, DataTypePtr, name }<br/>
+Block: { size_t num_rows, std::vector<ColumnPtr>, properties... }</p>
+</section>
+
+
+<section class="slide">
+<h2>Потоки блоков</h2>
+
+<p>IBlockInputStream: Block read();<br/>
+IBlockOutputStream: void write(Block);</p>
+
+<p>Реализуют:<br/>
+&mdash; форматы данных (CSV, JSON, Native...)<br/>
+&mdash; чтение и запись в таблицы;<br/>
+&mdash; преобразования над данными (Limit, Filter, Expression, ...)</p>
+
+<p>Строго типизированы &mdash; блоки имеют одни типы данных<br/><em>и значения констант</em>.</p>
+<code>/** Get data structure of the stream... */
+virtual Block getHeader() const = 0;</code>
+
+<p>(Совсем недавно этого метода не было.<br/>Вопрос &mdash; что он позволил сделать?)</p>
+</section>
+
+
+<section class="slide">
+<h2>Движки таблиц</h2>
+
+<p>Интерфейс &mdash; IStorage.<br/>
+Имплементации &mdash; StorageMemory, StorageMergeTree...<br/>
+Экземпляры класса &mdash; это таблицы.</p>
+
+<code>virtual <b>BlockInputStreams</b> read(
+    const Names &amp; /*column_names*/,
+    const SelectQueryInfo &amp; /*query_info*/,
+    const Context &amp; /*context*/,
+    QueryProcessingStage::Enum &amp; /*processed_stage*/,
+    size_t /*max_block_size*/,
+    unsigned /*num_streams*/)</code>
+    
+</p>Почему BlockInputStreams?</p>
+</section>
+
+
+<section class="slide">
+<h2>Конвейер выполнения запроса</h2>
+
+<p>Это всего лишь BlockInputStream (для SELECT)<br/>или BlockOutputStream (для INSERT),<br/>
+который выполняет все нужные преобразования<br/>при вызове метода read или write.</p>
+
+<p>Вопрос &mdash; а какой конвейер для INSERT SELECT?</p>
+</section>
+
+
+<section class="slide">
+<h2>Конвейер выполнения запроса</h2>
+
+<p style="margin-top: -20px;">SELECT работает по принципу pull, INSERT по принципу push.</p>
+
+<p>На самом деле это &mdash; архитектурная ошибка.</p>
+
+<p>&mdash; control flow не контролируется извне;<br/>
+&mdash; нет возможности склеить выполнение нескольких запросов;<br/>
+&mdash; более сложная реализация отмены выполнения запроса, приоритетов и кооперативного выполнения;<br/>
+&mdash; трудно прицеплять операции сбоку конвейера &mdash; выполнение скалярных подзапросов, window функции, и т. п.<br/>
+&mdash; нет прозрачного доступа к алгебраическим свойствам элементов конвейера.<br/>
+&mdash; трудно выполнять преобразования над конвейером;<br/>
+&mdash; план выполнения запросов не доступен в декларативном виде;<br/>
+&mdash; для распределённых запросов виден только фрагмент плана выполнения.</p>
+</section>
+
+
+<section class="slide">
+<h2>Лексер, парсер, AST</h2>
+
+<p>Парсер &mdash; recursive descent parser вручную.</p>
+
+<p>Готовые парсеры SQL:<br/>
+&mdash; парсер из PostgreSQL (есть библиотека);<br/>
+&mdash; парсер из sqlite;<br/>
+&mdash; готовые варианты для ANTLR;<br/>
+&mdash; Apache Calcite;</p>
+
+<p>Особенности парсера ClickHouse:<br/>
+&mdash; Nested столбцы;<br/>
+&mdash; лямбда-функции;<br/>
+&mdash; алиасы и выражения в любом месте запроса;</p>
+</section>
+
+
+<section class="slide">
+<h2>Анализ и оптимизация запроса</h2>
+
+<p>InterpreterSelectQuery<br/>
+ExpressionAnalyzer</p>
+
+<p>Большинство &mdash; rule based оптимизации:<br/>
+&mdash; свёртка констант;<br/>
+&mdash; склейка одинаковых выражений;<br/>
+&mdash; удаление ненужных вычислений;<br/>
+&mdash; удаление ненужных столбцов;<br/>
+...<br/>
+&mdash; протаскивание ARRAY JOIN ближе к концу;<br/>
+&mdash; превращение цепочек OR в IN;</p>
+
+<p>Надо всё переписать :)</p>
+</section>
+
+
+<section class="slide">
+<h2>Анализ и оптимизация запроса</h2>
+
+<p>Выделить отдельные оптимизации по своим местам.</p>
+<p>Сделать оптимизации запросов легко pluggable.</p>
+<p>Выделить общие интерфейсы для некоторых видов оптимизаций.<br/>
+(пример &mdash; peephole оптимизации)</p>
+</section>
+
+
+<section class="slide">
+<h2>Функции</h2>
+
+<p>Работают сразу над целым блоком.<br/>
+В коде реализуется не одно применение функции,<br/> а целый цикл над массивами.</p>
+<p>Внутренний цикл (обычно) свой <br/>для каждой комбинации типов аргументов.</p>
+<p>Внутри цикла (обычно) нет виртуальных вызовов,<br/>проверок типов, лишних бранчей.</p>
+</section>
+
+
+<section class="slide">
+<h2>Функции</h2>
+
+<p>Пример: для оператора сложения есть</p>
+
+<p><code style="font-size: 90%">UInt8 UInt16 UInt32 UInt64     UInt8 UInt16 UInt32 UInt64 
+    Int8 Int16 Int32 Int64  ✕  Int8 Int16 Int32 Int64
+           Float32 Float64     Float32 Float64</code></p>
+
+<p>комбинаций.</p>
+
+<p>А ещё один из аргументов может быть константным:<br/>10 * 10 * 3 = 300 реализаций.</p>
+</section>
+
+
+<section class="slide">
+<h2>Функции</h2>
+
+<p>Достоинства:<br/>
+&mdash; максимальная специализация;<br/>
+&mdash; (почти) максимально возможная эффективность;<br/>
+&mdash; достаточно изолированный код.</p>
+
+<p>Недостатки:<br/>
+&mdash; неудобный интерфейс для реализации;<br/>
+&mdash; громоздкий код (шаблоны C++);<br/>
+&mdash; сильное увеличение размера бинарника;<br/>
+&mdash; нет возможности оптимизировать fused операции, пример: x * y + z;</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Как выполнять выражения эффективно?</h2>
+
+<p>1. Векторный движок.</p>
+<p>Примеры: <br/>
+APL, A+, J (jd), K (kdb+, q)<br/>
+Vectorwise (Actian Vector, VectorH), начальная поддержка в Hive</p>
+
+<p>2. Компиляция выражений в runtime.</p>
+<p>Примеры:<br/>
+Impala, MemSQL, DBToaster</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Как выполнять выражения эффективно?</h2>
+
+<p>1. Векторный движок.<br/>
+2. Компиляция выражений в runtime.</p>
+
+<p>Лучше всего &mdash; и то, и другое!</p>
+
+<p>&mdash; SIMD;<br/>
+&mdash; Instruction Level Parallelism;<br/>
+&mdash; Out Of Order Execution;</p>
+
+<p><a href="https://github.com/ClickHouse/ClickHouse/pull/2277">https://github.com/ClickHouse/ClickHouse/pull/2277</a></p>
+</section>
+
+
+<section class="slide">
+<h2>Агрегатные функции</h2>
+
+<p>IAggregateFunction</p>
+
+<p><b>create</b> &mdash; инициализировать состояние<br/>в заранее подготовленном куске памяти;</p>
+
+<p><b>update</b> &mdash; обновить состояние по значению аргументов;<br/>
+<b>merge</b> &mdash; склеить два состояния в одно;</p>
+
+<p><b>serialize</b>, <b>deserialize</b><br/>&mdash; записать в поток ввода-вывода (сеть, файл, таблицу)</p>
+
+<p><b>insertResultInto</b> &mdash; получить конечное значение.</p>
+
+<p>Состояние агрегатной функции - first class citizen в ClickHouse!</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Я хочу добавить что-то новое в ClickHouse</h2>
+
+<p>&mdash; обычную функцию;<br/>
+<a href="https://github.com/ClickHouse/ClickHouse/pull/1535">https://github.com/ClickHouse/ClickHouse/pull/1535</a><br/>
+gcd, lcm &mdash; Maks Skorokhod</p>
+
+<p>&mdash; агрегатную функцию;<br/>
+<a href="https://github.com/ClickHouse/ClickHouse/pull/2352">https://github.com/ClickHouse/ClickHouse/pull/2352</a><br/>
+windowFunnel &mdash; Sundy Li</p>
+
+<p>&mdash; табличную функцию;<br/>
+<a href="https://github.com/ClickHouse/ClickHouse/pull/2164/">https://github.com/ClickHouse/ClickHouse/pull/2164/</a><br/>
+file &mdash; decaseal (Топвизор)</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Я хочу добавить что-то новое в ClickHouse</h2>
+
+<p>&mdash; формат данных;<br/>
+<a href="https://github.com/ClickHouse/ClickHouse/pull/1387">https://github.com/ClickHouse/ClickHouse/pull/1387</a><br/>
+Cap'n'Proto &mdash; Marek Vavruša</p>
+
+<p>&mdash; движок таблиц;<br/>
+<a href="https://github.com/ClickHouse/ClickHouse/pull/1331">https://github.com/ClickHouse/ClickHouse/pull/1331</a><br/>
+Kafka &mdash; Marek Vavruša</p>
+
+<p>&mdash; движок баз данных;<br/>
+<a href="https://github.com/ClickHouse/ClickHouse/pull/914">https://github.com/ClickHouse/ClickHouse/pull/914</a><br/>
+Dictionary &mdash; Nicolai Kochetov</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Я хочу добавить что-то новое в ClickHouse</h2>
+
+<p>&mdash; источник внешних словарей;<br/>
+<a href="https://github.com/ClickHouse/ClickHouse/pull/204">https://github.com/ClickHouse/ClickHouse/pull/204</a><br/>
+http, executable &mdash; Oleg Alexeenkov</p>
+
+<p>&mdash; layout внешнего словаря;<br/>
+<a href="https://github.com/ClickHouse/ClickHouse/pull/785">https://github.com/ClickHouse/ClickHouse/pull/785</a><br/>
+iptrie &mdash; Marek Vavruša</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Я хочу добавить что-то новое в ClickHouse</h2>
+
+<p>&mdash; синтаксическую конструкцию;<br/>
+<a href="https://github.com/ClickHouse/ClickHouse/pull/2134">https://github.com/ClickHouse/ClickHouse/pull/2134</a><br/>
+скобки для элементов UNION ALL &mdash; zhang2014</p>
+
+<p>&mdash; секцию запроса;<br/>
+<a href="https://github.com/ClickHouse/ClickHouse/pull/293">https://github.com/ClickHouse/ClickHouse/pull/293</a><br/>
+LIMIT BY &mdash; Artemkin Pavel</p>
+
+<p>&mdash; тип запросов;<br/>
+<a href="https://github.com/ClickHouse/ClickHouse/pull/1163">https://github.com/ClickHouse/ClickHouse/pull/1163</a><br/>
+SYSTEM &mdash; Vitaliy Lyudvichenko</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Я хочу добавить что-то новое в ClickHouse</h2>
+
+<p>&mdash; тип данных;<br/>
+<a href="https://github.com/ClickHouse/ClickHouse/pull/945">https://github.com/ClickHouse/ClickHouse/pull/945</a><br/>
+UUID &mdash; Guillaume Tassery</p>
+
+<p>&mdash; алгоритм сжатия;<br/>
+<a href="https://github.com/ClickHouse/ClickHouse/pull/1045">https://github.com/ClickHouse/ClickHouse/pull/1045</a><br/>
+none &mdash; Paweł Róg</p>
+
+<p>&mdash; протокол работы сервера;</p>
+</section>
+
+
+<section class="slide">
+<h2>Уже 124 контрибьютора!</h2>
+<p><img src="pictures/commits.png"/></p>
+</section>
+
+
+    <section class="slide">
+        <h2>.</h2>
+    </section>
+    
+    <section class="slide">
+        <h2>.</h2>
+        <p>Web site: <a href="https://clickhouse.com/">https://clickhouse.com/</a></p>
+        <p>Google groups: <a href="https://groups.google.com/forum/#!forum/clickhouse">https://groups.google.com/forum/#!forum/clickhouse</a></p>
+        <p>Maillist: clickhouse-feedback@yandex-team.com</p>
+        <p>Telegram chat: <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_ru</a> (более 1500 участников) и <a href="https://telegram.me/clickhouse_en">https://telegram.me/clickhouse_en</a></p>
+        <p>GitHub: <a href="https://github.com/ClickHouse/ClickHouse/">https://github.com/ClickHouse/ClickHouse/</a></p>
+        <p>Twitter: <a href="https://twitter.com/ClickHouseDB">https://twitter.com/ClickHouseDB</a></p>
+        
+        <!-- TODO Draw map -->
+        <p>+ митапы. Москва, Санкт-Петербург, Новосибирск, Екатеринбург, Минск, Нижний Новгород, Берлин, Palo Alto, Пекин, Sunnyvale, San Francisco...</p>
+    </section>
+    
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Самые новые возможности ClickHouse</title>
+    <title>The Most Fresh ClickHouse Features</title>
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -17,15 +17,15 @@
 </head>
 <body class="shower list">
     <header class="caption">
-        <h1>Самые новые возможности ClickHouse</h1>
+        <h1>The Most Fresh ClickHouse Features</h1>
     </header>
 
     <section class="slide" id="cover">
-        <h1 style="margin-top: 180px; font-size: 48pt;"><span>Самые новые<br/>возможности ClickHouse</span></h1>
+        <h1 style="margin-top: 180px; font-size: 48pt;"><span>The Most Fresh<br/>ClickHouse Features</span></h1>
     </section>
 
     <section class="slide">
-        <h2>В предыдущих сериях:</h2>
+        <h2>In previous episodes:</h2>
         <p><a href="https://clickhouse.com/presentations/meetup28/new_features/">https://clickhouse.com/presentations/meetup28/new_features/</a></p>
         <p class="cloud">
             <span>CONSTRAINTs</span>
@@ -60,16 +60,16 @@
     </section>
 
     <section class="slide">
-        <h2>Не буду рассказывать</h2>
+        <h2>I won't tell you...</h2>
         <p><b>Tiered Storage</b><br/>
-        &mdash; про это уже рассказал Владимир Чеботарёв.</p>
+        &mdash; Vladimir Chebotarev already presented it.</p>
 
         <p><b>Merge JOIN</b><br/>
-        &mdash; про это уже рассказал Артём Зуйков.</p>
+        &mdash; Artem Zuikov already presented it.</p>
     </section>
 
 <section class="slide">
-<h2 style="font-size: 32pt;">Внешние словари (было)</h2>
+<h2 style="font-size: 32pt;">External Dictionaries (was)</h2>
 <p style="margin-top: -1em;">campaigns_dictionary.xml:</p>
 <code style="margin-top: -2em; font-size: 8pt; width: 50%;">&lt;yandex>
     &lt;dictionary>
@@ -116,7 +116,7 @@
 </section>
 
 <section class="slide">
-<h2 style="font-size: 32pt;">Управление словарями SQL запросами</h2>
+<h2 style="font-size: 32pt;">Managing Dictionaries With SQL Queries</h2>
 <code style="margin-top: -1em;">CREATE DICTIONARY db.dict
 (
   region_id Int64 DEFAULT -1,
@@ -134,35 +134,35 @@ LIFETIME(MIN 300 MAX 600);</code>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 32pt;">Управление словарями SQL запросами</h2>
+<h2 style="font-size: 32pt;">Managing Dictionaries With SQL Queries</h2>
 <code style="margin-top: -1em; margin-bottom: 1em;">SELECT dictGetString('<b>db.dict</b>', 'name', toInt64(213));</code>
-<p>Созданные словари также доступны на чтение в виде таблиц.</p>
+<p>Created dictionaries are also available as tables to read.</p>
 <code style="margin-top: 1em; margin-bottom: 1em;">SELECT * FROM db.dict;</code>
 
-<p style="margin-top: 1em;">&mdash; доступно с версии <span style="color: green;">19.17</span>.</p>
+<p style="margin-top: 1em;">&mdash; available since <span style="color: green;">19.17</span>.</p>
 <p style="margin-top: 3em; color: gray; font-size: 12pt;">Разработчики &mdash; Александр Сапин, Максим Сабянин</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 32pt;">Источник Redis для словарей</h2>
-<p style="margin-top: 1em;">&mdash; доступно с версии <span style="color: green;">19.16</span>.</p>
+<h2 style="font-size: 32pt;">Redis as Dictionary Source</h2>
+<p style="margin-top: 1em;">&mdash; available since <span style="color: green;">19.16</span>.</p>
 <p style="margin-top: 1em; color: gray; font-size: 12pt;">Разработчики &mdash; Алексей Басманов, Антон Попов</p>
 <h2 style="font-size: 32pt;">Layout sparse_hashed</h2>
-<p style="margin-top: 1em;">&mdash; доступно с версии <span style="color: green;">19.15</span>.</p>
+<p style="margin-top: 1em;">&mdash; available since <span style="color: green;">19.15</span>.</p>
 <p style="margin-top: 1em; color: gray; font-size: 12pt;">Разработчик &mdash; Azat Khuzhin</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 32pt;">Параллельный парсинг форматов</h2>
+<h2 style="font-size: 32pt;">Parallel Parsing Of Data Formats</h2>
 <code style="margin-top: -1em; margin-bottom: 1em; font-size: 16pt;">clickhouse-local \
     -S 'WatchID UInt64, JavaEnable UInt8, Title String, ...' \
     --query "SELECT count() FROM table" &lt; hits.tsv</code>
 <p>Было: <span style="color: red;">46.2</span> sec., 192 096 rows/sec., 168 MB/sec.<br/>
 Стало: <span style="color: green;">4.5</span> sec., 1 935 419 rows/sec., 1.7 GB/sec.</p>
-<p>Работает для форматов TSV, CSV, JSONEachRow.</p>
-<p>Работает в clickhouse-client, clickhouse-local,<br/>HTTP интерфейсе, движках File, URL, HDFS, S3.</p>
-<p>Включается настройкой <b>input_format_parallel_parsing</b>.<br/>Уже включено по-умолчанию!</p>
-<p style="margin-top: 1em;">&mdash; доступно с версии <span style="color: gray;">19.18</span>.</p>
+<p>Works for TSV, CSV, JSONEachRow.</p>
+<p>Works in clickhouse-client, clickhouse-local,<br/>HTTP interface; File, URL, HDFS, S3 tables.</p>
+<p>Enabled with <b>input_format_parallel_parsing</b>.<br/>And it's already enabled by default!</p>
+<p style="margin-top: 1em;">&mdash; available since <span style="color: gray;">19.18</span>.</p>
 <p style="margin-top: 1em; color: gray; font-size: 12pt;">Разработчики &mdash; Никита Михайлов, Олег Ершов</p>
 </section>
 
@@ -170,19 +170,19 @@ LIFETIME(MIN 300 MAX 600);</code>
 <h2 style="font-size: 32pt;">Оптимизация VALUES с выражениями</h2>
 <code style="margin-top: -1em; margin-bottom: 1em; font-size: 16pt;">CREATE TABLE test.null (x UInt64, d DateTime) ENGINE = Null</code>
 <code style="margin-top: -1em; margin-bottom: 1em; font-size: 16pt;">clickhouse-client --query "INSERT INTO test.null VALUES" &lt;...</code>
-<p>Вставка 1 млн. строк вида <span style="white-space: pre; font-family: Monospace;">(1, '2019-12-11 00:00:00')</span>:<br/>
+<p>Inserting 1 mln. records like <span style="white-space: pre; font-family: Monospace;">(1, '2019-12-11 00:00:00')</span>:<br/>
 &mdash; <b style="color: green;">0.108</b> sec.</p>
-<p>Вставка 1 млн. строк вида <span style="white-space: pre; font-family: Monospace;">(1, now())</span>:<br/>
+<p>Inserting 1 mln. records like <span style="white-space: pre; font-family: Monospace;">(1, now())</span>:<br/>
 &mdash; <b style="color: red;">40.4</b> sec. &mdash; <span style="color: red;">в 400 раз медленнее</span>.</p>
-<p>Вставка 1 млн. строк вида <span style="white-space: pre; font-family: Monospace;">(1, now())</span> с включенной опцией<br/> <b>input_format_values_deduce_templates_of_expressions:</b><br/>
+<p>Inserting 1 mln. records like <span style="white-space: pre; font-family: Monospace;">(1, now())</span> с включенной опцией<br/> <b>input_format_values_deduce_templates_of_expressions:</b><br/>
 &mdash; <b style="color: green;">0.112</b> sec. &mdash; <span style="color: green;">почти без регрессии производительности</span>.</p>
-<p style="margin-top: 1em;">&mdash; доступно с версии <span style="color: green;">19.16</span>.</p>
+<p style="margin-top: 1em;">&mdash; available since <span style="color: green;">19.16</span>.</p>
 <p style="margin-top: 1em; color: gray; font-size: 12pt;">Разработчик &mdash; Александр Токмаков</p>
 </section>
 
 
 <section class="slide">
-<h2>Формат JSONCompactEachRow</h2>
+<h2>FORMAT JSONCompactEachRow</h2>
 <code>[11825667, "закрепление журные людьми и"]
 [7588965, "выпискусстановке фото 3д фирма"]
 [30622428, "губка перерьер ванновгород главный"]
@@ -193,14 +193,14 @@ LIFETIME(MIN 300 MAX 600);</code>
 [792887, "пп оптики билей ремиум новый фасонвар"]
 [315961, "рангику"]
 [1151353, "дом-2 последние смотреть онлайн фигур"]</code>
-<p style="margin-top: 1em;">&mdash; доступно с версии <span style="color: gray;">19.18</span>.</p>
+<p style="margin-top: 1em;">&mdash; available since <span style="color: gray;">19.18</span>.</p>
 <p style="margin-top: 1em; color: gray; font-size: 12pt;">Разработчик &mdash; Михаил Коротов</p>
 </section>
 
 
 <section class="slide">
-<h2>Формат CustomSeparated</h2>
-<p>Настройки:</p>
+<h2>FORMAT CustomSeparated</h2>
+<p>Controlled by the settings:</p>
 <p>format_custom_escaping_rule
 <br/>format_custom_field_delimiter
 <br/>format_custom_row_before_delimiter
@@ -212,42 +212,42 @@ LIFETIME(MIN 300 MAX 600);</code>
 </section>
 
 <section class="slide">
-<h2>Формат Template</h2>
-<p>Позволяет задать шаблон для форматирования или парсинга данных.</p>
-<p>Шаблон содержит разделители и подстановки.</p>
-<p>Для подстановок указан способ экранирования значений:<br/>Quoted, Escaped, CSV, JSON, XML, Raw.</p>
+<h2>Template Format</h2>
+<p>Allow to define a template for data formatting/parsing.</p>
+<p>A template contains substitutions and delimieters.</p>
+<p>Each substitution specifies data escaping rule:<br/>Quoted, Escaped, CSV, JSON, XML, Raw.</p>
 <code>Website ${domain:Quoted} has ${count:Raw} pageviews.</code>
-<p style="margin-top: 1em;">Задаётся шаблон для строк, разделитель между строками<br/>и шаблон для resultset.</p>
-<p style="margin-top: 1em;">Пример: распарсить access логи.<br/>
-Пример: распарсить сложный вложенный JSON.<br/>
-Пример: сформировать HTML прямо из ClickHouse.</p>
+<p style="margin-top: 1em;">You can specify a template for rows, a delimiter between rows<br/>and a template to wrap resultset.</p>
+<p style="margin-top: 1em;">Example: to parse web access logs.<br/>
+Example: to parse deeply nested JSON.<br/>
+Example: generate HTML right in ClickHouse.</p>
 </section>
 
 <section class="slide">
-<h2>Улучшение текстовых форматов</h2>
+<h2>Improvements of Text Formats</h2>
 <p><b>input_format_csv_unquoted_null_literal_as_null</b>
-<br/>&mdash; понимать NULL в CSV как NULL (иначе только \N).</p>
+<br/>&mdash; parse unquoted NULL in CSV as NULL (otherwise you have to \N).</p>
 <p><b>input_format_null_as_default</b>
-<br/>&mdash; преобразовывать NULL в значение по-умолчанию.</p>
+<br/>&mdash; parse NULL as default value for non-Nullable columns.</p>
 <p><b>input_format_tsv_empty_as_default</b>
-<br/>&mdash; преобразовывать пустые значения в TSV в значения по-умолчанию.</p>
+<br/>&mdash; parse empty values in TSV as default values.</p>
 <p><b>input_format_with_names_use_header</b>
-<br/>&mdash; использовать порядок столбцов в заголовке TSV, CSV;<br/>&mdash; заполнять отсутствующие поля значениями по-умолчанию.</p>
+<br/>&mdash; use headers in TSV and CSV to determine column order;<br/>&mdash; fill missing columns with default values.</p>
 <p><b>input_format_defaults_for_omitted_fields</b>
-<br/>&mdash; вычислимые default для JSONEachRow, TSV, CSV.</p>
+<br/>&mdash; calculate complex default values for JSONEachRow, TSV, CSV.</p>
 </section>
 
 
 <section class="slide">
-<h2>Поддержка сжатых файлов</h2>
-<p>Для таблиц типа File, URL, HDFS, S3:</p>
+<h2>Import/Export Compressed Files Directly</h2>
+<p>For tables with File, URL, HDFS, S3 engines:</p>
 <code>SELECT * FROM url('https://site.ru/data.<b style="color: green;">gz</b>',
     TSV, 'phrase String, counter_id UInt32, ...')
 
 INSERT INTO TABLE FUNCTION url(
     'https://site.ru/data.<b style="color: green;">gz</b>',
     TSV, 'phrase String, counter_id UInt32, ...')</code>
-<p><br/>Автоопределение по расширению или явное указание: gzip, none, auto:</p>
+<p><br/>Autodetect by file extension or explicit: gz/gzip, br/brotli, none, auto:</p>
 <code>SELECT * FROM url('https://site.ru/data', TSV,
     'phrase String, counter_id UInt32, ...', <b style="color: green;">'gzip'</b>)</code>
 <p style="margin-top: 1em; color: gray; font-size: 12pt;">Разработчик &mdash; Андрей Бодров</p>
@@ -255,26 +255,26 @@ INSERT INTO TABLE FUNCTION url(
 </section>
 
 <section class="slide">
-<h2>Табличная функция s3</h2>
-<p>И движок таблиц S3:</p>
+<h2>s3 Import/Export</h2>
+<p>Table function <b>s3</b> and table engine <b>S3</b>:</p>
 <code>SELECT * FROM s3(...)
 INSERT INTO TABLE FUNCTION s3(...)
 CREATE TABLE table ENGINE = S3(...)</code>
-<p style="margin-top: 1em;">&mdash; полная поддержка начиная с версии <span style="color: gray;">19.18</span>.</p>
+<p style="margin-top: 1em;">&mdash; full support in <span style="color: gray;">19.18</span>.</p>
 <p style="margin-top: 3em; color: gray; font-size: 12pt;">Разработчик &mdash; Владимир Чеботарёв</p>
 </section>
 
 
 <section class="slide">
-<h2 style="font-size: 32pt;">Функции для работы с географией</h2>
+<h2 style="font-size: 32pt;">Geographical Data Processing</h2>
 <img style="float: right;" src="pictures/shodanium.png"/>
 <p><b>greatCircleDistance</b>
-<br/>&mdash; ускорена в <b style="color: green;">3 раза</b><br/>с помощью кода Андрея Аксёнова;</p>
+<br/>&mdash; improved performance <b style="color: green;">3 times</b><br/>with the code from Andrey Aksenov;</p>
 <p><b style="color: green;">greatCircleAngle</b>
-<br/>&mdash; возвращает расстояние на сфере в градусах;</p>
+<br/>&mdash; the distance on sphere in degrees;</p>
 <p><b style="color: green;">geoDistance</b>
-<br/>&mdash; считает расстояние на эллипсоиде WGS-84<br/>(при некоторых допущениях);</p>
-<p style="margin-top: 1em;">&mdash; доступно с версии <span style="color: gray;">19.18</span>.</p>
+<br/>&mdash; calculates the distance on WGS-84 ellipsoid<br/>(under certain assumptions);</p>
+<p style="margin-top: 1em;">&mdash; available since <span style="color: gray;">19.18</span>.</p>
 </section>
 
 
@@ -282,7 +282,7 @@ CREATE TABLE table ENGINE = S3(...)</code>
 <h2 style="font-size: 32pt;">Исправление работы Kafka</h2>
 <p>С версии 19.15 по 19.17 была регрессия производительности.<br/>Теперь всё нормально.</p>
 <img src="pictures/roadmap.png"/>
-<p style="margin-top: 1em;">&mdash; доступно с версии <span style="color: gray;">19.18</span> и будет бэкпортировано.</p>
+<p style="margin-top: 1em;">&mdash; available since <span style="color: gray;">19.18</span> и будет бэкпортировано.</p>
 <p style="margin-top: 3em; color: gray; font-size: 12pt;">Разработчик &mdash; Михаил Филимонов, при участии Ивана Лежанкина</p>
 </section>
 
@@ -297,34 +297,34 @@ CREATE TABLE table ENGINE = S3(...)</code>
 <section class="slide">
 <h2>Ещё всякие фичи</h2>
 <p>Комбинаторы -OrNull и -OrDefault для агрегатных функций.</p>
-<p>Bloom filter индексы для массивов.</p>
-<p>Виртуальный столбец _shard_num.</p>
-<p>Пропуск неизвестных настроек при распределённых запросах.</p>
-<p>Одновременное использование FINAL и SAMPLE.</p>
-<p>Оптимизация uniqCombined; uniqCombined64.</p>
-<p>Быстрый count() по всей таблице.</p>
+<p>Bloom filter secondary index for arrays.</p>
+<p>Virtual column _shard_num.</p>
+<p>Skipping unknown settings in distributed queries.</p>
+<p>Allow using FINAL and SAMPLE simultaneously.</p>
+<p>Optimization of uniqCombined; uniqCombined64.</p>
+<p>Instant count() in trivial queries.</p>
 </section>
 
 
 <section class="slide">
-    <h2>Что дальше?</h2>
+    <h2>What's Next?</h2>
 </section>
 
 <section class="slide">
-<h2>Декабрь 2019</h2>
+<h2>February 2020</h2>
 <p>RBAC</p>
 <p>DateTime64</p>
-<p>Полиморфные куски</p>
+<p>Polymorphic Data Parts</p>
 <p>Ручка для Prometheus</p>
 <p>Кэш результатов запросов</p>
-<p>Настраиваемые HTTP handlers</p>
+<p>Custom HTTP handlers</p>
 </section>
 
 <section class="slide">
-    <h2>Публичный roadmap 2020!</h2>
+    <h2>Public Roadmap 2020!</h2>
     <p><a href="https://clickhouse.com/docs/ru/extended_roadmap/">https://clickhouse.com/docs/ru/extended_roadmap/</a></p>
     <p>~ 500 задач с подробным описанием &mdash; зависимости, исполнители...</p>
-    <p>из них ~ 20 уже сделано :)</p>
+    <p>из них ~ 20 are already done :)</p>
 </section>
 
 

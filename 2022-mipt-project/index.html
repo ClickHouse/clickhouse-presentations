@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Векторный поиск в ClickHouse</title>
+    <title>Vector Search in ClickHouse</title>
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -15,47 +15,47 @@
 </head>
 <body class="shower list">
     <header class="caption">
-        <h1>Векторный поиск в ClickHouse</h1>
+        <h1>Vector Search in ClickHouse</h1>
     </header>
     <section class="slide" id="cover">
         <img src="https://presentations.clickhouse.com/original_website/logo.svg" style="width: 15%; position: absolute; right: 20px; bottom: 20px;" />
-        <h1 style="margin-top: 80px; line-height: 150%; color: black; font-size: 64pt">Векторный поиск<br/>в ClickHouse</h1>
+        <h1 style="margin-top: 80px; line-height: 150%; color: black; font-size: 64pt">Vector Search<br/>in ClickHouse</h1>
     </section>
 
 <section class="slide">
-<h2>Vector Similarity Search в ClickHouse</h2>
-<p>VSS &mdash; поиск похожих объектов в неструктурированных данных:</p>
-<p>&mdash; Поиск похожих объектов по их embedding-ам.</p>
-<p>&mdash; С помощью индексов в многомерных пространствах.</p>
-<p>&mdash; В данных, превышающих объём памяти и одной машины.</p>
-<p>&mdash; Индексы динамически обновляемые.</p>
+<h2>Vector Similarity Search in ClickHouse</h2>
+<p>VSS &mdash; searching for similar objects in unstructured data:</p>
+<p>&mdash; Search for similar objects by their embeddings.</p>
+<p>&mdash; Using indexes in multidimensional spaces.</p>
+<p>&mdash; In data exceeding memory capacity and single machine.</p>
+<p>&mdash; Dynamically updatable indexes.</p>
 </section>
 
 <section class="slide">
-<h2>Актуальность, востребованность</h2>
-<p>Направление Vector Similarity Search развивается прямо сейчас<br/>
-и совмещает в себе два современных направления инженерной мысли:<br/>
-машинное обучение и обработка больших данных.</p>
-<p>Примеры:</p>
-<p>Анонс Google, December 13, 2021:<br/>"Find anything blazingly fast with Google's vector search technology"
-<br/>&mdash; закрытая технология для клиентов Облака.</p>
-<p>Новые компании-стартапы вокруг этой технологии: Сohere.ai</p>
+<h2>Relevance, Demand</h2>
+<p>The Vector Similarity Search direction is developing right now<br/>
+and combines two modern directions of engineering thought:<br/>
+machine learning and big data processing.</p>
+<p>Examples:</p>
+<p>Google announcement, December 13, 2021:<br/>"Find anything blazingly fast with Google's vector search technology"
+<br/>&mdash; proprietary technology for Cloud customers.</p>
+<p>New startup companies around this technology: Cohere.ai</p>
 </section>
 
 <section class="slide">
-<h2>Что будем делать</h2>
-<p>1. Подготовка датасетов:</p>
-<p>&mdash; картинки из интернета (400 млн. картинок);</p>
-<p>&mdash; комментарии в соц сетях (дамп Reddit, Hacker News);</p>
-<p>&mdash; файлы с исходным кодом (10 млн. репозиториев);</p>
-<p>&mdash; HTML страницы (6 млн сайтов).</p>
+<h2>What We Will Do</h2>
+<p>1. Dataset preparation:</p>
+<p>&mdash; images from the internet (400 million images);</p>
+<p>&mdash; social media comments (Reddit, Hacker News dumps);</p>
+<p>&mdash; source code files (10 million repositories);</p>
+<p>&mdash; HTML pages (6 million websites).</p>
 </section>
 
 <section class="slide">
-<h2>Что будем делать</h2>
-<p>2. Изучение алгоритмов и их реализаций:</p>
+<h2>What We Will Do</h2>
+<p>2. Study of algorithms and their implementations:</p>
 <p>&mdash; hnswlib (Hierarchical Navigable Small World Graphs);
-<br/>&mdash; redis-hnsw (реализация в Redis);
+<br/>&mdash; redis-hnsw (implementation in Redis);
 <br/>&mdash; nmslib (Non-Metric Space Library);
 <br/>&mdash; Faiss;
 <br/>&mdash; ScaNN;
@@ -63,58 +63,58 @@
 </section>
 
 <section class="slide">
-<h2>Что будем делать</h2>
-<p>3. Baseline &mdash; проверка brute-force поиска:</p>
-<p>&mdash; поиск полным перебором с вычислением Lp метрики налету.</p>
+<h2>What We Will Do</h2>
+<p>3. Baseline &mdash; testing brute-force search:</p>
+<p>&mdash; search by full enumeration with on-the-fly Lp metric calculation.</p>
 </section>
 
 <section class="slide">
-<h2>Что будем делать</h2>
-<p>4. Выбор структуры данных для индекса:</p>
-<p>&mdash; монолитный индекс, целиком загружаемый в память;</p>
-<p>&mdash; разреженный индекс со статистиками по гранулам,
-<br/>&emsp; варианты во внешней памяти;</p>
-<p>&mdash; эксперименты по построению locality sensitive хэшей
-<br/>&emsp; с помощью grid в VP-tree и space-filling curves.</p>
+<h2>What We Will Do</h2>
+<p>4. Choosing data structure for the index:</p>
+<p>&mdash; monolithic index, fully loaded into memory;</p>
+<p>&mdash; sparse index with granule statistics,
+<br/>&emsp; variants in external memory;</p>
+<p>&mdash; experiments in building locality sensitive hashes
+<br/>&emsp; using grid in VP-tree and space-filling curves.</p>
 </section>
 
 <section class="slide">
-<h2>Что будем делать</h2>
-<p>5. Реализация структур данных в ClickHouse.</p>
-<p style="color: gray;">--- здесь всё самое интересное ---</p>
+<h2>What We Will Do</h2>
+<p>5. Implementation of data structures in ClickHouse.</p>
+<p style="color: gray;">--- this is where all the most interesting things happen ---</p>
 </section>
 
 <section class="slide">
-<h2>Что будем делать</h2>
-<p>6. Проведение экспериментов и сравнительное тестирование:</p>
-<p>&mdash; потребление памяти;
-<br/>&mdash; производительность поиска;
-<br/>&mdash; скорость загрузки индекса;
-<br/>&mdash; точность результатов.</p>
-<p>Оптимизация производительности.</p>
-<p>Разработка тестов и документации.</p>
+<h2>What We Will Do</h2>
+<p>6. Conducting experiments and comparative testing:</p>
+<p>&mdash; memory consumption;
+<br/>&mdash; search performance;
+<br/>&mdash; index loading speed;
+<br/>&mdash; result accuracy.</p>
+<p>Performance optimization.</p>
+<p>Development of tests and documentation.</p>
 </section>
 
 <section class="slide">
-<h2>Стек технологий</h2>
+<h2>Technology Stack</h2>
 <p>90% C++
-<br/>10% Python (подготовка данных)</p>
-<p>Области знаний:
-<br/>&mdash; Базы данных и распределённые системы;
-<br/>&mdash; Алгоритмы и структуры данных;
-<br/>&mdash; Машинное обучение.
+<br/>10% Python (data preparation)</p>
+<p>Knowledge areas:
+<br/>&mdash; Databases and distributed systems;
+<br/>&mdash; Algorithms and data structures;
+<br/>&mdash; Machine learning.
 </p>
-<p>Для работы будут предоставлены ресурсы в Облаке.</p>
+<p>Resources in the Cloud will be provided for the work.</p>
 </section>
 
 <section class="slide">
-<h2>Требования</h2>
-<p>&mdash; 4..6 человек в команде;
-<br/>&mdash; уверенные знания C++.</p>
-<h2>Контакты</h2>
-<p>Лидер команды &mdash; Артур Филатенков,
+<h2>Requirements</h2>
+<p>&mdash; 4..6 people in the team;
+<br/>&mdash; confident knowledge of C++.</p>
+<h2>Contacts</h2>
+<p>Team leader &mdash; Artur Filatyenkov,
 <br/>Telegram @illusion_cat.</p>
-<p>Руководитель проекта &mdash; Алексей Миловидов,
+<p>Project supervisor &mdash; Alexey Milovidov,
 <br/>Telegram @milovidov_an.</p>
 </section>
 
@@ -132,4 +132,3 @@
     <!--/Video plugin-->
 </body>
 </html>
-

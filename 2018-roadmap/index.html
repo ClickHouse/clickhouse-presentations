@@ -17,109 +17,109 @@
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">То, о чём не страшно рассказывать</h2>
+        <h2 style="font-size: 32pt;">Things We're Not Afraid to Talk About</h2>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">Декабрь 2018</h2>
-        <p><b>LowCardinality</b> типы данных в продакшене.</p>
-        <p>Выбор алгоритма сжатия на уровне отдельных столбцов.</p>
-        <p>Поддержка вычислимых DEFAULT выражений<br/>при импорте JSONEachRow.</p>
-        <p>Поддержка формата <b>Parquet</b> для импорта и экспорта.</p>
+        <h2 style="font-size: 32pt;">December 2018</h2>
+        <p><b>LowCardinality</b> data types in production.</p>
+        <p>Choice of compression algorithm at individual column level.</p>
+        <p>Support for computed DEFAULT expressions<br/>when importing JSONEachRow.</p>
+        <p>Support for <b>Parquet</b> format for import and export.</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">Январь 2019</h2>
-        <p>Импорт/экспорт данных в <b>HDFS</b> с помощью табличной функции.</p>
-        <p>Импорт/экспорт данных в <b>S3</b> с помощью табличной функции.</p>
-        <p>Возможность добавления новых столбцов<br/>в ключ сортировки MergeTree таблиц.</p>
-        <p>Уменьшение объёма метаданных в ZooKeeper.</p>
+        <h2 style="font-size: 32pt;">January 2019</h2>
+        <p>Import/export data to <b>HDFS</b> using table function.</p>
+        <p>Import/export data to <b>S3</b> using table function.</p>
+        <p>Ability to add new columns<br/>to the sorting key of MergeTree tables.</p>
+        <p>Reduction of metadata volume in ZooKeeper.</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">Февраль 2019</h2>
-        <p>Возможность создания словарей посредством DDL запросов.</p>
-        <p>Адаптивная гранулированность индекса в MergeTree таблицах.</p>
+        <h2 style="font-size: 32pt;">February 2019</h2>
+        <p>Ability to create dictionaries via DDL queries.</p>
+        <p>Adaptive index granularity in MergeTree tables.</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">То, о чём можно рассказывать с&nbsp;осторожностью</h2>
+        <h2 style="font-size: 32pt;">Things We Can Talk About with&nbsp;Caution</h2>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">Управление правами доступа</h2>
-        <p>Ограничение доступа на уровне таблиц, столбцов и строк<br>(row-level security).</p>
-        <p>Ролевая модель управления доступом (RBAC).</p>
-        <p>Возможность подключения внешней системы<br/>для аутентификации (LDAP, Kerberos).</p>
+        <h2 style="font-size: 32pt;">Access Rights Management</h2>
+        <p>Access restriction at the level of tables, columns and rows<br>(row-level security).</p>
+        <p>Role-based access control (RBAC).</p>
+        <p>Ability to connect an external system<br/>for authentication (LDAP, Kerberos).</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">Разделение ресурсов запросами</h2>
-        <p>Настраиваемые пулы ресурсов: доля CPU, IO, Network, RAM.</p>
+        <h2 style="font-size: 32pt;">Resource Separation for Queries</h2>
+        <p>Configurable resource pools: CPU share, IO, Network, RAM.</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">Развитие поддержки JOIN</h2>
-        <p>Несколько JOIN без использования вложенных подзапросов.</p>
-        <p>Merge JOIN для соединения очень больших множеств.</p>
-        <p>Bucket-Shuffle JOIN для оптимизации больших распределённых JOIN.</p>
+        <h2 style="font-size: 32pt;">JOIN Support Development</h2>
+        <p>Multiple JOINs without using nested subqueries.</p>
+        <p>Merge JOIN for joining very large sets.</p>
+        <p>Bucket-Shuffle JOIN for optimizing large distributed JOINs.</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">(весна/лето 2019)</h2>
+        <h2 style="font-size: 32pt;">(Spring/Summer 2019)</h2>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">То, о чём можно рассказывать<br/>только хорошим друзьям</h2>
+        <h2 style="font-size: 32pt;">Things We Can Only Tell<br/>Our Good Friends</h2>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">Вторичные индексы</h2>
-        <p>Если быть точным &mdash; индексные структуры для пропуска данных.</p>
+        <h2 style="font-size: 32pt;">Secondary Indexes</h2>
+        <p>To be precise &mdash; index structures for data skipping.</p>
         <p>min/max, distinct values, micro bloom-filter.</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">Методы машинного обучения<br/>как агрегатные функции</h2>
-        <p>Возможность создать и применить модель<br/>непосредственно в ClickHouse.</p>
+        <h2 style="font-size: 32pt;">Machine Learning Methods<br/>as Aggregate Functions</h2>
+        <p>Ability to create and apply a model<br/>directly in ClickHouse.</p>
     </section>
 
     <section class="slide">
         <h2 style="font-size: 32pt;">ASOF JOIN</h2>
-        <p>Что это такое?</p>
+        <p>What is it?</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">Оптимизация ORDER BY и GROUP BY по ключевым столбцам.</h2>
+        <h2 style="font-size: 32pt;">Optimization of ORDER BY and GROUP BY on key columns.</h2>
         <code>SELECT * FROM sensors ORDER BY time DESC LIMIT 10</code>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 26pt;">Расширение возможностей работы с гео-данными</h2>
-        <p>Функции для работы с geohash.</p>
-        <p>Словари полигонов для поиска (запросы вида region by location).</p>
+        <h2 style="font-size: 26pt;">Expanding Capabilities for Working with Geo-data</h2>
+        <p>Functions for working with geohash.</p>
+        <p>Dictionaries of polygons for searching (region by location queries).</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 26pt;">Продвинутые алгоритмы работы со строками</h2>
-        <p>Алгоритм min-hash для нечёткого поиска полудубликатов.</p>
-        <p>Быстрый матчинг большого количества подстрок.</p>
-        <p>Возможность создания дополнительной стркутуры для ускорения brute-force поиска подстроки в строке.</p>
+        <h2 style="font-size: 26pt;">Advanced String Processing Algorithms</h2>
+        <p>Min-hash algorithm for fuzzy search of near-duplicates.</p>
+        <p>Fast matching of a large number of substrings.</p>
+        <p>Ability to create additional structure to accelerate brute-force substring search in string.</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">Хранение данных на нескольких разделах</h2>
-        <p>Разделение горячих и холодных данных на SSD и HDD.</p>
-        <p>Возможность использования JBOD.</p>
+        <h2 style="font-size: 32pt;">Data Storage on Multiple Volumes</h2>
+        <p>Separation of hot and cold data on SSD and HDD.</p>
+        <p>Ability to use JBOD.</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">Правильная буферизация для MergeTree</h2>
-        <p>Избавиться от проблем с частыми вставками.</p>
+        <h2 style="font-size: 32pt;">Proper Buffering for MergeTree</h2>
+        <p>Getting rid of problems with frequent inserts.</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">(осень/зима 2019)</h2>
+        <h2 style="font-size: 32pt;">(Fall/Winter 2019)</h2>
     </section>
 
     <section class="slide">

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Профайлер запросов: трудный путь</title>
+    <title>Query Profiler: The Hard Way</title>
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -15,31 +15,31 @@
 </head>
 <body class="shower list">
     <header class="caption">
-        <h1>Профайлер запросов: трудный путь</h1>
+        <h1>Query Profiler: The Hard Way</h1>
     </header>
 
     <section class="slide" id="cover">
-        <h1 style="margin-top: 150px; font-size: 36pt; line-height: 150%;">Профайлер запросов: трудный путь</h1>
+        <h1 style="margin-top: 150px; font-size: 36pt; line-height: 150%;">Query Profiler: The Hard Way</h1>
     </section>
 
 <section class="slide">
-<h2>Обо мне</h2>
-<p>Алексей &mdash; разработчик ClickHouse.</p>
-<p>ClickHouse &mdash; аналитическая СУБД.</p>
-<p>Основное продуктовое свойство<br/>&mdash; высокая скорость обработки запросов.</p>
+<h2>About Me</h2>
+<p>Alexey &mdash; ClickHouse developer.</p>
+<p>ClickHouse &mdash; analytical DBMS.</p>
+<p>Main product feature<br/>&mdash; high query processing speed.</p>
 </section>
 
 <section class="slide">
-<h2>Тривиальные факты</h2>
-<p>и основные принципы.</p>
+<h2>Trivial Facts</h2>
+<p>and basic principles.</p>
 </section>
 
 <section class="slide">
-<h2>Тривиальные факты</h2>
-<p>Чтобы что-то улучшить &mdash; надо это измерить.</p>
-<p>Разбить на составляющие детали и измерить вклад каждой.</p>
-<p>Выяснить, что является основным узким местом системы.</p>
-<p style="margin-top: 2em;">&mdash; для этого можно использовать профайлер.</p>
+<h2>Trivial Facts</h2>
+<p>To improve something &mdash; you need to measure it.</p>
+<p>Break it down into components and measure the contribution of each.</p>
+<p>Find out what is the main bottleneck of the system.</p>
+<p style="margin-top: 2em;">&mdash; a profiler can be used for this.</p>
 </section>
 
 
@@ -61,44 +61,44 @@
 
 
 <section class="slide">
-<h2>Какие бывают профайлеры?</h2>
-<p><b>Низкоуровневые</b>:</p>
-<p>&mdash; в каких функциях в моём коде тратится больше времени?</p>
-<p>(конечно же в функции <b>memcpy</b>... или <b>malloc</b>)</p>
-<p style="margin-top: 2em;"><b>Высокоуровневые</b>:</p>
-<p>&mdash; какое преобразование данных занимает больше времени?</p>
-<p>(JOIN? Сортировка? Агрегация?)</p>
+<h2>What Types of Profilers Exist?</h2>
+<p><b>Low-level</b>:</p>
+<p>&mdash; which functions in my code spend more time?</p>
+<p>(of course in <b>memcpy</b>... or <b>malloc</b>)</p>
+<p style="margin-top: 2em;"><b>High-level</b>:</p>
+<p>&mdash; which data transformation takes more time?</p>
+<p>(JOIN? Sorting? Aggregation?)</p>
 </section>
 
 <section class="slide">
-<h2>Тривиальный пример</h2>
-<p>Профайлер показывает, что больше всего времени<br/>тратится на выполнение <b>memcpy</b>.</p>
-<p>Нужно оптимизировать эту функцию?</p>
+<h2>Trivial Example</h2>
+<p>The profiler shows that most time<br/>is spent executing <b>memcpy</b>.</p>
+<p>Need to optimize this function?</p>
 
-<p style="margin-top: 2em;">Да, в ClickHouse оптимизированный memcpy!</p>
-<p>На самом деле, даже несколько...</p>
-<p>&mdash; &laquo;китайский&raquo; memcpy;</p>
-<p>&mdash; memcpy для gather коротких кусков памяти:<br/>
+<p style="margin-top: 2em;">Yes, ClickHouse has optimized memcpy!</p>
+<p>Actually, even several...</p>
+<p>&mdash; &laquo;Chinese&raquo; memcpy;</p>
+<p>&mdash; memcpy for gathering short memory chunks:<br/>
 memcpySmallAllowReadWriteOverflow15</p>
 </section>
 
 <section class="slide">
-<h2>Тривиальный пример</h2>
-<p>Профайлер показывает, что больше всего времени<br/>тратится на выполнение <b>memcpy</b>.</p>
-<p>Нужно оптимизировать эту функцию?</p>
+<h2>Trivial Example</h2>
+<p>The profiler shows that most time<br/>is spent executing <b>memcpy</b>.</p>
+<p>Need to optimize this function?</p>
 
-<p style="margin-top: 2em;">Но обычно надо просто реже её вызывать:</p>
+<p style="margin-top: 2em;">But usually we just need to call it less:</p>
 <code>std::vector&lt;int> vec;
 for (int i = 0; i &lt; n; ++i)
     vec.push_back(i); // <b style="color: red;">memcpy</b></code>
 </section>
 
 <section class="slide">
-<h2>Очевидный пример</h2>
-<p>Профайлер показывает, что больше всего времени<br/>тратится на выполнение <b>memcpy</b>.</p>
-<p>Нужно оптимизировать эту функцию?</p>
+<h2>Obvious Example</h2>
+<p>The profiler shows that most time<br/>is spent executing <b>memcpy</b>.</p>
+<p>Need to optimize this function?</p>
 
-<p style="margin-top: 2em;">Но обычно надо просто реже её вызывать:</p>
+<p style="margin-top: 2em;">But usually we just need to call it less:</p>
 <code>std::vector&lt;int> vec;
 vec.reserve(n);
 for (int i = 0; i &lt; n; ++i)
@@ -106,11 +106,11 @@ for (int i = 0; i &lt; n; ++i)
 </section>
 
 <section class="slide">
-<h2>Очевидный пример</h2>
-<p>Профайлер показывает, что больше всего времени<br/>тратится на выполнение <b>memcpy</b>.</p>
-<p>Нужно оптимизировать эту функцию?</p>
+<h2>Obvious Example</h2>
+<p>The profiler shows that most time<br/>is spent executing <b>memcpy</b>.</p>
+<p>Need to optimize this function?</p>
 
-<p style="margin-top: 2em;">Но обычно надо просто реже её вызывать:</p>
+<p style="margin-top: 2em;">But usually we just need to call it less:</p>
 <code>std::vector&lt;int> vec;
 vec.resize(n); // <b style="color: red;">memset</b>
 for (int i = 0; i &lt; n; ++i)
@@ -118,22 +118,22 @@ for (int i = 0; i &lt; n; ++i)
 </section>
 
 <section class="slide">
-<h2>Банальный пример</h2>
-<p>Профайлер показывает, что больше всего времени<br/>тратится на выполнение <b>memcpy</b>.</p>
-<p>Нужно оптимизировать эту функцию?</p>
+<h2>Banal Example</h2>
+<p>The profiler shows that most time<br/>is spent executing <b>memcpy</b>.</p>
+<p>Need to optimize this function?</p>
 
-<p style="margin-top: 2em;">Но обычно надо просто реже её вызывать:</p>
+<p style="margin-top: 2em;">But usually we just need to call it less:</p>
 <code>std::unordered_map&lt;int, std::vector&lt;char>> map;
 ...
 for (const auto elem : map) { ... }</code>
 </section>
 
 <section class="slide">
-<h2>Банальный пример</h2>
-<p>Профайлер показывает, что больше всего времени<br/>тратится на выполнение <b>memcpy</b>.</p>
-<p>Нужно оптимизировать эту функцию?</p>
+<h2>Banal Example</h2>
+<p>The profiler shows that most time<br/>is spent executing <b>memcpy</b>.</p>
+<p>Need to optimize this function?</p>
 
-<p style="margin-top: 2em;">Но обычно надо просто реже её вызывать:</p>
+<p style="margin-top: 2em;">But usually we just need to call it less:</p>
 <code>std::unordered_map&lt;int, std::vector&lt;char>> map;
 ...
 for (const auto <b style="color: red;">&amp;</b> elem : map) { ... }</code>
@@ -141,68 +141,68 @@ for (const auto <b style="color: red;">&amp;</b> elem : map) { ... }</code>
 
 
 <section class="slide">
-<h2>Какую величину будем измерять?</h2>
-<p>Количество тактов или время CPU;<br/>
-&mdash; <b>rdtsc</b>/<b>rdtscp</b>, информация от ОС (<b>getrusage</b>)</p>
-<p>Количество обработанных инструкций;<br/>
-&mdash; счётчики CPU (через ядро &mdash; <b>perf_event_open</b><br/>&emsp; или напрямую &mdash; <b>rdpmc</b>)<br/>
-&mdash; запуск в эмуляторе (<b>valgrind</b>)</p>
-<p>Количество байт, прочитанных с диска (или из файловой системы?):<br/>
-&mdash; счётчики приложения или информация от ОС.</p>
-<p>Реальное время между событиями (или его аппроксимация?);<br/>
-&mdash; таймеры в приложении;<br/>
-&mdash; сэмплирование;<br/>
+<h2>What Metric to Measure?</h2>
+<p>Number of cycles or CPU time;<br/>
+&mdash; <b>rdtsc</b>/<b>rdtscp</b>, OS information (<b>getrusage</b>)</p>
+<p>Number of instructions processed;<br/>
+&mdash; CPU counters (through kernel &mdash; <b>perf_event_open</b><br/>&emsp; or directly &mdash; <b>rdpmc</b>)<br/>
+&mdash; run in emulator (<b>valgrind</b>)</p>
+<p>Number of bytes read from disk (or from file system?):<br/>
+&mdash; application counters or OS information.</p>
+<p>Real time between events (or its approximation?);<br/>
+&mdash; timers in application;<br/>
+&mdash; sampling;<br/>
 ...
 </section>
 
 
 <section class="slide">
-<h2>Ещё пример</h2>
-<p>Используем CPU профайлер.<br/>Мы оптимизировали функцию memcpy, но программа не ускорилась.<br/>Потому что наша программа упирается:</p>
-<p>&mdash; в чтение с диска;</p>
-<p>&mdash; в получение данных по сети;</p>
-<p>&mdash; в ожидание на mutex;</p>
-<p>&mdash; в sleep;</p>
+<h2>Another Example</h2>
+<p>Using CPU profiler.<br/>We optimized memcpy function, but the program didn't speed up.<br/>Because our program is bottlenecked by:</p>
+<p>&mdash; disk reads;</p>
+<p>&mdash; receiving data over network;</p>
+<p>&mdash; waiting on mutex;</p>
+<p>&mdash; sleep;</p>
 </section>
 
 
 <section class="slide">
-<h2>Методы профилирования</h2>
-<p><b>Инструментирование:</b></p>
-<p>&mdash; добавляем в программу код,<br/>который измеряет её работу;</p>
-<p><b>Сэмплирование:</b></p>
-<p>&mdash; в случайные моменты времени смотрим,<br/>где находится выполнение кода;</p>
+<h2>Profiling Methods</h2>
+<p><b>Instrumentation:</b></p>
+<p>&mdash; add code to the program<br/>that measures its work;</p>
+<p><b>Sampling:</b></p>
+<p>&mdash; at random moments in time, look<br/>where code execution is;</p>
 </section>
 
 
 <section class="slide">
-<h2>Снаружи или изнутри?</h2>
-<p><b>Внутренний профайлер:</b><br/>
-&mdash; приложение содержит код профайлера внутри себя;<br/>
-(1) в явном виде в исходниках;<br/>
-(2) без изменения исходников:<br/>
-профайлер добавляется при компиляции (<b>gprof (-pg)</b>, <b>LLVM XRay</b>)<br/> или при линковке (<b>Google CPU profiler</b>);</p>
-<p><b>Внешний профайлер:</b><br/>
-&mdash; приложение не требует изменений;<br/>
-&mdash; внешняя программа или ядро ОС следит за ним<br/>(<b>poor man's profiler</b>, <b>Linux Perf</b>);</p>
+<h2>External or Internal?</h2>
+<p><b>Internal profiler:</b><br/>
+&mdash; application contains profiler code inside itself;<br/>
+(1) explicitly in source code;<br/>
+(2) without changing source code:<br/>
+profiler added during compilation (<b>gprof (-pg)</b>, <b>LLVM XRay</b>)<br/> or during linking (<b>Google CPU profiler</b>);</p>
+<p><b>External profiler:</b><br/>
+&mdash; application requires no changes;<br/>
+&mdash; external program or OS kernel monitors it<br/>(<b>poor man's profiler</b>, <b>Linux Perf</b>);</p>
 </section>
 
 <section class="slide">
-<h2>Насколько влияет на работу?</h2>
-<p>Запуск приложения под эмуляцией.<br/>
-Пример: <b>valgrind</b>, замедление в 50 раз и больше.</p>
-<p>Добавление инструкций в каждую функцию.<br/>
-Пример: <b>gprof</b>, замедление в десятки раз.</p>
-<p>Добавление <b>nop</b> инструкций в крупные функции и патч налету.<br/>
-Пример: <b>LLVM XRay</b>, незначительное влияние если не используется.</p>
-<p>Сэмплирование.<br/>
-Пример: <b>Linux Perf</b>, можно включать в продакшене.</p>
-<p>Сбор готовых метрик.<br/>
-Пример: <b>rdpmc</b>, почти бесплатно.</p>
+<h2>How Much Does It Impact Performance?</h2>
+<p>Running application under emulation.<br/>
+Example: <b>valgrind</b>, slowdown of 50x and more.</p>
+<p>Adding instructions to every function.<br/>
+Example: <b>gprof</b>, slowdown of tens of times.</p>
+<p>Adding <b>nop</b> instructions to large functions and on-the-fly patching.<br/>
+Example: <b>LLVM XRay</b>, negligible impact if not used.</p>
+<p>Sampling.<br/>
+Example: <b>Linux Perf</b>, can be enabled in production.</p>
+<p>Collecting ready metrics.<br/>
+Example: <b>rdpmc</b>, almost free.</p>
 </section>
 
 <section class="slide">
-<h2>Всё уже написано до нас?</h2>
+<h2>Is Everything Already Written?</h2>
 <p class="cloud">
 <span>gprof</span> <span>valgrind</span> <span>linux perf</span><br/>
 <span>oprofile</span> <span>Coz</span> <span>VTune</span> <span>Google CPU profiler</span><br/>
@@ -212,23 +212,23 @@ for (const auto <b style="color: red;">&amp;</b> elem : map) { ... }</code>
 
 
 <section class="slide">
-<h2>Что мы хотим?</h2>
-<p>Постоянно держать профайлер включенным в продакшене:<br/>
-&mdash; нужно околонулевое влияние на скорость;</p>
+<h2>What Do We Want?</h2>
+<p>Keep the profiler constantly enabled in production:<br/>
+&mdash; need near-zero performance impact;</p>
 
-<p>Уметь сопоставлять профили конкретным запросам:<br/>
-&mdash; выделять <b>конкретные запросы</b> на нагруженном сервере<br/> и смотреть их профили;</p>
+<p>Be able to associate profiles with specific queries:<br/>
+&mdash; isolate <b>specific queries</b> on a loaded server<br/> and view their profiles;</p>
 
-<p>Хранить данные профилирования в ClickHouse:<br/>
-&mdash; агрегация профилей по типам запросов,<br/> по пользователям, на кластере;</p>
+<p>Store profiling data in ClickHouse:<br/>
+&mdash; aggregate profiles by query types,<br/> by users, across cluster;</p>
 
-<p style="color: green;">Может быть нам подойдёт сэмплирующий профайлер?</p>
+<p style="color: green;">Maybe a sampling profiler will work for us?</p>
 </section>
 
 
 <section class="slide">
-<h2>Сэмплирующие профайлеры</h2>
-<p>С некоторой периодичностью смотрим, где находилось<br/>выполнение кода во всех потоках. Пример: <b>Poor Man's Profiler</b>:</p>
+<h2>Sampling Profilers</h2>
+<p>At certain intervals, check where<br/>code execution was in all threads. Example: <b>Poor Man's Profiler</b>:</p>
 
 <code style="font-size: 16pt;">#!/bin/bash
 for x in $(seq 1 $nsamples)
@@ -237,7 +237,7 @@ for x in $(seq 1 $nsamples)
       -ex "<b style="color: green;">thread apply all bt</b>" -batch -p $pid
     sleep $sleeptime
   done | \
-awk '
+ awk '
   BEGIN { s = ""; }
   /^Thread/ { print s; s = ""; }
   /^\#/ { if (s != "" ) { s = s "," $4} else { s = $4 } }
@@ -246,35 +246,35 @@ sort | uniq -c | sort -r -n -k 1,1</code>
 </section>
 
 <section class="slide">
-<h2>Сэмплирующие профайлеры</h2>
-<p>С некоторой периодичностью смотрим, где находилось<br/>выполнение кода во всех потоках. Пример: <b>Google CPU Profiler</b>:</p>
+<h2>Sampling Profilers</h2>
+<p>At certain intervals, check where<br/>code execution was in all threads. Example: <b>Google CPU Profiler</b>:</p>
 
-<p>Выставляем в каждом потоке таймер,<br/>который будет отправлять этому потоку <b>сигнал</b>*.<br/>Например, 100 раз в секунду.</p>
-<p>В обработчике сигнала смотрим стек трейс.</p>
-<p>Агрегируем стек трейсы.</p>
-<p style="color: green; margin-top: 2em;">Выглядит тривиально!</p>
-<p style="font-size: 10pt;">* альтернатива &mdash; использовать <b>ptrace</b> из вспомогательного процесса.</p>
+<p>Set a timer in each thread,<br/>which will send a <b>signal</b>* to that thread.<br/>For example, 100 times per second.</p>
+<p>In the signal handler, capture the stack trace.</p>
+<p>Aggregate stack traces.</p>
+<p style="color: green; margin-top: 2em;">Looks trivial!</p>
+<p style="font-size: 10pt;">* alternative &mdash; use <b>ptrace</b> from auxiliary process.</p>
 </section>
 
 <section class="slide">
-<h2>Задача</h2>
-<p>Разработать <b>сэмплирующий профайлер</b> в ClickHouse, в котором<br/>собранная информация будет иметь <b>привязку к запросам</b>.</p>
-<p>Легко, так как для каждый поток в ClickHouse в один момент времени выполняет один запрос, и мы знаем, какой.</p>
-<p style="color: green; margin-top: 2em;">Выглядит тривиально!</p>
+<h2>The Task</h2>
+<p>Develop a <b>sampling profiler</b> in ClickHouse, where<br/>collected information will be <b>tied to queries</b>.</p>
+<p>Easy, because each thread in ClickHouse executes one query at a time, and we know which one.</p>
+<p style="color: green; margin-top: 2em;">Looks trivial!</p>
 </section>
 
 
 <section class="slide">
-<h2>Задача</h2>
-<p>Эту задачу делал не я :)</p>
-<p>Вся разработка &mdash; <b>Никита Лапков</b>;<br/>&mdash; разработчик баннерной системы Яндекса;<br/>&mdash; разработчик Facebook;<br>&mdash; контрибьютор ClickHouse;<br/>&mdash; крепкий профессионал;<br/>&mdash; и вообще хороший человек.</p>
+<h2>The Task</h2>
+<p>I didn't do this task :)</p>
+<p>All development &mdash; <b>Nikita Lapkov</b>;<br/>&mdash; Yandex banner system developer;<br/>&mdash; Facebook developer;<br/>&mdash; ClickHouse contributor;<br/>&mdash; strong professional;<br/>&mdash; and generally a good person.</p>
 </section>
 
 
 <section class="slide">
 <img style="height: 576px; float: right; margin-top: -20px; margin-right: -100px;" src="pictures/laplab.jpg" />
-<p style="margin-top: 170px;">Когда задачу стали делать,<br/>она почему-то оказалась<br/>нетривиальной.</p>
-<p>Очень нетривиальной.</p>
+<p style="margin-top: 170px;">When we started the task,<br/>it turned out to be<br/>non-trivial.</p>
+<p>Very non-trivial.</p>
 </section>
 
 
@@ -285,65 +285,65 @@ sort | uniq -c | sort -r -n -k 1,1</code>
 
 
 <section class="slide">
-<h2>Проблемы</h2>
-<p>Как сделать что-то в обработчике сигнала?</p>
-<p>В обработчике сигнала можно вызывать только <b>signal-safe</b> функции.</p>
-<p>Нельзя блокировать mutex*, ждать на condvar, выделять память...</p>
-<p>Можно писать в файловый дескриптор.</p>
-<p><span style="color: green;">Можно передавать информацию в отдельный поток через pipe</span>,<br/>а в этом потоке делать всё остальное: логгировать, вставлять в таблицу.</p>
-<p style="font-size: 10pt;">* вопрос: а можно ли использовать spinlock в обработчике сигнала?</p>
+<h2>Problems</h2>
+<p>How to do something in a signal handler?</p>
+<p>In a signal handler, you can only call <b>signal-safe</b> functions.</p>
+<p>Can't lock mutex*, wait on condvar, allocate memory...</p>
+<p>Can write to file descriptor.</p>
+<p><span style="color: green;">Can pass information to a separate thread via pipe</span>,<br/>and in that thread do everything else: log, insert into table.</p>
+<p style="font-size: 10pt;">* question: can you use spinlock in a signal handler?</p>
 </section>
 
 
 <section class="slide">
-<h2>Как собирать стек трейсы?</h2>
+<h2>How to Collect Stack Traces?</h2>
 <p>1. Frame pointer chain walking.</p>
-<p>Не работает, если код скомпилирован с -f<b>omit-frame-pointer</b>.<br/>Это по-умолчанию при сборке с оптимизациями.</p>
-<p>Можно собирать код с -f<b>no-omit-frame-pointer</b>. Но так хуже;<br/> библиотека <b>glibc</b> уже собрана с -f<b>omit-frame-pointer</b>.</p>
-<p style="font-size: 10pt; margin-top: 50px;">Вопрос: ASan, MSan, TSan используют именно этот метод. Почему он работает?</p>
+<p>Doesn't work if code is compiled with -f<b>omit-frame-pointer</b>.<br/>This is default when building with optimizations.</p>
+<p>Can build code with -f<b>no-omit-frame-pointer</b>. But that's worse;<br/> <b>glibc</b> library is already built with -f<b>omit-frame-pointer</b>.</p>
+<p style="font-size: 10pt; margin-top: 50px;">Question: ASan, MSan, TSan use exactly this method. Why does it work?</p>
 </section>
 
 <section class="slide">
-<h2>Как собирать стек трейсы?</h2>
-<p>2. Функция <b>backtrace</b> из execinfo.h &mdash; часть <b>libgcc</b>.</p>
-<p>Делает внутри себя <b style="color: red;">dlopen</b>, блокирует <b style="color: red;">mutex</b>,<br/>потом зовёт внутреннюю реализацию unwind из libgcc.<br/>
-<p>Непригодна для вызова из обработчика сигнала.</p>
+<h2>How to Collect Stack Traces?</h2>
+<p>2. <b>backtrace</b> function from execinfo.h &mdash; part of <b>libgcc</b>.</p>
+<p>Internally does <b style="color: red;">dlopen</b>, locks <b style="color: red;">mutex</b>,<br/>then calls internal unwind implementation from libgcc.<br/>
+<p>Not suitable for calling from signal handler.</p>
 </section>
 
 <section class="slide">
-<h2>Как собирать стек трейсы?</h2>
-<p>3. С помощью <b>libunwind</b>.</p>
-<p>Должен работать, потому что см. <b>asynchronous-unwind-tables</b>.</p>
-<p>Есть по крайней мере три варианта использования libunwind:<br/>
-&mdash; libunwind из libgcc*;<br/>
+<h2>How to Collect Stack Traces?</h2>
+<p>3. Using <b>libunwind</b>.</p>
+<p>Should work, because see <b>asynchronous-unwind-tables</b>.</p>
+<p>There are at least three variants of using libunwind:<br/>
+&mdash; libunwind from libgcc*;<br/>
 &mdash; libunwind "nongnu";<br/>
-&mdash; libunwind LLVM;</p>
-<p>И все три варианта выделяют память и блокируют mutex.<br/><b style="color: red;">Непригодны для вызова из обработчика сигнала.</b></p>
-<p style="font-size: 10pt">* программа на C++ с поддержкой исключений уже использует внутри себя часть libunwind. Другая реализация libunwind может быть подключена как отдельно &mdash; без пересечений по именам символов, так и в качестве полной замены реализации обработки исключений.</p>
+&mdash; LLVM libunwind;</p>
+<p>And all three variants allocate memory and lock mutex.<br/><b style="color: red;">Not suitable for calling from signal handler.</b></p>
+<p style="font-size: 10pt">* a C++ program with exception support already uses part of libunwind internally. Another libunwind implementation can be connected either separately &mdash; without symbol name conflicts, or as a complete replacement for exception handling implementation.</p>
 </section>
 
 <section class="slide">
-<h2>Как собирать стек трейсы?</h2>
-<p>4. Собирать стек трейс не из обработчика сигнала.</p>
-<p>В обработчике сигнала передавать <b>ucontext</b> в другой поток через <b>pipe</b>.</p>
-<p>Но чтобы преобразовать ucontext в стек трейс,<br/>поток должен быть заморожен.<br/>
-&mdash; в обработчике сигнала придётся ждать &mdash; очень медленно;<br/>
-&mdash; косвенная блокировка &mdash; <b style="color: red;">неприемлемо</b>.</p>
+<h2>How to Collect Stack Traces?</h2>
+<p>4. Collect stack trace not from signal handler.</p>
+<p>In signal handler pass <b>ucontext</b> to another thread via <b>pipe</b>.</p>
+<p>But to convert ucontext to stack trace,<br/>the thread must be frozen.<br/>
+&mdash; in signal handler have to wait &mdash; very slow;<br/>
+&mdash; indirect locking &mdash; <b style="color: red;">unacceptable</b>.</p>
 </section>
 
 <section class="slide">
-<h2>Как собирать стек трейсы?</h2>
+<h2>How to Collect Stack Traces?</h2>
 <img style="float: left; height: 60%; margin-left: -60px; margin-top: -60px; margin-right: 50px;" src="pictures/optimal.webp"/>
-<p>Выбрали вариант &mdash; патчить libunwind.</p>
+<p>Chose the option &mdash; patch libunwind.</p>
 </section>
 
 <section class="slide">
-<h2>Что не так с libunwind?</h2>
-<p>1. nongnu libunwind не проходит тесты под address sanitizer.</p>
-<p>Решили просто перейти на LLVM libunwind.</p>
+<h2>What's Wrong with libunwind?</h2>
+<p>1. nongnu libunwind doesn't pass tests under address sanitizer.</p>
+<p>Decided to just switch to LLVM libunwind.</p>
 
-<p style="color: green;">Бонус: заодно используем LLVM libunwind вместо libgcc для обработки исключений в C++.</p>
-<p>Правда такую конфигурацию сборки очень неудобно<br/>описывать в CMake.</p>
+<p style="color: green;">Bonus: also use LLVM libunwind instead of libgcc for C++ exception handling.</p>
+<p>Though such build configuration is very inconvenient<br/>to describe in CMake.</p>
 
 <code style="font-size: 10pt;">-Wl,--start-group
     .../libglibc-compatibility.a
@@ -355,24 +355,24 @@ sort | uniq -c | sort -r -n -k 1,1</code>
 </section>
 
 <section class="slide">
-<h2>Что не так с libunwind?</h2>
-<p>2. libunwind выделяет память с помощью <b>malloc</b>.</p>
-<p>Возможное решение: всегда выделять память с помощью <b>mmap</b><br/>&mdash; очень медленно.</p>
-<p>Решение: буфер на стеке и stack аллокатор поверх него.</p>
+<h2>What's Wrong with libunwind?</h2>
+<p>2. libunwind allocates memory using <b>malloc</b>.</p>
+<p>Possible solution: always allocate memory using <b>mmap</b><br/>&mdash; very slow.</p>
+<p>Solution: buffer on stack and stack allocator on top of it.</p>
 <p><a href="https://github.com/ClickHouse-Extras/libunwind/commit/500aa227911bd185a94bfc071d68f4d3b03cb3b1">https://github.com/ClickHouse-Extras/libunwind/commit/500aa227</a><br/>
 <a href="https://github.com/ClickHouse-Extras/libunwind/commit/ec86b1c6a2c6b8ba316f429db9a6d- 4122dd12710">https://github.com/ClickHouse-Extras/libunwind/commit/ec86b1c6</a></p>
 </section>
 
 <section class="slide">
-<h2>Что не так с libunwind?</h2>
-<p>3. Пропущенный регистр.</p>
+<h2>What's Wrong with libunwind?</h2>
+<p>3. Missing register.</p>
 <p><a href="https://github.com/ClickHouse-Extras/libunwind/commit/17a48fbfa7913ee889960a698516bd3ba51d63ee">https://github.com/ClickHouse-Extras/libunwind/commit/17a48fbf</a></p>
 <p><a href="https://reviews.llvm.org/D66685">https://reviews.llvm.org/D66685</a></p>
 </section>
 
 <section class="slide">
-<h2>Что не так с libunwind?</h2>
-<p>4. Неправильная CFA.</p>
+<h2>What's Wrong with libunwind?</h2>
+<p>4. Incorrect CFA.</p>
 <code>unsigned char mincore_res = 0;
 if (0 != syscall(SYS_mincore,
     (void*)(<b>cfa</b> / 4096 * 4096), 1, &amp;mincore_res))
@@ -384,80 +384,80 @@ if (0 != syscall(SYS_mincore,
 </section>
 
 <section class="slide">
-<h2>Что не так с libunwind?</h2>
+<h2>What's Wrong with libunwind?</h2>
 <p>5. FDE Cache.</p>
-<p>Использует <b>rwlock</b>.</p>
-<p>Модификация FDE Cache &mdash; для регистрации JIT-кода.<br/>Фактически используется только read lock.</p>
-<p>Даже read lock &mdash; не signal safe и приводит к <b style="color: red;">deadlock</b>.</p>
-<p>Решение &mdash; <span style="color: green;">удалить FDE Cache</span>.</p>
+<p>Uses <b>rwlock</b>.</p>
+<p>FDE Cache modification &mdash; for JIT code registration.<br/>Actually only read lock is used.</p>
+<p>Even read lock &mdash; not signal safe and leads to <b style="color: red;">deadlock</b>.</p>
+<p>Solution &mdash; <span style="color: green;">remove FDE Cache</span>.</p>
 <p><a href="https://github.com/ClickHouse-Extras/libunwind/commit/96f5f17125a3d8eed890e365868ccaa96bcd2301">https://github.com/ClickHouse-Extras/libunwind/commit/96f5f171</a></p>
 </section>
 
 <section class="slide">
-<h2>Что не так с libunwind?</h2>
-<p>6. Использование функции <b>dl_iterate_phdr</b>.</p>
-<p>Решение: lock-free PHDR Cache.</p>
-<p>&mdash; не работает совместно с thread sanitizer;<br/>
-&mdash; надо обновлять вручную при dlopen;</p>
+<h2>What's Wrong with libunwind?</h2>
+<p>6. Using <b>dl_iterate_phdr</b> function.</p>
+<p>Solution: lock-free PHDR Cache.</p>
+<p>&mdash; doesn't work with thread sanitizer;<br/>
+&mdash; need to update manually on dlopen;</p>
 <p><a href="https://github.com/libunwind/libunwind/issues/16">https://github.com/libunwind/libunwind/issues/16</a><br/>
 <a href="https://github.com/ClickHouse/ClickHouse/pull/6124">https://github.com/ClickHouse/ClickHouse/pull/6124</a></p>
-<p style="font-size: 10pt;">Решение придумал Фёдор Короткий, разработчик YT.</p>
+<p style="font-size: 10pt;">Solution designed by Fedor Korotkiy, YT developer.</p>
 </section>
 
 <section class="slide">
-<h2>Что не так с профайлером?</h2>
-<p>7. Несовместимость профайлера с sanitizers.</p>
-<p>Причина: санитайзеры тоже используют stack unwinding.</p>
-<p>Для этого они используют frame pointer и модифицируют регистр <b>%rbp</b>.</p>
-<p>В этот момент не работает linunwind.</p>
-<p>Решение: не использовать профайлер под sanitizers.</p>
+<h2>What's Wrong with the Profiler?</h2>
+<p>7. Profiler incompatibility with sanitizers.</p>
+<p>Reason: sanitizers also use stack unwinding.</p>
+<p>For this they use frame pointer and modify the <b>%rbp</b> register.</p>
+<p>At this moment libunwind doesn't work.</p>
+<p>Solution: don't use profiler under sanitizers.</p>
 <p><a href="https://github.com/ClickHouse/ClickHouse/pull/6769">https://github.com/ClickHouse/ClickHouse/pull/6769</a></p>
 </section>
 
 <section class="slide">
-<h2>Что не так с профайлером?</h2>
-<p>8. Отсутствие перезапуска syscalls после сигналов.</p>
+<h2>What's Wrong with the Profiler?</h2>
+<p>8. No syscall restart after signals.</p>
 <p style="font-family: Monospace;">man 7 signal</p>
-<p><b>SA_RESTART</b> работает не для всех syscalls*:</p>
-<p>&mdash; чтение и запись в socket с таймаутом.</p>
+<p><b>SA_RESTART</b> doesn't work for all syscalls*:</p>
+<p>&mdash; reading and writing to socket with timeout.</p>
 <p>&mdash; sleep, usleep, nanosleep, clock_nanosleep.</p>
-<p style="font-size: 10pt; margin-top: 50px;">* в FreeBSD и Mac OS X вообще всё по-другому.</p>
+<p style="font-size: 10pt; margin-top: 50px;">* in FreeBSD and Mac OS X everything is different.</p>
 </section>
 
 <section class="slide">
-<h2>Что не так с профайлером?</h2>
-<p>9. Неправильный перезапуск syscalls после сигналов:</p>
-<p>&mdash; чтение и запись в socket с таймаутом;</p>
-<p>&mdash; перезапускаем вызов, но не обновляем таймаут;</p>
-<p>Решение &mdash; всегда делать poll перед чтением.</p>
+<h2>What's Wrong with the Profiler?</h2>
+<p>9. Incorrect syscall restart after signals:</p>
+<p>&mdash; reading and writing to socket with timeout;</p>
+<p>&mdash; restart the call, but don't update timeout;</p>
+<p>Solution &mdash; always do poll before reading.</p>
 <p><a href="https://github.com/ClickHouse/ClickHouse/pull/6386">https://github.com/ClickHouse/ClickHouse/pull/6386</a></p>
 </section>
 
 <section class="slide">
-<h2>Что не так с профайлером?</h2>
-<p>10. Переполнение pipe.</p>
-<p>Решение:<br/>
-&mdash; увеличиваем размер pipe до 1 МБ;<br/>
-&mdash; если не удалось записать в pipe &mdash; игнорируем.</p>
-<p>Альтернативное решение:<br/>lock-free циклический буфер вместо pipe.</p>
+<h2>What's Wrong with the Profiler?</h2>
+<p>10. Pipe overflow.</p>
+<p>Solution:<br/>
+&mdash; increase pipe size to 1 MB;<br/>
+&mdash; if can't write to pipe &mdash; ignore.</p>
+<p>Alternative solution:<br/>lock-free circular buffer instead of pipe.</p>
 </section>
 
 <section class="slide">
-<h2>Что не так с профайлером?</h2>
-<p>11. Слишком частые сигналы.</p>
-<p>Решение: если <b>si_overrun</b> > 0 &mdash; пропускаем обработку.</p>
+<h2>What's Wrong with the Profiler?</h2>
+<p>11. Too frequent signals.</p>
+<p>Solution: if <b>si_overrun</b> > 0 &mdash; skip processing.</p>
 </section>
 
 <section class="slide">
-<h2>Результат</h2>
+<h2>Result</h2>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 32pt;">Результат</h2>
-<p>1. Включаем одну или обе настройки:</p>
+<h2 style="font-size: 32pt;">Result</h2>
+<p>1. Enable one or both settings:</p>
 <code>SET query_profiler_<b>cpu</b>_time_period_ns = 1000000;</code>
 <code style="margin-top: 10px;">SET query_profiler_<b>real</b>_time_period_ns = 1000000;</code>
-<p style="margin-top: 1em;">2. Запускаем запросы.<br/>Данные записываются в таблицу <b>system.trace_log</b>.</p>
+<p style="margin-top: 1em;">2. Run queries.<br/>Data is written to <b>system.trace_log</b> table.</p>
 <code style="margin-top: 1em; font-size: 12pt;">event_date:    2019-09-05
 event_time:    2019-09-05 05:47:44
 revision:      54425
@@ -472,12 +472,12 @@ trace:         [140171472847748,61781958,110943821,117594728,117595220,115654933
 </section>
 
 <section class="slide">
-<h2 style="font-size: 32pt;">Результат</h2>
-<p style="margin-top: -1em;"><b>trace</b> &mdash; массив адресов (stack trace);</p>
-<p>Преобразовать адрес в имя функции:<br/>&mdash; demangle(addressToSymbol(trace[1]))<br/>
-Преобразовать адрес в имя файла и номер строки:<br/>&mdash; addressToLine(trace[1])</p>
-<p>* не забудьте установить пакет clickhouse-common-static-<b>dbg</b></p>
-<p>Пример: топ функций</p>
+<h2 style="font-size: 32pt;">Result</h2>
+<p style="margin-top: -1em;"><b>trace</b> &mdash; array of addresses (stack trace);</p>
+<p>Convert address to function name:<br/>&mdash; demangle(addressToSymbol(trace[1]))<br/>
+Convert address to file name and line number:<br/>&mdash; addressToLine(trace[1])</p>
+<p>* don't forget to install clickhouse-common-static-<b>dbg</b> package</p>
+<p>Example: top functions</p>
 <code style="margin-right: -10px;">SELECT count(),
   demangle(addressToSymbol(trace[1] AS addr)) AS symbol
 FROM system.trace_log
@@ -487,8 +487,8 @@ ORDER BY count() DESC LIMIT 10</code>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 32pt;">Результат</h2>
-<p>Пример: топ функций:</p>
+<h2 style="font-size: 32pt;">Result</h2>
+<p>Example: top functions:</p>
 <code style="margin-left: -100px; margin-right: -100px;">┌─count()─┬─symbol──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │     517 │ void LZ4::(anonymous namespace)::decompressImpl&lt;32ul, false>(char const*, char*, unsigned long)                                                                                                                         │
 │     480 │ void DB::deserializeBinarySSE2&lt;4>(DB::PODArray&lt;unsigned char, 4096ul, Allocator&lt;false, false>, 15ul, 16ul>&amp;, DB::PODArray&lt;unsigned long, 4096ul, Allocator&lt;false, false>, 15ul, 16ul>&amp;, DB::ReadBuffer&amp;, unsigned long) │
@@ -504,8 +504,8 @@ ORDER BY count() DESC LIMIT 10</code>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 32pt;">Результат</h2>
-<p>Пример: топ контекстов для запроса:</p>
+<h2 style="font-size: 32pt;">Result</h2>
+<p>Example: top contexts for a query:</p>
 <code style="margin-right: -10px;">SELECT count(),
   arrayStringConcat(arrayMap(x -> concat(
     demangle(addressToSymbol(x)),
@@ -567,12 +567,12 @@ clone
 
 <section class="slide">
 <p>&nbsp;</p>
-<p>Секреты оптимизации производительности ClickHouse: <br/><a href="https://youtu.be/ltg8vstuHUU">https://youtu.be/ltg8vstuHUU</a></p>
-<p>Анализ производительности запросов в ClickHouse: <br/><a href="https://youtu.be/ondHe_JUyW4">https://youtu.be/ondHe_JUyW4</a></p>
-<p>Как устроены хэш-таблицы в ClickHouse: <br/><a href="https://youtu.be/EoX82TEz2sQ">https://youtu.be/EoX82TEz2sQ</a></p>
-<p>Параллельный и распределённый GROUP BY: <br/><a href="https://youtu.be/SrucFOs8Y6c">https://youtu.be/SrucFOs8Y6c</a></p>
-<p>Как ускорить разжатие LZ4: <br/><a href="https://youtu.be/V2CqQBICt7M">https://youtu.be/V2CqQBICt7M</a></p>
-<p>Обфускация баз данных: <br/><a href="https://youtu.be/2iR7i4akL44">https://youtu.be/2iR7i4akL44</a></p>
+<p>ClickHouse Performance Optimization Secrets: <br/><a href="https://youtu.be/ltg8vstuHUU">https://youtu.be/ltg8vstuHUU</a></p>
+<p>Query Performance Analysis in ClickHouse: <br/><a href="https://youtu.be/ondHe_JUyW4">https://youtu.be/ondHe_JUyW4</a></p>
+<p>How Hash Tables Work in ClickHouse: <br/><a href="https://youtu.be/EoX82TEz2sQ">https://youtu.be/EoX82TEz2sQ</a></p>
+<p>Parallel and Distributed GROUP BY: <br/><a href="https://youtu.be/SrucFOs8Y6c">https://youtu.be/SrucFOs8Y6c</a></p>
+<p>How to Speed Up LZ4 Decompression: <br/><a href="https://youtu.be/V2CqQBICt7M">https://youtu.be/V2CqQBICt7M</a></p>
+<p>Database Obfuscation: <br/><a href="https://youtu.be/2iR7i4akL44">https://youtu.be/2iR7i4akL44</a></p>
 </section>
 
     <section class="slide">

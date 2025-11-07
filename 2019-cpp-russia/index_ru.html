@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Не слишком глупые указатели в ClickHouse</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x10.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>Не слишком глупые указатели в ClickHouse</h1>
+    </header>
+
+    <section class="slide" id="cover">
+        <h1 style="margin-top: 200px;"><span style="background: rgba(255, 255, 255, 0.75)">Не слишком глупые указатели<br/>в ClickHouse</span></h1>
+    </section>
+
+<section class="slide">
+<h2>Основа ClickHouse &mdash; столбцы</h2>
+
+<p>На диске &mdash; столбцы.<br/>
+Данные хранятся по столбцам.</p>
+
+<p>В оперативке &mdash; столбцы.<br/>
+Данные обрабатываются по столбцам.</p>
+</section>
+
+
+<section class="slide">
+<h2>Как хранятся столбцы в оперативке</h2>
+
+<p>В виде кусочков столбцов &mdash; например, 65 536 элементов.</p>
+<p>Размер кусочка &mdash; зависит от многих вещей.</p>
+<p>При SELECT &mdash; см. настройку max_block_size.</p>
+</section>
+
+
+<section class="slide">
+<h2>Как хранятся столбцы в оперативке</h2>
+<p>Представлены в виде объектов с интерфейсом IColumn.</p>
+<p>Варианты &mdash; ColumnVector&lt;T&gt;, ColumnString, ColumnArray...</p>
+
+<p>ColumnVector&lt;T&gt; &mdash; почти как std::vector&lt;T&gt;.<br/>
+Но под интерфейсом IColumn.<br/>
+И вместо std::vector&lt;T&gt; &mdash; PODArray&lt;T&gt; (зачем?).</p>
+</section>
+
+
+<section class="slide">
+<h2>Как хранятся столбцы в оперативке</h2>
+<img style="float: left; height: 60%; margin-left: -60px; margin-top: -60px; margin-right: 20px;" src="pictures/optimal.webp"/>
+<p>Раньше был std::vector. PODArray &mdash; просто оптимизация.</p>
+
+<p>PODArray:<br/>
+&mdash; нет лишнего memset;<br/>
+&mdash; есть padding 15 байт на конце;<br/>
+&mdash; использует интерфейс аллокатора, отличный от std::allocator, который позволяет иногда делать mremap.</p>
+</section>
+
+
+<section class="slide">
+<h2>Как хранятся столбцы в оперативке</h2>
+
+<p>ColumnString &mdash; из двух компонент:</p>
+
+<p>1. Байты, уложенные подряд.<br/>
+2. Смещения до i+1 строки.</p>
+
+<code>h e l l o \0 w o r l d \0
+6 12</code>
+</section>
+
+
+<section class="slide">
+<h2>Как хранятся столбцы в оперативке</h2>
+
+<p>ColumnConst</p>
+
+<p>Из одного вложенного столбца,<br/>
+содержащего одно значение.</p>
+</section>
+
+
+<section class="slide">
+<h2>Что даёт интерфейс IColumn</h2>
+
+<p>Базовые операции:<br/>
+&mdash; cut &mdash; вырезать часть столбца, для реализации LIMIT;<br/>
+&mdash; filter &mdash; для реализации WHERE;<br/>
+&mdash; compareAt, permute &mdash; для реализации ORDER BY;<br/>
+...</p>
+</section>
+
+
+<section class="slide">
+<h2>Почти все операции immutable</h2>
+
+<p>virtual <b>Ptr</b> filter(const Filter &amp; filt, ssize_t result_size_hint) <b>const</b> = 0;</p>
+
+<p>Вместо модификации содержимого, создают<br/>и возвращают новый объект-столбец.</p>
+
+<p>Это нормально, так как операции "крупные".</p>
+
+<p>Но есть также "мелкие", мутирующие операции.</p>
+</section>
+
+
+<section class="slide">
+<h2>IColumn, за что отвечает:</h2>
+
+<p>&mdash; хранение данных в оперативке;<br/>
+&mdash; общие операции над столбцами.</p>
+
+<h2>IColumn, на что похоже:</h2>
+
+<p>&mdash; Apache Arrow;<br/>
+&mdash; массивы в NumPy;<br/>
+&mdash; массивы APL, J, K.</p>
+</section>
+
+
+<section class="slide">
+<h2>Мотивация</h2>
+
+<p>Изолировать максимально эффективные<br/>внутренние циклы от кода-обвязки.</p>
+<p>Код не обязан быть эффективным целиком.</p>
+<p>Оптимизируемые места должны быть локализуемы.</p>
+
+<p><b>&laquo;векторный движок&raquo;</b></p>
+
+<p>Бонус:<br/>
+&mdash; SIMD инструкции;<br/>
+&mdash; хитрые оптимизации для однородных данных<br/>
+(IColumn::filter, реализация функции LIKE);</p>
+</section>
+
+
+<section class="slide">
+<h2>Common Subexpression Elimination</h2>
+
+<p><span style="white-space: pre; font-family: Monospace, Courier New; background-color: #FED; padding: 10px;">SELECT f(x + y), g(x + y)</span></p>
+<p>&mdash; <span style="white-space: pre; font-family: Monospace, Courier New; background-color: #FED; padding: 10px;">x + y</span> &mdash; одинаковое выражение, встречающееся несколько раз.</p>
+<p><span style="white-space: pre; font-family: Monospace, Courier New; background-color: #FED; padding: 10px;">SELECT x + y AS a, x + y AS b</span></p>
+<p>&mdash; <b>a</b> и <b>b</b> &mdash; на самом деле одни и те же столбцы.</p>
+
+<p>Простое, изящное и неправильное решение:<br/>&mdash; использовать <b>shared_ptr&lt;IColumn></b>.</p>
+<p>Столбцы <b>a</b> и <b>b</b> будут просто ссылаться на одно и то же.</p>
+</section>
+
+
+<section class="slide">
+<h2>Common Subexpression Elimination</h2>
+
+<p><span style="white-space: pre; font-family: Monospace, Courier New">SELECT f(x + y), g(x + y)</span></p>
+<p>AST запроса тоже можно склеить &mdash; превратить из дерева в DAG:</p>
+<pre>
+  x   y   x   y              x   y
+<span style="color: gray;">   ↘ ↙     ↘ ↙                ↘ ↙</span>
+    +       +                  +
+<span style="color: gray;">    ↓       ↓      &minus;&minus;&minus;>       ↙ ↘</span>
+    f       g                f   g
+<span style="color: gray;">     ↘     ↙                 ↓   ↓</span>
+      SELECT                 SELECT
+</pre>
+<p>Использовать для узлов <b>shared_ptr&lt;IAST></b> и расшарить одинаковые узлы.</p>
+</section>
+
+
+<section class="slide">
+<h2>Все вычисления функций immutable</h2>
+
+<p>Вычисления:<br/><div style="white-space: pre; font-family: Monospace, Courier New; background-color: #FED; padding: 10px; line-height: 1.25">c1 = x;<br/>c2 = y;<br/>c3 = plus(c1, c2);<br/>c4 = f(c3);<br/>c5 = g(c3);</div></p>
+<p>&mdash; можно выполнять независимо,<br/>в произвольном порядке обхода графа<br/>и параллельно.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 36pt;">Проблемы использования shared_ptr</h2>
+
+<p>Часть операций <b>mutable</b>.</p>
+<p>Например:
+<br/>&mdash; <span style="white-space: pre; font-family: Monospace, Courier New; background-color: #FED; padding: 0 10px 0 10px;">IColumn::insert</span> &mdash; вставить в конец столбца одно значение;
+<br/>&mdash; <span style="white-space: pre; font-family: Monospace, Courier New; background-color: #FED; padding: 0 10px 0 10px;">IColumn::insertRangeFrom</span> &mdash; вставить в конец столбца кусок другого.</p>
+<p>Пример использования:</p>
+<p><span style="white-space: pre; font-family: Monospace, Courier New; background-color: #FED; padding: 10px;">INSERT INTO table SELECT a, b FROM other</span></p>
+<p>&mdash; склейка мелких блоков в более крупные при INSERT;
+<br/>&mdash; но <b>mutable</b> операции нельзя применять к <b>shared</b> данным.</p>
+<p>Persistent data structures?</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 36pt;">Проблемы использования shared_ptr</h2>
+
+<p>Если AST склеено в DAG с помощью shared_ptr,<br/>то переписывание одного куска запроса меняет другой.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 36pt;">Очевидное решение</h2>
+
+<p>Использовать <b>shared_ptr&lt;const T></b> для разделяемых данных<br/>
+и <b>unique_ptr&lt;T></b>, когда данные надо менять.</p>
+
+<p>Пример:</p>
+
+<code><span style="color: blue;">// Создаём объект и меняем его.</span>
+std::unique_ptr&lt;T> u{std::make_unique&lt;T>()};
+u->modify();
+
+<span style="color: blue;">// Когда объект готов, его можно разделять.</span>
+std::shared_ptr&lt;const T> s1{std::move(u)};
+std::shared_ptr&lt;const T> s2 = s1;
+
+<span style="color: blue;">// Разделяемый объект никто не может менять.</span></code>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 36pt;">Очевидное решение</h2>
+
+<p style="margin-top: -1em;">Если нужно поменять разделяемый объект?
+<br/>&mdash; просто клонируем его:</p>
+
+<code><span style="color: blue;">// Создаём объект и меняем его.</span>
+std::unique_ptr&lt;T> u{std::make_unique&lt;T>()};
+u->modify();
+
+<span style="color: blue;">// Когда объект готов, его можно разделять.</span>
+std::shared_ptr&lt;const T> s1{u.release()};
+std::shared_ptr&lt;const T> s2 = s1;
+
+<span style="color: blue;">// Разделяемый объект никто не может менять.</span>
+<span style="color: blue;">// Но может клонировать, а потом менять новую копию.</span>
+std::unique_ptr&lt;T> u2{s2->clone()};
+u2->modify();
+</code>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 36pt;">Очевидное решение</h2>
+
+<p>Склейка мелких блоков в более крупные.</p>
+<p>Было:</p>
+<code>result->insertRangeFrom(*source, 0, length);</code>
+<p style="margin-top: 1em;">Стало:</p>
+<code>result_mutable = result->clone();
+result_mutable->insertRangeFrom(*source, 0, length);
+result = result_mutable;</code>
+<p style="margin-top: 1em;"><span style="color: red;">Лишнее копирование, даже если refcount == 1.</span>
+<br/>В случае многих итераций, все копирования кроме первого,<br/>будут гарантированно лишними.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 36pt;">Очевидное решение</h2>
+<img style="float: right; height: 60%; margin-right: -60px; margin-top: -100px; margin-left: 20px;" src="pictures/not_optimal.webp"/>
+<p style="margin-top: 1em;"><span style="color: red;">Лишнее копирование, даже если refcount == 1.</span>
+</p><p>В случае многих итераций, все копирования<br/>кроме первого, будут гарантированно лишними.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 36pt;">&nbsp;</h2>
+
+<p>Можно ли клонировать объект только если refcount &gt; 1 а иначе<br/><span style="color: green;">магическим образом</span> преобразовывать <b>shared_ptr</b> в <b>unique_ptr</b>?</p>
+
+<p>Нет, потому что у них разные <span style="color: red;">memory layout</span> и вообще всё.</p>
+<p>sizeof(unique_ptr&lt;T>) == sizeof(void*)<br/>
+sizeof(shared_ptr&lt;T>) == 2 * sizeof(void*)</p>
+<p>(в реализации libc++ или libstdc++)</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 36pt;">Copy-on-write?</h2>
+
+<p>Техника <b>copy-on-write</b> печально известна<br/>по старым реализациям <b>std::string</b>.</p>
+<p>Пример: libstdc++ с old C++ ABI по-умолчанию в gcc до 5.1.</p>
+<p>CoW-строки <span style="color: red;">тормозят</span>.</p>
+<p><a href="https://www.youtube.com/watch?v=rJWSSWYL83U">https://www.youtube.com/watch?v=rJWSSWYL83U</a></p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 36pt;">Copy-on-write?</h2>
+
+<p>Почему CoW-строки &mdash; не очень хорошо:</p>
+<p>&mdash; реализация CoW требует подсчёта refcount, что требует атомарных операций в многопоточных программах;</p>
+<p>&mdash; но в типичных случаях, большинство строк <span style="color: red;">мелкие</span> и их копирование (при наличии SSO или хорошего аллокатора) дешевле изменения refcnt;</p>
+<p>&mdash; копирование при модификации осуществляется <span style="color: red;">неявным образом</span>, что требует крайне сложного кода;</p>
+<p>&mdash; в особенности для корректной поддержки non-const iterator<br/>и non-const operator[];</p>
+<p>&mdash; начиная с C++11, move заменяет копирования временных объектов;</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 36pt;">Copy-on-write?</h2>
+
+<p>CoW <span style="color: red;">не нужно</span> использовать:</p>
+<p>1. Для мелких объектов, которые легко копировать.</p>
+<p>&mdash; <span style="color: green;">но если объект тяжёлый, то лучше его разделять<br/>и увеличивать refcount вместо копирования</span>.
+</p><p>Пример: <b>fbstring</b> использует CoW для длинных строк и SSO для мелких.</p>
+<p>2. Если копирование выполняется неявно.</p>
+<p>&mdash; <span style="color: green;">но можно сделать один метод, который даёт доступ
+<br/>к non-const части интерфейса (подготовить объект к изменению)<br/> клонировать, если refcount > 1 или "reinterpret_cast" иначе</span>.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 36pt;">Разумный CoW</h2>
+
+<code style="margin-top: -1em; font-size: 16pt;"><span style="color: blue;">// Creating and assigning to immutable ptr.</span>
+COW&lt;T>::Ptr x = COW&lt;T>::create(1);
+<span style="color: blue;">// Sharing single immutable object in two ptrs.</span>
+COW&lt;T>::Ptr y = x;
+<span style="color: blue;">// Now x and y are shared.</span>
+
+<span style="color: blue;">// Change value of x.</span>
+{
+    <span style="color: blue;">// Creating mutable ptr.
+    // It can clone an object under the hood if it was shared.</span>
+    COW&lt;T>::MutablePtr mutate_x = std::move(*x).mutate();
+    <span style="color: blue;">// Using non-const methods of an object.</span>
+    mutate_x->set(2);
+    <span style="color: blue;">// Assigning pointer 'x' to mutated object.</span>
+    x = std::move(mutate_x);
+}
+<span style="color: blue;">// Now x and y are unshared and have different values.</span>
+</code>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 36pt;">Разумный CoW</h2>
+
+<p><b>COW&lt;T>::Ptr</b> &mdash; ведёт себя аналогично <b>std::shared_ptr&lt;const T></b></p>
+<p><b>COW&lt;T>::MutablePtr</b> &mdash; ведёт себя аналогично <b>std::unique_ptr&lt;T></b></p>
+
+<p>Преобразование mutable в immutable:</p>
+<code>COW&lt;T>::MutablePtr x;
+COW&lt;T>::Ptr y = std::move(x);
+</code>
+
+<p style="margin-top: 1em;">Преобразование immutable в mutable:</p>
+<code>COW&lt;T>::Ptr x;
+COW&lt;T>::MutablePtr y = std::move(*x).mutate();
+</code>
+<p style="margin-top: 1em;">&mdash; выполняет копирование, если refcount > 1.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 36pt;">Разумный CoW</h2>
+
+<p><span style="white-space: pre; font-family: Monospace, Courier New; background-color: #FED; padding: 10px;">std::move(*x).mutate();</span></p>
+<p>или</p>
+<p><span style="white-space: pre; font-family: Monospace, Courier New; background-color: #FED; padding: 10px;">std::move(x)->mutate();</span></p>
+<p>?</p>
+<p>1. В C++ нет rvalue qualified <span style="white-space: pre; font-family: Monospace, Courier New;">operator-></span>
+<br/><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3723.html">http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3723.html</a></p>
+<p>2. Хотим инвалидировать само значение, а не Ptr.<br/>
+(у Ptr мы ещё можем использовать оператор присваивания)<br/>
+Update после доклада: на самом деле нет проблем с вызовом<br/>оператора присваивания после move.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 36pt;">Реализация</h2>
+
+<code>template &lt;typename Derived>
+class COW : public
+    boost::intrusive_ref_counter&lt;Derived>
+</code>
+
+<p style="margin-top: 1em;">&mdash; будем использовать интрузивный указатель<br/>&mdash; добавляем к объекту refcount.</p>
+
+<code>class IColumn : public COW&lt;IColumn>
+{
+private:
+    friend class COW&lt;IColumn>;
+    virtual MutablePtr clone() const = 0;
+</code>
+
+<p style="margin-top: 1em;">&mdash; метод <b>COW&lt;T>::mutate</b> будет вызывать <b>T::clone</b>, если надо.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 36pt;">Реализация</h2>
+
+<code style="font-size: 16pt; margin-top: -1em;">template &lt;typename Derived>
+class COW : public <b style="color: #08F;">boost::intrusive_ref_counter</b>&lt;Derived>
+{
+    template &lt;typename T>
+    class <b style="color: #0BF;">IntrusivePtr</b> : public <b style="color: blue;">boost::intrusive_ptr</b>&lt;T> {...}
+
+protected:
+    template &lt;typename T>
+    class <b style="color: #A50;">mutable_ptr</b> : public <b style="color: #0BF;">IntrusivePtr</b>&lt;T> {...}
+
+public: using <b style="color: #F80;">MutablePtr</b> = <b style="color: #A50;">mutable_ptr</b>&lt;Derived>;
+
+protected:
+    template &lt;typename T>
+    class <b style="color: green;">immutable_ptr</b> : public <b style="color: #0CF;">IntrusivePtr</b>&lt;const T> {...}
+
+public: using <b style="color: #0B0;">Ptr</b> = <b style="color: green;">immutable_ptr</b>&lt;Derived>;
+}
+</code>
+</section>
+
+
+<section class="slide">
+<code style="font-size: 14pt;">template &lt;typename T>
+class mutable_ptr : public IntrusivePtr&lt;T>
+{
+...
+public:
+    <span style="color: blue;">/// Copy: not possible.</span>
+    mutable_ptr(const mutable_ptr &amp;) = delete;
+
+    <span style="color: blue;">/// Move: ok.</span>
+    mutable_ptr(mutable_ptr &amp;&amp;) = default;
+    mutable_ptr &amp; operator=(mutable_ptr &amp;&amp;) = default;
+
+    <span style="color: blue;">/// Initializing from temporary of compatible type.</span>
+    template &lt;typename U>
+    mutable_ptr(mutable_ptr&lt;U> &amp;&amp; other) : Base(std::move(other)) {}
+
+    mutable_ptr() = default;
+    mutable_ptr(std::nullptr_t) {}
+};
+</code>
+</section>
+
+<section class="slide">
+<code style="font-size: 12pt;">template &lt;typename T>
+class immutable_ptr : public IntrusivePtr&lt;const T>
+{ ...
+public:
+    <span style="color: blue;">/// Copy from immutable ptr: ok.</span>
+    immutable_ptr(const immutable_ptr &amp;) = default;
+    immutable_ptr &amp; operator=(const immutable_ptr &amp;) = default;
+
+    template &lt;typename U>
+    immutable_ptr(const immutable_ptr&lt;U> &amp; other) : Base(other) {}
+
+    <span style="color: blue;">/// Move: ok.</span>
+    immutable_ptr(immutable_ptr &amp;&amp;) = default;
+    immutable_ptr &amp; operator=(immutable_ptr &amp;&amp;) = default;
+
+    <span style="color: blue;">/// Initializing from temporary of compatible type.</span>
+    template &lt;typename U>
+    immutable_ptr(immutable_ptr&lt;U> &amp;&amp; other) : Base(std::move(other)) {}
+
+    <span style="color: blue;">/// Move from mutable ptr: ok.</span>
+    template &lt;typename U>
+    immutable_ptr(mutable_ptr&lt;U> &amp;&amp; other) : Base(std::move(other)) {}
+
+    <span style="color: blue;">/// Copy from mutable ptr: not possible.</span>
+    template &lt;typename U>
+    immutable_ptr(const mutable_ptr&lt;U> &amp;) = delete;
+
+    immutable_ptr() = default;
+    immutable_ptr(std::nullptr_t) {}
+};
+</code>
+</section>
+
+<section class="slide">
+<code style="font-size: 14pt;">class COW : public boost::intrusive_ref_counter&lt;Derived>
+{
+protected:
+    MutablePtr shallowMutate() const
+    {
+        if (this->use_count() > 1)
+            return derived()->clone();
+        else
+            return assumeMutable();
+    }
+
+public:
+    MutablePtr <b>mutate</b>() const &amp;&amp; { return shallowMutate(); }
+
+    MutablePtr assumeMutable() const
+    {
+        return const_cast&lt;COW*>(this)->getPtr();
+    }
+
+    Derived &amp; assumeMutableRef() const
+    {
+        return const_cast&lt;Derived &amp;>(*derived());
+    }
+</code>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 36pt;">Наследование</h2>
+
+<code style="font-size: 16pt;">template &lt;typename Base, typename Derived>
+class COWHelper : public Base
+</code>
+
+<code style="font-size: 16pt; margin-top: 1em;">class IColumn
+    : public COW&lt;IColumn>
+{
+    friend class COW&lt;IColumn>;
+    virtual MutablePtr clone() const = 0;
+    virtual ~IColumn() {}
+};
+
+class ConcreteColumn
+    : public COWHelper&lt;IColumn, ConcreteColumn>
+{
+    friend class COWHelper&lt;IColumn, ConcreteColumn>;
+};
+</code>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 36pt;">Наследование</h2>
+<p style="margin-bottom: 2em;">Диаграмма наследования:</p>
+
+<pre style="line-height: 1.5;">boost::intrusive_ref_counter&lt;IColumn>
+                <span style="color: gray">↑</span>
+          COW&lt;IColumn>
+                <span style="color: gray">↑</span>
+             <b>IColumn</b>
+                <span style="color: gray">↑</span>
+   COWHelper&lt;IColumn, ConcreteColumn>
+                <span style="color: gray">↑</span>
+          <b>ConcreteColumn</b>
+</pre>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 36pt;">Композиция / агрегация</h2>
+<code style="font-size: 16pt;">class ColumnPair final
+    : public COWHelper&lt;IColumn, ColumnPair>
+{
+private:
+    <b>SomePtr a;</b>
+    <b>SomePtr b;</b>
+}
+</code>
+<p style="margin-top: 1em;">Непонятно, делать ли члены класса MutablePtr или Ptr?</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 36pt;">Композиция / агрегация</h2>
+<p>Подход 1: immutable члены.</p>
+<p>Объект содержит внутри себя immutable члены.<br/>
+Во всех non-const методах вызывается mutate,
+<br/>производятся изменения и присваивание обратно.</p>
+<p>Недостатки:</p><p>
+Лишние проверки и атомарные операции<br/>при каждом вызове non-const методов.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 36pt;">Композиция / агрегация</h2>
+<p>Подход 2: mutable члены.</p>
+<p>Объект содержит внутри себя mutable члены.<br/>
+Два объекта не могут иметь разделяемые члены класса.</p>
+<p>Недостатки:</p><p>
+Разделяемые члены класса нужны.<br/>Пример: столбцы с массивами, имеющими совпадающие длины.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 36pt;">Композиция / агрегация</h2>
+<p>Подход 3: immutable члены и deep-мутация.</p>
+<p>Объект содержит внутри себя immutable члены.<br/>
+Метод mutate делает глубокую мутацию всех членов класса,
+<br/>что гарантирует их уникальность в mutable объектах.
+<br/>Во всех non-const методах используется <b>assumeMutableRef</b>.</p>
+<p>Недостатки:</p><p>
+Сложная реализация.<br/>
+Метод <b>assumeMutableRef</b> небезопасен.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 36pt;">Композиция / агрегация</h2>
+<p style="font-size: 32pt;">std::experimental::propagate_const</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 36pt;">Композиция / агрегация</h2>
+<p style="margin-top: -1em;">Подход 4: chameleon_ptr.</p>
+<p>Объект содержит внутри себя <b>chameleon</b> члены.<br/>
+Которые ведут себя как immutable, если объект const
+<br/>и как mutable, если объект не const.</p>
+
+<style>
+.chameleon
+{
+    color: red;
+    animation: anim 15s;
+    -moz-animation: anim 15s infinite;
+    -webkit-animation: anim 15s infinite;
+}
+
+@-moz-keyframes anim
+{
+    0%   {color: #F80;}
+    50%  {color: green;}
+    100% {color: #F80;}
+}
+
+@-webkit-keyframes anim
+{
+    0%   {color: #F80;}
+    50%  {color: green;}
+    100% {color: #F80;}
+}
+</style>
+
+<code>template &lt;typename T>
+class <b class="chameleon">chameleon_ptr</b>
+{
+private:
+ immutable_ptr<T> value;
+public:
+ <span style="color: green;">const T &amp; operator*() const { return *value; }</span>
+ <span style="color: #A50;">T &amp; operator*() { return value->assumeMutableRef(); }</span>
+...
+}
+</code>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 36pt;">Полиморфизм типов по const</h2>
+
+<code>using T = X;
+using const T = Y;
+</code>
+
+<p style="margin-top: 1em;">Где X и Y &mdash; разные типы с одинаковым memory layout.<br/>T работает примерно как <span style="white-space: pre; font-family: Monospace, Courier New;">union { X x; Y y; }</span>.</p>
+
+<code>template &lt;typename T>
+using COWPtr&lt;T> = mutable_ptr&lt;T>;
+
+template &lt;typename T>
+using const COWPtr&lt;T> = immutable_ptr&lt;T>;
+</code>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 36pt;">Полиморфизм типов по const</h2>
+
+<p>Вряд ли стоит делать это в C++.</p><p>C++ и так уже слишком сложный :)</p>
+</section>
+
+
+    <section class="slide">
+        <p style="font-size: 32pt; margin-top: 1em;"><a href="https://github.com/ClickHouse/ClickHouse/blob/master/dbms/src/Common/COW.h">https://github.com/ClickHouse/ClickHouse/<br/>&nbsp;&nbsp;&nbsp;&nbsp;blob/master/dbms/src/Common/COW.h</a></p>
+        <p>&mdash; 300 строк кода, из них 40% &mdash; комментарии.</p>
+    </section>
+
+
+    <section class="slide">
+        <h2>.</h2>
+    </section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+</body>
+</html>

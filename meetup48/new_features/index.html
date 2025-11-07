@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Ещё более новые возможности ClickHouse</title>
+    <title>Even More New Features of ClickHouse</title>
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -16,15 +16,15 @@
 </head>
 <body class="shower list">
     <header class="caption">
-        <h1>Ещё более новые возможности ClickHouse</h1>
+        <h1>Even More New Features of ClickHouse</h1>
     </header>
 
     <section class="slide" id="cover">
-        <h1 style="margin-top: 180px; font-size: 48pt;"><span>Ещё более новые возможности ClickHouse</h1>
+        <h1 style="margin-top: 180px; font-size: 48pt;"><span>Even More New Features of ClickHouse</h1>
     </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">В предыдущих сериях: лето 2020</h2>
+<h2 style="font-size: 30pt;">Previously on: Summer 2020</h2>
 <p class="cloud">
 <span>PostgreSQL wire protocol</span>
 <span>Geographical dictionaries</span>
@@ -44,7 +44,7 @@
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Запрос EXPLAIN</h2>
+<h2 style="font-size: 30pt;">EXPLAIN Query</h2>
 <p><code>EXPLAIN [AST|SYNTAX|PLAN|PIPELINE]
 SELECT ...</code></p>
 <p><code>EXPLAIN PLAN
@@ -54,127 +54,127 @@ SELECT ...</code></p>
 <p><code>EXPLAIN PIPELINE
     header = 0, graph = 1, compact = 1
 SELECT ...</code></p>
-<p style="margin-top: 100px; font-size: 14pt; color: gray;">Доступно с версии 20.6. Разработчик &mdash; Николай Кочетов.</p>
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Available since version 20.6. Developer &mdash; Nikolai Kochetov.</p>
 </section>
 
 <section class="slide">
 <h2 style="font-size: 30pt;">WITH subqueries (CTE)</h2>
-<p>&mdash; для подзапросов:<br><br/>
+<p>&mdash; for subqueries:<br><br/>
 <code>WITH <b>a</b> AS (SELECT ...),
      <b>b</b> AS (SELECT ...),
      <b>c</b> AS (SELECT ...)
 SELECT * FROM <b>a</b>, <b>b</b> WHERE x IN <b>c</b></code></p>
-<p>&mdash; глобальный scope:<br><br/>
+<p>&mdash; global scope:<br><br/>
 <code>WITH <b>a</b> AS (SELECT ...)
 SELECT * FROM (SELECT * FROM <b>a</b>)</code></p>
-<p style="margin-top: 100px; font-size: 14pt; color: gray;">Доступно с версии 20.10. Разработчик &mdash; Amos Bird.</p>
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Available since version 20.10. Developer &mdash; Amos Bird.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">LDAP аутентификация</h2>
-<p>&mdash; для аутентификации уже заданных пользователей (20.7);</p>
-<p>&mdash; LDAP в качестве справочника пользователей (20.11);</p>
-<p style="color: gray;">&mdash; LDAP в качестве справочника ролей;</p>
-<p style="color: gray;">&mdash; Kerberos аутентификация;</p>
-<p style="margin-top: 100px; font-size: 14pt; color: gray;">Разработчики &mdash; Денис Глазачев, Виталий Баранов.</p>
+<h2 style="font-size: 30pt;">LDAP Authentication</h2>
+<p>&mdash; for authentication of existing users (20.7);</p>
+<p>&mdash; LDAP as a user directory (20.11);</p>
+<p style="color: gray;">&mdash; LDAP as a role directory;</p>
+<p style="color: gray;">&mdash; Kerberos authentication;</p>
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Developers &mdash; Denis Glazachev, Vitaly Baranov.</p>
 </section>
 
 <section class="slide">
 <h2 style="font-size: 30pt;">Atomic Database</h2>
-<p>&mdash; запросы DROP TABLE, RENAME TABLE теперь неблокирующие;</p>
-<p>&mdash; запрос EXCHANGE TABLES;</p>
-<p style="margin-top: 100px; font-size: 14pt; color: gray;">Разработчик &mdash; Александр Токмаков.<br/>
-По-умолчанию с версии 20.10. Обратная совместимость с версии 20.4.</p>
+<p>&mdash; DROP TABLE, RENAME TABLE queries are now non-blocking;</p>
+<p>&mdash; EXCHANGE TABLES query;</p>
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Developer &mdash; Alexander Tokmakov.<br/>
+Default since version 20.10. Backward compatibility since version 20.4.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Улучшение репликации</h2>
-<p>&mdash; отказ от выбора лидера (20.5);</p>
-<p>&mdash; параллельная вставка с кворумом (20.10);</p>
-<p>&mdash; возможность повторной вставки на разные реплики (20.10);</p>
-<p>&mdash; запрос ALTER DROP/DETACH PART (20.12);</p>
-<p style="margin-top: 100px; font-size: 14pt; color: gray;">Разработчики:<br/> Алексей Миловидов, Александра Латышева, Александр Сапин, Николае Вартоломей.</p>
+<h2 style="font-size: 30pt;">Replication Improvements</h2>
+<p>&mdash; removal of leader selection (20.5);</p>
+<p>&mdash; parallel insert with quorum (20.10);</p>
+<p>&mdash; ability to retry insert on different replicas (20.10);</p>
+<p>&mdash; ALTER DROP/DETACH PART query (20.12);</p>
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Developers:<br/> Alexey Milovidov, Aleksandra Latysheva, Alexander Sapin, Nicolae Vartolomei.</p>
 </section>
 
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Новый формат данных в MergeTree</h2>
-<p>&mdash; Компактные куски данных (с версии <span style="color: green">20.3</span>).</p>
-<p>&mdash; Куски данных в оперативной памяти (с версии <span style="color: green">20.6</span>).</p>
-<p>&mdash; Write-Ahead Log (с версии <span style="color: green">20.6</span>).</p>
-<p>&mdash; Настройки durability (с версии <span style="color: gray">20.10</span>).</p>
+<h2 style="font-size: 30pt;">New Data Format in MergeTree</h2>
+<p>&mdash; Compact data parts (since version <span style="color: green">20.3</span>).</p>
+<p>&mdash; In-memory data parts (since version <span style="color: green">20.6</span>).</p>
+<p>&mdash; Write-Ahead Log (since version <span style="color: green">20.6</span>).</p>
+<p>&mdash; Durability settings (since version <span style="color: gray">20.10</span>).</p>
 
-<p style="margin-top: 100px; font-size: 14pt; color: gray;">Разработчик &mdash; Антон Попов.</p>
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Developer &mdash; Anton Popov.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Три формата кусков данных</h2>
-<p>1. Wide &mdash; классический формат.</p>
-<p>2. Compact &mdash; все столбцы в одном файле.</p>
-<p>3. Memory &mdash; данные в оперативке.</p>
+<h2 style="font-size: 30pt;">Three Data Part Formats</h2>
+<p>1. Wide &mdash; classic format.</p>
+<p>2. Compact &mdash; all columns in one file.</p>
+<p>3. Memory &mdash; data in RAM.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Три формата кусков данных</h2>
-<p>Регулируется настройками:</p>
+<h2 style="font-size: 30pt;">Three Data Part Formats</h2>
+<p>Controlled by settings:</p>
 <p>&mdash; <b>min_bytes_for_wide_part</b>,<br/>&emsp; <b>min_rows_for_wide_part</b>:</p>
-<p>&emsp; если размер больше &mdash; использовать <b>wide</b> формат.</p>
+<p>&emsp; if size is larger &mdash; use <b>wide</b> format.</p>
 <p>&mdash; <b>min_bytes_for_compact_part</b>,<br/>&emsp; <b>min_rows_for_compact_part</b>:</p>
-<p>&emsp; если размер больше &mdash; использовать <b>compact</b> формат,<br/>
-&emsp; если меньше &mdash; использовать memory формат.</p>
+<p>&emsp; if size is larger &mdash; use <b>compact</b> format,<br/>
+&emsp; if smaller &mdash; use memory format.</p>
 <p>Wide > Compact > Memory</p>
 </section>
 
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Wide куски</h2>
-<p>Классический формат.</p>
-<p>Каждый столбец и индекс в отдельном файле.</p>
-<p>Оптимален для чтения данных с дисков, в том числе медленных.</p>
-<p>Дешёвый ALTER добавления или удаления столбца.</p>
+<h2 style="font-size: 30pt;">Wide Parts</h2>
+<p>Classic format.</p>
+<p>Each column and index in a separate file.</p>
+<p>Optimal for reading data from disks, including slow ones.</p>
+<p>Cheap ALTER for adding or removing columns.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Compact куски</h2>
-<p>Все столбцы в одном файле.</p>
-<p style="color: green;">Оптимален для вставки новых данных.<br/>
-Особенно на медленных файловых системах.</p>
-<p style="color: red;">Менее оптимален для чтения.</p>
+<h2 style="font-size: 30pt;">Compact Parts</h2>
+<p>All columns in one file.</p>
+<p style="color: green;">Optimal for inserting new data.<br/>
+Especially on slow filesystems.</p>
+<p style="color: red;">Less optimal for reading.</p>
 
-<p>Рекомендуется для кусков данных небольшого размера.</p>
-<p>Не рекомендуется использовать для всех кусков.</p>
+<p>Recommended for small data parts.</p>
+<p>Not recommended for all parts.</p>
 
-<p>Доступен с версии 20.3, но выключен по-умолчанию.<br/>
-С версии 20.10 будет использоваться для кусков до 10 МБ.</p>
+<p>Available since version 20.3, but disabled by default.<br/>
+Since version 20.10, it will be used for parts up to 10 MB.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">In-Memory куски</h2>
+<h2 style="font-size: 30pt;">In-Memory Parts</h2>
 <img style="float: left; height: 60%; margin-left: -60px; margin-top: -60px; margin-right: 20px;" src="pictures/optimal.webp" />
-<p>Данные в оперативной памяти.</p>
-<p>+ Write-Ahead Log, отключаемый.</p>
+<p>Data in RAM.</p>
+<p>+ Write-Ahead Log, can be disabled.</p>
 
 <p>&mdash; in_memory_parts_enable_wal;<br/>
 &mdash; write_ahead_log_max_bytes.</p>
 
-<p><span style="color: green;">Ещё более оптимален для вставки новых данных...</span><br/>
-... если выключить write-ahead log.</p>
+<p><span style="color: green;">Even more optimal for inserting new data...</span><br/>
+... if write-ahead log is disabled.</p>
 
-<p><span style="color: green;">Более эффективен для чтения...</span><br/>
-... но данные в оперативной памяти несжатые.</p>
+<p><span style="color: green;">More efficient for reading...</span><br/>
+... but data in RAM is uncompressed.</p>
 
-<p>Все куски реплицируются так же, как обычно.</p>
+<p>All parts are replicated as usual.</p>
 
-<p style="color: gray">Экспериментальная возможность.</p>
+<p style="color: gray">Experimental feature.</p>
 </section>
 
 <section class="slide">
 <h2 style="font-size: 30pt;">Durability</h2>
-<p>Если все ваши данные расположены на одном сервере...</p>
-<p>Если вы не используете репликацию...</p>
-<p>Если репликация есть, но в пределах одного региона...</p>
+<p>If all your data is located on one server...</p>
+<p>If you don't use replication...</p>
+<p>If replication exists, but within one region...</p>
 
-<p style="margin-top: 2em; color: green;">&mdash; надо просто вызывать fsync до ответа на INSERT?</p>
+<p style="margin-top: 2em; color: green;">&mdash; should we just call fsync before responding to INSERT?</p>
 </section>
 
 <section class="slide">
@@ -191,11 +191,11 @@ SELECT * FROM (SELECT * FROM <b>a</b>)</code></p>
 
 <section class="slide">
 <h2 style="font-size: 30pt;">Durability</h2>
-<p>Если все ваши данные расположены на одном сервере...<br/>
-Если вы не используете репликацию...<br/>
-Если репликация есть, но в пределах одного региона...</p>
+<p>If all your data is located on one server...<br/>
+If you don't use replication...<br/>
+If replication exists, but within one region...</p>
 
-<p style="color: green;">Тогда вот:</p>
+<p style="color: green;">Then here you go:</p>
 
 <p>&mdash; min_rows_to_fsync_after_merge;
 <br/>&mdash; min_compressed_bytes_to_fsync_after_merge;
@@ -209,25 +209,25 @@ SELECT * FROM (SELECT * FROM <b>a</b>)</code></p>
 
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Нормализация и обфускация запросов</h2>
-<p>Функции <b>normalizeQuery</b>, <b>normalizedQueryHash</b>.</p>
+<h2 style="font-size: 30pt;">Query Normalization and Obfuscation</h2>
+<p>Functions <b>normalizeQuery</b>, <b>normalizedQueryHash</b>.</p>
 <code>SELECT <b>normalizeQuery</b>(query) FROM system.query_log</code>
-<p style="margin-top: 2em;">&mdash; замена литералов на <span style="background-color: #EEE; padding: 5px 10px; font-family: Monospace;">?</span></p>
-<p>&mdash; замена списков литералов на <span style="background-color: #EEE; padding: 5px 10px; font-family: Monospace;">?..</span></p>
-<p>&mdash; замена сложных алиасов на <span style="background-color: #EEE; padding: 5px 10px; font-family: Monospace;">`?`</span></p>
+<p style="margin-top: 2em;">&mdash; replacement of literals with <span style="background-color: #EEE; padding: 5px 10px; font-family: Monospace;">?</span></p>
+<p>&mdash; replacement of literal lists with <span style="background-color: #EEE; padding: 5px 10px; font-family: Monospace;">?..</span></p>
+<p>&mdash; replacement of complex aliases with <span style="background-color: #EEE; padding: 5px 10px; font-family: Monospace;">`?`</span></p>
 
-<p style="margin-top: 100px; font-size: 14pt; color: green;">Доступно с версии 20.8.</p>
+<p style="margin-top: 100px; font-size: 14pt; color: green;">Available since version 20.8.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Обфускация запросов</h2>
-<p>У одного моего друга тормозил запрос...<br/>
-... но он не хотел его показывать.</p>
-<p>Решение:</p>
+<h2 style="font-size: 30pt;">Query Obfuscation</h2>
+<p>A friend of mine had a slow query...<br/>
+... but he didn't want to show it.</p>
+<p>Solution:</p>
 <code>clickhouse-format --<b>obfuscate</b> &lt; query.sql</code>
 
-<p style="margin-top: 100px; font-size: 14pt; color: gray;">Доступно с версии 20.10.</p>
-<p style="font-size: 14pt; color: gray;">Обфускация данных: <a href="https://www.youtube.com/watch?v=2iR7i4akL44">https://www.youtube.com/watch?v=2iR7i4akL44</a></p>
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Available since version 20.10.</p>
+<p style="font-size: 14pt; color: gray;">Data obfuscation: <a href="https://www.youtube.com/watch?v=2iR7i4akL44">https://www.youtube.com/watch?v=2iR7i4akL44</a></p>
 </section>
 
 <section class="slide" style="background-image: url('pictures/query.png'); background-size: 100%;">
@@ -236,7 +236,7 @@ SELECT * FROM (SELECT * FROM <b>a</b>)</code></p>
 
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Пережатие старых данных</h2>
+<h2 style="font-size: 30pt;">Recompression of Old Data</h2>
 <code>CREATE TABLE hits
 (
   event_time DateTime,
@@ -248,11 +248,11 @@ SELECT * FROM (SELECT * FROM <b>a</b>)</code></p>
     event_time + INTERVAL 1 YEAR
         <b>RECOMPRESS</b> CODEC(ZSTD(6))</code>
 
-<p style="margin-top: 100px; font-size: 14pt; color: gray;">Разработчик &mdash; Александр Сапин. Доступно с версии 20.10.</p>
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Developer &mdash; Alexander Sapin. Available since version 20.10.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Мелочи для ALTER</h2>
+<h2 style="font-size: 30pt;">Minor Features for ALTER</h2>
 <code>CREATE TABLE hits
 (
   event_time DateTime CODEC(Delta, <b>Default</b>),
@@ -263,11 +263,11 @@ SELECT * FROM (SELECT * FROM <b>a</b>)</code></p>
     <b>REMOVE</b> COMMENT|CODEC|TTL
         |DEFAULT|MATERIALIZED|ALIAS</code>
 
-<p style="margin-top: 100px; font-size: 14pt; color: gray;">Разработчик &mdash; Александр Сапин. Доступно с версии 20.10.</p>
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Developer &mdash; Alexander Sapin. Available since version 20.10.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Преобразования списка столбцов</h2>
+<h2 style="font-size: 30pt;">Column List Transformations</h2>
 <code>SELECT * <b>EXCEPT</b>(secret_column) FROM table;</code>
 <code style="margin-top: 0.5em;">SELECT table.* <b>REPLACE</b>(
   (URL LIKE '%yandex%' ? '' : URL) AS URL) FROM table;</code>
@@ -275,13 +275,13 @@ SELECT * FROM (SELECT * FROM <b>a</b>)</code></p>
 <code style="margin-top: 0.5em;">SELECT t.* <b>APPLY</b>(sum) FROM table AS t;</code>
 <code style="margin-top: 0.5em;">SELECT <b>COLUMNS(x, y, z)</b> <b>APPLY</b>(sum) FROM table;</code>
 
-<p style="margin-top: 100px; font-size: 14pt; color: gray;">Разработчик &mdash; Amos Bird, mfridental. Доступно с версии 20.10.</p>
-<p style="font-size: 14pt; color: gray;">COLUMNS('regexp'): разработчик &mdash; mfridental. Доступно с версии <span style="color: green;">19.12</span>.</p>
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Developer &mdash; Amos Bird, mfridental. Available since version 20.10.</p>
+<p style="font-size: 14pt; color: gray;">COLUMNS('regexp'): developer &mdash; mfridental. Available since version <span style="color: green;">19.12</span>.</p>
 </section>
 
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Новые версии ClickHouse</h2>
+<h2 style="font-size: 30pt;">New Versions of ClickHouse</h2>
 <p style="color: gray">20.12 &mdash; testing.</p>
 <p style="color: gray">20.11 &mdash; prestable.</p>
 <p style="color: green">20.10 &mdash; stable.</p>
@@ -295,37 +295,37 @@ SELECT * FROM (SELECT * FROM <b>a</b>)</code></p>
 
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Что ещё?</h2>
-<p>Импорт данных из RabbitMQ.</p>
-<p>Kerberos аутентификация для Kafka.</p>
-<p>Бета unlimited storage в Яндекс.Облаке.</p>
-<p>Форматы Regexp, RawBLOB, JSONAsString, LinesAsString.</p>
-<p>Запуск clickhouse без пакетов и конфигурации.</p>
-<p>Таблица system.crash_log, Sentry.</p>
-<p>Вычисление корелляции рангов.</p>
+<h2 style="font-size: 30pt;">What Else?</h2>
+<p>Data import from RabbitMQ.</p>
+<p>Kerberos authentication for Kafka.</p>
+<p>Beta unlimited storage in Yandex Cloud.</p>
+<p>Regexp, RawBLOB, JSONAsString, LinesAsString formats.</p>
+<p>Running ClickHouse without packages and configuration.</p>
+<p>system.crash_log table, Sentry.</p>
+<p>Rank correlation calculation.</p>
 <p>256bit Decimal.</p>
 </section>
 
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Что дальше?</h2>
-<p>Бэкапы.</p>
-<p>Проекции.</p>
-<p>Отказ от ZooKeeper.</p>
-<p>Поддержка OpenTracing.</p>
-<p>Хеджирование запросов.</p>
-<p>Чтение срезов столбцов.</p>
-<p>Функции анализа геоданных.</p>
-<p>Анализ полудубликатов текстов.</p>
+<h2 style="font-size: 30pt;">What's Next?</h2>
+<p>Backups.</p>
+<p>Projections.</p>
+<p>Moving away from ZooKeeper.</p>
+<p>OpenTracing support.</p>
+<p>Query hedging.</p>
+<p>Reading column slices.</p>
+<p>Geodata analysis functions.</p>
+<p>Semi-duplicate text analysis.</p>
 </section>
 
 
 <section class="slide">
-    <h2>Публичный roadmap 2020.</h2>
+    <h2>Public Roadmap 2020.</h2>
     <p><a href="https://clickhouse.tech/docs/ru/whats-new/extended-roadmap/">https://clickhouse.tech/docs/ru/whats-new/extended-roadmap/</a></p>
-    <p>~ 500 задач с подробным описанием &mdash; зависимости, исполнители...</p>
-    <h2 style="color: gray;">Публичный roadmap 2021.</h2>
-    <p style="color: gray;">&mdash; ожидается в конце ноября.</p>
+    <p>~ 500 tasks with detailed description &mdash; dependencies, assignees...</p>
+    <h2 style="color: gray;">Public Roadmap 2021.</h2>
+    <p style="color: gray;">&mdash; expected at the end of November.</p>
 </section>
 
 

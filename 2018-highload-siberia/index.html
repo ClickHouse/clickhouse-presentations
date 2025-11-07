@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Как ускорить разжатие LZ4</title>
+    <title>How to Speed Up LZ4 Decompression</title>
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -13,10 +13,10 @@
 </head>
 <body class="shower list">
     <header class="caption">
-        <h1>Как ускорить разжатие LZ4</h1>
+        <h1>How to Speed Up LZ4 Decompression</h1>
     </header>
     <section class="slide" id="cover" style="background: #FFF url('pictures/title.png') no-repeat; background-size: 100%;">
-        <h1 style="margin-top: 50px; margin-left: -40px; line-height: 150%">Как ускорить разжатие LZ4</h1>
+        <h1 style="margin-top: 50px; margin-left: -40px; line-height: 150%">How to Speed Up LZ4 Decompression</h1>
     </section>
 
 
@@ -32,81 +32,81 @@ ORDER BY EventTime LIMIT 10</pre>
 </section>
 
 <section class="slide">
-<h2>Что такое LZ4</h2>
-<p>&mdash; библиотека для сжатия данных;</p>
-<p>&mdash; высокая скорость работы;</p>
-<p>&mdash; частный случай алгоритма LZ77;</p>
-<p>&mdash; не специализирована под конкретные типы данных;</p>
-<p>&mdash; существует с 2011 года;</p>
-<p>&mdash; используется в ClickHouse с 2011 года;</p>
-<p>&mdash; автор &mdash; Yann Collet;</p>
-<p>&mdash; аналоги: Snappy, QuickLZ, LZO, FastLZ, BriefLZ, LZF;</p>
+<h2>What is LZ4</h2>
+<p>&mdash; data compression library;</p>
+<p>&mdash; high performance;</p>
+<p>&mdash; special case of LZ77 algorithm;</p>
+<p>&mdash; not specialized for specific data types;</p>
+<p>&mdash; exists since 2011;</p>
+<p>&mdash; used in ClickHouse since 2011;</p>
+<p>&mdash; author &mdash; Yann Collet;</p>
+<p>&mdash; analogues: Snappy, QuickLZ, LZO, FastLZ, BriefLZ, LZF;</p>
 </section>
 
 <section class="slide">
-<h2>Почему именно LZ4</h2>
-<p>Он почти &laquo;парето-оптимален&raquo;.</p>
-<p>Сравниваем алгоритмы по трём параметрам<br/>на всевозможных датасетах:
-<br/>&mdash; коэффициент сжатия;
-<br/>&mdash; скорость сжатия;
-<br/>&mdash; скорость разжатия;
+<h2>Why LZ4 Specifically</h2>
+<p>It's almost &laquo;Pareto-optimal&raquo;.</p>
+<p>We compare algorithms by three parameters<br/>on all possible datasets:
+<br/>&mdash; compression ratio;
+<br/>&mdash; compression speed;
+<br/>&mdash; decompression speed;
 </p>
-<p>Алгоритм называется &laquo;парето-оптимальным&raquo;, если нет другого, который лучше хотя бы по одному параметру и не хуже по всем остальным.</p>
+<p>An algorithm is called &laquo;Pareto-optimal&raquo; if there is no other algorithm that is better in at least one parameter and not worse in all others.</p>
 </section>
 
 <section class="slide">
-<h2>Есть варианты немного &laquo;круче&raquo;:</h2>
-<p>Lizard (бывший LZ5): <a href="https://github.com/inikep/lizard/">https://github.com/inikep/lizard/</a></p>
+<h2>There Are Slightly &laquo;Cooler&raquo; Options:</h2>
+<p>Lizard (formerly LZ5): <a href="https://github.com/inikep/lizard/">https://github.com/inikep/lizard/</a></p>
 <p>LZSSE: <a href="https://github.com/ConorStokes/LZSSE/">https://github.com/ConorStokes/LZSSE/</a></p>
 <p>density: <a href="https://github.com/centaurean/density">https://github.com/centaurean/density</a></p>
 <p>LZTURBO: <a href="https://sites.google.com/site/powturbo/">https://sites.google.com/site/powturbo/</a></p>
 </section>
 
 <section class="slide">
-<h2>Почему разжатие &mdash; узкое место?</h2>
-<p>Типичная скорость разжатия &mdash; несколько ГБ/сек на одном ядре CPU.</p>
-<p>Разжатие производится в несколько потоков,<br/>что даёт скорость 10 ГБ/сек и больше.</p>
-<p>Это больше скорости массива HDD и SSD<br/>и разжатие не должно быть узким местом?</p>
-<p>Но:</p>
-<p>С дисковой подсистемы читаются сжатые данные, что уменьшает IO.</p>
-<p>Данные часто находятся в page cache<br/>
-&mdash; тогда узким местом всегда будет CPU, а не IO.</p>
+<h2>Why Is Decompression a Bottleneck?</h2>
+<p>Typical decompression speed is several GB/sec on a single CPU core.</p>
+<p>Decompression is done in multiple threads,<br/>which gives a speed of 10 GB/sec and more.</p>
+<p>This is more than the speed of HDD and SSD arrays,<br/>so decompression shouldn't be a bottleneck?</p>
+<p>But:</p>
+<p>Compressed data is read from disk, which reduces IO.</p>
+<p>Data is often in the page cache<br/>
+&mdash; then the CPU will always be the bottleneck, not IO.</p>
 </section>
 
 <section class="slide">
-<h2>Стоит ли вообще сжимать данные?</h2>
-<p>&mdash; да.</p>
-<p>Если этого не делать &mdash; упрёмся в IO или объём данных.</p>
-<p>Сжимайте данные всегда:<br/>
-&mdash; при хранении, даже если у вас массив из быстрых NVM-e SSD;<br/>
-&mdash; при передаче данных по сети, даже если 10 GBit без переподписки;</p>
+<h2>Should We Compress Data at All?</h2>
+<p>&mdash; yes.</p>
+<p>If we don't &mdash; we'll hit IO or data volume limits.</p>
+<p>Always compress data:<br/>
+&mdash; when storing, even if you have an array of fast NVMe SSDs;<br/>
+&mdash; when transmitting data over the network, even with 10 GBit without oversubscription;</p>
 </section>
 
 <section class="slide">
-<h2>Как устроен LZ4*</h2>
-<p>Сжатый файл - это набор команд двух видов,<br/>при выполнении которых, происходит разжатие данных:</p>
-<p><b>Literals</b>: скопируй следующие N байт сжатых данных как есть.</p>
-<p><b>Match</b>: скопируй N байт по смещению M,<br/>которые уже были недавно разжаты.</p>
+<h2>How LZ4 Works*</h2>
+<p>A compressed file is a set of two types of commands,<br/>executing which results in data decompression:</p>
+<p><b>Literals</b>: copy the next N bytes of compressed data as is.</p>
+<p><b>Match</b>: copy N bytes at offset M,<br/>which were recently decompressed.</p>
 
 <pre>Hello world Hello</pre>
 
 <pre>literals 12 "Hello world " match 5 12</pre>
 
-<p style="font-size: 12pt; color: #888;">* &mdash; за исключением мелких деталей; любой алгоритм семейства LZ77;</p>
+<p style="font-size: 12pt; color: #888;">* &mdash; except for small details; any LZ77 family algorithm;</p>
 </section>
 
 <section class="slide">
-<h2>Как сжимать данные</h2>
-<p>&mdash; идём по данным;</p>
-<p>&mdash; хэшируем следующие 4 байта;</p>
-<p>&mdash; кладём смещение в хэш-таблицу;</p>
-<p>&mdash; если там уже есть эти 4 байта - мы нашли совпадение;</p>
-<p>&mdash; смотрим максимальную длину совпадения;</p>
-<p>&mdash; записываем команду "повторить данные такой-то длины по такому-то смещению" в сжатый файл;</p>
+<h2>How to Compress Data</h2>
+<p>&mdash; iterate through the data;</p>
+<p>&mdash; hash the next 4 bytes;</p>
+<p>&mdash; put the offset in a hash table;</p>
+<p>&mdash; if these 4 bytes are already there - we found a match;</p>
+<p>&mdash; look at the maximum match length;</p>
+<p>&mdash; write the command "repeat data of such length at such offset" to the compressed file;</p>
 </section>
 
 <section class="slide">
-<h2>Как разжимать данные</h2>
+<h2>How to Decompress Data</h2>
 <code>
 while (...)
 {
@@ -124,7 +124,7 @@ while (...)
 </section>
 
 <section class="slide">
-<h2>Как скопировать кусок памяти?</h2>
+<h2>How to Copy a Memory Block?</h2>
 </section>
 
 <section class="slide">
@@ -132,24 +132,24 @@ while (...)
 </section>
 
 <section class="slide">
-<h2>&mdash; memcpy тормозит*;</h2>
-<h2 style="line-height: 1.5em;">&mdash; memcpy не всегда<br/>корректно использовать;<h2>
-<p style="font-size: 12pt; color: #888; margin-top: 100px;">* &mdash; в данном сценарии работы;</p>
+<h2>&mdash; memcpy is slow*;</h2>
+<h2 style="line-height: 1.5em;">&mdash; memcpy is not always<br/>correct to use;<h2>
+<p style="font-size: 12pt; color: #888; margin-top: 100px;">* &mdash; in this usage scenario;</p>
 </section>
 
 <section class="slide">
-<h2>Почему memcpy &mdash; неоптимально?</h2>
+<h2>Why Is memcpy Non-Optimal?</h2>
 
-<p>1. Потому что memcpy обычно находится в библиотеке libc, а&nbsp;библиотека libc обычно линкуется динамически, и вызов memcpy будет идти косвенно, через PLT.</p>
-<p>2. Потому что функция memcpy с неизвестным в compile time аргументом size не инлайнится.</p>
-<p>3. Потому что функция memcpy делает много усилий для корректной обработки &laquo;хвостов&raquo; куска памяти, не кратных размеру машинного слова или регистра.</p>
+<p>1. Because memcpy is usually in the libc library, and the libc library is usually dynamically linked, and the call to memcpy will be indirect, through PLT.</p>
+<p>2. Because the memcpy function with an unknown size argument at compile time is not inlined.</p>
+<p>3. Because the memcpy function makes a lot of effort to correctly handle &laquo;tails&raquo; of memory chunks that are not multiples of the machine word or register size.</p>
 </section>
 
 <section class="slide">
-<h2>Можно писать лишние байты</h2>
+<h2>We Can Write Extra Bytes</h2>
 
-<p>Можем всегда копировать кусками кратными 8 (или 16, 32...) байт.</p>
-<p>Эта оптимизация уже присутствует в оригинальной реализации LZ4.</p>
+<p>We can always copy in chunks that are multiples of 8 (or 16, 32...) bytes.</p>
+<p>This optimization is already present in the original LZ4 implementation.</p>
 
 <code><span style="color: green;"><b>Hello</b></span> world <span style="color: gray;">...........</span>
 ^^^^^ - src
@@ -159,14 +159,14 @@ while (...)
 ^^^^^<span style="color: red">^^^</span> - src
             ^^^^^<span style="color: red">^^^</span> - dst
 </code>
-<p>(но нужна проверка выхода за границы буфера)</p>
+<p>(but we need to check for buffer overflow)</p>
 </section>
 
 <section class="slide">
-<h2>Можно писать лишние байты</h2>
+<h2>We Can Write Extra Bytes</h2>
 <code style="margin-top: -30px;">void copy8(UInt8 * dst, const UInt8 * src)
 {
-    <span style="color: #08F;">/// Здесь memcpy не вызывается (builtin).</span>
+    <span style="color: #08F;">/// Here memcpy is not called (builtin).</span>
     memcpy(dst, src, 8);
 }
 
@@ -183,7 +183,7 @@ void wildCopy8(
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Нужна проверка выхода за границы буфера</h2>
+<h2 style="font-size: 30pt;">Need to Check for Buffer Overflow</h2>
 
     <blockquote>The last 5 bytes are always literals
     <br/>The last match must start at least 12 bytes before end of block.
@@ -193,10 +193,10 @@ void wildCopy8(
 </section>
 
 <section class="slide">
-<h2 style="font-size: 36pt;">Почему копируем именно по 8 байт?</h2>
+<h2 style="font-size: 36pt;">Why Copy Exactly 8 Bytes?</h2>
 
-<p>&mdash; почему цикл не развёрнут?</p>
-<p>&mdash; почему не используем SSE или AVX регистры?</p>
+<p>&mdash; why isn't the loop unrolled?</p>
+<p>&mdash; why don't we use SSE or AVX registers?</p>
 </section>
 
 <section class="slide">
@@ -219,17 +219,17 @@ void wildCopy16(
 </section>
 
 <section class="slide">
-<h2 style="font-size: 36pt;">Почему копируем именно по 8 байт?</h2>
+<h2 style="font-size: 36pt;">Why Copy Exactly 8 Bytes?</h2>
 
-<p>&mdash; не очевидно, как лучше;</p>
-<p>&mdash; в оригинальной реализации LZ4
-<br/>это связано с условиями в формате сжатых данных,
-<br/>предотвращающими проезд по памяти;</p>
+<p>&mdash; it's not obvious which is better;</p>
+<p>&mdash; in the original LZ4 implementation
+<br/>this is related to conditions in the compressed data format,
+<br/>preventing memory overrun;</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 36pt;">Копирование match, простой случай</h2>
-<p>Копируем 5 байт по смещению 12:</p>
+<h2 style="font-size: 36pt;">Copying Match, Simple Case</h2>
+<p>Copy 5 bytes at offset 12:</p>
 <code><span style="color: green;"><b>Hello</b></span> world <span style="color: gray;">...........</span>
 ^^^^^ - src
             ^^^^^ - dst
@@ -241,8 +241,8 @@ void wildCopy16(
 </section>
 
 <section class="slide">
-<h2 style="font-size: 36pt;">Копирование match, сложный случай</h2>
-<p>Копируем 10 байт по смещению 3:</p>
+<h2 style="font-size: 36pt;">Copying Match, Complex Case</h2>
+<p>Copy 10 bytes at offset 3:</p>
 <code><span style="color: green;"><b>abc</b></span><span style="color: gray;">.............</span>
 ^^^^^^^^^^ - src
    ^^^^^^^^^^ - dst
@@ -254,8 +254,8 @@ void wildCopy16(
 </section>
 
 <section class="slide">
-<h2 style="font-size: 36pt; line-height: 1.5em;">Нужно копировать так,<br/>
-как если бы мы делали это побайтово</h2>
+<h2 style="font-size: 36pt; line-height: 1.5em;">Need to Copy<br/>
+As If We Were Doing It Byte by Byte</h2>
 
 <code>op[0] = match[0];
 op[1] = match[1];
@@ -288,17 +288,17 @@ op[3] = match[3];
 </section>
 
 <section class="slide">
-<p>Копируем первые 4 байта побайтово:</p>
+<p>Copy the first 4 bytes byte by byte:</p>
 <code style="margin-top: 10px; margin-bottom: 15px;">abc<span style="color: green;"><b>abca</b></span><span style="color: gray;">.........</span>
 ^^^^ - src
    ^^^^ - dst
 </code>
-<p>Теперь можно скопировать 4 байта сразу:</p>
+<p>Now we can copy 4 bytes at once:</p>
 <code style="margin-top: 10px; margin-bottom: 15px;">abcabca<span style="color: green;"><b>bcab</b></span><span style="color: gray;">.....</span>
  ^^^^ - src
        ^^^^ - dst
 </code>
-<p>Теперь можно скопировать 8 байт сразу:</p>
+<p>Now we can copy 8 bytes at once:</p>
 <code style="margin-top: 10px; margin-bottom: 15px;">abcabcabcab<span style="color: green;"><b>cabcabca</b></span><span style="color: gray;">.....</span>
   ^^^^^^^^ - src
            ^^^^^^^^ - dst
@@ -306,7 +306,7 @@ op[3] = match[3];
 </section>
 
 <section class="slide">
-<h2>Удивительно непонятный код</h2>
+<h2>Surprisingly Confusing Code</h2>
 
 <code style="margin-left: -20px; margin-right: -20px; line-height: 1.25em;">const unsigned dec32table[] = {0, 1, 2, 1, 4, 4, 4, 4};
 const int dec64table[] = {0, 0, 0, -1, 0, 1, 2, 3};
@@ -372,25 +372,25 @@ match -= dec64;</code>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 36pt; line-height: 1.5em;">Можно ли реализовать &laquo;хитрое&raquo; копирование более оптимально?</h2>
+<h2 style="font-size: 36pt; line-height: 1.5em;">Can We Implement &laquo;Clever&raquo; Copying More Optimally?</h2>
 
-<p>Может быть есть магическая SIMD инструкция,<br/>
-которая сделает сразу всё что нужно?</p>
+<p>Maybe there's a magic SIMD instruction<br/>
+that will do everything we need at once?</p>
 </section>
 
 <section class="slide">
-<h2>Инструкция pshufb</h2>
+<h2>The pshufb Instruction</h2>
 
-<p>&mdash; от слова shuffle;</p>
-<p>&mdash; входит в SSSE3 (три буквы S).</p>
+<p>&mdash; from the word shuffle;</p>
+<p>&mdash; part of SSSE3 (three S's).</p>
 
-<p>Принимает два 16-байтных регистра:</p>
-<p>&mdash; данные, которые надо shuffle;</p>
-<p>&mdash; &laquo;селектор&raquo; &mdash; из какого байта взять i-ый байт результата.</p>
+<p>Takes two 16-byte registers:</p>
+<p>&mdash; data to shuffle;</p>
+<p>&mdash; &laquo;selector&raquo; &mdash; which byte to take for the i-th result byte.</p>
 </section>
 
 <section class="slide">
-<h2>Пример</h2>
+<h2>Example</h2>
 <code style="line-height: 1.5em; margin-bottom: 20px;">xmm0: abc.............
 xmm1: 0120120120120120
 
@@ -398,7 +398,7 @@ pshufb %xmm1, %xmm0
 
 xmm0: abcabcabcabcabca
 </code>
-<p>Каждый байт результата мы заполнили выбранным нами байтом исходных данных - как раз то, что нужно!</p>
+<p>Each result byte is filled with a byte we selected from the source data - exactly what we need!</p>
 </section>
 
 <section class="slide">
@@ -435,54 +435,54 @@ xmm0: abcabcabcabcabca
 </section>
 
 <section class="slide">
-<h2>Инструкция pshufb</h2>
-<p>Можно применять и для 8 байт:</p>
-<p>&mdash; используя MMX регистры (плохо);</p>
-<p>&mdash; используя 16 байтные регистры, просто переставляя ненужные байты во второй половине.</p>
+<h2>The pshufb Instruction</h2>
+<p>Can also be used for 8 bytes:</p>
+<p>&mdash; using MMX registers (bad);</p>
+<p>&mdash; using 16-byte registers, just shuffling unnecessary bytes in the second half.</p>
 
-<p>Аналогичные инструкции:</p>
-<p>&mdash; в AVX2: vpermb (неполноценная);</p>
-<p>&mdash; в AVX-512 VBMI - сразу для 64 байт;</p>
-<p>&mdash; в ARM Neon: vtbl (неполноценная).</p>
+<p>Analogous instructions:</p>
+<p>&mdash; in AVX2: vpermb (incomplete);</p>
+<p>&mdash; in AVX-512 VBMI - for 64 bytes at once;</p>
+<p>&mdash; in ARM Neon: vtbl (incomplete).</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 32pt; line-height: 1.5em;">Как избежать проверки<br/>выхода за границы массива?</h2>
+<h2 style="font-size: 32pt; line-height: 1.5em;">How to Avoid Checking<br/>Array Bounds?</h2>
 
-<p>&mdash; просто попросить пользователя<br/>выделить больше памяти для буферов.</p>
-<p>&mdash; но может быть деградация производительности из-за аллокатора.</p>
+<p>&mdash; simply ask the user<br/>to allocate more memory for buffers.</p>
+<p>&mdash; but there may be performance degradation due to the allocator.</p>
 </section>
 
 <section class="slide">
-<h2>Три оптимизации</h2>
+<h2>Three Optimizations</h2>
 
-<p>1. Копирование по 16 байт вместо 8 байт.</p>
-<p>2. Использование shuffle инструкции для случая offset &lt; 16.</p>
-<p>3. Убран один лишний if.</p>
+<p>1. Copying 16 bytes instead of 8 bytes.</p>
+<p>2. Using shuffle instruction for offset &lt; 16 case.</p>
+<p>3. Removed one unnecessary if.</p>
 </section>
 
 <section class="slide">
-<h2>Даёт ли это ускорение?</h2>
+<h2>Does This Give Speedup?</h2>
 
-<p>Пример 1:</p>
-<p>Xeon E2650v2, данные Яндекс.Браузера, столбец AppVersion.</p>
+<p>Example 1:</p>
+<p>Xeon E2650v2, Yandex.Browser data, AppVersion column.</p>
 <p>reference: <b>1.67</b> GB/sec.
-<br/>16 bytes, shuffle: <b>2.94</b> GB/sec (на <b>76%</b> <span style="color: green;">быстрее</span>!).
+<br/>16 bytes, shuffle: <b>2.94</b> GB/sec (<b>76%</b> <span style="color: green;">faster</span>!).
 </p>
 
-<p>Пример 2:</p>
-<p>Xeon E2650v2, данные Яндекс.Директа, столбец ShowsSumPosition.</p>
+<p>Example 2:</p>
+<p>Xeon E2650v2, Yandex.Direct data, ShowsSumPosition column.</p>
 <p>reference: <b>2.30</b> GB/sec.
-<br/>16 bytes, shuffle: <b>1.91</b> GB/sec (на <b>20%</b> <span style="color: red;">медленнее</span>).
+<br/>16 bytes, shuffle: <b>1.91</b> GB/sec (<b>20%</b> <span style="color: red;">slower</span>).
 </p>
 
 </section>
 
 <section class="slide">
-<h2>Сделаем 4 варианта кода</h2>
+<h2>Let's Make 4 Code Variants</h2>
 
-<p>&mdash; оперируем 8 или 16 байтными кусочками;</p>
-<p>&mdash; используем или не используем shuffle инструкцию.</p>
+<p>&mdash; operate with 8 or 16-byte chunks;</p>
+<p>&mdash; use or don't use shuffle instruction.</p>
 
 <code style="margin-top: 20px; line-height: 1.5em;">template &lt;size_t copy_amount, bool use_shuffle&gt;
 void NO_INLINE decompressImpl(
@@ -504,54 +504,54 @@ kill -STOP $(pidof firefox) $(pidof chromium)</code>
     $(pidof perl) \
     $(pgrep -u skynet) \
     $(pidof cqudp-client)</code>
-<p><br/>Иначе результаты будут нестабильными.</p>
+<p><br/>Otherwise the results will be unstable.</p>
 </section>
 
 <section class="slide">
-<h2>Как выбрать лучший вариант?</h2>
+<h2>How to Choose the Best Variant?</h2>
 
-<p>&mdash; выбрать тот, который лучше в среднем,<br/>
-на репрезентативной нагрузке и актуальных моделях CPU;</p>
+<p>&mdash; choose the one that's better on average,<br/>
+on representative workload and current CPU models;</p>
 
-<p>&mdash; вручную вписать условия<br/>
-в зависимости от коэффициента сжатия<br/>
-и модели CPU;</p>
+<p>&mdash; manually write conditions<br/>
+depending on compression ratio<br/>
+and CPU model;</p>
 
-<p>&mdash; протестировать все варианты на всех доступных CPU<br/>
-или читать справочники по latency и throughput инструкций.</p>
+<p>&mdash; test all variants on all available CPUs<br/>
+or read reference manuals for instruction latency and throughput.</p>
 </section>
 
 <section class="slide">
 <video style="width: 100%;"><source src="video/bandits.ogv" type="video/ogg"></video>
-<p style="font-size: 12pt; color: #888;">Источник: <a href="https://learnforeverlearn.com/bandits/">https://learnforeverlearn.com/bandits/</a></p>
+<p style="font-size: 12pt; color: #888;">Source: <a href="https://learnforeverlearn.com/bandits/">https://learnforeverlearn.com/bandits/</a></p>
 </section>
 
 <section class="slide">
-<h2>Многорукие бандиты</h2>
+<h2>Multi-Armed Bandits</h2>
 
-<p>&mdash; выбираем разные варианты случайно;</p>
-<p>&mdash; считаем статистику для каждого;</p>
-<p>&mdash; рассматриваем время каждого варианта как случайную величину;</p>
-<p>&mdash; оцениваем распределение времени для каждого варианта;</p>
+<p>&mdash; randomly choose different variants;</p>
+<p>&mdash; collect statistics for each;</p>
+<p>&mdash; consider the time of each variant as a random variable;</p>
+<p>&mdash; estimate the time distribution for each variant;</p>
 </section>
 
 <section class="slide">
 <h2>Thompson Sampling</h2>
 
-<p>&mdash; &laquo;разыгрываем в уме&raquo; случайную величину для каждого варианта;</p>
-<p>&mdash; выбираем тот, для которого разыгранное значение оказалось лучше.</p>
+<p>&mdash; &laquo;simulate in our mind&raquo; a random variable for each variant;</p>
+<p>&mdash; choose the one for which the simulated value turned out better.</p>
 </section>
 
 <section class="slide">
-<h2>Как оценивать распределение</h2>
+<h2>How to Estimate Distribution</h2>
 
-<p>&mdash; байесовский метод;</p>
-<p>&mdash; параметрически, что-нибудь типа Gamma распределения;</p>
-<p>&mdash; параметрически, нормальное распределение;</p>
+<p>&mdash; Bayesian method;</p>
+<p>&mdash; parametrically, something like Gamma distribution;</p>
+<p>&mdash; parametrically, normal distribution;</p>
 </section>
 
 <section class="slide">
-<h2 style="line-height: 1em;">Тестирование на разных CPU</h2>
+<h2 style="line-height: 1em;">Testing on Different CPUs</h2>
 
 <p>Intel(R) Xeon(R) CPU<br/>
 &mdash; E5-2650 v2 @ 2.60GHz<br/>
@@ -570,23 +570,23 @@ AMD Opteron(tm) Processor 6380</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 32pt;">Тестирование на разных CPU и dataset-ах</h2>
+<h2 style="font-size: 32pt;">Testing on Different CPUs and Datasets</h2>
 
-<p>&mdash; имеется 13 серверов;</p>
-<p>&mdash; на каждом из них запускается тест на 256 файлах;</p>
-<p>&mdash; в 6 вариантах (reference, 0, 1, 2, 3, adaptive);</p>
-<p>&mdash; и каждый тест запускаем 10 раз, чередуя варианты в перемешку.</p>
-<p>Получается 199 680 результатов, и их можно сравнивать.</p>
+<p>&mdash; we have 13 servers;</p>
+<p>&mdash; each runs tests on 256 files;</p>
+<p>&mdash; in 6 variants (reference, 0, 1, 2, 3, adaptive);</p>
+<p>&mdash; and each test is run 10 times, alternating variants.</p>
+<p>This gives 199,680 results that can be compared.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 32pt;">Тестирование на разных CPU и dataset-ах</h2>
+<h2 style="font-size: 32pt;">Testing on Different CPUs and Datasets</h2>
 
-<p>&mdash; на современных Intel ускорение &mdash; 13..17% в среднем;</p>
-<p>&mdash; на AMD EPYC ускорение &mdash; 19.7% в среднем;</p>
-<p>&mdash; на старом Intel E5440 &mdash; &minus;1%;</p>
-<p>&mdash; на Cavium &mdash; 3..4% (предварительные результаты);</p>
-<p>&mdash; на всех кроме E5440 многорукие бандиты в среднем<br/>всегда лучше любого наперёд выбранного варианта.</p>
+<p>&mdash; on modern Intel, speedup is 13..17% on average;</p>
+<p>&mdash; on AMD EPYC, speedup is 19.7% on average;</p>
+<p>&mdash; on old Intel E5440 &mdash; &minus;1%;</p>
+<p>&mdash; on Cavium &mdash; 3..4% (preliminary results);</p>
+<p>&mdash; on all except E5440, multi-armed bandits on average<br/>are always better than any pre-selected variant.</p>
 </section>
 
     <section class="slide">
@@ -594,7 +594,7 @@ AMD Opteron(tm) Processor 6380</p>
     </section>
 
     <section class="slide">
-        <p style="margin-top: 50px;">Pull request: <a href="https://github.com/ClickHouse/ClickHouse/pull/1890">https://github.com/ClickHouse/ClickHouse/pull/1890</a><br/>(уже помержили)</p>
+        <p style="margin-top: 50px;">Pull request: <a href="https://github.com/ClickHouse/ClickHouse/pull/1890">https://github.com/ClickHouse/ClickHouse/pull/1890</a><br/>(already merged)</p>
     </section>
 
     <section class="slide" style="padding: 20px;"><code style="font-size: 12pt; line-height: 1.5em;">┌─cpu───────────────────┬──ref─┬─adapt─┬──max─┬─best─┬─adapt_boost─┬─max_boost─┬─adapt_over_max─┐
@@ -622,4 +622,3 @@ AMD Opteron(tm) Processor 6380</p>
     <!--/Video plugin-->
 </body>
 </html>
-

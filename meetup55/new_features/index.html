@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Поразительные возможности ClickHouse</title>
+    <title>Amazing Features of ClickHouse</title>
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -15,15 +15,15 @@
 </head>
 <body class="shower list">
     <header class="caption">
-        <h1>Поразительные возможности ClickHouse</h1>
+        <h1>Amazing Features of ClickHouse</h1>
     </header>
     <section class="slide" id="cover">
         <img src="https://presentations.clickhouse.com/original_website/logo.svg" style="width: 15%; position: absolute; right: 20px; bottom: 20px;" />
-        <h1 style="margin-top: 80px; line-height: 150%; color: black; font-size: 64pt">Поразительные возможности ClickHouse</h1>
+        <h1 style="margin-top: 80px; line-height: 150%; color: black; font-size: 64pt">Amazing Features of ClickHouse</h1>
     </section>
 
 <section class="slide">
-<h2>Уже рассказали</h2>
+<h2>Already Covered</h2>
 <p>— SQL UDF, executable UDF;</p>
 <p>— executable table function &amp; dictionary source;</p>
 <p>— full disk encryption;</p>
@@ -31,9 +31,9 @@
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Short-circuit вычисления</h2>
+<h2 style="font-size: 30pt;">Short-Circuit Evaluation</h2>
 
-<p style="margin-top: -1em;">Было:</p>
+<p style="margin-top: -1em;">Before:</p>
 
 <code style="font-size: 16pt;">SELECT IF(number = 0, 0, 123 % number) FROM numbers(10)</code>
 <p style="color: red;">&mdash; division by zero.</p>
@@ -41,7 +41,7 @@
 <code style="font-size: 16pt;">SELECT * FROM numbers(10) WHERE number > 0 AND 10 % number > 0</code>
 <p style="color: red;">&mdash; division by zero.</p>
 
-<p>&mdash; обе стороны IF, AND, OR выполняются.</p>
+<p>&mdash; both sides of IF, AND, OR are executed.</p>
 
 <pre style="font-size: 16pt;">SELECT * FROM
 (
@@ -53,41 +53,41 @@ WHERE 10 % number > 0</pre>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Short-circuit вычисления</h2>
+<h2 style="font-size: 30pt;">Short-Circuit Evaluation</h2>
 
-<p>Сейчас:</p>
-<p style="color: green; font-size: 30pt;">&mdash; всё просто работает как надо.</p>
+<p>Now:</p>
+<p style="color: green; font-size: 30pt;">&mdash; everything simply works as expected.</p>
 <p style="color: green; margin-top: 5em;">Available in 21.9.</p><p>Developer — Pavel Kruglov.</p>
 </section>
 
 <section class="slide">
-<h2>Асинхронные INSERT запросы</h2>
-<p>Возможность делать много частых INSERT.</p>
-<p>Из множества параллельных соединений.</p>
-<p style="color: green;"><b>Без Kafka и без Buffer таблиц!</b></p>
-<p>Множество мелких INSERTs комбинируются вместе<br/>
-в одну пачку в оперативной памяти.</p>
-<p>Вставки надёжные по-умолчанию:<br/>клиент получает ответ, когда данные записаны в таблицу.</p>
+<h2>Asynchronous INSERT Queries</h2>
+<p>Ability to do many frequent INSERTs.</p>
+<p>From multiple parallel connections.</p>
+<p style="color: green;"><b>Without Kafka and without Buffer tables!</b></p>
+<p>Multiple small INSERTs are combined together<br/>
+into one batch in memory.</p>
+<p>Inserts are reliable by default:<br/>client receives a response when data is written to the table.</p>
 <p style="color: gray;">Available in 21.11-testing.
 <br/>Developer: Anton Popov, Ivan Lezhankin.</p>
 </section>
 
 <section class="slide">
-<h2>ZooKeeper уходит!</h2>
-<p>1. <b>clickhouse-keeper</b> &mdash; 100% совместимый с ZooKeeper<br/>по протоколу и модели данных.</p>
+<h2>ZooKeeper is Going Away!</h2>
+<p>1. <b>clickhouse-keeper</b> &mdash; 100% compatible with ZooKeeper<br/>in protocol and data model.</p>
 <p>&mdash; compressed logs and snapshots;
 <br/>&mdash; no issues with zxid overflow;
 <br/>&mdash; no issues with large packets;
 <br/>&mdash; better memory usage;
 <br/>&mdash; no issues with GC and Java heap;</p>
-<p>2. Может запускаться <b>встроенным</b> в clickhouse-server.</p>
-<p>&mdash; нет необходимости в отдельном сервисе;</p>
+<p>2. Can be run <b>embedded</b> in clickhouse-server.</p>
+<p>&mdash; no need for a separate service;</p>
 <p style="color: gray">Preproduction stage, planned for Q4 2021.
 <br/>Developer: Alexander Sapin.</p>
 </section>
 
 <section class="slide">
-<h2>Поддержка SQL/JSON</h2>
+<h2>SQL/JSON Support</h2>
 <p>JSON_EXISTS, JSON_VALUE, JSON_QUERY</p>
 <code style="line-height: 1.5;">SELECT JSON_QUERY(
     '<span style="color: green;">$.array[*][0 to 2, 4]</span>',
@@ -248,7 +248,7 @@ TSV, CSV, JSONEachRow.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">YAML configuration</h2>
+<h2 style="font-size: 30pt;">YAML Configuration</h2>
 
 <p>I heard you don't like XML...</p>
 <p>Then ClickHouse will support YAML as an alternative for you.</p>
@@ -272,19 +272,19 @@ max_connections: 4096
 
 
 <section class="slide">
-<h2>Удобные мелочи</h2>
-<p>Поддержка импорта и экспорта <b>gz</b>, <b>xz</b>, <b>bz2</b>, <b>zst</b>, <b>lz4</b>.</p>
+<h2>Convenient Minor Features</h2>
+<p>Support for importing and exporting <b>gz</b>, <b>xz</b>, <b>bz2</b>, <b>zst</b>, <b>lz4</b>.</p>
 
-<p>Это работает для <b>url</b>, <b>file</b>, <b>s3</b>, <b>hdfs</b></p>
+<p>This works for <b>url</b>, <b>file</b>, <b>s3</b>, <b>hdfs</b></p>
 <p>SELECT INTO OUTFILE,<br/><span style="color: green;">INSERT FROM INFILE</span>.</p>
 </section>
 
 <section class="slide">
-<h2>Синтаксис</h2>
-<p>Оператор <b style="font-family: monospace;">::</b> для преобразования типов:</p>
+<h2>Syntax</h2>
+<p><b style="font-family: monospace;">::</b> operator for type casting:</p>
 <code>SELECT x::UInt64,
        ['Hello', 'world!']::Array(Nullable(String))</code>
-<p style="margin-top: 1em;"><b>$heredoc$</b> для строковых литералов:</p>
+<p style="margin-top: 1em;"><b>$heredoc$</b> for string literals:</p>
 <code>SELECT
 $$
    Hello, 'C:\WINDOWS\SYSTEM32'
@@ -295,27 +295,27 @@ $$</code>
 
 
 <section class="slide">
-<h2>Удобные мелочи</h2>
-<p style="margin-top: -1em;">Тонна улучшений словарей:</p>
-<p>&mdash; поддержка массивов в словарях;
-<br/>&mdash; поддержка Nullable в словарях;
-<br/>&mdash; можно создавать словари только с ключами, без атрибутов;
+<h2>Convenient Minor Features</h2>
+<p style="margin-top: -1em;">Tons of dictionary improvements:</p>
+<p>&mdash; array support in dictionaries;
+<br/>&mdash; Nullable support in dictionaries;
+<br/>&mdash; dictionaries can be created with keys only, without attributes;
 <br/>&mdash; complex_key_range_hashed;
-<br/>&mdash; executable_pool источник;
-<br/>&mdash; скорость работы cache словарей;
+<br/>&mdash; executable_pool source;
+<br/>&mdash; cache dictionary performance;
 <br/>&mdash; dictGetChildren; dictGetDescendants;
 <br/>&mdash; dictGetOrNull;
 </p>
 <p style="color: green; margin-top: -0.5em;">Developer &mdash; Maksim Kita.</p>
-<p>&mdash; поддержка одновременно IPv4/IPv6 в ip_trie;</p>
+<p>&mdash; support for both IPv4/IPv6 in ip_trie;</p>
 <p style="color: green; margin-top: -0.5em;">Developer &mdash; Vladimir Cherkasov.</p>
 </section>
 
 <section class="slide">
-<h2>Удобные мелочи</h2>
-<p>Тонна улучшений словарей:</p>
-<p>Все источники словарей из внешних баз данных
-<br/>позволяют задать явно запрос:</p>
+<h2>Convenient Minor Features</h2>
+<p>Tons of dictionary improvements:</p>
+<p>All dictionary sources from external databases
+<br/>allow specifying explicit queries:</p>
 <code>CREATE DICTIONARY dict
 ... SOURCE(PostgreSQL(
       DB 'db' HOST 'host' PORT 5432 USER 'postgres'
@@ -326,50 +326,50 @@ $$</code>
 </section>
 
 <section class="slide">
-<h2>Удобные мелочи</h2>
-<p>Тонна улучшений JOIN:</p>
-<p>&mdash; Приведение типов в секции ON/USING.</p>
-<p>&mdash; Фильтры на таблицу в секции ON.</p>
-<p>&mdash; Преобразования CROSS в INNER JOIN и обратно.</p>
-<p>&mdash; Поддержка join_use_nulls для Array, LowCardinality.</p>
+<h2>Convenient Minor Features</h2>
+<p>Tons of JOIN improvements:</p>
+<p>&mdash; Type casting in ON/USING clause.</p>
+<p>&mdash; Table filters in ON clause.</p>
+<p>&mdash; CROSS to INNER JOIN transformations and back.</p>
+<p>&mdash; join_use_nulls support for Array, LowCardinality.</p>
 <p style="margin-top: 2em; color: green;">Developer &mdash; Vladimir Cherkasov.</p>
 </section>
 
 <section class="slide">
-<h2>Удобные мелочи</h2>
-<p>Интерактивный режим <b>clickhouse-local</b>.</p>
+<h2>Convenient Minor Features</h2>
+<p>Interactive mode for <b>clickhouse-local</b>.</p>
 <p>INTERSECT, EXCEPT, ANY, ALL, EXISTS.</p>
-<p>Виртуальная файловая система поверх статических файлов: web disk.</p>
+<p>Virtual file system over static files: web disk.</p>
 <p>ALTER ... MATERIALIZE COLUMN.</p>
 <p>SYSTEM RESTORE REPLICA.</p>
 </section>
 
 <section class="slide">
-<h2>Удобные мелочи</h2>
+<h2>Convenient Minor Features</h2>
 <p><b>SQLite</b> database engine.</p>
 <p>Integration with <b>S2 Geometry</b>.</p>
 <p><b>s3Cluster</b> table function.</p>
 <p>INFORMATION_SCHEMA.</p>
-<p>Хранение прав доступа в ZooKeeper.</p>
+<p>Storing access rights in ZooKeeper.</p>
 </section>
 
 <section class="slide">
-<h2>А заметили ли вы, что:</h2>
-<p>ClickHouse уже поддерживает <b>window функции</b>!</p>
-<p>ClickHouse уже поддерживает <b>географические типы данных</b>:
-<br/><b>Point</b>, <b>Ring</b>, <b>Polygon</b>, <b>MultiPolygon</b> и функции:
+<h2>Did You Notice That:</h2>
+<p>ClickHouse already supports <b>window functions</b>!</p>
+<p>ClickHouse already supports <b>geographical data types</b>:
+<br/><b>Point</b>, <b>Ring</b>, <b>Polygon</b>, <b>MultiPolygon</b> and functions:
 <br/>polygonsIntersection, polygonArea, polygonsWithin, ...</p>
-<p>MaterializedMySQL &mdash; <b>change data capture</b> из PostgreSQL.</p>
+<p>MaterializedMySQL &mdash; <b>change data capture</b> from PostgreSQL.</p>
 </section>
 
 <section class="slide">
-<h2>Улучшения UI</h2>
-<p>Поддержка OPTIONS HTTP запроса,
-<br/><br/>&mdash; чтобы Grafana и Observable работали без прокси.</p>
-<p>Улучшения Play UI:
-<br/><br/>&mdash; графы для EXPLAIN;
-<br/>&mdash; спарклайны;
-<br/>&mdash; ссылки;</p>
+<h2>UI Improvements</h2>
+<p>OPTIONS HTTP request support,
+<br/><br/>&mdash; so Grafana and Observable work without proxy.</p>
+<p>Play UI improvements:
+<br/><br/>&mdash; graphs for EXPLAIN;
+<br/>&mdash; sparklines;
+<br/>&mdash; links;</p>
 </section>
 
 <section class="slide" style="background: url('pictures/ui1.png') no-repeat; background-size: 100%;">
@@ -379,7 +379,7 @@ $$</code>
 </section>
 
 <section class="slide">
-<h2>Что дальше</h2>
+<h2>What's Next</h2>
 </section>
 
 <section class="slide">
@@ -426,4 +426,3 @@ $$</code>
     <!--/Video plugin-->
 </body>
 </html>
-

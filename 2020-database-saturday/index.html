@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Субботник по бэкенду</title>
+    <title>Backend Saturday</title>
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -13,51 +13,51 @@
 </head>
 <body class="shower list">
     <header class="caption">
-        <h1>Субботник по бэкенду</h1>
+        <h1>Backend Saturday</h1>
     </header>
     <section class="slide" id="cover">
-        <h1 style="margin-top: 150px; font-size: 32pt;"><div>Две низкоуровневые оптимизации,</div><div style="text-align: right;">которые я сделал вчера</div></h1>
+        <h1 style="margin-top: 150px; font-size: 32pt;"><div>Two Low-Level Optimizations</div><div style="text-align: right;">That I Made Yesterday</div></h1>
     </section>
 
     <section class="slide">
-        <h2>Или:</h2>
-<h2>&mdash; как я сидел дома и писал код.</h2>
+        <h2>Or:</h2>
+<h2>&mdash; How I Stayed Home and Wrote Code.</h2>
     </section>
 
 
     <section class="slide">
-        <h2>Оптимизации в ClickHouse</h2>
-        
-<p><span style="color: green;">&plus;</span> Скорость работы &mdash; основное свойство продукта ClickHouse.</p>
-<p><span style="color: green;">&plus;</span> Мы постоянно всё оптимизируем...</p>
+        <h2>Optimizations in ClickHouse</h2>
+
+<p><span style="color: green;">&plus;</span> Performance is the main product quality of ClickHouse.</p>
+<p><span style="color: green;">&plus;</span> We constantly optimize everything...</p>
 <p>&nbsp;</p>
-<p><span style="color: red;">&minus;</span> Каждая оптимизация &mdash; это сложный эксперимент.</p>
-<p><span style="color: red;">&minus;</span> Иногда эксперимент проваливается уже в продакшене.</p>
+<p><span style="color: red;">&minus;</span> Every optimization is a complex experiment.</p>
+<p><span style="color: red;">&minus;</span> Sometimes the experiment fails already in production.</p>
     </section>
 
 
     <section class="slide">
-        <h2>Примеры спорных оптимизаций</h2>
+        <h2>Examples of Controversial Optimizations</h2>
 
-<p><img style="float: right; width: 35%; margin-right: -80px; margin-top: -100px; margin-left: 0px;" src="pictures/not_optimal.webp"/>Оптимизации, которые люди старательно сделали,<br/> но которые потом &laquo;выстрелили&raquo; в обратную сторону.</p>
+<p><img style="float: right; width: 35%; margin-right: -80px; margin-top: -100px; margin-left: 0px;" src="pictures/not_optimal.webp"/>Optimizations that people carefully made,<br/> but which later "backfired".</p>
 
-<p>Из ядра Linux:</p>
+<p>From the Linux kernel:</p>
 <p>&mdash; NUMA awareness;</p>
 <p>&mdash; Huge Pages.</p>
 
-<p style="color: gray; font-size: 80%; margin-top: 2em;">С точки зрения разработчиков:<br/>&mdash; это хорошие оптимизации; во всех проблемах виноваты пользователи.</p>
+<p style="color: gray; font-size: 80%; margin-top: 2em;">From the developers' point of view:<br/>&mdash; these are good optimizations; users are to blame for all problems.</p>
     </section>
 
 
     <section class="slide">
         <h2>NUMA Awareness</h2>
 
-<p>&mdash; в системе несколько процессоров;</p>
-<p>&mdash; скорость доступа к памяти неравномерна;</p>
-<p>&mdash; части памяти относятся к разных процессорам;</p>
-<p>&mdash; работа со &laquo;своей&raquo; памятью быстрее.</p>
+<p>&mdash; the system has multiple processors;</p>
+<p>&mdash; memory access speed is non-uniform;</p>
+<p>&mdash; parts of memory belong to different processors;</p>
+<p>&mdash; working with "your own" memory is faster.</p>
     </section>
-    
+
     <section class="slide">
         <h2>NUMA</h2>
         <img src="pictures/numa.png" style="width: 100%;" />
@@ -67,17 +67,17 @@
     <section class="slide">
         <h2>NUMA Awareness</h2>
 
-<p>Как выделять физическую память:</p>
-<p>1. Как попало.
-<p>2. <span style="color: green;">В той части памяти, которая относится к процессору,<br/>&emsp; который сейчас выполняет код.</span></p>
+<p>How to allocate physical memory:</p>
+<p>1. Any way.
+<p>2. <span style="color: green;">In that part of memory that belongs to the processor<br/>&emsp; that is currently executing the code.</span></p>
     </section>
-    
-    
+
+
     <section class="slide">
         <h2>NUMA Awareness</h2>
 
-<p style="color: green;">Ядро Linux оптимизировали.</p>
-<p style="color: red;">MySQL в продакшене стал убиваться OOM killer.</p>
+<p style="color: green;">The Linux kernel was optimized.</p>
+<p style="color: red;">MySQL in production started getting killed by OOM killer.</p>
 
 <p style="font-size: 80%; margin-top: 2em;"><a href="https://blog.jcole.us/2010/09/28/mysql-swap-insanity-and-the-numa-architecture/">https://blog.jcole.us/2010/09/28/mysql-swap-insanity-and-the-numa-architecture/</a></p>
     </section>
@@ -86,12 +86,12 @@
     <section class="slide">
         <h2>Huge Pages</h2>
 
-<p>&mdash; программы работают с виртуальной памятью;</p>
-<p>&mdash; виртуальная память отображается на физическую;</p>
-<p>&mdash; с помощью таблицы трансляции адресов (page table);</p>
-<p>&mdash; единица отображения &mdash; <b>страница</b> памяти;</p>
-<p>&mdash; на x86_64 по-умолчанию размер страницы &mdash; 4 КБ;</p>
-<p>&mdash; таблица трансляции адресов сама тоже хранится в памяти;</p>
+<p>&mdash; programs work with virtual memory;</p>
+<p>&mdash; virtual memory is mapped to physical memory;</p>
+<p>&mdash; using a page table (address translation table);</p>
+<p>&mdash; the mapping unit is a memory <b>page</b>;</p>
+<p>&mdash; on x86_64 the default page size is 4 KB;</p>
+<p>&mdash; the page table itself is also stored in memory;</p>
 
     </section>
 
@@ -99,16 +99,16 @@
     <section class="slide">
         <h2>Huge Pages</h2>
 
-<p>Таблица трансляции адресов хранится в памяти;<br/>
-&mdash; на x86_64 по-умолчанию размер страницы &mdash; 4 КБ.</p>
+<p>The page table is stored in memory;<br/>
+&mdash; on x86_64 the default page size is 4 KB.</p>
 
-<p>Пример: программа использует 200 GiB оперативки;<br/>
-&mdash; это до 50 млн. записей в таблице трансляции адресов.</p>
+<p>Example: a program uses 200 GiB of RAM;<br/>
+&mdash; that's up to 50 million entries in the page table.</p>
 
-<p>Структура данных таблицы трансляции адресов<br/>
-&mdash; 5-уровневый 512-way trie.</p>
+<p>Page table data structure<br/>
+&mdash; 5-level 512-way trie.</p>
 
-<!-- 
+<!--
 https://en.wikipedia.org/wiki/Intel_5-level_paging
 
 4096 - 12 bit
@@ -118,17 +118,17 @@ Each level is 9 bit (512-way)
 45 + 12 = 57
 -->
 
-<p>Чтобы прочитать что-то из виртуальной памяти,<br/>надо ещё 5 раз прочитать что-то из памяти?</p>
-<p>&mdash; кэшируется CPU с помощью TLB.</p>
+<p>To read something from virtual memory,<br/>do we need to read from memory 5 more times?</p>
+<p>&mdash; cached by CPU using TLB.</p>
     </section>
-    
+
     <section class="slide">
         <img src="pictures/page_tables.svg" style="height: 90%;" />
         <p style="color: gray; font-size: 10pt;">Bellezzasolo - Own work, CC BY-SA 4.0, Wikipedia, 2018</p>
     </section>
-    
+
     <section class="slide">
-    <h2>TLB, пример</h2>
+    <h2>TLB, Example</h2>
     <p>AMD Zen 2</p>
     <p>iTLB:<br/>
     &mdash; 64 entry L1, fully associative;<br/>
@@ -136,28 +136,28 @@ Each level is 9 bit (512-way)
     <p>dTLB:<br/>
     &mdash; 64 entry L1, fully associative;<br/>
     &mdash; 2048 entry L2, 16-way set associative.</p>
-    <p>Информация с сайта <a href="https://en.wikichip.org/wiki/amd/microarchitectures/zen_2">wikichip.org</a>.</p>
+    <p>Information from <a href="https://en.wikichip.org/wiki/amd/microarchitectures/zen_2">wikichip.org</a>.</p>
     </section>
-    
-    <section class="slide">
-        <h2>Huge Pages</h2>
-
-<p>Отображение адресов кэшируется с помощью TLB.</p>
-<p>Размер TLB маленький.<br/>Непопадание в TLB &mdash; чтение из памяти (надеемся из кэша).</p>
-
-<p style="color: red; margin-top: 2em;">Всё тормозит?</p>
-<p style="color: green; margin-bottom: 2em;">Решение &mdash; включить Huge Pages.</p>
-
-<p>На x86_64 можно использовать страницы<br/>размером 2 МБ или 1 ГБ вместо 4 КБ.</p>
-    </section>
-
 
     <section class="slide">
         <h2>Huge Pages</h2>
 
-<p>&mdash; явно выделенные huge pages:<br/>
+<p>Address translation is cached using TLB.</p>
+<p>TLB size is small.<br/>TLB miss &mdash; memory read (hopefully from cache).</p>
+
+<p style="color: red; margin-top: 2em;">Everything is slow?</p>
+<p style="color: green; margin-bottom: 2em;">Solution &mdash; enable Huge Pages.</p>
+
+<p>On x86_64 you can use pages<br/>of size 2 MB or 1 GB instead of 4 KB.</p>
+    </section>
+
+
+    <section class="slide">
+        <h2>Huge Pages</h2>
+
+<p>&mdash; explicitly allocated huge pages:<br/>
 <pre style="margin-bottom: 0;"># echo 10 > /proc/sys/vm/nr_hugepages</pre>
-также смотрите hugetlbfs.
+also see hugetlbfs.
 </p>
 
 <p>&mdash; transparent huge pages:<br/>
@@ -168,138 +168,138 @@ always [madvise] never</pre>
 
     <section class="slide">
         <h2>Huge Pages</h2>
-<p>Примеры из жизни:</p>
-<p>Как мои знакомые &laquo;ускорили&raquo; MySQL.</p>
-<p>Как коллеги из соседнего отдела ускорили весь свой продакшен<br/>и всё перестало работать.</p>
-<p>Как я ускорил ClickHouse и всё стало тормозить.</p>
+<p>Examples from real life:</p>
+<p>How my friends "sped up" MySQL.</p>
+<p>How colleagues from a neighboring department sped up their entire production<br/>and everything stopped working.</p>
+<p>How I sped up ClickHouse and everything started slowing down.</p>
 <p style="margin-top: 2em; font-size: 80%;"><a href="https://github.com/ClickHouse/ClickHouse/commit/60054d177c8bc190e8187c7c5f5e8495a1957a04">https://github.com/ClickHouse/ClickHouse/commit/60054d177c8bc190e8187c7c5f5e8495a1957a04</a></p>
     </section>
-    
+
     <section class="slide">
-        <h2>Примеры спорных оптимизаций</h2>
+        <h2>Examples of Controversial Optimizations</h2>
 
 <p>&mdash; NUMA awareness;</p>
 <p>&mdash; Huge Pages.</p>
 
-<p style="color: gray; font-size: 80%; margin-top: 2em;">С точки зрения разработчиков:<br/>&mdash; это хорошие оптимизации; во всех проблемах виноваты пользователи.</p>
+<p style="color: gray; font-size: 80%; margin-top: 2em;">From the developers' point of view:<br/>&mdash; these are good optimizations; users are to blame for all problems.</p>
 
-<p>Просто забудем про эти оптимизации?</p>
-    </section>
-    
-    
-    <section class="slide">
-        <h2 style="font-size: 32pt">Тесты производительности в ClickHouse</h2>
+<p>Just forget about these optimizations?</p>
     </section>
 
+
     <section class="slide">
-        <h2 style="font-size: 32pt">Тесты производительности в ClickHouse</h2>
+        <h2 style="font-size: 32pt">Performance Tests in ClickHouse</h2>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt">Performance Tests in ClickHouse</h2>
         <img src="pictures/perf_check.png"/>
     </section>
-    
+
     <section class="slide">
-        <h2 style="font-size: 32pt">Тесты производительности в ClickHouse</h2>
+        <h2 style="font-size: 32pt">Performance Tests in ClickHouse</h2>
         <img style="margin-left: -50px; margin-top: -1em; height: 100%;" src="pictures/perf_results.png"/>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt">Тесты производительности в ClickHouse</h2>
-        <p>&mdash; выполняет запрос вперемешку на двух разных сборках сервера;</p>
-        <p>&mdash; собираем статистику времени выполнения:<br/>
-        &emsp; например 10 запусков на старой версии и 10 на новой;</p>
-        <p>&mdash; берём bootstrap распределение случайной величины:<br/>
-        &emsp; какова разница во времени выполнения запроса<br/>
-        &emsp; на случайно выбранной паре запусков на старой и новой версии.</p>
-        <p>&mdash; считаем медиану этой случайной величины<br/>
-        &emsp; и сравниваем с 95% квантилем случайной величины,
-        <br/>&emsp; посчитанной если сравнивать сервер сам с собой.</p>
-        
-        <p style="margin-top: 2em; font-size: 80%; color: gray;">Box, Hunter, Hunter "Statictics for exprerimenters", p. 78: "A Randomized Design Used in the Comparison of Standard and Modified Fertilizer Mixtures for Tomato Plants."</p>
+        <h2 style="font-size: 32pt">Performance Tests in ClickHouse</h2>
+        <p>&mdash; executes queries alternating between two different server builds;</p>
+        <p>&mdash; collects execution time statistics:<br/>
+        &emsp; for example 10 runs on the old version and 10 on the new;</p>
+        <p>&mdash; takes bootstrap distribution of the random variable:<br/>
+        &emsp; what is the difference in query execution time<br/>
+        &emsp; on a randomly selected pair of runs on old and new versions.</p>
+        <p>&mdash; calculates the median of this random variable<br/>
+        &emsp; and compares it with the 95% quantile of the random variable,
+        <br/>&emsp; calculated when comparing the server with itself.</p>
+
+        <p style="margin-top: 2em; font-size: 80%; color: gray;">Box, Hunter, Hunter "Statistics for Experimenters", p. 78: "A Randomized Design Used in the Comparison of Standard and Modified Fertilizer Mixtures for Tomato Plants."</p>
     </section>
-    
+
     <section class="slide">
-        <h2 style="font-size: 32pt">Тесты производительности в ClickHouse</h2>
-        <p>Выдаёт один из результатов:</p>
-        <p style="color: green;">&mdash; разница несущественная;</p>
-        <p style="color: green;">&mdash; запрос ускорился;</p>
-        <p style="color: red;">&mdash; запрос замедлился;</p>
-        <p style="color: red;">&mdash; запрос нестабилен.</p>
-        
-        <p>Иногда вместо нестабильного запроса<br/>показывается ложное ускорение или замедление.</p>
-        <p>Почему время выполнения запроса может быть нестабильным?</p>
+        <h2 style="font-size: 32pt">Performance Tests in ClickHouse</h2>
+        <p>Outputs one of the results:</p>
+        <p style="color: green;">&mdash; difference is insignificant;</p>
+        <p style="color: green;">&mdash; query sped up;</p>
+        <p style="color: red;">&mdash; query slowed down;</p>
+        <p style="color: red;">&mdash; query is unstable.</p>
+
+        <p>Sometimes instead of an unstable query<br/>false acceleration or slowdown is shown.</p>
+        <p>Why can query execution time be unstable?</p>
     </section>
-    
+
     <section class="slide">
-        <h2 style="font-size: 32pt">Тесты производительности в ClickHouse</h2>
-        <p>Почему время выполнения запроса может быть нестабильным?</p>
-        <p>Надо смотреть на метрики выполнения запроса:</p>
-        <p>&mdash; метрики <b>userspace</b>:<br/>время выполнения запроса, rows processed, opened files;</p>
-        <p>&mdash; метрики <b>ядра ОС</b>:<br/>время ожидания выполнения, iowait, blkio read bytes;</p>
-        <p>&mdash; метрики <b>CPU</b>:<br/>instructions, branch mispredictions, L1d cache misses, dTLB misses;</p>
-        <p style="color: green;">Все эти метрики есть в ClickHouse и считаются на каждый запрос!</p>
+        <h2 style="font-size: 32pt">Performance Tests in ClickHouse</h2>
+        <p>Why can query execution time be unstable?</p>
+        <p>Need to look at query execution metrics:</p>
+        <p>&mdash; <b>userspace</b> metrics:<br/>query execution time, rows processed, opened files;</p>
+        <p>&mdash; <b>OS kernel</b> metrics:<br/>wait time, iowait, blkio read bytes;</p>
+        <p>&mdash; <b>CPU</b> metrics:<br/>instructions, branch mispredictions, L1d cache misses, dTLB misses;</p>
+        <p style="color: green;">All these metrics exist in ClickHouse and are calculated for each query!</p>
     </section>
-    
+
     <section class="slide">
-        <h2 style="font-size: 32pt">Тесты производительности в ClickHouse</h2>
+        <h2 style="font-size: 32pt">Performance Tests in ClickHouse</h2>
         <img src="pictures/metrics_cdf.png" style="width: 95%; margin-top: -1em;"/>
     </section>
-    
+
     <section class="slide">
-        <h2 style="font-size: 32pt">Тесты производительности в ClickHouse</h2>
+        <h2 style="font-size: 32pt">Performance Tests in ClickHouse</h2>
         <img src="pictures/metrics_comparison.png" style="width: 100%; margin-top: -1em; margin-left: -1em;"/>
     </section>
-    
+
     <section class="slide">
-        <h2>Проблема</h2>
-        <p>Pull request с добавлением поддержки<br/>типов UInt256, Int256, Decimal256.</p>
-        <p>Увеличился размер бинарника (324 МБ -> 429 МБ).</p>
-        <p>По perf тестам <span style="color: green;">замедлений нет</span>.</p>
-        <p>Но <span style="color: red;">выросло количество нестабильных запросов!</span></p>
+        <h2>The Problem</h2>
+        <p>Pull request adding support<br/>for UInt256, Int256, Decimal256 types.</p>
+        <p>Binary size increased (324 MB -> 429 MB).</p>
+        <p>Perf tests show <span style="color: green;">no slowdowns</span>.</p>
+        <p>But <span style="color: red;">the number of unstable queries increased!</span></p>
     </section>
 
     <section class="slide">
-        <h2>Проблема</h2>
-        <p>Выросло количество нестабильных запросов!</p>
-        <p>Перебором всех метрик выяснили, что:</p>
-        <p>&mdash; увеличилось количество <b style="color: red;">iTLB misses</b>.</p>
-    </section>
-    
-    <section class="slide">
-        <h2>Проблема</h2>
-        <p>Увеличилось количество <b style="color: red;">iTLB misses</b>.</p>
-        <p>Кажется надо засунуть сегмент с кодом в Huge Pages :)</p>
-        <p>Как это сделать?</p>
-        <p>Использовать hugetlbfs? Но в тестовой инфраструктуре<br/>не получится выделить явные huge pages.<br/>
-        И придётся как-то странно делать линковку.</p>
-        <p>Использовать transparent huge pages?<br/>
-        Но они работают только для anonymous memory mappings.<br/>
-        А наш код - это mmap сегмента исполняемого файла.</p>
-    </section>
-    
-    <section class="slide">
-        <h2 style="font-size: 32pt">Безумное решение</h2>
-        <p>Надо сделать remap машинного кода налету!</p>
-        <p>&mdash; выделить новый кусок памяти для кода (<b>mmap</b>);</p>
-        <p>&mdash; сделать <b>madvise</b>(..., <b>MADV_HUGE</b>);</p>
-        <p>&mdash; сделать <b>mprotect</b>, добавить executable и убрать write access;</p>
-        <p>&mdash; скопировать туда машинный код;</p>
-        <p>&mdash; передать ему управление.</p>
-    </section>
-    
-    <section class="slide">
-        <h2 style="font-size: 32pt">Безумное решение</h2>
-        <p>Надо сделать remap машинного кода налету!</p>
-        <p>Не работает, потому что у нас не <b>P</b>osition <b>I</b>ndependent <b>C</b>ode*.</p>
-        
-        <p style="color: gray; font-size: 80%; margin-top: 2em;">* потому что так более оптимально, +1% производительности.</p>
-        
-        <p style="margin-top: 2em;">Надо удалить старый код, выделить на старом месте<br/>новый кусок памяти и скопировать машинного код туда.</p>
-        <p style="color: green; font-size: 80%;">Худший код, который я писал в жизни.</p>
+        <h2>The Problem</h2>
+        <p>The number of unstable queries increased!</p>
+        <p>By enumerating all metrics we found that:</p>
+        <p>&mdash; the number of <b style="color: red;">iTLB misses</b> increased.</p>
     </section>
 
-    
     <section class="slide">
-        <h2 style="font-size: 30pt;">Безумное решение</h2>
-<p>Шаг 1: определим адрес и длину куска памяти с нашим кодом.</p>
+        <h2>The Problem</h2>
+        <p>The number of <b style="color: red;">iTLB misses</b> increased.</p>
+        <p>It seems we need to put the code segment into Huge Pages :)</p>
+        <p>How to do this?</p>
+        <p>Use hugetlbfs? But in the test infrastructure<br/>we won't be able to allocate explicit huge pages.<br/>
+        And we'll have to do linking in some strange way.</p>
+        <p>Use transparent huge pages?<br/>
+        But they only work for anonymous memory mappings.<br/>
+        And our code is an mmap of the executable file segment.</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt">Crazy Solution</h2>
+        <p>Need to remap machine code on the fly!</p>
+        <p>&mdash; allocate new memory chunk for code (<b>mmap</b>);</p>
+        <p>&mdash; do <b>madvise</b>(..., <b>MADV_HUGE</b>);</p>
+        <p>&mdash; do <b>mprotect</b>, add executable and remove write access;</p>
+        <p>&mdash; copy machine code there;</p>
+        <p>&mdash; transfer control to it.</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt">Crazy Solution</h2>
+        <p>Need to remap machine code on the fly!</p>
+        <p>Doesn't work because we don't have <b>P</b>osition <b>I</b>ndependent <b>C</b>ode*.</p>
+
+        <p style="color: gray; font-size: 80%; margin-top: 2em;">* because it's more optimal, +1% performance.</p>
+
+        <p style="margin-top: 2em;">Need to delete the old code, allocate new memory at the old location<br/>and copy the machine code there.</p>
+        <p style="color: green; font-size: 80%;">The worst code I've written in my life.</p>
+    </section>
+
+
+    <section class="slide">
+        <h2 style="font-size: 30pt;">Crazy Solution</h2>
+<p>Step 1: determine the address and length of the memory chunk with our code.</p>
 
 <code style="font-size: 12pt; line-height: 1.25">std::pair&lt;void *, size_t> getMappedArea(void * ptr)
 {
@@ -320,10 +320,10 @@ always [madvise] never</pre>
     throw Exception("Cannot find mapped area for pointer", ErrorCodes::LOGICAL_ERROR);
 }</code>
     </section>
-    
+
     <section class="slide">
-        <h2 style="font-size: 30pt;">Безумное решение</h2>
-<p>Шаг 1: определим адрес и длину куска памяти с нашим кодом.</p>
+        <h2 style="font-size: 30pt;">Crazy Solution</h2>
+<p>Step 1: determine the address and length of the memory chunk with our code.</p>
 
 <code style="font-size: 16pt; line-height: 1.25">void <b>remapExecutable</b>()
 {
@@ -336,8 +336,8 @@ always [madvise] never</pre>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 30pt;">Безумное решение</h2>
-<p>Шаг 1: определим адрес и длину куска памяти с нашим кодом.</p>
+        <h2 style="font-size: 30pt;">Crazy Solution</h2>
+<p>Step 1: determine the address and length of the memory chunk with our code.</p>
 
 <code style="font-size: 16pt; line-height: 1.25">void <b>remapExecutable</b>()
 {
@@ -349,20 +349,20 @@ always [madvise] never</pre>
 }
 </code>
 
-    <p style="color: gray; font-size: 80%; margin-top: 2em;">* не пишите так.</p>
+    <p style="color: gray; font-size: 80%; margin-top: 2em;">* don't write like this.</p>
     </section>
-    
+
     <section class="slide">
-        <h2 style="font-size: 30pt;">Безумное решение</h2>
-<p style="margin-top: -1em;">Шаг 2: выделим временный кусок памяти,<br/>скопируем туда код и передадим ему управление.</p>
+        <h2 style="font-size: 30pt;">Crazy Solution</h2>
+<p style="margin-top: -1em;">Step 2: allocate temporary memory,<br/>copy code there and transfer control to it.</p>
 
 <code style="font-size: 12pt; line-height: 1.25; margin-left: -3em; margin-right: -3em;">void remapToHugeStep1(void * begin, size_t size)
 {
     <span style="color: green">/// Allocate scratch area and copy the code there.</span>
-    void * scratch = mmap(nullptr, size, 
+    void * scratch = mmap(nullptr, size,
         PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (MAP_FAILED == scratch)
-        throwFromErrno(fmt::format("Cannot mmap {} bytes", size), 
+        throwFromErrno(fmt::format("Cannot mmap {} bytes", size),
             ErrorCodes::CANNOT_ALLOCATE_MEMORY);
 
     memcpy(scratch, begin, size);
@@ -375,38 +375,38 @@ always [madvise] never</pre>
         reinterpret_cast&lt;intptr_t>(<b>remapToHugeStep2</b>) + offset)(begin, size, scratch);
 }</code>
     </section>
-    
+
     <section class="slide">
-        <h2 style="font-size: 30pt;">Безумное решение</h2>
-<p style="margin-top: -1em;">Шаг 3: удалим старый код и выделим новый кусок памяти на его месте.</p>
+        <h2 style="font-size: 30pt;">Crazy Solution</h2>
+<p style="margin-top: -1em;">Step 3: delete old code and allocate new memory at its location.</p>
 
 <code style="font-size: 14pt; line-height: 1.25;">void remapToHugeStep2(void * begin, size_t size, void * scratch)
 {
     int munmap_res = munmap(begin, size);
-    
+
     if (munmap_res == 0)
         std::cerr &lt;&lt; "Successfully unmapped\n";
-    <span style="color: red">/// ^ здесь segfault :(</span>
+    <span style="color: red">/// ^ segfault here :(</span>
 </code>
     </section>
-    
+
     <section class="slide">
-        <h2 style="font-size: 30pt;">Безумное решение</h2>
-<p style="margin-top: -1em;">Шаг 3: удалим старый код и выделим новый кусок памяти на его месте.</p>
+        <h2 style="font-size: 30pt;">Crazy Solution</h2>
+<p style="margin-top: -1em;">Step 3: delete old code and allocate new memory at its location.</p>
 
-<p>После <b>munmap</b> кода, вызов любой функции приведёт к segfault,<br/>
-так как функции в не-PIC коде вызываются по абсолютным адресам*, которых больше нет.</p>
+<p>After <b>munmap</b> of code, calling any function will cause segfault,<br/>
+as functions in non-PIC code are called by absolute addresses*, which no longer exist.</p>
 
-<p>Но нам нужны функции <b>mmap</b>, <b>madvise</b>, <b>mprotect</b>, <b>memcpy</b>!</p>
+<p>But we need functions <b>mmap</b>, <b>madvise</b>, <b>mprotect</b>, <b>memcpy</b>!</p>
 
-<p><b>mmap</b>, <b>madvise</b>, <b>mprotect</b> &mdash; обёртки над системными вызовами;<br/>
-<b>memcpy</b> &mdash; полностью userspace функция.</p>
+<p><b>mmap</b>, <b>madvise</b>, <b>mprotect</b> &mdash; wrappers around system calls;<br/>
+<b>memcpy</b> &mdash; fully userspace function.</p>
 
-<p style="color: gray; font-size: 80%; margin-top: 2em;">* функции из .so, как libc.so, вызываются чуть по-другому.</p>
+<p style="color: gray; font-size: 80%; margin-top: 2em;">* functions from .so, like libc.so, are called a bit differently.</p>
     </section>
-    
+
     <section class="slide">
-        <h2 style="font-size: 30pt;">Системные вызовы</h2>
+        <h2 style="font-size: 30pt;">System Calls</h2>
 <code>std::cerr &lt;&lt; "Hello, world\n";</code>
 <p>&mdash; C++</p>
 <code style="margin-top: 1em;">write(2, "Hello, world\n", 13);</code>
@@ -417,9 +417,9 @@ always [madvise] never</pre>
          ...
          syscall")</code>
     </section>
-    
+
     <section class="slide">
-        <h2 style="font-size: 30pt;">Системные вызовы</h2>
+        <h2 style="font-size: 30pt;">System Calls</h2>
 <code style="font-size: 16pt; line-height: 1.25;">__attribute__((__noinline__)) int64_t our_syscall(...)
 {
     __asm__ __volatile__ (R"(
@@ -436,12 +436,12 @@ always [madvise] never</pre>
     return 0;
 }</code>
     </section>
-    
+
     <section class="slide">
         <h2 style="font-size: 30pt;">Memcpy</h2>
-        
-        <p>Просто написать цикл.</p>
-        <p>Но сначала выставить <b>-fno-tree-loop-distribute-patterns</b>.</p>
+
+        <p>Just write a loop.</p>
+        <p>But first set <b>-fno-tree-loop-distribute-patterns</b>.</p>
 <code style="font-size: 16pt; line-height: 1.25;">while (src &lt; src_end)
 {
     _mm_storeu_si128(dst, _mm_loadu_si128(src));
@@ -449,14 +449,14 @@ always [madvise] never</pre>
     ++dst;
     ++src;
 }</code>
-    <p style="margin-top: 1em;">Не особо эффективно, но Ок.</p>
+    <p style="margin-top: 1em;">Not very efficient, but OK.</p>
     <p><a href="https://gcc.gnu.org/bugzilla/show_bug.cgi?id=56888">https://gcc.gnu.org/bugzilla/show_bug.cgi?id=56888</a></p>
     </section>
-    
-    
+
+
     <section class="slide">
-        <h2 style="font-size: 30pt;">Безумное решение</h2>
-<p style="margin-top: -1em;">Шаг 3: удалим старый код и выделим новый кусок памяти на его месте.</p>
+        <h2 style="font-size: 30pt;">Crazy Solution</h2>
+<p style="margin-top: -1em;">Step 3: delete old code and allocate new memory at its location.</p>
 
 <code style="font-size: 12pt; line-height: 1.25;">int64_t (*syscall_func)(...) = reinterpret_cast&lt;int64_t (*)(...)>(
     reinterpret_cast&lt;intptr_t>(our_syscall) + offset);
@@ -478,10 +478,10 @@ syscall_func(<b>SYS_mprotect</b>, begin, size, PROT_READ | PROT_EXEC);
 void(* volatile step3)(void*, size_t, size_t) = <b>remapToHugeStep3</b>;
 step3(scratch, size, offset);</code>
     </section>
-    
+
     <section class="slide">
-        <h2 style="font-size: 30pt;">Безумное решение</h2>
-<p style="margin-top: -1em;">Шаг 4: удалим временный кусок памяти и вернёмся в точку вызова.</p>
+        <h2 style="font-size: 30pt;">Crazy Solution</h2>
+<p style="margin-top: -1em;">Step 4: delete temporary memory and return to the call point.</p>
 
 <code style="font-size: 12pt; line-height: 1.25; margin-left: -3em; margin-right: -3em;">void remapToHugeStep3(void * scratch, size_t size, size_t offset)
 {
@@ -495,57 +495,57 @@ step3(scratch, size, offset);</code>
     /// (because it was called from there).</span>
     <span style="color: green">/// But the scratch area no longer exists.
     /// We should correct the return address by subtracting the offset.</span>
-    
+
     __asm__ __volatile__("subq %0, 8(%%rsp)" : : "r"(offset) : "memory");
 }</code>
     </section>
-    
-    
-    
+
+
+
     <section class="slide">
-        <h2>Безумное решение</h2>
+        <h2>Crazy Solution</h2>
 
-<p style="color: green;">Оно работает.</p>
+<p style="color: green;">It works.</p>
 
-<p style="margin-top: 2em;">Не работает в debug сборке.</p>
-<p style="margin-bottom: 2em;">Не работает с sanitizers.</p>
-        
-<p>Есть ли польза?</p>
-<p>Можно ли включать в продакшене?</p>
+<p style="margin-top: 2em;">Doesn't work in debug build.</p>
+<p style="margin-bottom: 2em;">Doesn't work with sanitizers.</p>
+
+<p>Is there any benefit?</p>
+<p>Can it be enabled in production?</p>
     </section>
 
 
     <section class="slide">
-        <h2>А что мы всё-таки сделали?</h2>
-<p>Очень хитрым способом поменяли сегмент с кодом в памяти<br/>
-&mdash; для того, чтобы он стал использовать <b>Huge Pages</b><br/>
-&mdash; в надежде уменьшить количество <b>iTLB</b> промахов<br/>
-&mdash; чтобы уменьшить ложные срабатывания <b>perf-тестов в CI</b>.</p>
+        <h2>What Did We Actually Do?</h2>
+<p>In a very tricky way changed the code segment in memory<br/>
+&mdash; so that it starts using <b>Huge Pages</b><br/>
+&mdash; hoping to reduce the number of <b>iTLB</b> misses<br/>
+&mdash; to reduce false positives in <b>perf-tests in CI</b>.</p>
 
-<p style="line-height: 1.5em;">Результат:<br/>
-<p>1. Всё работает, Huge Pages действительно используются.</p>
-<p style="color: green;">2. Количество iTLB промахов уменьшилось почти до нуля!</p>
-<p>3. Скорость работы запросов никак не изменилась :(</p>
-<p>4. Увеличилась ли стабильность perf-тестов? &mdash; пока неизвестно.</p>
+<p style="line-height: 1.5em;">Result:<br/>
+<p>1. Everything works, Huge Pages are actually used.</p>
+<p style="color: green;">2. The number of iTLB misses decreased almost to zero!</p>
+<p>3. Query execution speed didn't change :(</p>
+<p>4. Did perf-test stability improve? &mdash; still unknown.</p>
     </section>
-    
+
     <section class="slide">
-        <h2>Результат</h2>
-<p>В продакшен не пойдёт, так как польза не доказана, а код адский.</p>
-<p style="color: green;">Будет включено в perf тестах для проверки.</p>
+        <h2>Result</h2>
+<p>Won't go to production as benefit is not proven and the code is hellish.</p>
+<p style="color: green;">Will be enabled in perf tests for verification.</p>
 
 <p style="margin-top: 2em;"><a href="https://github.com/ClickHouse/ClickHouse/pull/14685">https://github.com/ClickHouse/ClickHouse/pull/14685</a></p>
     </section>
 
 
     <section class="slide">
-        <h2>Выводы</h2>
+        <h2>Conclusions</h2>
 
-<p>Хотите что-то оптимизировать &mdash; сначала научитесь измерять.</p>
-<p>Готовьтесь проводить много экспериментов,<br/>большинство из которых не оправдаются.</p>
-<p>Надёжные тесты производительности сделать сложно.</p>
-<p>Несмотря на наличие измерений и continuous integration,<br/>последствия оптимизаций могут стать известны только в продакшене.</p>
-<p>Самые рискованные оптимизации &mdash; под конкретное железо<br/> и особенности его работы.</p>
+<p>Want to optimize something &mdash; first learn to measure.</p>
+<p>Be prepared to conduct many experiments,<br/>most of which won't pay off.</p>
+<p>Reliable performance tests are hard to make.</p>
+<p>Despite having measurements and continuous integration,<br/>consequences of optimizations may only become known in production.</p>
+<p>The riskiest optimizations are for specific hardware<br/> and its operational characteristics.</p>
 
     </section>
 

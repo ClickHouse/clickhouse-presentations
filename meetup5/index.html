@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" style="background-color: #FFF;">
 <head>
-    <title>GROUP BY и Memory limit exceeded</title>
+    <title>GROUP BY and Memory limit exceeded</title>
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -9,13 +9,13 @@
 </head>
 <body class="shower list">
     <header class="caption">
-        <h1>GROUP BY и Memory limit exceeded</h1>
+        <h1>GROUP BY and Memory limit exceeded</h1>
     </header>
 
     <section class="slide" id="cover">
-        <h1 style="margin-top: 200px">GROUP BY и Memory limit exceeded</h1>
+        <h1 style="margin-top: 200px">GROUP BY and Memory limit exceeded</h1>
     </section>
-    
+
     <section class="slide">
         <img style="height: 60%" src="pictures/plain.png"/>
     </section>
@@ -23,130 +23,130 @@
     <section class="slide">
         <video style="height: 90%"><source src="video/plain.ogv" type="video/ogg"></video>
     </section>
-    
+
     <section class="slide">
         <video style="height: 90%"><source src="video/stats.ogv" type="video/ogg"></video>
     </section>
-    
+
     <section class="slide">
-        <h1>Способ 1</h1>
-        <p>Просто увеличить max_memory_usage</p>
+        <h1>Method 1</h1>
+        <p>Simply increase max_memory_usage</p>
     </section>
-    
+
     <section class="slide">
         <video style="height: 90%"><source src="video/raise_mem.ogv" type="video/ogg"></video>
     </section>
-    
+
     <section class="slide">
-        <h1>Способ 2</h1>
-        <p>Включить агрегацию во внешней памяти:</p>
+        <h1>Method 2</h1>
+        <p>Enable external memory aggregation:</p>
         <p>max_bytes_before_external_group_by</p>
         <p>distributed_aggregation_memory_efficient</p>
     </section>
-    
+
     <section class="slide">
         <video style="height: 90%"><source src="video/external.ogv" type="video/ogg"></video>
     </section>
-    
+
     <section class="slide">
-        <h1>Способ 3</h1>
-        <p>Двухпроходная агрегация:</p>
-        <p>&ndash; в подзапросе вычисляем множество ключей,<br />&nbsp;которые войдут в результат;</p>
-        <p>&ndash; только для них считаем все агрегатные функции.</p>
+        <h1>Method 3</h1>
+        <p>Two-pass aggregation:</p>
+        <p>&ndash; in a subquery, calculate the set of keys<br />&nbsp;that will be included in the result;</p>
+        <p>&ndash; only for them calculate all aggregate functions.</p>
     </section>
-    
+
     <section class="slide">
         <img style="height: 80%" src="pictures/twopass1.png"/>
     </section>
-    
+
     <section class="slide">
         <video style="height: 90%"><source src="video/twopass1.ogv" type="video/ogg"></video>
     </section>
-    
+
     <section class="slide">
-        <h1>Способ 3, лучше</h1>
-        <p>Двухпроходная агрегация:</p>
-        <p>&ndash; в подзапросе вычисляем множество ключей,<br />&nbsp;которые войдут в результат;</p>
-        <p>&ndash; только для них считаем все агрегатные функции.</p>
-        <p>Чтобы сэкономить память, будем вычислять<br />множество хэшей вместо множества строк.</p>
+        <h1>Method 3, better</h1>
+        <p>Two-pass aggregation:</p>
+        <p>&ndash; in a subquery, calculate the set of keys<br />&nbsp;that will be included in the result;</p>
+        <p>&ndash; only for them calculate all aggregate functions.</p>
+        <p>To save memory, we will calculate<br />a set of hashes instead of a set of strings.</p>
     </section>
-    
+
     <section class="slide">
         <img style="height: 80%" src="pictures/twopass2.png"/>
     </section>
-    
+
     <section class="slide">
         <video style="height: 90%"><source src="video/twopass2.ogv" type="video/ogg"></video>
     </section>
-    
+
     <section class="slide">
-        <h1>Способ 4</h1>
-        <p>Магические опции:</p>
+        <h1>Method 4</h1>
+        <p>Magic options:</p>
         <p>max_rows_to_group_by,<br/>group_by_overflow_mode = 'any'</p>
     </section>
-    
+
     <section class="slide">
         <video style="height: 90%"><source src="video/overflow.ogv" type="video/ogg"></video>
     </section>
-    
+
     <section class="slide">
-        <h1>Способ 5</h1>
-        <p>Сэмплирование</p>
+        <h1>Method 5</h1>
+        <p>Sampling</p>
     </section>
-    
+
     <section class="slide">
         <img style="height: 60%" src="pictures/sample.png"/>
     </section>
-    
+
     <section class="slide">
         <video style="height: 90%"><source src="video/sample.ogv" type="video/ogg"></video>
     </section>
-    
+
     <section class="slide">
-        <h1>Способ 6</h1>
-        <p>Выгрузить данные по части ключей.</p>
-        <p>Сделать несколько проходов.</p>
+        <h1>Method 6</h1>
+        <p>Export data for a subset of keys.</p>
+        <p>Make multiple passes.</p>
     </section>
-    
+
     <section class="slide">
         <img style="height: 50%" src="pictures/multipass.png"/>
     </section>
-    
+
     <section class="slide">
         <video style="height: 90%"><source src="video/multipass.ogv" type="video/ogg"></video>
     </section>
-    
+
     <section class="slide">
-        <h1>Способ 7</h1>
-        <p>Посчитать данные для ключей,<br />которые встречаются часто.</p>
+        <h1>Method 7</h1>
+        <p>Calculate data for keys<br />that occur frequently.</p>
     </section>
-    
+
     <section class="slide">
         <img style="height: 80%" src="pictures/random_rows.png"/>
     </section>
-    
+
     <section class="slide">
         <video style="height: 90%"><source src="video/random_rows.ogv" type="video/ogg"></video>
     </section>
-    
+
     <section class="slide">
-        <h1>Способ 7, лучше</h1>
-        <p>Посчитать данные для ключей,<br />которые встречаются часто.</p>
+        <h1>Method 7, better</h1>
+        <p>Calculate data for keys<br />that occur frequently.</p>
     </section>
-    
+
     <section class="slide">
         <img style="height: 80%" src="pictures/sampled_rows.png"/>
     </section>
-    
+
     <section class="slide">
         <video style="height: 90%"><source src="video/sampled_rows.ogv" type="video/ogg"></video>
     </section>
-    
+
     <section class="slide">
-        <h1>Вывод</h1>
-        <p>Если запрос не укладывается в ограничения,<br />вы всё-равно можете его выполнить.</p>
+        <h1>Conclusion</h1>
+        <p>If a query doesn't fit within the limits,<br />you can still execute it.</p>
     </section>
-    
+
     <section class="slide">
         <h1>?</h1>
     </section>

@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Как устроены хэш-таблицы в ClickHouse</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/ribbon/styles/screen-16x10.css">
+    
+    <style type="text/css">
+         span { padding: 10px 10px; background: rgba(255, 255, 255, 0.75); }
+         code { display: block; background-color: #EEE; white-space: pre; }
+         h2 { line-height: 1.5 !important; padding-bottom: 30px; }
+         td { line-height: 1.5; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>Как устроены хэш-таблицы в ClickHouse</h1>
+    </header>
+
+    <section class="slide" id="cover" style="background: url('pictures/xor.png') no-repeat center center; background-size: 100%">
+        <h1 style="margin-top: 200px;"><span>Как устроены хэш-таблицы</span><br/><span>в ClickHouse</span></h1>
+    </section>
+
+    <section class="slide">
+        <h2>Обо мне</h2>
+        <p>Алексей, разработчик ClickHouse.</p>
+        <p>С 2008 занимался движком обработки данных в Яндекс.Метрике.</p>
+        <p>Пишу на C++.</p>
+    </section>
+
+<section class="slide">
+<h2>Где нужны хорошие хэш-таблицы</h2>
+
+<p>GROUP BY<br>
+SELECT DISTINCT<br>
+IN, JOIN</p>
+
+<p><br>А также:<br>
+— uniqExact, uniq;<br>
+— arrayEnumerateUniq;<br>
+— LIMIT BY.</p>
+</section>
+
+<section class="slide">
+<h2>Что такое хэш-таблица</h2>
+</section>
+
+<section class="slide">
+<h2>Чем отличаются хэш-таблицы<br>от lookup таблиц?</h2>
+
+<p>1. Хэширование.</p>
+<p>2. Разрешение коллизий.</p>
+<p>3. Ресайзы.</p>
+<p>&nbsp;</p>
+<p>Все пункты не являются обязательными.</p>
+<p>Пример: direct mapped cache.</p>
+</section>
+
+<section class="slide">
+<h2>Хэширование</h2>
+
+<div style="float: right; text-align: right;">
+<img src="pictures/power.png" style="margin-bottom: -30px;" />
+<br><span style="padding-right: 10px; font-size: 10px;">xkcd.com</span>
+</div>
+
+<p>Магический приём, который пронизывает<br>всё software engineering &amp; computer science.</p>
+<p>Используется повсеместно.</p>
+<p>Алгоритмы поиска, машинное обучение,<br>распределённые системы, сжатие данных,<br>sketching структуры данных...</p>
+</section>
+
+<section class="slide">
+<h2>Ошибки при выборе хэш-функции</h2>
+
+<p>1. Использование тривиальной хэш-функции</p>
+
+<code>hash(x) = x
+</code>
+
+<p>
+Так сделано в реализации стандартной библиотеки (std::hash)<br>в libstdc++ и в libc++ для int-ов.</p>
+</section>
+
+<section class="slide">
+<h2>Почему тривиальная хэш-функция<br>— это плохо.</h2>
+
+<p>Пример: посчитаем, сколько раз каждый пользователь был в интернете.</p>
+<p>На входе — массив yandexuid.<br>yandexuid — UInt64</p>
+
+<code>for (const auto &amp; key : data)
+    ++map[key];
+</code>
+
+<p>
+Всего 100 000 000 посещений, в них 17 630 976 разных yandexuid.<br>
+value_type — 16 байт, оперативки примерно 260 MB<br>— не помещается в LL кэш.</p>
+</section>
+
+<section class="slide">
+<p>
+Что такое yandexuid: concat(rand, timestamp).<br>Младшие биты — <b>unix timestamp</b> с точностью до секунд.</p>
+
+<img src="pictures/traffic.png" style="height:50%"/>
+
+<code style="font-size: 20px;">SELECT toHour(EventTime) * 60 + toMinute(EventTime) AS k,
+    count() AS c FROM hits_all
+WHERE EventDate >= today() - 365 GROUP BY k ORDER BY k
+INTO OUTFILE 'minutes.tsv' FORMAT TabSeparated</code>
+
+<p>
+Elapsed: 800.580 sec. Processed 4.33 trillion rows</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 40px;">Насколько тривиальная хэш-функция хуже</h2>
+
+<p>std::unordered_map<br/>
+— разницы в производительности <b>нет</b> (10.319 vs 10.279 сек)</p>
+
+<p>google::dense_hash_map<br/>
+— разница в производительности: 3.156 vs 81.86 сек — в <b>26 раз</b></p>
+
+<p>ClickHouse HashMap<br/>
+— разница в производительности: 2.527 vs 10.264 сек — в <b>4 раза</b></p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 40px;">2. Ошибки при комбинировании<br>хэш-функций</h2>
+
+<p>hash(x, y) = hash(x) ^ hash(y)
+— ужасно, так делать нельзя</p>
+
+<p>hash(x, y) = hash(hash(x) ^ y)
+— можно так, но зачастую можно лучше</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 40px;">3. Использование<br/>для типов фиксированной длины<br/>хэш-функции, предназначенной для строк.</h2>
+
+<p>Пример:</p>
+<code style="font-size: 19px;">hash(int x) = CityHash64(reinterpret_cast&lt;const char *&gt;(&amp;x), sizeof(x))
+</code>
+<p>
+— очень плохо.</p>
+
+<p>
+— хэш-функции для строк как правило не инлайнятся;
+
+— они содержат много бранчей — представляют собой вариации 
+  на тему duff device для fast path цикла и обработки хвостиков,
+  всё это не нужно, если хэшируем типы фиксированной длины.
+</p>
+</section>
+
+<section class="slide">
+<h2>Почему плохо</h2>
+
+<p style="margin-top: -30px;">HashMap в ClickHouse:
+<table style="margin-top: -15px;">
+<tr><td>— хорошая хэш-функция:</td><td>2.439 сек.</td></tr>
+<tr><td>— ошибочно используем CityHash64 для UInt64: </td><td>3.347 сек.</td></tr>
+<tr><td>— используем murmur finalizer: </td><td>2.722 сек.</td></tr>
+<tr><td>— тривиальная хэш-функция: </td><td>9.721 сек.</td></tr></table></p>
+
+<p>std::unordered_map:
+<table style="margin-top: -15px;">
+<tr><td>— хорошая хэш-функция: </td><td>10.097 сек.</td></tr>
+<tr><td>— ошибочно используем CityHash64 для UInt64: </td><td>11.040 сек.</td></tr></table></p>
+
+<p>(производительность скрадывается зависимыми кэш-промахами)</p>
+
+<p><a style="font-size: 15px;" href="https://github.com/ClickHouse/ClickHouse/blob/master/dbms/src/Common/tests/integer_hash_tables_and_hashes.cpp">https://github.com/ClickHouse/ClickHouse/blob/master/dbms/src/Common/tests/integer_hash_tables_and_hashes.cpp</a></p>
+</section>
+
+<section class="slide">
+<h2>4. Интерференция хэш-функций</h2>
+
+<p>Для прямо или косвенно связанных друг с другом 
+структур данных используйте разные хэш-функции.</p>
+
+<p>Пример: для шардирования данных 
+и для хэш-таблиц при обработке этих данных.</p>
+
+<p><span style="padding: 0; font-size: 30px;">☠</span> Приводит к замедлению в разы или к полному залипанию!</p>
+
+<p>Иногда выбор нескольких хэш-функций из одного семейства
+— недостаточно хорошее решение.</p>
+<p>Пример: <code>hash(x, seed) = hash(x ^ seed)</code>— зачастую недостаточно хорошо,
+если часть операций hash коммутирует с xor.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 40px;">5. Использование устаревших медленных<br>хэш-функций низкого качества</h2>
+
+<p>Пример: в libstdc++ из gcc 7 используется FNV1a для строк.
+
+Эта хэш-функция содержит цикл по байтам, 
+может работать не медленно только для коротких строк,
+но для коротких строк слишком низкое качество.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 40px;">5. Использование устаревших медленных<br>хэш-функций низкого качества</h2>
+
+<p style="margin-top: -25px;">Пример: Делаем 5 млн. вставок.
+
+PageCharset — короткие повторяющиеся строки (windows-1251, utf-8)
+<table style="margin-top: -15px;">
+<tr><td>— FNV1a:</td><td>76 409 407 inserts/sec.
+<tr><td>— CityHash64:</td><td>94 725 900 inserts/sec.
+<tr><td>— хэш-функция из ClickHouse:</td><td>112 791 109 inserts/sec.</td></tr></table>
+
+URL — много разных строк ~60 байт
+<table style="margin-top: -15px;"><tr><td>— FNV1a:</td><td>10 108 171 inserts/sec.</td></tr>
+<tr><td>— CityHash64:</td><td>11 337 682 inserts/sec.</td></tr>
+<tr><td>— хэш-функция из ClickHouse:</td><td>13 637 320 inserts/sec.</td></tr></table></p>
+
+<a style="font-size: 15px;" href="https://github.com/ClickHouse/ClickHouse/blob/master/dbms/src/Interpreters/tests/hash_map_string_3.cpp">https://github.com/ClickHouse/ClickHouse/blob/master/dbms/src/Interpreters/tests/hash_map_string_3.cpp</a></p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 40px;">6. Использование криптографических<br>хэш-функций без необходимости</h2>
+
+<p>Иногда не ошибка, если надо избежать algorithmic complexity attack.</p>
+<p>В этом случае используйте <b>SipHash</b>.
+Не используйте MD5, SHA1,2,3 для хэш-таблиц.</p>
+
+<p>Но добиться этого иногда можно и другими способами
+(выбор случайной хэш-функции из семейства)</p>
+<p>* правда это обычно не помогает.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 40px;">6. Использование криптографических<br>хэш-функций без необходимости</h2>
+
+<p style="margin-top: -25px;">Пример:
+
+URL:
+<table style="margin-top: -15px;">
+<tr><td>CityHash64: </td><td>3755.84 MB/sec.</td></tr>
+<tr><td>SipHash: </td><td>1237.51 MB/sec.</td></tr>
+<tr><td>MD5: </td><td>361.86 MB/sec.</td></tr></table>
+
+SearchPhrase:
+
+<table style="margin-top: -5px;">
+<tr><td>CityHash64: </td><td>822.56 MB/sec.</td></tr>
+<tr><td>SipHash: </td><td>183.35 MB/sec.</td></tr>
+<tr><td>MD5: </td><td>30.87 MB/sec.</td></tr></table>
+
+<a style="font-size: 15px;" href="https://github.com/ClickHouse/ClickHouse/blob/master/dbms/src/Common/tests/hashes_test.cpp">https://github.com/ClickHouse/ClickHouse/blob/master/dbms/src/Common/tests/hashes_test.cpp</a></p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 40px;">Оценка качества<br>некриптографической хэш-функции</h2>
+
+<img style="float: right;" src="pictures/avalanche.svg" />
+<p>Пример: SMHasher.
+
+<a href="https://github.com/aappleby/smhasher">https://github.com/aappleby/smhasher</a></p>
+
+<p>
+Avalanche, Bit Independence</p>
+
+<a style="font-size: 25px;" href="http://ticki.github.io/blog/designing-a-good-non-cryptographic-hash-function/">http://ticki.github.io/blog/designing-a-good-non-cryptographic-hash-function/</a>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 40px;">Ограниченность критерия Avalanche</h2>
+
+<p>Для разных алгоритмов имеют смысл 
+разные критерии качества хэш-функций.</p>
+
+<p>Хэш-функция может быть качественной
+для linear probing open addressing hash table,
+но не качественной для HyperLogLog.</p>
+</section>
+
+<section class="slide">
+<h2>Примеры хэш-функций для int-ов</h2>
+</section>
+
+<section class="slide">
+<h2>1. Murmur finalizer</h2>
+<code style="margin-top: -40px;">inline UInt64 intHash64(UInt64 x)
+{
+    x ^= x >> 33;
+    x *= 0xff51afd7ed558ccdULL;
+    x ^= x >> 33;
+    x *= 0xc4ceb9fe1a85ec53ULL;
+    x ^= x >> 33;
+
+    return x;
+}
+</code>
+
+<p>
+2.5 "раунда", состоящих из xor-shift и умножения.
+(city, farm, metro hash используют примерно то же самое)</p>
+
+<p>latency умножения — 3 такта, xor и shift — 1 такт,
+в одной хэш-функции нет instruction level parallelism,
+поэтому всего latency примерно 12 тактов.</p>
+</section>
+
+<section class="slide">
+<h2>1. Murmur finalizer</h2>
+
+<p>Достоинства:
+— хорошее качество;
+— независимое вычисление нескольких хэшей векторизуется
+  (gcc, clang даже сами это делают);
+— instruction-parallel независимое вычисление нескольких хэшей;
+— понятный смысл.</p>
+
+<p>Недостатки:
+— когда хэш-таблица помещается в L1..L2 кэш, оверхед всё-таки большой.
+  (можно уменьшить до 1..1.5 раунда, если качество устраивает)</p>
+</section>
+
+<section class="slide">
+<h2>2. CRC-32C</h2>
+
+<code>
+#if __SSE4_2__
+
+#include &lt;nmmintrin.h&gt;
+
+inline UInt64 intHashCRC32(UInt64 x)
+{
+    return _mm_crc32_u64(-1ULL, x);
+}
+
+#endif
+</code>
+</section>
+
+<section class="slide">
+<h2>2. CRC-32C</h2>
+
+<p>
+одна инструкция (на самом деле две)
+
+latency 3 такта
+
+instruction level parallelism — 3 операции одновременно
+
+throughput до 1 такта на операцию
+
+
+<a href="https://software.intel.com/sites/landingpage/IntrinsicsGuide/">https://software.intel.com/sites/landingpage/IntrinsicsGuide/</a>
+</p>
+</section>
+
+<section class="slide">
+<h2>2. CRC-32C</h2>
+
+<p>Недостатки:
+— всего лишь 32 бита
+— <b>нулевое</b> качество по Avalanche и Bit Independence Criteria
+  потому что crc коммутирует с xor: 
+</p>
+<code>crc(x ^ y) = crc(x) ^ crc(y)</code>  
+<p>
+  значит при изменении n-го бита x,
+  m-й бит crc(x) меняется или не меняется 
+   в зависимости от n, но независимо от x.
+  
+  каждый бит crc — это xor некоторых бит x.
+</p>
+<p>
+Достоинства:
+— хорошо работает на практике в хэш-таблицах</p>
+</section>
+
+<section class="slide">
+<p style="padding-top: 50px; font-size: 50px;">Кстати, обе функции обратимы.</p>
+<p>Но это никого не волнует.</p>
+</section>
+
+<section class="slide">
+<p style="padding-top: 50px;">
+Throughput, Latency, Avalanche
+хэш-функций для int-ов:
+
+<a style="font-size: 20px;" href="https://software.intel.com/sites/landingpage/IntrinsicsGuide/">https://github.com/ClickHouse/ClickHouse/blob/master/dbms/src/Common/tests/int_hashes_perf.cpp</a></p>
+<code>./int_hashes_perf 1000000000</code>
+</section>
+
+<section class="slide">
+<h2>Разрешение коллизий</h2>
+
+Два класса хэш-таблиц...
+</section>
+
+<section class="slide">
+<h2>1. Chaining</h2>
+<p>(цепочечные; с внешними явными списками разрешения коллизий)<br>
+Примеры: std::unordered_map, boost::intrusive::hash_table.</p>
+
+<p>Достоинства:
+
+— подходит для толстых объектов;
+— подходит для неперемещаемых объектов;
+— подходит для intrusive контейнеров;
+
+— node-based container, не инвалидируются 
+      указатели на ноды (внимание, итераторы инвалидируются);
+
+— нет взаимного влияния цепочек разрешения коллизий 
+      — положительной обратной связи на разрастание цепочек;
+
+— более терпимо к плохой хэш-функции и к большому load factor.</p>
+</section>
+
+<section class="slide">
+<h2>1. Chaining</h2>
+
+<p>Недостатки:
+
+— низкая кэш-локальность;
+
+— нагрузка на аллокатор;
+
+— большой оверхед по памяти для маленьких значений;</p>
+</section>
+
+<section class="slide">
+<h2>2. Open-Addressing</h2>
+
+<p>(closed hashing; с внутренними цепочками разрешения коллизий)
+
+Примеры: 
+ClickHouse HashMap, sparse_hash_map,
+dense_hash_map, HashMap в Rust.</p>
+
+<p>Недостатки:
+— очень чувствительны к выбору хэш-функции;
+— например, абсолютно плохо работают с тривиальной хэш-функцией;
+— многообразие вариантов memory layout и collision resolution, 
+      нужно выбирать под конкретную задачу;
+— сильная деградация производительности, 
+      если хранить inplace крупные объекты;</p>
+
+<p>Достоинства:
+— при правильном использовании работают быстро :)</p>
+</section>
+
+<section class="slide">
+<h2>Другие варианты</h2>
+
+<p>Не обязательно списки.</p>
+
+<p>Другие внешние явные структуры данных для разрешения коллизий:
+— непрерывные массивы;
+— сбалансированные деревья (пример: HashMap в Java).</p>
+
+<p>Chaining с первой ячейкой inplace;
+— сочетают в себе недостатки chaining и open-addressing;
+— можно использовать комбинированный вариант для multiset/multimap.</p>
+</section>
+
+<section class="slide">
+<h2>Варианты memory layout<br>для open-addressing hash table</h2>
+
+<p>Как обозначить, что ячейка занята?
+
+1. Явно — бит занятости в каждой ячейке.
+
+2. Неявно — отсутствие значение обозначено нулевым ключом,
+а элемент с нулевым ключом хранится отдельно.</p>
+</section>
+
+<section class="slide">
+<h2>Варианты memory layout<br>для open-addressing hash table</h2>
+<p>
+— простой массив ячеек;
+
+— необычный массив ячеек — sparse array (пример: sparse_hash_map);
+
+— двухуровневый массив;
+
+— массив с address translation (косвенной адресацией);
+
+— два массива ячеек — один для key, другой для mapped;
+
+— два и больше массива ячеек для cuckoo hash table;
+
+— массив ячеек + битовые маски;</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 40px;">Какую дополнительную информацию<br>можно хранить в ячейках</h2>
+<p>
+— значение хэша — для shortcut сравнения тяжёлых ключей;
+      для отсутствия повторных вычислений при ресайзах;
+
+— номер версии для мгновенной очистки хэш-таблицы;
+
+— информация, как далеко находится элемент
+      с соответствующим значением остатка от деления хэша;
+
+— указатели, формирующие цепочку разрешения коллизий
+      как в chaining hash table;
+
+— атомики и даже мъютексы для блокировок.</p>
+</section>
+
+<section class="slide">
+<h2>Способы разрешения коллизий</h2>
+</section>
+
+<section class="slide">
+<h2>Во что упирается insert и lookup<br>в хэш-таблицах?</h2>
+
+<p>
+1. В случае, когда всё влезает в L1..L2 кэш (иногда L3 кэш):
+— вычисление хэш-функции;
+— обход цепочек разрешения коллизий
+      (бранчи, арифметика, иногда просто много инструкций);
+— сравнение элементов на равенство.
+
+2. В случае, когда всё не помещается в LL кэш (иногда только в L3 кэш):
+— случайные чтения из памяти.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 50px;">Во что упирается insert и lookup?</h2>
+
+<img style="margin-top: -30px;" src="pictures/random_set_query.png"/>
+<img src="pictures/perf.png"/>
+</section>
+
+
+<section class="slide">
+<h2>Linear probing</h2>
+
+<p>Достоинства:
+— отличная кэш-локальность;
+— очень простой;
+— самый быстрый при условии одинаковых длин цепочек;
+
+Недостатки:
+— максимально капризный метод;
+— не терпит большой fill factor.
+
+Средняя сложность lookup-а в хэш-таблице:
+O(n^2), где n — средняя длина цепочки разрешения коллизий.</p>
+</section>
+
+<section class="slide">
+<h2>Quadratic probing</h2>
+
+<p>Достоинства:
+— неплохая кэш-локальность;
+— только чуть-чуть сложнее linear probing;
+— слегка менее капризный;</p>
+
+<p>Пример: используется в dense_hash_map.</p>
+</section>
+
+<section class="slide">
+<h2>Double hashing</h2>
+
+<p>Недостатки:
+— плохая кэш-локальность;
+— более сложный в реализации и использовании;
+— менее эффективный при условии одинаковых длин цепочек;
+
+Достоинства:
+— не капризный.
+
+Бонус:
+— полезен не только для хэш-таблиц
+Например, для Bloom Filter достаточно двух хэш-функций
+для генерации семейства хэш-функций:
+hash(x, k) = hash1(x) + k * hash2(x)</p>
+</section>
+
+<section class="slide">
+<h2>Linear probing<br>with Robin Hood hashing:</h2>
+
+<p>Недостатки:
+— чуть-чуть медленнее linear probing 
+      при условии одинаковых длин цепочек;
+— нужно больше вычислять или хранить
+      значение хэш-функции для ячеек;
+
+Достоинства:
+— такая же кэш-локальность, как у linear probing;
+— средние длины цепочек существенно меньше linear probing;
+— хэш-таблица получается почти полностью 
+      упорядоченной по остатку от деления хэш-функции, 
+      что можно использовать в других алгоритмах.
+      
+Пример: HashMap в Rust.
+</p>
+</section>
+
+<section class="slide">
+<h2>Cuckoo hashing</h2>
+
+<p>Достоинства:
+
+— O(1) lookup
+
+
+Недостатки:
+
+— два (в среднем полтора)
+      случайных доступа к памяти вместо одного
+
+— сложные insert-ы</p>
+</section>
+
+<section class="slide">
+<h2>Hopscotch hashing</h2>
+
+<p>Достоинства:
+
+— O(1) lookup
+
+
+Недостатки:
+
+— сложные insert-ы
+
+
+Я вчера взял первую попавшуюся реализацию из интернета,
+скопировал в проект, и она тормозит.
+
+<a href="https://github.com/Tessil/hopscotch-map/">https://github.com/Tessil/hopscotch-map/</a>
+<a href="http://codecapsule.com/2013/08/11/hopscotch-hashing/">http://codecapsule.com/2013/08/11/hopscotch-hashing/</a></p>
+
+</section>
+
+<section class="slide">
+<h2>Еxplicit pointers chain</h2>
+
+<p>Недостатки:
+
+— вообще непонятно зачем.</p>
+</section>
+
+
+<section class="slide" style="padding:0; margin: 0">
+    <video style="width: 100%; margin-top: 100px;"><source src="video/resize.ogv" type="video/ogg"></video>
+</section>
+
+<section class="slide">
+<h2>Ресайзы</h2>
+
+<p>— какой max fill использовать;
+
+— во сколько раз ресайзить;
+
+— какой размер хэш-таблицы брать;
+
+— как выделять и инициализировать память;
+
+— как перемещать элементы;</p>
+</section>
+
+<section class="slide">
+<h2>Какой max fill использовать</h2>
+
+<p><span style="font-size: 50px;">0.5</span>
+
+— прекрасно подходит для самых капризных вариантов,
+
+— если оверхед по памяти слабо волнует;
+
+— при max fill = 0.5 и ресайзе в два раза, максимальный оверхед — 4 раза.
+
+
+Больше — неприемлимо для linear probing.
+Только для Robin Hood (не всегда) и double hashing.</p>
+</section>
+
+<section class="slide">
+<h2>Во сколько раз ресайзить</h2>
+
+<p>В два раза (или близко).
+— это почти единственный вариант, если размер-степень двух;
+
+Пока хэш-таблица маленькая, можно и в 4 раза.
+— так как не имеет значения оверхед по памяти;
+— но польза от этого маленькая;
+
+Другие варианты:
+
+В 1.5 раза; в golden ratio раз?
+— сложно, бессмысленно, дорого.
+
+Использовать массивы из чанков 
+с косвенной адресацией и добавлять чанки.
+— сложно, дорого.</p>
+</section>
+
+<section class="slide">
+<h2>Какой размер хэш-таблицы брать</h2>
+
+<p><span style="font-size: 50px">2<sup>n</sup></span>
+
+— дешёвая арифметика
+
+— возможно чудовищное замедление при вставке элементов 
+      из одной хэш-таблицы в меньшую, если max_fill > 0.5:
+
+<a style="font-size: 20px;" href="https://accidentallyquadratic.tumblr.com/post/153545455987/rust-hash-iteration-reinsertion">https://accidentallyquadratic.tumblr.com/post/153545455987/rust-hash-iteration-reinsertion</a>
+</p>
+</section>
+
+<section class="slide">
+<h2>Какой размер хэш-таблицы брать</h2>
+
+<p>Простое число, близкое к 2<sup>n</sup>
+
+Недостатки:
+
+— деление с остатком — очень медленно
+
+— если константа compile time, 
+     то компилятор заменяет на умножения и сдвиги
+
+— чтобы было compile time, 
+     приходится использовать switch/case со всеми вариантами
+
+— хотя бранч хорошо предсказуем, 
+     в итоге всё-равно медленно</p>
+</section>
+
+<section class="slide">
+<h2>Простое число, близкое к 2<sup>n</sup></h2>
+
+<p>Ложное достоинство:
+— скрадывает низкое качество хэш-функции;
+
+Почему ложное:
+
+Повышения качества распределения элементов 
+аналогично выбору более качественной хэш-функции,
+но остаток от деления — слишком дорогой способ повышения качества.
+
+Разумно инкапсулировать качество распределения внутри хэш-функции.
+
+Возможно, использование простого числа для размера — нелепость.
+
+std::unordered_map использует именно эту нелепость.
+</section>
+
+<section class="slide">
+<h2 style="font-size: 40px;">Как выделять и инициализировать память</h2>
+
+<p>Если пустая ячейка представлена нулевыми байтами, 
+то можно использовать mmap, или calloc.
+
+При ресайзе, можно для inplace ресайза использовать mremap или realloc.
+
+Но:
+
+— <b>mmap</b> чудовищно медленный;
+
+— <b>calloc</b> почти во всех аллокаторах полностью бесполезен
+      (работает через malloc, memset);
+
+— <b>realloc</b> почти во всех аллокаторах полностью бесполезен
+      (работает через malloc, memcpy, free);
+
+— также заметим, что в <b>std::allocator</b>
+      и вовсе нет интерфейса для realloc или calloc.</p>
+</section>
+
+<section class="slide">
+<h2>Насколько mmap медленный</h2>
+<p>~ 2000 вызовов mmap, page fault, munmap в секунду, 
+независимо от количества ядер.
+
+
+Почему mmap медленный:
+
+— системный вызов;
+
+— изменение структур данных в ядре;
+
+— сброс TLB кэша;
+
+— page fault.</p>
+</section>
+
+<section class="slide">
+<h2>Насколько mmap медленный</h2>
+
+<p>Можно использовать mmap, munmap, mremap 
+только для больших кусков памяти.
+
+<span style="font-size: 50px;">64 MiB</span>
+
+(пусть мы умеем работать с памятью со скоростью 50 GB/sec;
+ пусть мы хотим, чтобы оверхед на mmap составлял не больше половины;
+ пусть mmap можно делать всего 1000 раз в секунду)
+ 
+Вообще-то все аллокаторы уже используют mmap, 
+если кусок памяти большой, но:
+
+— страдают использованием mmap 
+      для недостаточно больших кусков памяти;
+— не используют mremap для realloc даже в этом случае;
+
+Поэтому использовать mmap вручную разумно.</p>
+</section>
+ 
+<section class="slide">
+<h2>Как перемещать элементы</h2>
+
+<p>1. Выделить новый массив, вставить туда все элементы.
+
+Достоинства: тривиально.</p>
+</section>
+
+<section class="slide">
+<h2>Как перемещать элементы</h2>
+<p>2. Расширить массив в два раза. Правая половина будет пустой.
+
+При условии, что размер массива всегда — степень двух, в среднем
+— чуть меньше половины элементов останутся на месте;
+— половина элементов переедет на новое место вправо;
+— некоторая часть элементов переедет немного влево за счёт того, 
+      что предыдущие в цепочке разрешения коллизий 
+      переедут в правую половину.
+  
+Достоинства:
+— это реально эффективнее;
+— меньше выделяем временной памяти;
+— лучше кэш-локальность;
+
+Недостатки:
+— сложный алгоритм, легко ошибиться;</p>
+</section>
+
+<section class="slide">
+<h2>Как перемещать элементы</h2>
+
+<p>3. Амортизированный ресайз
+
+— делать ресайз постепенно, 
+      размазав сложность на время вставки новых элементов.
+
+Достоинства:
+
+— контроль над latency;
+
+Недостатки:
+
+— throughput будет хуже;
+— сложнее реализация;
+— надо до двух случайных доступов к памяти вместо одного.</p>
+</section>
+
+<section class="slide">
+<h2>Оптимизации, которые не работают</h2>
+</section>
+
+<section class="slide">
+<h2>Оптимизации, которые не работают</h2>
+
+<p>Ресайзить, когда цепочка стала длинной
+
+— длина цепочки разрешения коллизий 
+      — распределение с тяжёлыми хвостами,
+      и максимальная длина в случае linear probing
+      слишком рано становится большой.
+</p>
+</section>
+  
+<section class="slide">
+<h2>Оптимизации, которые не работают</h2>
+
+<p>Избавиться от overlap
+
+— бессмысленно, так как в случае
+      2<sup>n</sup> размера хэш-таблицы, overlap 
+      — это bit and с маской,
+      и это очень простая операция, 
+      которая никак не уменьшает throughput
+      благодаря instruction level parallelism.
+</section>
+  
+<section class="slide">
+<h2>Оптимизации, которые не работают</h2>
+
+<p>Вынести условие на ресайз за пределы цикла</p>
+
+<code>/// Это цикл:
+for (const auto &amp; key : data)
+    ++map[key]; /// А здесь может вызваться ресайз.
+</code>
+
+<p></p>
+
+<code>if (there is enough space)
+    for (batch of data)
+        insert into map without
+        possibility of resize;
+</code>
+
+<p>
+— в данном случае хорошо предсказуемый
+      бранч ничего не стоит</p>
+</section>
+
+
+<section class="slide">
+<h2>Оптимизации, которые работают</h2>
+</section>
+
+<section class="slide">
+<h2>Оптимизации, которые работают</h2>
+
+<p>mmap, mremap для больших размеров</p>
+
+<code style="font-size: 20px;">if (old_size &lt; MMAP_THRESHOLD &amp;&amp; new_size &lt; MMAP_THRESHOLD 
+    &amp;&amp; alignment &lt;= MALLOC_MIN_ALIGNMENT)
+{
+...
+}
+else if (old_size &gt;= MMAP_THRESHOLD &amp;&amp; new_size &gt;= MMAP_THRESHOLD)
+{
+    ...
+    buf = <b>mremap</b>(buf, old_size, new_size, MREMAP_MAYMOVE);
+    if (MAP_FAILED == buf)
+        DB::throwFromErrno("Allocator: Cannot mremap memory chunk...
+
+    /// No need for zero-fill, because mmap guarantees it.
+}
+else
+{
+...
+}</code>
+
+</section>
+
+<section class="slide">
+<h2>Оптимизации, которые работают</h2>
+
+<p>Inplace ресайзы</p>
+
+<code style="font-size: 13px;">/** Now some items may need to be moved to a new location.
+  * The element can stay in place, or move to a new location "on the right",
+  *  or move to the left of the collision resolution chain, because 
+  *  the elements to the left of it have been moved to the new "right" location.
+  */
+size_t i = 0;
+for (; i &lt; old_size; ++i)
+    if (!buf[i].isZero(*this) &amp;&amp; !buf[i].isDeleted())
+        reinsert(buf[i], buf[i].getHash(*this));
+
+/** There is also a special case:
+  *    if the element was to be at the end of the old buffer,                  [        x]
+  *    but is at the beginning because of the collision resolution chain,      [o       x]
+  *    then after resizing, it will first be out of place again,               [        xo        ]
+  *    and in order to transfer it where necessary,
+  *    after transferring all the elements from the old halves you need to     [         o   x    ]
+  *    process tail from the collision resolution chain immediately after it   [        o    x    ]
+  */
+for (; !buf[i].isZero(*this) &amp;&amp; !buf[i].isDeleted(); ++i)
+    reinsert(buf[i], buf[i].getHash(*this));
+</code>
+</section>
+
+<section class="slide">
+<h2>Оптимизации, которые работают</h2>
+
+<p>Shortcut для подряд идущих одинаковых значений ключа</p>
+
+<code style="font-size: 18px;">typename Method::Key <b>prev_key</b>;
+for (size_t i = 0; i &lt; rows; ++i)
+{
+    /// Get the key to insert into the hash table.
+    typename Method::Key key = state.getKey(...);
+
+    /// Optimization for consecutive identical keys.
+    if (!Method::no_consecutive_keys_optimization)
+    {
+        if (i != 0 &amp;&amp; <b>key == prev_key</b>)
+        {
+            /// Add values to the aggregate functions.
+            continue;
+        }
+        else
+            prev_key = key;
+    }
+
+    <b>method.data.emplace(key, it, inserted)</b>;
+    /// Add values to the aggregate functions.
+}
+</code>
+    
+</section>
+
+<section class="slide">
+<h2>Оптимизации, которые работают</h2>
+
+<p>Сохранение значения хэша для тяжёлых ключей</p>
+
+<code style="font-size: 20px;">template &lt;typename Key, typename TMapped, typename Hash, ...>
+struct HashMapCellWithSavedHash
+    : public HashMapCell&lt;Key, TMapped, Hash, TState>
+{
+    using Base = HashMapCell&lt;Key, TMapped, Hash, TState>;
+
+    size_t <b>saved_hash</b>;
+
+    using Base::Base;
+
+    bool keyEquals(const Key &amp; key_) const 
+        { return this->value.first == key_; }
+    bool keyEquals(const Key &amp; key_, size_t hash_) const 
+        { return <b>saved_hash == hash_</b> &amp;&amp; this->value.first == key_; }
+
+    void setHash(size_t hash_value) { saved_hash = hash_value; }
+    size_t getHash(const Hash &amp; hash) const { return <b>saved_hash</b>; }
+};</code>
+</section>
+
+<section class="slide">
+<h2>Оптимизации, которые работают</h2>
+
+<p>Мгновенно очищаемые хэш-таблицы</p>
+
+<code style="font-size: 20px;">template &lt;typename Key, typename BaseCell>
+struct ClearableHashTableCell : public BaseCell
+{
+    using State = ClearableHashSetState;
+    using value_type = typename BaseCell::value_type;
+
+    UInt32 <b>version</b>;
+
+    bool isZero(const State &amp; state) const
+        { return <b>version != state.version</b>; }
+
+    void setZero() { version = 0; }
+    static constexpr bool need_zero_value_storage = false;
+
+    ClearableHashTableCell() {}
+    ClearableHashTableCell(const Key &amp; key_, const State &amp; state)
+        : BaseCell(key_, state), <b>version(state.version)</b> {}
+};</code>
+
+</section>
+
+<section class="slide">
+<h2>Оптимизации, которые работают</h2>
+
+<p>Prefetch</p>
+
+<code style="font-size: 20px;">template &lt;size_t N>
+void ALWAYS_INLINE hasN(const Key * x, UInt8 * res) const
+{
+    size_t hash_value[N];
+    size_t place[N];
+    
+    for (size_t i = 0; i &lt; N; ++i)
+    {
+        hash_value[i] = hash(x[i]);
+        place[i] = grower.place(hash_value[i]);
+        <b>_mm_prefetch(&amp;buf[place[i]], _MM_HINT_T0);</b>
+    }
+        
+    for (size_t i = 0; i &lt; N; ++i)
+        res[i] = Cell::isZero(x[i], *this)
+            ? this->hasZero()
+            : !buf[findCell(x[i], hash_value[i], place[i])]
+                .isZero(*this);
+}</code>
+</section>
+
+<section class="slide">
+<h2>Оптимизации, которые работают</h2>
+
+<p>Пометка методов хэш-таблицы как ALWAYS_INLINE, 
+
+а внешних методов, содержащих циклы 
+работы с хэш-таблицей как NO_INLINE.
+
+</p>
+
+<code style="font-size: 24px;">#define ALWAYS_INLINE __attribute__((__always_inline__))
+
+#define NO_INLINE __attribute__((__noinline__))
+</code>
+
+</section>
+
+<section class="slide">
+<h2 style="font-size: 40px;">Оптимизации, которые я не пробовал</h2>
+
+<p>Предсказание размера хэш-таблицы перед её созданием
+
+Хранение состояний агрегатных функций 
+inplace в хэш-таблице, если они маленькие
+
+Хранение состояний агрегатных функций 
+inplace в хэш-таблице, а если они большое, 
+то разделение на два массива — отдельно ключи и значения
+
+Хранение коротких строковых ключей inplace в хэш-таблице 
+с разделением на несколько хэш-таблиц 
+по power-of-two size class-ам
+
+Unrolled speculative probing
+
+SIMD probing</p>
+</section>
+
+<section class="slide">
+<h2>Хэш-таблицы для сложных ключей</h2>
+
+<p>Для строк:
+
+— складываем подряд строки в Arena,
+в хэш-таблице храним StringRef
+
+(std::string_view, std::pair&lt;const char *, size_t&gt;).
+
+Для кортежей:
+
+— если кортеж маленький, то укладываем его 
+в 64 или 128 или 256 бит и используем это в качестве ключа;
+
+— если кортеж большой, то сериализуем его в Arena
+и работаем как со строковым ключом.</p>
+</section>
+
+<section class="slide">
+<h2>Это не всё.</h2>
+Но у меня закончилось время.
+</section>
+
+<section class="slide">
+<h2>?</h2>
+</section>
+    
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+    
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>

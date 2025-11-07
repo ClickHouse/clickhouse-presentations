@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Раскрашиваем логи</title>
+    <title>Colorizing Logs</title>
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -9,67 +9,67 @@
 </head>
 <body class="shower list">
     <header class="caption">
-        <h1>Раскрашиваем логи</h1>
+        <h1>Colorizing Logs</h1>
     </header>
 
     <section class="slide" id="cover">
-        <h1 style="margin-top: 50px; font-size: 48pt;">Раскрашиваем логи</h1>
+        <h1 style="margin-top: 50px; font-size: 48pt;">Colorizing Logs</h1>
     </section>
 
     <section class="slide">
-        <h2>Обо мне</h2>
-        <p>Алексей, разработчик ClickHouse.</p>
+        <h2>About Me</h2>
+        <p>Alexey, ClickHouse developer.</p>
     </section>
 
     <section class="slide">
-        <h2>О чём доклад?</h2>
-        <p>&mdash; не про ClickHouse?</p>
-        <p>&mdash; не про базы данных??</p>
-        <p>&mdash; не про бэкенд???</p>
-        <p>&mdash; не про разработку????</p>
-        <p>&mdash; не про технологии?????</p>
+        <h2>What is This Talk About?</h2>
+        <p>&mdash; not about ClickHouse?</p>
+        <p>&mdash; not about databases??</p>
+        <p>&mdash; not about backend???</p>
+        <p>&mdash; not about development????</p>
+        <p>&mdash; not about technology?????</p>
     </section>
 
     <section class="slide">
-        <h2>О чём доклад?</h2>
-        <p>&mdash; про одну маленькую задачу...</p>
+        <h2>What is This Talk About?</h2>
+        <p>&mdash; about one small task...</p>
     </section>
 
     <section class="slide">
-        <h2>Запускаем сервер в терминале</h2>
-        <p>Он выводит логи:</p>
+        <h2>Running Server in Terminal</h2>
+        <p>It outputs logs:</p>
         <img style="width: 100%" src="pictures/gray_logs.png"/>
     </section>
 
     <section class="slide">
-        <h2>Полезные вещи в логах</h2>
-        <p>&mdash; уровень логгирования;</p>
-        <p>&mdash; имя логера;</p>
-        <p>&mdash; идентификатор запроса;</p>
-        <p>&mdash; номер потока;</p>
+        <h2>Useful Things in Logs</h2>
+        <p>&mdash; logging level;</p>
+        <p>&mdash; logger name;</p>
+        <p>&mdash; query identifier;</p>
+        <p>&mdash; thread number;</p>
     </section>
 
     <section class="slide">
-        <h2>Скучные серые логи</h2>
+        <h2>Boring Gray Logs</h2>
         <img style="width: 100%" src="pictures/gray_logs.png"/>
     </section>
 
     <section class="slide">
-        <h2>Нескучные логи</h2>
+        <h2>Not Boring Logs</h2>
         <img style="margin-top: -1em; width: 100%" src="pictures/good_colors_dark.png"/>
     </section>
 
     <section class="slide">
-        <h2>Как раскрасить логи?</h2>
-        <p>Использовать управляющие последовательности терминала.</p>
+        <h2>How to Colorize Logs?</h2>
+        <p>Use terminal control sequences.</p>
         <img style="float: right; width: 40%;" src="pictures/DEC_VT100_terminal.jpg"/>
         <p>ANSI escape sequences:</p>
         <p>ESC &mdash; \x1b (hex), \033 (octal).</p>
-        <p>Пример: <b>\x1b[31m</b> &mdash; <span style="color: red;">красный цвет</span>.</p>
+        <p>Example: <b>\x1b[31m</b> &mdash; <span style="color: red;">red color</span>.</p>
     </section>
 
     <section class="slide">
-        <h2>Как раскрасить логи?</h2>
+        <h2>How to Colorize Logs?</h2>
     <pre>echo -e "\033[1;41m Fatal \033[0m" \
         "\033[7;31m Critical \033[0m" \
         "\033[1;31m Error \033[0m" \
@@ -84,7 +84,7 @@
     </section>
 
     <section class="slide">
-        <h2>Классические 8/16 цветов</h2>
+        <h2>Classic 8/16 Colors</h2>
     <pre>for i in {0..1};
 do
   for j in {0..7};
@@ -102,19 +102,19 @@ done
     </section>
 
     <section class="slide">
-        <h2>Классические 8/16 цветов</h2>
-        <p>&mdash; зависят от эмулятора терминала;</p>
-        <p>&mdash; зависят от настроек отображения.</p>
+        <h2>Classic 8/16 Colors</h2>
+        <p>&mdash; depend on terminal emulator;</p>
+        <p>&mdash; depend on display settings.</p>
     </section>
 
     <section class="slide">
-        <h2>Как раскрасить id запроса?</h2>
-        <p>&mdash; псевдослучайно: каждому запросу свой цвет;</p>
-        <p>&mdash; вычислим хэш-функцию, отобразим её в цвет.</p>
+        <h2>How to Colorize Query ID?</h2>
+        <p>&mdash; pseudo-randomly: each query gets its own color;</p>
+        <p>&mdash; calculate hash function, map it to color.</p>
     </section>
 
     <section class="slide">
-        <h2>Псевдослучайные цвета</h2>
+        <h2>Pseudo-Random Colors</h2>
         <pre>COLORS=("\033[0;31m" "\033[0;32m" "\033[0;33m" "\033[0;34m"
         "\033[0;35m" "\033[0;36m" "\033[0;37m" "\033[1;30m"
         "\033[1;31m" "\033[1;32m" "\033[1;34m" "\033[1;35m"
@@ -129,12 +129,12 @@ done</pre>
     </section>
 
     <section class="slide">
-        <h2>Псевдослучайные цвета</h2>
+        <h2>Pseudo-Random Colors</h2>
         <img style="margin-top: -1em; width: 100%" src="pictures/random_vga_colors_dark.png"/>
     </section>
 
     <section class="slide">
-        <h2>Псевдослучайные цвета</h2>
+        <h2>Pseudo-Random Colors</h2>
         <img style="margin-top: -1em; width: 100%" src="pictures/random_vga_colors_light.png"/>
     </section>
 
@@ -142,8 +142,8 @@ done</pre>
     <section class="slide">
         <h2>24 bit &laquo;true color&raquo;</h2>
         <p>ESC[ 38;2;<span style="color: #F00;">⟨r⟩</span>;<span style="color: green;">⟨g⟩</span>;<span style="color: #00F;">⟨b⟩</span> m</p>
-        <p>&mdash; поддерживается не всеми терминалами;</p>
-        <p>&mdash; например, не поддерживается screen.</p>
+        <p>&mdash; not supported by all terminals;</p>
+        <p>&mdash; for example, not supported by screen.</p>
     </section>
 
     <section class="slide">
@@ -152,9 +152,9 @@ done</pre>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 28pt;">Задача: сгенерировать псевдослучайный цвет</h2>
-        <p>Вариант 1:</p>
-        <p>&mdash; генерируем каждый компонент R, G, B<br/>&emsp; равномерно случайно в диапазоне 0..255.</p>
+        <h2 style="font-size: 28pt;">Task: Generate Pseudo-Random Color</h2>
+        <p>Option 1:</p>
+        <p>&mdash; generate each R, G, B component<br/>&emsp; uniformly randomly in range 0..255.</p>
         <pre style="font-size: 14pt;">for i in {0..1000}; do echo -e -n
   "\033[38;2;<span style="color: #F00;">$((RANDOM % 256))</span>;<span style="color: green;">$((RANDOM % 256))</span>;<span style="color: #00F;">$((RANDOM % 256))</span>m" \
   "test" \
@@ -163,27 +163,27 @@ done</pre>
     </section>
 
     <section class="slide">
-        <h2>Псевдослучайные цвета</h2>
+        <h2>Pseudo-Random Colors</h2>
         <img style="margin-top: -1em; width: 100%" src="pictures/random_rgb_dark.png"/>
     </section>
 
     <section class="slide">
-        <h2>Псевдослучайные цвета</h2>
+        <h2>Pseudo-Random Colors</h2>
         <img style="margin-top: -1em; width: 100%" src="pictures/random_rgb_light.png"/>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 28pt;">Задача: сгенерировать псевдослучайный цвет</h2>
-        <p>Вариант 1:</p>
-        <p>&mdash; генерируем каждый компонент R, G, B<br/>&emsp; равномерно случайно в диапазоне 0..255.</p>
-        <p>Недостаток:</p>
-        <p>&mdash; часто попадаются цвета, которые сливаются с фоном.</p>
+        <h2 style="font-size: 28pt;">Task: Generate Pseudo-Random Color</h2>
+        <p>Option 1:</p>
+        <p>&mdash; generate each R, G, B component<br/>&emsp; uniformly randomly in range 0..255.</p>
+        <p>Disadvantage:</p>
+        <p>&mdash; colors often blend with background.</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 28pt;">Задача: сгенерировать псевдослучайный цвет</h2>
-        <p>Случайный оттенок цвета, но примерно<br/>одинаковой яркости и насыщенности.</p>
-        <p><span style="color: green;">Очевидное решение</span>: перейти в пространство <b>HSV</b>?</p>
+        <h2 style="font-size: 28pt;">Task: Generate Pseudo-Random Color</h2>
+        <p>Random color hue, but approximately<br/>same brightness and saturation.</p>
+        <p><span style="color: green;">Obvious solution</span>: switch to <b>HSV</b> color space?</p>
         <p style="color: gray;">PS. HSV? HSL? HSB? HSI?</p>
     </section>
 
@@ -198,7 +198,7 @@ done</pre>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 28pt;">Задача: сгенерировать псевдослучайный цвет</h2>
+        <h2 style="font-size: 28pt;">Task: Generate Pseudo-Random Color</h2>
         <pre style="line-height: 1.5;">for (let i = 0; i &lt; 200; ++i) {
   document.write('&lt;span style="color: hsl('
     + Math.random() * 360
@@ -209,7 +209,7 @@ done</pre>
 <!-- Cube - hexagon -->
 
     <section class="slide">
-        <h2 style="font-size: 28pt;">HSV, случайный компонент Hue</h2>
+        <h2 style="font-size: 28pt;">HSV, Random Hue Component</h2>
 <div style="background: #000; padding: 0 1em 0 1em;">
 <script type="text/javascript">
 for (let i = 0; i < 200; ++i) {
@@ -220,7 +220,7 @@ for (let i = 0; i < 200; ++i) {
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 28pt;">HSV, случайный компонент Hue</h2>
+        <h2 style="font-size: 28pt;">HSV, Random Hue Component</h2>
 <div style="background: #FFF; padding: 0 1em 0 1em;">
 <script type="text/javascript">
 for (let i = 0; i < 200; ++i) {
@@ -231,20 +231,20 @@ for (let i = 0; i < 200; ++i) {
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 28pt;">HSV, случайный компонент Hue</h2>
-        <p>Недостатки:</p>
-        <p>&mdash; почему-то мало цветов;</p>
-        <p>&mdash; почему-то цвета всё-равно разной яркости.</p>
-        <p>Можно ли сделать лучше?</p>
+        <h2 style="font-size: 28pt;">HSV, Random Hue Component</h2>
+        <p>Disadvantages:</p>
+        <p>&mdash; for some reason, few colors;</p>
+        <p>&mdash; for some reason, colors still have different brightness.</p>
+        <p>Can we do better?</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 28pt;">Можно ли сделать лучше?</h2>
-        <p>Как люди воспринимают цвета?</p>
-        <p>Как описать множество всевозможных цветов?</p>
-        <p>Как выглядит цветовое пространство?</p>
-        <p>Как численно описать это пространство?</p>
-        <p>Какие цвета могут быть воспроизведены?</p>
+        <h2 style="font-size: 28pt;">Can We Do Better?</h2>
+        <p>How do people perceive colors?</p>
+        <p>How to describe the set of all possible colors?</p>
+        <p>What does color space look like?</p>
+        <p>How to numerically describe this space?</p>
+        <p>Which colors can be reproduced?</p>
     </section>
 
     <section class="slide">
@@ -268,34 +268,34 @@ for (let i = 0; i < 200; ++i) {
     </section>
 
     <section class="slide">
-        <h2>Можно ли сделать лучше?</h2>
-        <p>Как люди воспринимают цвета?</p>
-        <p>&mdash; под каким освещением смотреть?</p>
-        <p>&mdash; под каким углом смотреть?</p>
-        <p>&mdash; кто именно смотрит?</p>
-        <p>&mdash; как наблюдатель понимает цвета?</p>
+        <h2>Can We Do Better?</h2>
+        <p>How do people perceive colors?</p>
+        <p>&mdash; under what lighting to view?</p>
+        <p>&mdash; at what angle to view?</p>
+        <p>&mdash; who exactly is viewing?</p>
+        <p>&mdash; how does observer understand colors?</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 28pt;">Можно ли сделать лучше?</h2>
+        <h2 style="font-size: 28pt;">Can We Do Better?</h2>
         <div style="float: right;"><span style="display: inline-block; background-color: #F00; width: 2em;">&nbsp;</span><span style="display: inline-block; background-color: #0F0; width: 2em;">&nbsp;</span><span style="display: inline-block; background-color: #00F; width: 2em;">&nbsp;</span><br/><span style="display: inline-block; background-color: #888; width: 6em;">&nbsp;</span><br/><span style="display: inline-block; background-color: #363636; width: 2em;">&nbsp;</span><span style="display: inline-block; background-color: #b6b6b6; width: 2em;">&nbsp;</span><span style="display: inline-block; background-color: #121212; width: 2em;">&nbsp;</span></div>
-        <p>Как посчитать яркость цвета, заданного в RGB*?</p>
+        <p>How to calculate brightness of color specified in RGB*?</p>
         <p>1. Brightness = max(r, g, b)</p>
         <p>2. Brightness = (r + g + b) / 3</p>
         <p>3. Brightness = 0.299 * r + 0.587 * g + 0.114 * b</p>
         <p>4. Brightness = 0.2126 * r + 0.7152 * g + 0.0722 * b</p>
-        <p>На самом деле все способы выше неверны без контекста.</p>
-        <p>Какое именно пространство RGB имеется ввиду? Gamma?</p>
-        <p>Яркость каждой из компонент может зависить от монитора (впрочем, мониторы калибруются) и наблюдателя (а они не калибруются).</p>
+        <p>In fact, all methods above are incorrect without context.</p>
+        <p>Which RGB space is meant? Gamma?</p>
+        <p>Brightness of each component may depend on monitor (however, monitors are calibrated) and observer (but they are not calibrated).</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 28pt;">Задача: сгенерировать псевдослучайный цвет</h2>
-        <p>Случайный оттенок цвета, но примерно<br/>одинаковой яркости и насыщенности.</p>
-        <p>Очевидное решение: перейти в пространство <b>HSV</b>?</p>
-        <p style="color: red;">Не подходит, потому что в HSV, V (value) &mdash; не яркость, а что-то другое.</p>
-        <p style="color: gray;">И ещё мы не использовали S (saturation).</p>
-        <p style="color: green;">Перейдём в цветовое пространство YCbCr!</p>
+        <h2 style="font-size: 28pt;">Task: Generate Pseudo-Random Color</h2>
+        <p>Random color hue, but approximately<br/>same brightness and saturation.</p>
+        <p>Obvious solution: switch to <b>HSV</b> color space?</p>
+        <p style="color: red;">Doesn't work, because in HSV, V (value) is not brightness, but something else.</p>
+        <p style="color: gray;">And we also didn't use S (saturation).</p>
+        <p style="color: green;">Let's switch to YCbCr color space!</p>
     </section>
 
     <section class="slide">
@@ -303,7 +303,7 @@ for (let i = 0; i < 200; ++i) {
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 28pt;">Задача: сгенерировать псевдослучайный цвет</h2>
+        <h2 style="font-size: 28pt;">Task: Generate Pseudo-Random Color</h2>
         <pre>for (let i = 0; i &lt; 200; ++i) {
   let y = 128;
   let cb = Math.random() * 256;
@@ -340,7 +340,7 @@ function randomYCbCr()
 </script>
 
     <section class="slide">
-        <h2 style="font-size: 28pt;">YCbCr, случайные Cb, Cr</h2>
+        <h2 style="font-size: 28pt;">YCbCr, Random Cb, Cr</h2>
 <div style="background: #000; padding: 0 1em 0 1em;">
 <script type="text/javascript">
 for (let i = 0; i < 200; ++i) { document.write('<span style="color: ' + randomYCbCr() + '">test<\/span> '); }
@@ -349,7 +349,7 @@ for (let i = 0; i < 200; ++i) { document.write('<span style="color: ' + randomYC
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 28pt;">YCbCr, случайные Cb, Cr</h2>
+        <h2 style="font-size: 28pt;">YCbCr, Random Cb, Cr</h2>
 <div style="background: #FFF; padding: 0 1em 0 1em;">
 <script type="text/javascript">
 for (let i = 0; i < 200; ++i) { document.write('<span style="color: ' + randomYCbCr() + '">test<\/span> '); }
@@ -358,27 +358,27 @@ for (let i = 0; i < 200; ++i) { document.write('<span style="color: ' + randomYC
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 28pt;">Задача: сгенерировать псевдослучайный цвет,</h2>
-        <p>Перейдём в цветовое пространство YCbCr<br/>фиксируем Y и генерируем Cb, Cr.</p>
-        <p>Идеально? Но есть нюанс...</p>
-        <p>В YCbCr, YPbPr, YUV, компонента Y &mdash; это тоже не совсем яркость!</p>
+        <h2 style="font-size: 28pt;">Task: Generate Pseudo-Random Color,</h2>
+        <p>Switch to YCbCr color space<br/>fix Y and generate Cb, Cr.</p>
+        <p>Perfect? But there's a nuance...</p>
+        <p>In YCbCr, YPbPr, YUV, component Y is also not quite brightness!</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 28pt;">Гамма-коррекция</h2>
-        <p>В YCbCr, YPbPr, YUV, компонента Y &mdash; это &laquo;Luma&raquo;<br/>&mdash; нелинейно закодированная яркость с помощью gamma-compression.</p>
+        <h2 style="font-size: 28pt;">Gamma Correction</h2>
+        <p>In YCbCr, YPbPr, YUV, component Y is &laquo;Luma&raquo;<br/>&mdash; non-linearly encoded brightness using gamma-compression.</p>
 
         <img style="width: 100%;" src="pictures/gamma.png"/>
 
-        <p>sRGB #888888 на типичном мониторе - 20% от яркости, а не 50%.</p>
-        <p>Баг: изображения становятся темнее при уменьшении: <a href="http://www.ericbrasseur.org/gamma.html">http://www.ericbrasseur.org/gamma.html</a></p>
+        <p>sRGB #888888 on typical monitor - 20% of brightness, not 50%.</p>
+        <p>Bug: images become darker when reduced: <a href="http://www.ericbrasseur.org/gamma.html">http://www.ericbrasseur.org/gamma.html</a></p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 28pt;">Задача: сгенерировать псевдослучайный цвет,</h2>
-        <p>Как сделать ещё лучше?</p>
+        <h2 style="font-size: 28pt;">Task: Generate Pseudo-Random Color,</h2>
+        <p>How to do even better?</p>
         <p>L*a*b*, XYZ?</p>
-        <p>Но мне надоело.</p>
+        <p>But I got tired.</p>
     </section>
 
     <section class="slide">
@@ -387,15 +387,15 @@ for (let i = 0; i < 200; ++i) { document.write('<span style="color: ' + randomYC
 
 
     <section class="slide">
-        <h2>Выводы</h2>
-        <p>Хотите сделать что-нибудь действительно хорошо?<br/>&mdash; придётся изучить тонну деталей.</p>
-        <p>Внимание к деталям &mdash; важное качество разработчика.</p>
-        <p style="margin-top: 2em;">Примечание: этот доклад очень поверхностный!</p>
-        <p>Литература: <a href="https://www.handprint.com/HP/WCL/color1.html">https://www.handprint.com/HP/WCL/color1.html</a></p>
+        <h2>Conclusions</h2>
+        <p>Want to make something really good?<br/>&mdash; you'll have to learn tons of details.</p>
+        <p>Attention to detail is an important quality of developer.</p>
+        <p style="margin-top: 2em;">Note: this talk is very superficial!</p>
+        <p>Literature: <a href="https://www.handprint.com/HP/WCL/color1.html">https://www.handprint.com/HP/WCL/color1.html</a></p>
     </section>
 
     <section class="slide">
-        <h2>Спасибо!</h2>
+        <h2>Thank you!</h2>
     </section>
 
 

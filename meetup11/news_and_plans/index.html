@@ -1,240 +1,240 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>ClickHouse Meetup в Москве</title>
+    <title>ClickHouse Meetup in Moscow</title>
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x10.css">
-    
+
     <style type="text/css">
          code { display: block; white-space: pre; background-color: #EEE; }
     </style>
 </head>
 <body class="shower list">
     <header class="caption">
-        <h1>ClickHouse Meetup в Москве</h1>
+        <h1>ClickHouse Meetup in Moscow</h1>
     </header>
     <section class="slide" id="cover">
-        <h1 style="margin-top: 200px;"><span>Новые возможности ClickHouse<br/>и планы на будущее</span></h1>
+        <h1 style="margin-top: 200px;"><span>New ClickHouse Features<br/>and Future Plans</span></h1>
     </section>
-    
+
     <section class="slide">
-        <h2>Сделали и довольны</h2>
+        <h2>Done and Happy</h2>
     </section>
-    
+
     <section class="slide">
-        <h2>Сделали и довольны</h2>
-        <p>Произвольный ключ партиционирования</p>
+        <h2>Done and Happy</h2>
+        <p>Custom Partitioning Key</p>
         <code>CREATE TABLE ... ENGINE = MergeTree
   ORDER BY CounterID, Date
   PARTITION BY toStartOfWeek(Date)
   SETTINGS index_granularity = 8192</code>
     </section>
-    
+
     <section class="slide">
-        <h2>Сделали и довольны</h2>
-        <p>Распределённые DDL запросы</p>
+        <h2>Done and Happy</h2>
+        <p>Distributed DDL Queries</p>
         <code>CREATE TABLE ... ON CLUSTER cluster</code>
         <p style="color: #888;"><br/>
-        * не работает в случае перекрёстной репликации;<br/>
-        * для ALTER Replicated таблиц требуется включение опцией;</p>
+        * doesn't work with cross-replication;<br/>
+        * for ALTER of Replicated tables, requires enabling an option;</p>
     </section>
-    
+
     <section class="slide">
-        <h2>Сделали и довольны</h2>
-        <p>Geospatial функции:</p>
+        <h2>Done and Happy</h2>
+        <p>Geospatial Functions:</p>
         <p>&mdash; pointInPolygon;</p>
         <p>&mdash; pointInEllipses;</p>
         <p>&mdash; greatCircleDistance;</p>
         <code>SELECT pointInPolygon((lat, lon),
     [(6, 0), (8, 4), (5, 8), (0, 2), ...])</code>
     </section>
-    
+
     <section class="slide">
-        <h2>Сделали и довольны</h2>
-        <p>Подключение моделей CatBoost</p>
+        <h2>Done and Happy</h2>
+        <p>CatBoost Model Integration</p>
         <code>SELECT modelEvaluate('purchase', f1, ... fn)</code>
     </section>
-    
+
     <section class="slide">
-        <h2>Сделали и довольны</h2>
-        <p>Работа с интервалами дат и времени:</p>
+        <h2>Done and Happy</h2>
+        <p>Working with Date and Time Intervals:</p>
         <code>SELECT date + INTERVAL 1 MONTH</code>
-        <p><br/>&mdash; поддержка часовых поясов с нецелым смещением от UTC;</p>
-        <p>&mdash; расширение допустимого диапазона до 2105 года.</p>
+        <p><br/>&mdash; support for time zones with non-integer UTC offset;</p>
+        <p>&mdash; extending the valid range to year 2105.</p>
     </section>
-    
+
     <section class="slide">
-        <h2>Сделали и довольны</h2>
-        <p>Функции для работы с массивами:</p>
+        <h2>Done and Happy</h2>
+        <p>Array Functions:</p>
         <p>&mdash; arrayConcat, arraySlice;</p>
         <p>&mdash; arrayPushFront, arrayPushBack, arrayPopFront, arrayPopBack;</p>
         <p>&mdash; arrayReduce, arraySort, arrayReverseSort, arrayStringConcat;</p>
     </section>
-    
+
     <section class="slide">
-        <h2>Сделали и довольны</h2>
-        <p>Доработки словарей</p>
-        <p>&mdash; интроспекция словарей:</p>
+        <h2>Done and Happy</h2>
+        <p>Dictionary Improvements</p>
+        <p>&mdash; dictionary introspection:</p>
         <code>CREATE DATABASE dictionaries ENGINE = Dictionary</code>
-        <p><br/>&mdash; invalidate_query для обновления словарей;</p>
+        <p><br/>&mdash; invalidate_query for dictionary updates;</p>
         <p>&mdash; SYSTEM RELOAD DICTIONARY;</p>
     </section>
-    
+
     <section class="slide">
-        <h2>Сделали и довольны</h2>
-        <p>Сессии в HTTP интерфейсе:</p>
+        <h2>Done and Happy</h2>
+        <p>Sessions in HTTP Interface:</p>
         <code style="font-size: 16pt;">curl 'http://host:port/?session_id=123&amp;session_timeout=60' \
     -d 'CREATE TEMPORARY TABLE t'</code>
-        <p><br/>Нативная поддержка SSL для HTTP и TCP сервера.</p>
-        <p>Отправка прогресса в HTTP заголовках.</p>
+        <p><br/>Native SSL support for HTTP and TCP server.</p>
+        <p>Sending progress in HTTP headers.</p>
     </section>
-    
-    
+
+
     <section class="slide">
-        <h2>Сделали, но не совсем</h2>
+        <h2>Done, but Not Quite</h2>
     </section>
-    
+
     <section class="slide">
-        <h2>Сделали, но не совсем</h2>
-        <p>Доработки для совместимости с SQL:</p>
-        <p>&mdash; ограниченная поддержка алиасов таблиц и составных имён;</p>
-        <p>&mdash; квотирование имён в стиле ANSI;</p>
-        <p>&mdash; алиасы для типов данных;</p>
-        <p>&mdash; INSERT SELECT по позициям, а не по именам;</p>
-        <p>&mdash; приведение типов при INSERT SELECT;</p>
-        <p>&mdash; NULLS FIRST/LAST для ORDER BY.</p>
+        <h2>Done, but Not Quite</h2>
+        <p>Improvements for SQL Compatibility:</p>
+        <p>&mdash; limited support for table aliases and compound names;</p>
+        <p>&mdash; ANSI-style name quoting;</p>
+        <p>&mdash; data type aliases;</p>
+        <p>&mdash; INSERT SELECT by positions, not by names;</p>
+        <p>&mdash; type casting in INSERT SELECT;</p>
+        <p>&mdash; NULLS FIRST/LAST for ORDER BY.</p>
     </section>
-    
+
     <section class="slide">
-        <h2>Сделали, но не совсем</h2>
-        <p>ODBC драйвер:</p>
-        <p>+ начали работать BI tools;</p>
-        <p>&minus; ещё много дыр в реализации;</p>
+        <h2>Done, but Not Quite</h2>
+        <p>ODBC Driver:</p>
+        <p>+ BI tools started working;</p>
+        <p>&minus; still many holes in implementation;</p>
     </section>
-    
+
     <section class="slide">
-        <h2>Сделали, но не совсем</h2>
-        <p>Поддержка NULL.</p>
+        <h2>Done, but Not Quite</h2>
+        <p>NULL Support.</p>
     </section>
-    
-    
+
+
     <section class="slide">
-        <h2>Сделаем прямо сейчас</h2>
+        <h2>Will Do Right Now</h2>
     </section>
-    
+
     <section class="slide">
-        <h2>Сделаем прямо сейчас</h2>
-        <p>Понятная работа с таймзонами.</p>
-        <p>Что вернёт запрос?</p>
+        <h2>Will Do Right Now</h2>
+        <p>Clear Timezone Handling.</p>
+        <p>What will the query return?</p>
         <code>SELECT toStartOfHour(
-    toDateTime('2017-12-12 01:02:03'), 
+    toDateTime('2017-12-12 01:02:03'),
     'Europe/London') AS t</code>
     </section>
-    
+
     <section class="slide">
-        <h2>Сделаем прямо сейчас</h2>
-        <p>Полноценная поддержка многомерных массивов.</p>
+        <h2>Will Do Right Now</h2>
+        <p>Full Multi-dimensional Array Support.</p>
         <code>CREATE TABLE t
 (
-    x Array(Array(String)), 
+    x Array(Array(String)),
     z Nested(
-        x Array(String), 
+        x Array(String),
         y Nested(...))
 )
 ENGINE = MergeTree ORDER BY x</code>
     </section>
-    
+
     <section class="slide">
-        <h2>Сделаем прямо сейчас</h2>
-        <p>Копирование данных между кластерами.</p>
+        <h2>Will Do Right Now</h2>
+        <p>Copying Data Between Clusters.</p>
     </section>
 
     <section class="slide">
-        <h2>Сделаем прямо сейчас</h2>
-        <p>Подключение внешних таблиц из MySQL, ODBC.</p>
-        <p>Табличные функции mysql, odbc.</p>
-        
+        <h2>Will Do Right Now</h2>
+        <p>Connecting External Tables from MySQL, ODBC.</p>
+        <p>Table functions mysql, odbc.</p>
+
         <code>SELECT ...
 FROM mysql(
     'host:port',
     'db', 'table',
     'user', 'password')</code>
     </section>
-    
+
     <section class="slide">
-        <h2>Сделаем прямо сейчас</h2>
-        <p>O_DIRECT при мерже больших кусков.</p>
+        <h2>Will Do Right Now</h2>
+        <p>O_DIRECT When Merging Large Parts.</p>
     </section>
 
-    
+
     <section class="slide">
-        <h2>Чуть позже, чем прямо сейчас</h2>
-    </section>
-    
-    <section class="slide">
-        <h2>Чуть позже, чем прямо сейчас</h2>
-        <p>Поддержка вычисляемых DEFAULT выражений для полуструктурированных форматов JSONEachRow, TSKV.</p>
-        <p>Поддержка форматов Protobuf и Parquet для ввода-вывода.
-    </section>
- 
-    <section class="slide">
-        <h2>Чуть позже, чем прямо сейчас</h2>
-        <p>Использование индекса для запросов с IN (subquery).</p>
-        <p>Перенос условий из WHERE внутрь подзапросов.</p>
-        <p>Приведение типов для UNION ALL.</p>
-        <p>Поддержка подзапросов в VIEW.</p>
+        <h2>Slightly Later Than Right Now</h2>
     </section>
 
     <section class="slide">
-        <h2>Чуть позже, чем прямо сейчас</h2>
-        <p>Поддержка short-circuit вычисления выражений.</p>
+        <h2>Slightly Later Than Right Now</h2>
+        <p>Support for Computed DEFAULT Expressions for Semi-structured Formats JSONEachRow, TSKV.</p>
+        <p>Support for Protobuf and Parquet Formats for Input-Output.
+    </section>
+
+    <section class="slide">
+        <h2>Slightly Later Than Right Now</h2>
+        <p>Using Index for Queries with IN (subquery).</p>
+        <p>Moving Conditions from WHERE Inside Subqueries.</p>
+        <p>Type Casting for UNION ALL.</p>
+        <p>Support for Subqueries in VIEW.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Slightly Later Than Right Now</h2>
+        <p>Support for Short-circuit Expression Evaluation.</p>
         <code>SELECT number != 0
-    ? intDiv(10, number) 
-    : 0 
+    ? intDiv(10, number)
+    : 0
 FROM system.numbers LIMIT 10</code>
-        <p><br/>Модификаторы WITH ROLLUP и WITH CUBE для GROUP BY.</p>
-        <p>Использование первичного ключа при ORDER BY, GROUP BY.</p>
+        <p><br/>WITH ROLLUP and WITH CUBE Modifiers for GROUP BY.</p>
+        <p>Using Primary Key for ORDER BY, GROUP BY.</p>
     </section>
-        
-    
+
+
     <section class="slide">
-        <h2>Чуть позже, чем прямо сейчас</h2>
-        <p>Возможность использования custom алгоритмов<br/>сжатия для отдельных столбцов.</p>
-        <p>Индексные структуры для пропуска блоков данных в таблице.</p>
-        <p>Возможность хранения данных на разных разделах в пределах сервера.</p>
-    </section>
-        
-    <section class="slide">
-        <h2>Чуть позже, чем прямо сейчас</h2>
-        <p>Возможность создания словарей посредством DDL запросов.</p>
-        <p>Не возвращать пустоту при агрегации по пустому множеству.</p>
-        <p>Интеграция с LDAP.</p>
+        <h2>Slightly Later Than Right Now</h2>
+        <p>Ability to Use Custom Compression Algorithms<br/>for Individual Columns.</p>
+        <p>Index Structures for Skipping Data Blocks in Table.</p>
+        <p>Ability to Store Data on Different Partitions Within a Server.</p>
     </section>
 
     <section class="slide">
-        <h2>Чуть позже, чем прямо сейчас</h2>
-        <p>Поддержка UPDATE/DELETE.</p>
-        <p>Пулы ресурсов для выполнения запросов.</p>
-        <p>Правильный синтаксис для JOIN.</p>
-        <p>Облачные таблицы.</p>
+        <h2>Slightly Later Than Right Now</h2>
+        <p>Ability to Create Dictionaries via DDL Queries.</p>
+        <p>Don't Return Empty Set When Aggregating over Empty Set.</p>
+        <p>LDAP Integration.</p>
     </section>
-    
+
+    <section class="slide">
+        <h2>Slightly Later Than Right Now</h2>
+        <p>UPDATE/DELETE Support.</p>
+        <p>Resource Pools for Query Execution.</p>
+        <p>Proper Syntax for JOIN.</p>
+        <p>Cloud Tables.</p>
+    </section>
+
     <section class="slide">
         <h2>.</h2>
     </section>
-    
+
     <section class="slide">
         <h2>.</h2>
-        <p><span>Сайт: <a href="https://clickhouse.com/">https://clickhouse.com/</a></span></p>
+        <p><span>Website: <a href="https://clickhouse.com/">https://clickhouse.com/</a></span></p>
         <p><span>Google groups: <a href="https://groups.google.com/forum/#!forum/clickhouse">https://groups.google.com/forum/#!forum/clickhouse</a></span></p>
-        <p><span>Рассылка: clickhouse-feedback@yandex-team.com</span></p>
-        <p><span>Telegram чат: <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_ru</a> (уже 1238 участников)<br/>и <a href="https://telegram.me/clickhouse_en">https://telegram.me/clickhouse_en</a></span></p>
+        <p><span>Mailing list: clickhouse-feedback@yandex-team.com</span></p>
+        <p><span>Telegram chat: <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_ru</a> (already 1238 participants)<br/>and <a href="https://telegram.me/clickhouse_en">https://telegram.me/clickhouse_en</a></span></p>
         <p><span>GitHub: <a href="https://github.com/ClickHouse/ClickHouse/">https://github.com/ClickHouse/ClickHouse/</a></span></p>
         <p><span>Twitter: <a href="https://twitter.com/ClickHouseDB">https://twitter.com/ClickHouseDB</a></span></p>
     </section>
-    
+
     <div class="progress"></div>
     <script src="shower/shower.min.js"></script>
 </body>
