@@ -6,4 +6,6 @@ Presentation materials about **ClickHouse**, open-source column-oriented databas
 
 [YouTube channel](https://www.youtube.com/c/ClickHouseDB)
 
+[𝕏 (Twitter)](https://x.com/ClickhouseDB)
+
 [Documentation](https://clickhouse.com/docs/en/)
