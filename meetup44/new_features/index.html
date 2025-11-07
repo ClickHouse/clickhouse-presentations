@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Потрясающие возможности ClickHouse</title>
+    <title>Amazing ClickHouse Features</title>
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -17,25 +17,25 @@
 </head>
 <body class="shower list">
     <header class="caption">
-        <h1>Потрясающие возможности ClickHouse</h1>
+        <h1>Amazing ClickHouse Features</h1>
     </header>
     
     <section class="slide">
-        <h1 style="font-size: 34pt;">ClickHouse Meetup онлайн</h1>
-        <p style="margin-top: 1em;">YouTube трансляция: <a href="https://www.youtube.com/c/ClickHouseDB">https://www.youtube.com/c/ClickHouseDB</a></p>
+        <h1 style="font-size: 34pt;">ClickHouse Online Meetup</h1>
+        <p style="margin-top: 1em;">YouTube stream: <a href="https://www.youtube.com/c/ClickHouseDB">https://www.youtube.com/c/ClickHouseDB</a></p>
         <p>Telegram chat: <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_ru</a>, <a href="https://telegram.me/clickhouse_en">clickhouse_en</a></p>
         
-        <p style="margin-top: 3em;"><b>Футболки за вопросы!</b><br/><br/>Если вы задали вопрос через Zoom<br/>&mdash; напишите после мероприятия мне в Telegram в личку:<br/>
-        свой вопрос, размер футболки и адрес для доставки курьером.</p>
+        <p style="margin-top: 3em;"><b>T-shirts for questions!</b><br/><br/>If you asked a question via Zoom<br/>&mdash; write to me in Telegram after the event:<br/>
+        your question, t-shirt size and courier delivery address.</p>
     </section>
 
     <section class="slide" id="cover">
-        <h1 style="margin-top: 180px; font-size: 48pt;"><span>Возможности ClickHouse:<br/>весна/лето 2020</span></h1>
+        <h1 style="margin-top: 180px; font-size: 48pt;"><span>ClickHouse Features:<br/>Spring/Summer 2020</span></h1>
     </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Прореживание и агрегация старых данных</h2>
-<p style="margin-top: -1em;">... с помощью TTL выражений.<br/><span style="color: green">Вы уже знакомы с TTL выражениями?</span></p>
+<h2 style="font-size: 30pt;">Downsampling and Aggregation of Old Data</h2>
+<p style="margin-top: -1em;">... using TTL expressions.<br/><span style="color: green">Are you already familiar with TTL expressions?</span></p>
 <code>CREATE TABLE (d Date, 
     ip IPv4 TTL d + INTERVAL 1 MONTH, ...)
 ENGINE = MergeTree ...</code>
@@ -48,49 +48,49 @@ TTL d + INTERVAL 1 MONTH</code>
 
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Прореживание и агрегация старых данных</h2>
-<p style="margin-top: -1em;">... с помощью TTL выражений.</p>
-<p>Прореживание:</p>
+<h2 style="font-size: 30pt;">Downsampling and Aggregation of Old Data</h2>
+<p style="margin-top: -1em;">... using TTL expressions.</p>
+<p>Downsampling:</p>
 <code style="margin-top: 1em; margin-bottom: 1em;">TTL d + INTERVAL 1 MONTH 
     <b>DELETE WHERE is_yandex = 0</b></code>
-<p>Агрегация:</p>
+<p>Aggregation:</p>
 <code style="margin-top: 1em; margin-bottom: 1em;">CREATE TABLE t (d Date, a UInt64, b String, c String...
     ENGINE = MergeTree ORDER BY (a, b, c)
     TTL d + INTERVAL 1 MONTH
     <b>GROUP BY a, b SET x = sum(x), y = quantile(0.9)(y)</b></code>
-<p>a, b - префикс ключа сортировки</p>
+<p>a, b - prefix of the sorting key</p>
 </section>
 
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Прореживание и агрегация старых данных</h2>
-<p style="margin-top: -1em;">Агрегация:</p>
+<h2 style="font-size: 30pt;">Downsampling and Aggregation of Old Data</h2>
+<p style="margin-top: -1em;">Aggregation:</p>
 <code style="margin-top: 1em; margin-bottom: 1em;">CREATE TABLE t (d Date, a UInt64, b String, c String...
     ENGINE = MergeTree ORDER BY (a, b, c)
     TTL d + INTERVAL 1 MONTH
     <b>GROUP BY a, b SET x = sum(x), y = quantile(0.9)(y)</b></code>
-<p>&mdash; GROUP BY по префиксу ключа сортировки;</p>
-<p>&mdash; агрегатные функции можно вычислять<br/>от любой комбинации столбцов: SET x = argMax(x, time);</p>
+<p>&mdash; GROUP BY by prefix of the sorting key;</p>
+<p>&mdash; aggregate functions can be calculated<br/>from any combination of columns: SET x = argMax(x, time);</p>
 <p>&mdash; если выражение SET для столбца <br/>не задано &mdash; эквивалентно SET x = any(x);</p>
-<p>&mdash; пока нельзя: комбинировать WHERE и GROUP BY.</p>
+<p>&mdash; not yet possible: combine WHERE and GROUP BY.</p>
 </section>
 
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Прореживание и агрегация старых данных</h2>
-<p>... с помощью TTL выражений.</p>
-<p>Хорошо подходит для временных рядов<br/>
-&mdash; загрубление старых данных.</p>
-<p>Похоже на <b>GraphiteMergeTree</b>,<br/>но применимо для всех MergeTree таблиц.</p>
-<p>Похоже на <b>AggregatingMergeTree</b> и <b>SummingMergeTree</b>,<br/>но с порогами на время до агрегации.</p>
+<h2 style="font-size: 30pt;">Downsampling and Aggregation of Old Data</h2>
+<p>... using TTL expressions.</p>
+<p>Well suited for time series<br/>
+&mdash; coarse-graining of old data.</p>
+<p>Similar to <b>GraphiteMergeTree</b>,<br/>but applicable to all MergeTree tables.</p>
+<p>Similar to <b>AggregatingMergeTree</b> и <b>SummingMergeTree</b>,<br/>but with time thresholds before aggregation.</p>
 <p style="margin-top: 100px; font-size: 14pt; color: gray;">Доступно в версии 20.5. Разработчик &mdash; Николай Сорокин.</p>
 </section>
 
 
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Географические функции и словари</h2>
-<p>Вспоминаем про <b>pointInPolygon</b>...</p>
+<h2 style="font-size: 30pt;">Geographical Functions and Dictionaries</h2>
+<p>Remember <b>pointInPolygon</b>...</p>
 <p style="color: gray">demo</p>
 <!-- 
 CREATE TEMPORARY TABLE moscow (polygon Array(Tuple(Float64, Float64)));
@@ -106,17 +106,17 @@ SELECT avg(pointInPolygon((37.617222 + (rand(1) / 4294967295), 55.755833 + (rand
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Географические словари</h2>
+<h2 style="font-size: 30pt;">Geographical Dictionaries</h2>
 <img style="float: right; height: 60%; margin-right: -50px;" src="pictures/moscow.png"/>
-<p>Задача reverse geocoding:<br/><br/>
-&mdash; поиск полигона по координатам;<br/><br/>
-&mdash; найти самый маленький полигон,<br/>&emsp; вернуть его свойства;<br/><br/>
-&mdash; среди множеств (миллионов) полигонов;<br/><br/>
-&mdash; с разумной скоростью<br/>&emsp; и потреблением памяти;</p>
+<p>Reverse geocoding task:<br/><br/>
+&mdash; finding polygon by coordinates;<br/><br/>
+&mdash; find the smallest polygon,<br/>&emsp; return its properties;<br/><br/>
+&mdash; among sets (millions) of polygons;<br/><br/>
+&mdash; with reasonable speed<br/>&emsp; and memory consumption;</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Географические словари</h2>
+<h2 style="font-size: 30pt;">Geographical Dictionaries</h2>
 <code style="margin-bottom: 1em;">CREATE DICTIONARY polygon_dict
 (
     key Array(Array(Array(Array(Float64)))),
@@ -127,29 +127,29 @@ PRIMARY KEY key
 SOURCE(...)
 LAYOUT(POLYGON_INDEX_CELL())
 </code>
-<p>key - мульти-полигон:<br/>
-Array(Float64) - пара координат, также можно Tuple(Float64, Float64);<br/>
-Array(Array(Float64)) - кольцо (ring);<br/>
-Array(Array(Array(Float64))) - полигон с дырками;<br/>
-Array(Array(Array(Array(Float64)))) - мульти-полигон.
+<p>key - multi-polygon:<br/>
+Array(Float64) - coordinate pair, also can be Tuple(Float64, Float64);<br/>
+Array(Array(Float64)) - ring;<br/>
+Array(Array(Array(Float64))) - polygon with holes;<br/>
+Array(Array(Array(Array(Float64)))) - multi-polygon.
 </p>
 </section>
 
 <section class="slide">
-<h2>Географические словари</h2>
+<h2>Geographical Dictionaries</h2>
 <code style="margin-bottom: 1em;">SELECT dictGet('polygon_dict', 'name', (x, y))</code>
-<p>Производительность:</p>
-<p>Границы районов России (20 000 штук, 12 млн. точек)<br/>из OpenStreetMap.</p>
-<p>&mdash; 2 GB оперативки;<br/>
-&mdash; загрузка - 2.5 минуты;<br/>
-&mdash; скорость 900 000 lookups/sec * количество ядер CPU.</p>
-<p style="margin-top: 50px; font-size: 14pt; color: gray;">Неконстантные полигоны в pointInPolygon:<br/>Доступно в версии 20.5. Разработчики &mdash; Алексей Илюхов, Алексей Коряков.<br/>
-<br/>Словари полигонов:<br/>Ожидается в версии 20.6. Разработчики &mdash; Андрей Чулков, Антон Кваша, Артур Петуховский.</p>
+<p>Performance:</p>
+<p>Russian district boundaries (20,000 pieces, 12 mln. points)<br/>from OpenStreetMap.</p>
+<p>&mdash; 2 GB RAM;<br/>
+&mdash; loading - 2.5 minutes;<br/>
+&mdash; speed 900,000 lookups/sec * number of CPU cores.</p>
+<p style="margin-top: 50px; font-size: 14pt; color: gray;">Non-constant polygons in pointInPolygon:<br/>Доступно в версии 20.5. Разработчики &mdash; Алексей Илюхов, Алексей Коряков.<br/>
+<br/>Polygon dictionaries:<br/>Ожидается в версии 20.6. Разработчики &mdash; Андрей Чулков, Антон Кваша, Артур Петуховский.</p>
 </section>
 
 
 <section class="slide">
-<h2>Интерфейсы ClickHouse</h2>
+<h2>ClickHouse Interfaces</h2>
 <p>&mdash; Native</p>
 <p>&mdash; HTTP</p>
 <p>&emsp; &mdash; ODBC</p>
@@ -159,7 +159,7 @@ Array(Array(Array(Array(Float64)))) - мульти-полигон.
 </section>
 
 <section class="slide">
-<h2>Интерфейсы ClickHouse</h2>
+<h2>ClickHouse Interfaces</h2>
 <p>&mdash; Native</p>
 <p>&mdash; HTTP</p>
 <p>&emsp; &mdash; ODBC</p>
@@ -169,10 +169,10 @@ Array(Array(Array(Array(Float64)))) - мульти-полигон.
 </section>
 
 <section class="slide">
-<h2>PostgreSQL интерфейс в ClickHouse</h2>
-<p>Проверена работа с <b>psql</b> и <b>JDBC</b> драйвером Postgres.</p>
-<p>Работает и на чтение и на запись.</p>
-<p>Не поддерживается:<br/>extended query (параметризованные запросы) и COPY.</p>
+<h2>PostgreSQL Interface in ClickHouse</h2>
+<p>Tested with <b>psql</b> и <b>JDBC</b> Postgres driver.</p>
+<p>Works for both read and write.</p>
+<p>Not supported:<br/>extended query (parameterized queries) and COPY.</p>
 <p style="color: gray">demo</p>
 <!-- 
 CREATE USER milovidov IDENTIFIED WITH plaintext_password BY 'hello';
@@ -186,65 +186,65 @@ SELECT SearchPhrase, count() FROM test.hits GROUP BY SearchPhrase ORDER BY count
 </section>
 
 <section class="slide">
-<h2>Интерфейсы ClickHouse</h2>
+<h2>ClickHouse Interfaces</h2>
 <p>&mdash; Native</p>
 <p>&mdash; HTTP</p>
 <p>&emsp; &mdash; ODBC</p>
 <p>&emsp; &mdash; JDBC</p>
 <p>&mdash; MySQL &mdash; <span style="color: green">19.8</span></p>
 <p style="color: gray;">&mdash; PostgreSQL &mdash; <span style="color: gray">20.6</span></p>
-<p style="color: gray;">&mdash; GRPC &mdash; <span style="color: gray">прототип, разрабатывается</span></p>
+<p style="color: gray;">&mdash; GRPC &mdash; <span style="color: gray">prototype, in development</span></p>
 </section>
 
 <section class="slide">
-<h2>Форматы</h2>
+<h2>Formats</h2>
 <p style="color: green;">Apache Arrow</p>
-<p>ORC на чтение и <span style="color: green;">на запись</span></p>
+<p>ORC for read and <span style="color: green;">for write</span></p>
 <p style="color: green;">MsgPack, Regexp, Markdown, JSONAsString...</p>
-<p style="margin-top: 2em;"><span style="font-size: 12pt">Какой формат реализовать завтра?</span></p>
+<p style="margin-top: 2em;"><span style="font-size: 12pt">Which format to implement tomorrow?</span></p>
 <p style="margin-top: 50px; font-size: 14pt; color: gray;">Apache Arrow:<br/>Доступно в версии 20.5. Разработчики &mdash; Жанна Зосимова, hczhcz.<br/>
 <br/>MsgPack, Regexp, Markdown:<br/>Доступно в версии 20.4. Разработчик &mdash; Павел Круглов.<br/>
 <br/>JSONAsString, ORC output:<br/>Доступно в версии 20.5. Разработчик &mdash; Павел Круглов.</p>
 </section>
 
 <section class="slide">
-<h2>Словари</h2>
-<p>Источник MongoDB</p>
-<p>Источник Redis</p>
-<p style="color: green;">Источник Cassandra &mdash; 20.5</p>
+<h2>Dictionaries</h2>
+<p>MongoDB source</p>
+<p>Redis source</p>
+<p style="color: green;">Cassandra source &mdash; 20.5</p>
 <p>Layout <span style="color: green;">"direct"</span> и <span style="color: green;">"complex_key_direct"</span> &mdash; 20.5</p>
-<p style="color: green;">Настройки форматов для словарей &mdash; 20.4</p>
+<p style="color: green;">Format settings for dictionaries &mdash; 20.4</p>
 <code style="margin-bottom: 1em;">CREATE DICTIONARY ...
     SETTINGS format_csv_delimiter = '|'</code>
-<p style="color: green;">+ настройки форматов для Kafka таблиц &mdash; 20.5</p>
+<p style="color: green;">+ format settings for Kafka tables &mdash; 20.5</p>
 </section>
 
 <section class="slide">
-<h2>Кэширующие словари на SSD</h2>
-<p style="margin-top: -1em;">Пример проблемы:</p>
-<p>Большой постоянно обновляемый<br/>справочник баннеров в MySQL (~10 млрд. строк).</p>
-<p>Если использовать cache-словари, то размера кэша не хватает<br/>и идёт слишком много запросов в MySQL.</p>
-<p>Решение:</p>
+<h2>Caching Dictionaries on SSD</h2>
+<p style="margin-top: -1em;">Problem example:</p>
+<p>Large constantly updated<br/>banner reference in MySQL (~10 billion rows).</p>
+<p>If using cache-dictionaries, cache size is not enough<br/>and too many requests go to MySQL.</p>
+<p>Solution:</p>
 <p>Гибридная структура данных &mdash; оперативка + SSD.<br/>
-В оперативке 16 байт на ключ + буфер свежих данных.</p>
-<p>Все данные всё-равно не помещаются в кэш...<br/>но теперь hit rate примерно 100% и всё быстро.</p>
+In RAM 16 bytes per key + fresh data buffer.</p>
+<p>All data still doesn't fit in cache...<br/>but now hit rate is about 100% and everything is fast.</p>
 <p style="margin-top: 0px; font-size: 14pt; color: gray;">Ожидается в версии 20.6. Разработчик &mdash; Никита Васильев.</p>
 </section>
 
 <section class="slide">
-<h2>Интеграции</h2>
-<p style="color: green;">Запись в ODBC и JDBC таблицы</p>
+<h2>Integrations</h2>
+<p style="color: green;">Writing to ODBC and JDBC Tables</p>
 <code style="margin-bottom: 1em;">SELECT * FROM odbc('DSN', table);
 INSERT INTO TABLE FUNCTION odbc('DSN', table);</code>
 <p style="margin-top: 1em; font-size: 14pt; color: gray;">Доступно в версии 20.5. Разработчик &mdash; Артемий Бобровский.</p>
-<p style="color: gray; margin-top: 2em;">Табличная функция mongo</p>
-<p style="color: gray;">Стриминг из RabbitMQ</p>
-<p style="color: gray;">Репликация из MySQL</p>
+<p style="color: gray; margin-top: 2em;">mongo table function</p>
+<p style="color: gray;">Streaming from RabbitMQ</p>
+<p style="color: gray;">Replication from MySQL</p>
 </section>
 
 <section class="slide">
-<h2>Оптимизации</h2>
-<p>GROUP BY и DISTINCT по сортированным данным</p>
+<h2>Optimizations</h2>
+<p>GROUP BY and DISTINCT on Sorted Data</p>
 <p style="color: gray">demo</p>
 <!-- 
 SHOW CREATE TABLE test.hits_by_watch_id;
@@ -257,23 +257,23 @@ SELECT WatchID, count() FROM test.hits_by_watch_id GROUP BY WatchID ORDER BY cou
 </section>
 
 <section class="slide">
-<h2>Оптимизации</h2>
-<p>Распараллеливание FINAL.</p>
-<p>Оптимизации сортировок.</p>
-<p>Использование оперативки при двухуровневой агрегации.</p>
-<p>Параллельный и распределённый INSERT SELECT.</p>
+<h2>Optimizations</h2>
+<p>FINAL parallelization.</p>
+<p>Optimizations сортировок.</p>
+<p>Using RAM in two-level aggregation.</p>
+<p>Parallel and distributed INSERT SELECT.</p>
 </section>
 
 <section class="slide">
-<h2>Совместимость с SQL</h2>
-<p style="margin-top: -1em;">NULL в CREATE TABLE. Синонимы типов <span style="color: gray">(20.5)</span>:</p>
+<h2>SQL Compatibility</h2>
+<p style="margin-top: -1em;">NULL in CREATE TABLE. Type synonyms <span style="color: gray">(20.5)</span>:</p>
 <code>SET data_type_default_nullable = 1;
 <p>CREATE TEMPORARY TABLE test (
     x INT <b>NULL</b>, y VARCHAR(255) <b>NOT NULL</b>, z BLOB);
 </code>
-<p>Сравнение любых типов со строковыми константами <span style="color: gray">(20.5)</span>:</p>
+<p>Comparing any types with string constants <span style="color: gray">(20.5)</span>:</p>
 <code style="margin-bottom: 1em;">SELECT ... FROM table WHERE <b>x = '1'</b></code>
-<p>Сохранение Nullable при CAST <span style="color: gray">(20.6)</span>:</p>
+<p>Preserving Nullable on CAST <span style="color: gray">(20.6)</span>:</p>
 <code>SELECT toTypeName(x), toTypeName(CAST(x AS FLOAT));
 
 Nullable(UInt8) Nullable(Float32)
@@ -281,34 +281,34 @@ Nullable(UInt8) Nullable(Float32)
 </section>
 
 <section class="slide">
-<h2>Совместимость с SQL</h2>
-<p>Агрегатные функции count / count distinct / uniq от NULL. <span style="color: gray">(20.5)</span></p>
+<h2>SQL Compatibility</h2>
+<p>Aggregate functions count / count distinct / uniq from NULL. <span style="color: gray">(20.5)</span></p>
 <code style="margin-bottom: 1em;">SELECT COUNT(DISTINCT x) FROM (SELECT NULL AS x)
 
 0</code>
-<p>Сравнение String и FixedString с padding: <span style="color: gray">(20.4)</span></p>
+<p>String and FixedString comparison with padding: <span style="color: gray">(20.4)</span></p>
 <code style="margin-bottom: 1em;">SELECT 'x' = CAST('x' AS FixedString(10))</code>
-<p>Операторы DATE и TIMESTAMP <span style="color: gray">(20.4)</span>:</p>
+<p>DATE and TIMESTAMP operators <span style="color: gray">(20.4)</span>:</p>
 <code>SELECT DATE '2020-06-18'</code>
 </section>
 
 <section class="slide">
-<h2>Ещё фичи</h2>
-<p style="color: green;">Отказ от leader election при репликации.<br/>
+<h2>More Features</h2>
+<p style="color: green;">No more leader election in replication.<br/>
 Distributed over Distributed.<br/>
-Метрики perf events.</p>
-<p>Куски данных в оперативке и WAL.<br/>
-Opt-in отправка ошибок в Sentry.<br/>
-Агрегатные функции для статистических тестов.<br/>
-Типы Decimal256, Decimal512, Float16.<br/>
-Поиск полудубликатов текстов.<br/>
-Поддержка OpenTracing.</p>
+perf events metrics.</p>
+<p>Data parts in RAM and WAL.<br/>
+Opt-in error sending to Sentry.<br/>
+Aggregate functions for statistical tests.<br/>
+Decimal256, Decimal512, Float16 types.<br/>
+Text near-duplicate search.<br/>
+OpenTracing support.</p>
 </section>
 
 
 
 <section class="slide">
-    <h2>Публичный roadmap 2020!</h2>
+    <h2>Public roadmap 2020!</h2>
     <p><a href="https://clickhouse.tech/docs/ru/whats-new/extended-roadmap/">https://clickhouse.tech/docs/ru/whats-new/extended-roadmap/</a></p>
     <p>~ 500 задач с подробным описанием &mdash; зависимости, исполнители...</p>
 </section>

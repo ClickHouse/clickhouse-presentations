@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Эффективное использование ClickHouse</title>
+    <title>Efficient Use of ClickHouse</title>
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -9,273 +9,273 @@
 </head>
 <body class="shower list">
     <header class="caption">
-        <h1>Эффективное использование ClickHouse</h1>
+        <h1>Efficient Use of ClickHouse</h1>
     </header>
 
     <section class="slide" id="cover" style="background: #FFF url('pictures/title.png') no-repeat; background-size: 100%;">
-        <h1 style="margin-top: 200px; font-size: 32pt;">Эффективное использование<br/>ClickHouse</h1>
+        <h1 style="margin-top: 200px; font-size: 32pt;">Efficient Use of<br/>ClickHouse</h1>
     </section>
 
     <section class="slide">
-        <h2>Обо мне</h2>
-        <p>Алексей, разработчик ClickHouse.</p>
+        <h2>About Me</h2>
+        <p>Alexey, ClickHouse developer.</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 28pt;">Я не буду рассказывать, что такое ClickHouse</h2>
-        <p>1. Надоело.</p><p>2. Все и так знают.</p>
+        <h2 style="font-size: 28pt;">I Won't Explain What ClickHouse Is</h2>
+        <p>1. I'm tired of it.</p><p>2. Everyone already knows.</p>
     </section>
-    
+
     <section class="slide">
-        <h2 style="font-size: 28pt;">Как неправильно использовать ClickHouse</h2>
-        <p>Какие типичные ошибки, с которыми мы сталкивались на практике.</p>
+        <h2 style="font-size: 28pt;">How to Use ClickHouse Incorrectly</h2>
+        <p>Common mistakes we've encountered in practice.</p>
         <ul>
-            <li>какой сценарий является для ClickHouse неоптимальным;</li>
-            <li>из каких архитектурных причин следует эта неоптимальность;</li>
-            <li>и какие есть лучшие практики, чтобы избежать неоптимальностей.</li>
+            <li>which scenarios are suboptimal for ClickHouse;</li>
+            <li>architectural reasons for this suboptimality;</li>
+            <li>and what are the best practices to avoid these issues.</li>
         </ul>
     </section>
-    
+
     <section class="slide">
-        <h2 style="font-size: 24pt;">1. Слишком частые вставки с маленьким размером батча</h2>
-        <p>Пример: 
+        <h2 style="font-size: 24pt;">1. Too Frequent Inserts with Small Batch Sizes</h2>
+        <p>Example:
         <br/>
-        <br/>Таблица hits: 105 столбцов, 
-        <br/>размер строки в несжатом binary формате &mdash; 718 байт.</p>
+        <br/>Table hits: 105 columns,
+        <br/>row size in uncompressed binary format &mdash; 718 bytes.</p>
         <p>
-            Размер батча 1000000 строк:<br/>
+            Batch size 1000000 rows:<br/>
             <br/>
-            Вставка в таблицу MergeTree<br/>
-            &mdash; <b>506 650</b> строк в секунду;<br/><br/>
-            Вставка в таблицу ReplicatedMergeTree с двумя репликами<br/>
-            &mdash; <b>393 940</b> строк в секунду;<br/><br/>
-            Вставка в таблицу ReplicatedMergeTree<br/>
-            с двумя репликами и insert_quorum = 2
-            <br/>&mdash; <b>259 660</b> строк в секунду;<br/>
+            Insert into MergeTree table<br/>
+            &mdash; <b>506,650</b> rows per second;<br/><br/>
+            Insert into ReplicatedMergeTree table with two replicas<br/>
+            &mdash; <b>393,940</b> rows per second;<br/><br/>
+            Insert into ReplicatedMergeTree table<br/>
+            with two replicas and insert_quorum = 2
+            <br/>&mdash; <b>259,660</b> rows per second;<br/>
         </p>
     </section>
-    
+
     <section class="slide">
-        <h2 style="font-size: 24pt;">1. Слишком частые вставки с маленьким размером батча</h2>
-        <p>Пример: 
+        <h2 style="font-size: 24pt;">1. Too Frequent Inserts with Small Batch Sizes</h2>
+        <p>Example:
         <br/>
-        <br/>Таблица hits: 105 столбцов, 
-        <br/>размер строки в несжатом binary формате &mdash; 718 байт.</p>
+        <br/>Table hits: 105 columns,
+        <br/>row size in uncompressed binary format &mdash; 718 bytes.</p>
         <p>
-            Размер батча &mdash; одна строка:<br/>
+            Batch size &mdash; one row:<br/>
             <br/>
-            Вставка в таблицу MergeTree<br/>
-            &mdash; <b>59</b> строк в секунду;<br/><br/>
-            Вставка в таблицу ReplicatedMergeTree с двумя репликами<br/>
-            &mdash; <b>6</b> строк в секунду;<br/><br/>
-            Вставка в таблицу ReplicatedMergeTree<br/>
-            с двумя репликами и insert_quorum = 2
-            <br/>&mdash; <b>2</b> строки в секунду;<br/>
+            Insert into MergeTree table<br/>
+            &mdash; <b>59</b> rows per second;<br/><br/>
+            Insert into ReplicatedMergeTree table with two replicas<br/>
+            &mdash; <b>6</b> rows per second;<br/><br/>
+            Insert into ReplicatedMergeTree table<br/>
+            with two replicas and insert_quorum = 2
+            <br/>&mdash; <b>2</b> rows per second;<br/>
         </p>
     </section>
-    
-    <section class="slide">
-        <h2 style="font-size: 24pt;">1. Слишком частые вставки с маленьким размером батча</h2>
-        <p>&mdash; в 10 000 .. 100 000 раз медленнее.</p>
-        <p><br/>Почему так происходит?</p>
-        <p>Это недостаток ClickHouse.</p>
-        <p>Таблицы MergeTree не содержат log и memtable.</p>
-        <p>Данные сразу записываются в файловую систему,<br/>разложенные по столбцам.</p>
-    </section>
-    
-    <section class="slide">
-        <h2 style="font-size: 24pt;">Как правильно?</h2>
-        <p>Способ 1.</p><p>Используйте распределённую очередь (Kafka).</p>
-        <p>Вынимайте данные из очереди батчами раз в секунду<br/>и пишите в ClickHouse.</p>
 
-        <p><br/>Недостатки:</p>
-        <p>&mdash; громоздкая конструкция;</p>
-        <p>&mdash; ещё одна сложная распределённая система.</p>
-    </section>
-    
     <section class="slide">
-        <h2 style="font-size: 24pt;">Как правильно?</h2>
-        <p>Способ 2.</p><p>Пишите логи в файл.</p>
-        <p>Раз в секунду переименовывайте файл и открывайте новый.</p>
-        <p>Отдельный процесс берёт самый старый файл и вставляет в ClickHouse.</p>
+        <h2 style="font-size: 24pt;">1. Too Frequent Inserts with Small Batch Sizes</h2>
+        <p>&mdash; 10,000 .. 100,000 times slower.</p>
+        <p><br/>Why does this happen?</p>
+        <p>This is a limitation of ClickHouse.</p>
+        <p>MergeTree tables don't have a log and memtable.</p>
+        <p>Data is immediately written to the file system,<br/>arranged by columns.</p>
+    </section>
 
-        <p><br/>Недостатки:</p>
-        <p>&mdash; возможность потери данных при аппаратном сбое.</p>
-    </section>
-    
     <section class="slide">
-        <h2 style="font-size: 24pt;">Как правильно?</h2>
-        <p>Способ 3.</p><p>Серверный процесс накапливает пачку с логами во внутреннем буфере.</p>
-        <p>Раз в некоторое время накопленный буфер меняется местами с пустым<br/>
-        и отдельный поток пишет накопленные данные в ClickHouse.</p>
+        <h2 style="font-size: 24pt;">How to Do It Right?</h2>
+        <p>Method 1.</p><p>Use a distributed queue (Kafka).</p>
+        <p>Extract data from the queue in batches once per second<br/>and write to ClickHouse.</p>
 
-        <p><br/>Недостатки:</p>
-        <p>&mdash; потеря данных при kill -9 процесса;</p>
-        <p>&mdash; потеря данных либо OOM при невозможности записать в ClickHouse;</p>
+        <p><br/>Disadvantages:</p>
+        <p>&mdash; cumbersome construction;</p>
+        <p>&mdash; another complex distributed system.</p>
     </section>
-    
-    <section class="slide">
-        <h2 style="font-size: 24pt;">Как правильно?</h2>
-        <p>Способ 4.</p><p>Серверный процесс держит открытым соединение с ClickHouse,<br/>
-        в котором делается запрос INSERT и строчки отправляются по одной <br/>
-        или мелкими пачками с Transfer-Encoding: chunked.</p>
-        
-        <p>Раз в некоторое время, поток данных заканчивается<br/>и выполняется новый запрос INSERT.</p>
-        <p>В этом случае, ClickHouse будет буферизовать данные<br/> на своей стороне сам.</p>
 
-        <p>Недостатки:</p>
-        <p>&mdash; потеря данных при kill -9 процесса;</p>
-    </section>
-    
     <section class="slide">
-        <h2 style="font-size: 24pt;">Как правильно?</h2>
-        <p>Способ 5.</p>
+        <h2 style="font-size: 24pt;">How to Do It Right?</h2>
+        <p>Method 2.</p><p>Write logs to a file.</p>
+        <p>Once per second, rename the file and open a new one.</p>
+        <p>A separate process takes the oldest file and inserts it into ClickHouse.</p>
+
+        <p><br/>Disadvantages:</p>
+        <p>&mdash; possibility of data loss in case of hardware failure.</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 24pt;">How to Do It Right?</h2>
+        <p>Method 3.</p><p>Server process accumulates a batch of logs in an internal buffer.</p>
+        <p>Periodically, the accumulated buffer is swapped with an empty one<br/>
+        and a separate thread writes the accumulated data to ClickHouse.</p>
+
+        <p><br/>Disadvantages:</p>
+        <p>&mdash; data loss if the process is killed with kill -9;</p>
+        <p>&mdash; data loss or OOM if unable to write to ClickHouse;</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 24pt;">How to Do It Right?</h2>
+        <p>Method 4.</p><p>Server process keeps an open connection to ClickHouse,<br/>
+        in which an INSERT query is made and rows are sent one by one <br/>
+        or in small batches with Transfer-Encoding: chunked.</p>
+
+        <p>Periodically, the data stream ends<br/>and a new INSERT query is executed.</p>
+        <p>In this case, ClickHouse will buffer the data<br/> on its side.</p>
+
+        <p>Disadvantages:</p>
+        <p>&mdash; data loss if the process is killed with kill -9;</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 24pt;">How to Do It Right?</h2>
+        <p>Method 5.</p>
         <p>https://github.com/nikepan/clickhouse-bulk</p>
-        
-        <p>&mdash; промежуточный сервер для группировки INSERT-ов в батчи;</p>
+
+        <p>&mdash; intermediate server for grouping INSERTs into batches;</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 24pt;">Как правильно?</h2>
-        <p>Способ 6.</p><p>Buffer таблицы.</p>
-        <p><br/>Достоинства:</p>
-        <p>&mdash; очень просто начать использовать;</p>
-        <p><br/>Недостатки:</p>
-        <p>&mdash; снимает проблему не полностью, всё-равно нужны батчи;</p>
-        <p>&mdash; добавляет другие проблемы (нет лога, возможна потеря данных).</p>
+        <h2 style="font-size: 24pt;">How to Do It Right?</h2>
+        <p>Method 6.</p><p>Buffer tables.</p>
+        <p><br/>Advantages:</p>
+        <p>&mdash; very easy to start using;</p>
+        <p><br/>Disadvantages:</p>
+        <p>&mdash; doesn't completely solve the problem, batches are still needed;</p>
+        <p>&mdash; introduces other problems (no log, possible data loss).</p>
     </section>
-    
+
     <section class="slide">
-        <h2 style="font-size: 24pt;">Бонус</h2>
-        <p>Поддержка импорта из Kafka напрямую внутри ClickHouse.</p>
+        <h2 style="font-size: 24pt;">Bonus</h2>
+        <p>Support for direct import from Kafka inside ClickHouse.</p>
     </section>
-    
+
     <section class="slide">
-        <h2 style="font-size: 24pt;">Ещё грабли</h2>
-        <p>&mdash; вставка данных в формате VALUES с вычисляемыми выражениями;</p>
-        <p>&mdash; вставка данных, относящихся к большому<br/>количеству партиций в каждом батче.</p>
+        <h2 style="font-size: 24pt;">More Pitfalls</h2>
+        <p>&mdash; inserting data in VALUES format with computed expressions;</p>
+        <p>&mdash; inserting data belonging to a large<br/>number of partitions in each batch.</p>
     </section>
-    
-    
+
+
     <section class="slide">
-        <h2 style="font-size: 24pt;">2. String typing</h2>
-        <p>Пример:</p>
-        <p>Country String, 
-        <br/>City String, 
-        <br/>Browser String, 
+        <h2 style="font-size: 24pt;">2. String Typing</h2>
+        <p>Example:</p>
+        <p>Country String,
+        <br/>City String,
+        <br/>Browser String,
         <br/>IPAddress String,
         <br/>...
         </p>
     </section>
-    
+
     <section class="slide">
-        <h2 style="font-size: 24pt;">Насколько это плохо?</h2>
-        <p>Строки сжимаются почти так же хорошо, как числовые идентификаторы.</p>
-        <p>По диску и IO разницы почти нет.<br/>
-        Но при обработке запроса, разница по CPU не менее нескольких раз.<br/>
-        Пример:</p>
+        <h2 style="font-size: 24pt;">How Bad Is This?</h2>
+        <p>Strings compress almost as well as numeric identifiers.</p>
+        <p>There's almost no difference in disk and IO.<br/>
+        But during query processing, the CPU difference is at least several times.<br/>
+        Example:</p>
         <p>SELECT uniqExact(IPAddress) FROM ip_address_num<br/>
         &mdash; <b>0.073</b> sec, <b>137.79</b> million rows/s.</p>
-        
+
         <p>SELECT uniqExact(IPAddress) FROM ip_address_string<br/>
         &mdash; <b>0.265</b> sec, <b>37.70</b> million rows/s.</p>
-        
+
         <p>SELECT formatReadableSize(sum(data_compressed_bytes)) FROM system.columns WHERE table = 'ip_address_num'<br/>
         &mdash; <b>30.92</b> MiB vs. <b>43.65</b> MiB.</p>
     </section>
-    
+
     <section class="slide">
-        <h2 style="font-size: 24pt;">Как правильно?</h2>
+        <h2 style="font-size: 24pt;">How to Do It Right?</h2>
 
-        <p>1. Если разных значений мало,<br/>просто записывайте числовые идентификаторы.</p>
-        <p>Превращать в строки и обратно, можно уже на стороне приложения.</p>
-        <p>Это &mdash; типичная практика, применимая почти ко всем СУБД.</p>
+        <p>1. If there are few different values,<br/>just store numeric identifiers.</p>
+        <p>Converting to strings and back can be done on the application side.</p>
+        <p>This is a typical practice applicable to almost all DBMSs.</p>
 
-        <p>Пример:</p>
+        <p>Example:</p>
 
-        <p style="color: red;">Region String<br/>'Москва и Московская Область'</p>
+        <p style="color: red;">Region String<br/>'Moscow and Moscow Region'</p>
         <p style="color: green;">RegionID UInt32<br/>250</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 24pt;">Как правильно?</h2>
+        <h2 style="font-size: 24pt;">How to Do It Right?</h2>
 
-        <p>2. Если разных значений мало, можно использовать тип данных Enum.</p>
-        <p>Enum работает так же эффективно, как числовой идентификатор.</p>
-        <p>Недостаток: иногда надо делать ALTER.<br/>ALTER бесплатный, но ждёт выполняющихся запросов на блокировке.</p>
+        <p>2. If there are few different values, you can use the Enum data type.</p>
+        <p>Enum works as efficiently as a numeric identifier.</p>
+        <p>Disadvantage: sometimes you need to do ALTER.<br/>ALTER is free, but waits for running queries on a lock.</p>
 
-        <p>Пример:</p>
+        <p>Example:</p>
 
         <p style="color: red;">DeviceType String<br/>'mobile'</p>
         <p style="color: green;">DeviceType Enum8('desktop' = 1, 'mobile' = 2, 'tablet' = 3, 'tv' = 4)</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 24pt;">Как правильно?</h2>
+        <h2 style="font-size: 24pt;">How to Do It Right?</h2>
 
-        <p>3. Если разных значений не очень много,<br/>просто записывайте числовые идентификаторы.</p>
-        <p>Для удобства работы, можно подключать внешние словари.
-        <br/>Из ClickHouse, MySQL, Mongo, Postgres, ODBC, file, HTTP server...</p>
+        <p>3. If there aren't too many different values,<br/>just store numeric identifiers.</p>
+        <p>For convenience, you can connect external dictionaries.
+        <br/>From ClickHouse, MySQL, Mongo, Postgres, ODBC, file, HTTP server...</p>
 
-        <p>Пример: рекламные кампании и баннеры в Яндекс.Директе.</p>
-        <p>В ClickHouse хранится CampaignID UInt32, BannerID UInt64.</p>
-        <p>Подключены словари из MySQL.<br/>Кампании &mdash; всегда в оперативке. Баннеры &mdash; cache словарь.</p>
+        <p>Example: advertising campaigns and banners in Yandex.Direct.</p>
+        <p>ClickHouse stores CampaignID UInt32, BannerID UInt64.</p>
+        <p>Dictionaries are connected from MySQL.<br/>Campaigns &mdash; always in memory. Banners &mdash; cache dictionary.</p>
 
-        <p>Бонус: легко менять строки.</p>
+        <p>Bonus: easy to change strings.</p>
 
-        <p>Особенности: cache словарь из MySQL<br/>работает нормально только при hit rate ~ 100%.</p>
+        <p>Features: cache dictionary from MySQL<br/>works normally only with hit rate ~ 100%.</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 24pt;">Как правильно?</h2>
+        <h2 style="font-size: 24pt;">How to Do It Right?</h2>
 
-        <p>4. Если нет возможности сделать auto-increment, можно хэшировать.</p>
-        <p>При использовании 64bit хэша, коллизии будут<br/>(p ~ 1/2 при N ~ 1000000000).</p>
-        <p>Чтобы не беспокоиться, добавьте<br/>идентификатор клиента в ключ словаря.</p>
-        <p>Бонус &mdash; для многих операций достаточно одних хэшей.</p>
+        <p>4. If you can't do auto-increment, you can hash.</p>
+        <p>When using a 64-bit hash, there will be collisions<br/>(p ~ 1/2 at N ~ 1000000000).</p>
+        <p>To avoid worrying, add<br/>client identifier to the dictionary key.</p>
+        <p>Bonus &mdash; for many operations, hashes alone are sufficient.</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 24pt;">Как правильно?</h2>
+        <h2 style="font-size: 24pt;">How to Do It Right?</h2>
 
-        <p>5. Короткие строки нормально хранить как есть.</p>
-        <p>Пример:</p>
+        <p>5. Short strings are fine to store as is.</p>
+        <p>Example:</p>
         <p style="color: green;">URLDomain String<br/>'yandex.ru'</p>
         <p style="color: green;">BrowserLanguage String<br/>'ru'</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 24pt;">Как правильно?</h2>
+        <h2 style="font-size: 24pt;">How to Do It Right?</h2>
 
-        <p>6. Если множество строк большое и неограниченное,<br/>а существенная их доля уникальна.</p>
-        <p>Пример: URL, Referer, SearchPhrase, Title.</p>
-        <p>То делать словари полностью бессмысленно и противопоказано.</p>
-        <p style="color: green;">Храните как есть!</p>
-        <p>Не нужно пытаться выносить в отдельную таблицу и нормализовывать данные.</p>
+        <p>6. If the set of strings is large and unlimited,<br/>and a significant portion is unique.</p>
+        <p>Example: URL, Referer, SearchPhrase, Title.</p>
+        <p>Then making dictionaries is completely pointless and contraindicated.</p>
+        <p style="color: green;">Store as is!</p>
+        <p>Don't try to put them in a separate table and normalize the data.</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 24pt;">Как правильно?</h2>
+        <h2 style="font-size: 24pt;">How to Do It Right?</h2>
 
-        <p>7. Иногда разумно хранить избыточные столбцы с выжимкой данных.</p>
+        <p>7. Sometimes it's reasonable to store redundant columns with extracted data.</p>
 
-        <p>Пример: есть столбец URL.<br/>
-        Добавьте ещё столбец URLDomain.</p>
-        
-        Пример:</p>
+        <p>Example: there's a URL column.<br>
+        Add another URLDomain column.</p>
+
+        Example:</p>
         <p>SELECT <span style="color: red;">domain(URL)</span> AS k, count() AS c FROM test.hits GROUP BY k<br/>
         &mdash; <b>0.166</b> sec. Processed 762.68 MB (53.60 million rows/s., 4.61 GB/s.)</p>
-        
+
         <p>SELECT <span style="color: green;">URLDomain</span> AS k, count() AS c FROM test.hits GROUP BY k<br/>
         &mdash; <b>0.067</b> sec. Processed 188.06 MB (132.44 million rows/s., 2.81 GB/s.)</p>
-        
-        <p>На диске: URL - <b>126.80</b> MiB, URLDomain - <b>5.61</b> MiB.</p>
+
+        <p>On disk: URL - <b>126.80</b> MiB, URLDomain - <b>5.61</b> MiB.</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 24pt;">Как правильно?</h2>
+        <h2 style="font-size: 24pt;">How to Do It Right?</h2>
 
-        <p>8. Используйте правильные типы данных.</p>
+        <p>8. Use the correct data types.</p>
 
         <p style="color: red;">ClientIP String '5.255.255.5'<br/>
             ClientIPv6 String '2a02:6b8:a::a'<br/>
@@ -287,9 +287,9 @@
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 24pt;">Как правильно?</h2>
+        <h2 style="font-size: 24pt;">How to Do It Right?</h2>
 
-        <p>9. Иногда строки лучше предобработать заранее.</p>
+        <p>9. Sometimes strings are better preprocessed in advance.</p>
 
         <p style="color: red;">BrowserVersion String<br/>
         '12.3.67542.29'<br/>
@@ -302,28 +302,28 @@
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 24pt;">Как правильно?</h2>
+        <h2 style="font-size: 24pt;">How to Do It Right?</h2>
 
-        <p>10. Очень длинные строки и очень длинные массивы.</p>
+        <p>10. Very long strings and very long arrays.</p>
 
-        <p>Вообще не храните в ClickHouse.</p>
-        <p>Два варианта:</p>
-        <p>1. Режьте при вставке.</p>
-        <p>Пример: в одном из сервисов хранятся только<br/>первые 512 пользовательских параметров событий;</p>
-        <p>2. Храните снаружи, а в ClickHouse &mdash; хэши.</p>
+        <p>Don't store them in ClickHouse at all.</p>
+        <p>Two options:</p>
+        <p>1. Truncate on insert.</p>
+        <p>Example: in one service, only<br/>the first 512 user event parameters are stored;</p>
+        <p>2. Store externally, and in ClickHouse &mdash; hashes.</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 24pt;">Бонус:</h2>
+        <h2 style="font-size: 24pt;">Bonus:</h2>
 
-        <p>Можно загрузить данные в таблицу типа Log со String полями,<br/>
-        затем проанализировать их уже в ClickHouse,<br/>и выяснить правильные типы перед загрузкой дальше.</p>
+        <p>You can load data into a Log table with String fields,<br/>
+        then analyze them in ClickHouse,<br/>and determine the correct types before loading further.</p>
     </section>
-    
-    
-    
+
+
+
     <section class="slide">
-        <h2 style="font-size: 24pt;">3. Большое количество маленьких таблиц.</h2>
+        <h2 style="font-size: 24pt;">3. Large Number of Small Tables.</h2>
 
         <pre>:) SHOW TABLES
 
@@ -339,120 +339,120 @@
 │ stats_8   │
 │ stats_9   │
 │ stats_10  │
-  ...        
+  ...
 │ stats_999 │
 └───────────┘
 </pre>
     </section>
-    
+
     <section class="slide">
-        <h2 style="font-size: 24pt;">Причины использования:</h2>
+        <h2 style="font-size: 24pt;">Reasons for Using:</h2>
 
-        <p>Старые привычки из опыта работы с MySQL:</p>
-        <p>&mdash; отсутствие clustered primary key в MyISAM таблицах в MySQL;</p>
-        <p>&mdash; более простые maintenance операции с маленькими таблицами;</p>
-        <p>&mdash; микрошардинг.</p>
-    </section>
-    
-    <section class="slide">
-        <h2 style="font-size: 24pt;">Почему так не надо делать в ClickHouse?</h2>
-
-        <p>1. Данные в таблице упорядочены по первичному ключу.</p>
-        <p>Чтение диапазона эффективно вне зависимости от общего<br/>количества данных в таблице. Первичный ключ кластерный.</p>
-
-        <p>2. Таблица уже содержит внутри себя партиционирование.</p>
-        <p>Каждая таблица &mdash; довольно громоздкий объект.</p>
-        <p>Для каждой таблицы требуется постоянно выполнять<br/>некоторую фоновую работу по мержам.</p>
-
-    </section>
-    
-    <section class="slide">
-        <h2 style="font-size: 24pt;">Почему так не надо делать в ClickHouse?</h2>
-
-        <p>3. Нет проблем с maintenance операциями.</p>
-        <p>ALTER ADD/DROP COLUMN выполняется за O(1)</p>
-        <p>Таблица состоит из immutable кусков и восстановление после сбоя тривиально.</p>
-
-        <p>4. ClickHouse &mdash; это про throughput.</p>
-        <p>Время обработки 10 строк примерно такое же, как 10 000 строк.</p>
-        <p>Если ваши таблицы содержат меньше 10 000 строк,<br/>то меньше уже не важно.</p>
-    </section>
-    
-    <section class="slide">
-        <h2 style="font-size: 24pt;">Как правильно делать?</h2>
-
-        <p><span style="color: green;">Одна большая таблица!</span> Не бойтесь.</p>
-        <p>Пример: храним таблицу с метриками Graphite,<br/>
-        на одном сервере &mdash; 2 000 000 000 000 строк.</p>
-
-        <p>Бонус:</p>
-
-        <p>Поддержка произвольного ключа партиционирования в ClickHouse.</p>
-        <p>Если всё-таки нужно много маленьких таблиц без индекса<br>&mdash; используйте StripeLog.</p>
-    </section>
-    
-    
-    
-    <section class="slide">
-        <h2 style="font-size: 24pt;">4. Микрошардинг.</h2>
-
-        <p>Разумный подход для шардирования. Из другого мира.</p>
-        <p>Не используйте этот подход в ClickHouse.</p>
-
-        <p>Суть &mdash; данные разбиваются на 1000 виртуальных шардов<br/>любым удобным способом.</p>
-        <p>Каждый виртуальный шард отображается на набор серверов произвольным образом, и отображение хранится отдельно.</p>
-        <p>На каждом физическом сервере несколько инстансов<br/>&mdash; в разных БД или на разных портах.</p>
-        <p>Причина &mdash; упростить задачу перебалансировки данных.</p>
-    </section>
-    
-    <section class="slide">
-        <h2 style="font-size: 24pt;">4. Микрошардинг.</h2>
-
-        <p>Почему не нужно использовать это для ClickHouse?</p>
-        <p>1. Если данные расположены в разных инстансах ClickHouse, <br/>
-        то обработка запроса разными инстансами требует<br/><b>межпроцессного взаимодействия по TCP</b>.<br/>
-        Даже по localhost это гораздо медленнее, чем in-process.</p>
-
-        <p>2. В случае одного инстанса, потоки обрабатывают данные по мере возможности, работа распределена равномерно по потокам.<br/>
-        В случае разных инстансов, один инстанс закончит работу раньше других &mdash; <b>tail latency</b>.</p>
-
-        <p>3. Если даже таблицы расположены в одном инстансе ClickHouse,<br/>
-        вы получаете проблемы из-за большого количества мелких таблиц.<br/>
-        При объединении таблиц с помощью Merge-таблицы, <b>отключаются некоторые оптимизации</b>.</p>
+        <p>Old habits from MySQL experience:</p>
+        <p>&mdash; lack of clustered primary key in MyISAM tables in MySQL;</p>
+        <p>&mdash; simpler maintenance operations with small tables;</p>
+        <p>&mdash; microsharding.</p>
     </section>
 
-    
     <section class="slide">
-        <h2 style="font-size: 24pt;">5. Слишком много предагрегации.</h2>
+        <h2 style="font-size: 24pt;">Why You Shouldn't Do This in ClickHouse?</h2>
 
-        <p>Предагрегация &mdash; это нормально. Даже в ClickHouse.</p>
-        <p>Но слишком гранулированная предагрегация &mdash; бессмысленно.</p>
+        <p>1. Data in the table is ordered by primary key.</p>
+        <p>Reading a range is efficient regardless of the total<br/>amount of data in the table. Primary key is clustered.</p>
 
-        <p>Пример*:</p>
+        <p>2. Table already contains internal partitioning.</p>
+        <p>Each table is a rather bulky object.</p>
+        <p>For each table, some background merge work<br/>must be constantly performed.</p>
+
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 24pt;">Why You Shouldn't Do This in ClickHouse?</h2>
+
+        <p>3. No problems with maintenance operations.</p>
+        <p>ALTER ADD/DROP COLUMN executes in O(1)</p>
+        <p>Table consists of immutable pieces and recovery after failure is trivial.</p>
+
+        <p>4. ClickHouse is about throughput.</p>
+        <p>Processing time for 10 rows is about the same as 10,000 rows.</p>
+        <p>If your tables contain less than 10,000 rows,<br/>then smaller doesn't matter.</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 24pt;">How to Do It Right?</h2>
+
+        <p><span style="color: green;">One big table!</span> Don't be afraid.</p>
+        <p>Example: we store a table with Graphite metrics,<br/>
+        on one server &mdash; 2,000,000,000,000 rows.</p>
+
+        <p>Bonus:</p>
+
+        <p>Support for arbitrary partitioning key in ClickHouse.</p>
+        <p>If you still need many small tables without an index<br>&mdash; use StripeLog.</p>
+    </section>
+
+
+
+    <section class="slide">
+        <h2 style="font-size: 24pt;">4. Microsharding.</h2>
+
+        <p>A reasonable approach to sharding. From another world.</p>
+        <p>Don't use this approach in ClickHouse.</p>
+
+        <p>The essence &mdash; data is divided into 1000 virtual shards<br/>in any convenient way.</p>
+        <p>Each virtual shard is mapped to a set of servers arbitrarily, and the mapping is stored separately.</p>
+        <p>On each physical server, several instances<br/>&mdash; in different databases or on different ports.</p>
+        <p>Reason &mdash; simplify the task of data rebalancing.</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 24pt;">4. Microsharding.</h2>
+
+        <p>Why you shouldn't use this for ClickHouse?</p>
+        <p>1. If data is located in different ClickHouse instances, <br/>
+        then query processing by different instances requires<br/><b>interprocess communication via TCP</b>.<br/>
+        Even over localhost, this is much slower than in-process.</p>
+
+        <p>2. With a single instance, threads process data as they can, work is evenly distributed across threads.<br/>
+        With different instances, one instance will finish work before others &mdash; <b>tail latency</b>.</p>
+
+        <p>3. Even if tables are located in one ClickHouse instance,<br/>
+        you get problems due to a large number of small tables.<br/>
+        When combining tables with a Merge table, <b>some optimizations are disabled</b>.</p>
+    </section>
+
+
+    <section class="slide">
+        <h2 style="font-size: 24pt;">5. Too Much Preaggregation.</h2>
+
+        <p>Preaggregation is normal. Even in ClickHouse.</p>
+        <p>But too granular preaggregation is pointless.</p>
+
+        <p>Example*:</p>
         <p>SummingMergeTree(EventDate,<br/>
 (OrderID, EventDate, CampaignID, BannerID, AdID, TypeID,<br/>
 DisplayID, ContextID, TargetType, AbcID, IsGood, CostType, PageID),<br/>
 8192)</p>
-        <p style="font-size: 14pt;">* имена столбцов изменены.</p>
+        <p style="font-size: 14pt;">* column names changed.</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 24pt;">5. Слишком много предагрегации.</h2>
+        <h2 style="font-size: 24pt;">5. Too Much Preaggregation.</h2>
 
-        <p>Недостатки:</p>
-        <p>&mdash; объём данных хоть и уменьшается, но всего в несколько раз по сравнению с неагрегированными данными;</p>
-        <p>&mdash; разработчики постоянно просят расширить первичный ключ, но в ClickHouse нет поддержки ALTER PRIMARY KEY;</p>
-        <p>&mdash; среди агрегатов считаются только суммы (можно было бы обойти с помощью AggregatingMergeTree)</p>
-        <p>&mdash; годится только для примитивных отчётов, не подходит для аналитики.</p>
+        <p>Disadvantages:</p>
+        <p>&mdash; data volume decreases, but only by several times compared to non-aggregated data;</p>
+        <p>&mdash; developers constantly ask to extend the primary key, but ClickHouse has no support for ALTER PRIMARY KEY;</p>
+        <p>&mdash; among aggregates, only sums are calculated (could be worked around with AggregatingMergeTree)</p>
+        <p>&mdash; suitable only for primitive reports, not for analytics.</p>
 
-        <p>Для ClickHouse, неагрегированные данные &mdash; лучший сценарий.<br/>
-        Предагрегацию тоже можно использовать для простых случаев.</p>
+        <p>For ClickHouse, non-aggregated data is the best scenario.<br/>
+        Preaggregation can also be used for simple cases.</p>
     </section>
-    
-    
-    
+
+
+
     <section class="slide">
-        <h2 style="font-size: 24pt;">6. O(N) запросов из скрипта в цикле.</h2>
+        <h2 style="font-size: 24pt;">6. O(N) Queries from Script in Loop.</h2>
 
         <p style="color: red; font-size: 16pt;">
              SELECT count() FROM hits WHERE URL = 'https://yandex.ru/?cid=1764026490'
@@ -465,144 +465,144 @@ DisplayID, ContextID, TargetType, AbcID, IsGood, CostType, PageID),<br/>
 
         <p style="color: green;">SELECT URL, count() FROM hits WHERE URL IN (...) GROUP BY URL</p>
     </section>
-    
+
     <section class="slide">
-        <h2 style="font-size: 24pt;">Почему много запросов &mdash; плохо?</h2>
+        <h2 style="font-size: 24pt;">Why Are Many Queries Bad?</h2>
 
-        <p>Если индекс не используется, то каждый запрос<br/> &mdash; отдельный проход по данным;</p>
-        <p>Если индекс используется, то каждый запрос<br/>захватывает для чтения немного лишних данных,
-        <br/>например, читает 100 000 строк вместо одной строки<br/>&mdash; опять много проходов по одним и тем же данным.</p>
+        <p>If the index isn't used, then each query<br/> is a separate pass through the data;</p>
+        <p>If the index is used, then each query<br/>reads slightly more data than needed,
+        <br/>for example, reads 100,000 rows instead of one row<br/>&mdash; again many passes through the same data.</p>
 
-        <p>Можно переписать в один запрос.</p>
+        <p>Can be rewritten as one query.</p>
     </section>
-    
-    <section class="slide">
-        <h2 style="font-size: 24pt;">6. O(N) запросов из скрипта в цикле.</h2>
 
-        <p>Бонусы:</p>
-        <p>&mdash; в ClickHouse в секцию IN можно не бояться<br/>передавать мегабайты данных;</p>
-        <p>&mdash; в ClickHouse, индекс всегда работает не медленнее чем full scan;</p>
-        <p>Особенности:</p>
-        <p>&mdash; IN (SELECT ...) не использует индекс;</p>
-        <p>&mdash; при распределённой обработке запроса,<br/>текст запроса передаётся без сжатия.</p>
+    <section class="slide">
+        <h2 style="font-size: 24pt;">6. O(N) Queries from Script in Loop.</h2>
+
+        <p>Bonuses:</p>
+        <p>&mdash; in ClickHouse, you don't need to worry about<br/>passing megabytes of data in the IN section;</p>
+        <p>&mdash; in ClickHouse, the index always works no slower than a full scan;</p>
+        <p>Features:</p>
+        <p>&mdash; IN (SELECT ...) doesn't use the index;</p>
+        <p>&mdash; in distributed query processing,<br/>query text is transmitted without compression.</p>
     </section>
-    
+
     <section class="slide">
-        <h2 style="font-size: 24pt;">6. O(N) запросов из скрипта в цикле.</h2>
+        <h2 style="font-size: 24pt;">6. O(N) Queries from Script in Loop.</h2>
 
-        <p>Как быть, если запросы приходят из API?</p>
-        <p>&mdash; резать пользователей API:<br/>квоты, адаптивный throttling.</p>
+        <p>What if queries come from an API?</p>
+        <p>&mdash; limit API users:<br/>quotas, adaptive throttling.</p>
 
-        <p>Бонус: можно настроить квоты по пользователем в ClickHouse, передавая quota_key.</p>
-        
-        <p style="color: green;">Если API доступно снаружи, наличие квот обязательно!</p>
+        <p>Bonus: you can set up quotas per user in ClickHouse by passing quota_key.</p>
+
+        <p style="color: green;">If the API is accessible externally, quotas are mandatory!</p>
     </section>
-    
-    
+
+
     <section class="slide">
-        <h2 style="font-size: 24pt;">7. Репликация вручную.</h2>
+        <h2 style="font-size: 24pt;">7. Manual Replication.</h2>
 
-        <p>Что это такое?</p>
-        <p>Вы одинаковым образом записываете одни и те же данные<br/> на полностью независимых серверах.</p>
+        <p>What is this?</p>
+        <p>You write the same data identically<br/> to completely independent servers.</p>
 
-        <p>Достоинства:<br/>
-        &mdash; отсутствие ZooKeeper в инфраструктуре;<br/>
-        &mdash; простота использования, интеграция в существующий pipeline.</p>
+        <p>Advantages:<br/>
+        &mdash; no ZooKeeper in infrastructure;<br/>
+        &mdash; ease of use, integration into existing pipeline.</p>
 
-        <p>Недостатки:<br/>
-        &mdash; необходимость восстановления реплик вручную;<br/>
-        &mdash; из-за ошибок и недетерминированной работы на стороне приложения, данные расходятся в процессе работы;<br/>
-        &mdash; вы не можете решить, какая копия данных правильная.</p>
+        <p>Disadvantages:<br/>
+        &mdash; need to restore replicas manually;<br/>
+        &mdash; due to errors and non-deterministic behavior on the application side, data diverges during operation;<br/>
+        &mdash; you can't determine which copy of data is correct.</p>
     </section>
-    
+
     <section class="slide">
-        <h2 style="font-size: 24pt;">7. Репликация вручную.</h2>
+        <h2 style="font-size: 24pt;">7. Manual Replication.</h2>
 
-        <p>Бонус:</p>
-        <p>В ClickHouse легко создать Distributed таблицу,<br/>которая смотрит на &laquo;ручные&raquo; реплики.</p>
-        <p>С помощью load_balancing = 'nearest_hostname'<br/>можно избежать флапов в случае расходящихся реплик.</p>
+        <p>Bonus:</p>
+        <p>In ClickHouse, it's easy to create a Distributed table,<br/>that points to "manual" replicas.</p>
+        <p>Using load_balancing = 'nearest_hostname'<br/>you can avoid flaps with diverging replicas.</p>
 
-        <p>Правильное решение:<br/>Использовать ReplicatedMergeTree.</p>
-        <p>Достоинства:<br/>
-        &mdash; восстановление после сбоя;<br/>
-        &mdash; реплики сами следят за консистентностью данных.</p>
+        <p>Correct solution:<br/>Use ReplicatedMergeTree.</p>
+        <p>Advantages:<br/>
+        &mdash; recovery after failure;<br/>
+        &mdash; replicas monitor data consistency themselves.</p>
     </section>
-    
-    
-    <section class="slide">
-        <h2 style="font-size: 24pt; line-height: 1.5;">8. Использование примитивных table engines<br/> для основных данных.</h2>
 
-        <p>Для основных данных &mdash; используйте семейство MergeTree.</p>
+
+    <section class="slide">
+        <h2 style="font-size: 24pt; line-height: 1.5;">8. Using Primitive Table Engines<br/> for Primary Data.</h2>
+
+        <p>For primary data &mdash; use the MergeTree family.</p>
 
         <p>
-        &mdash; таблица не обязательно должна содержать Date<br/>
-        &mdash; можно использовать Date DEFAULT '2000-01-01',<br/>
-        &mdash; или таблицы без партиционирования.</p>
+        &mdash; table doesn't have to contain Date<br/>
+        &mdash; you can use Date DEFAULT '2000-01-01',<br/>
+        &mdash; or tables without partitioning.</p>
 
-        <p>Причины:</p>
+        <p>Reasons:</p>
         <p>
-        &mdash; сортировка по ключу, индекс;<br/>
-        &mdash; атомарная вставка;<br/>
-        &mdash; отсутствие блокировок при конкурентных INSERT и SELECT;<br/>
-        &mdash; immutable структуры данных на диске;<br/>
-        &mdash; репликация;</p>
+        &mdash; sorting by key, index;<br/>
+        &mdash; atomic insert;<br/>
+        &mdash; no locks with concurrent INSERT and SELECT;<br/>
+        &mdash; immutable data structures on disk;<br/>
+        &mdash; replication;</p>
     </section>
-    
-    <section class="slide">
-        <h2 style="font-size: 24pt;">8. Использование примитивных table engines.</h2>
 
-        <p>Для однократной загрузки небольших-средних объёмов<br/>&mdash; <b>Log</b>.</p>
-        <p>Для временных батчей для промежуточной обработки<br/>&mdash; <b>StripeLog</b>, <b>TinyLog</b>.</p>
-        <p>Для небольшого объёма временных данных<br/>&mdash; <b>Memory</b>.</p>
+    <section class="slide">
+        <h2 style="font-size: 24pt;">8. Using Primitive Table Engines.</h2>
+
+        <p>For one-time loading of small-medium volumes<br/>&mdash; <b>Log</b>.</p>
+        <p>For temporary batches for intermediate processing<br/>&mdash; <b>StripeLog</b>, <b>TinyLog</b>.</p>
+        <p>For small volume of temporary data<br/>&mdash; <b>Memory</b>.</p>
     </section>
-    
-    
+
+
     <section class="slide">
-        <h2 style="font-size: 24pt; line-height: 1.5;">9. Перенормализованные данные.<br/> JOIN большой кардинальности.</h2>
+        <h2 style="font-size: 24pt; line-height: 1.5;">9. Over-Normalized Data.<br/> JOIN with High Cardinality.</h2>
 
-        <p>Пример:</p>
+        <p>Example:</p>
 
-        <pre>SELECT url, count() FROM stats 
+        <pre>SELECT url, count() FROM stats
     ANY INNER JOIN urls USING (url_id)</pre>
 
-        <p>Почему это плохо?</p>
+        <p>Why is this bad?</p>
 
-        <p>ClickHouse умеет только Hash JOIN. Нет поддержки Merge JOIN.</p>
+        <p>ClickHouse only supports Hash JOIN. No support for Merge JOIN.</p>
 
-        <p>Hash JOIN &mdash; это случайный доступ в оперативке.<br/>
-        Для большой кардинальности хуже, чем прочитать данные inplace.</p>
+        <p>Hash JOIN is random access in memory.<br/>
+        For high cardinality, worse than reading data inplace.</p>
 
-        <p>Решение: для соединяемых данных большой кардинальности,<br/>лучше использовать их хранение в основной таблице.</p>
+        <p>Solution: for joined data with high cardinality,<br/>it's better to store it in the main table.</p>
     </section>
-    
-    
-    <section class="slide">
-        <h2 style="font-size: 24pt;">Ещё антипаттерны</h2>
-        <p>10. Использование запросов OPTIMIZE для того,<br/>чтобы изобразить функциональность UPDATE.</p>
-        <p>11. Использование распределённых JOIN<br/>с правой таблицей большого размера.<br/>ClickHouse плохо составляет план запроса для распределённых JOIN.</p>
 
-        <h2 style="font-size: 24pt;">Плохо, но иногда Ок</h2>
-        
-        <p>12. Использование ClickHouse только для того,<br/>чтобы прочитать данные обратно с помощью SELECT *.</p>
-        <p>13. Выполнение излишне громоздких вычислений<br/>внутри ClickHouse (большое значение cycle/byte).</p>
-    </section>
-    
-    
+
     <section class="slide">
-        <h2>Сообщество</h2>
-        <p>Сайт: <a href="https://clickhouse.com/">https://clickhouse.com/</a></p>
+        <h2 style="font-size: 24pt;">More Antipatterns</h2>
+        <p>10. Using OPTIMIZE queries to<br/>simulate UPDATE functionality.</p>
+        <p>11. Using distributed JOIN<br/>with large right table.<br/>ClickHouse poorly composes query plan for distributed JOINs.</p>
+
+        <h2 style="font-size: 24pt;">Bad, but Sometimes Ok</h2>
+
+        <p>12. Using ClickHouse only to<br/>read data back with SELECT *.</p>
+        <p>13. Performing excessively heavy computations<br/>inside ClickHouse (high cycle/byte value).</p>
+    </section>
+
+
+    <section class="slide">
+        <h2>Community</h2>
+        <p>Website: <a href="https://clickhouse.com/">https://clickhouse.com/</a></p>
         <p>Google groups: <a href="https://groups.google.com/forum/#!forum/clickhouse">https://groups.google.com/forum/#!forum/clickhouse</a></p>
-        <p>Рассылка: clickhouse-feedback@yandex-team.com</p>
-        <p>Telegram чат: <a href="https://telegram.me/clickhouse_en">https://telegram.me/clickhouse_en</a> и <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_ru</a> (уже 1041 участник)</p>
+        <p>Mailing list: clickhouse-feedback@yandex-team.com</p>
+        <p>Telegram chat: <a href="https://telegram.me/clickhouse_en">https://telegram.me/clickhouse_en</a> and <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_ru</a> (already 1041 members)</p>
         <p>GitHub: <a href="https://github.com/ClickHouse/ClickHouse/">https://github.com/ClickHouse/ClickHouse/</a></p>
-        <p>+ встречи. Москва, Санкт-Петербург, Новосибирск, Екатеринбург, Минск, Берлин... Далее: Нижний Новгород, Москва.</p>
+        <p>+ meetups. Moscow, St. Petersburg, Novosibirsk, Yekaterinburg, Minsk, Berlin... Next: Nizhny Novgorod, Moscow.</p>
     </section>
 
     <section class="slide">
-        <h2>Спасибо!</h2>
+        <h2>Thank You!</h2>
     </section>
-    
-        
+
+
     <div class="progress"></div>
     <script src="shower/shower.min.js"></script>
 </body>

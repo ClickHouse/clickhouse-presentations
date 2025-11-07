@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Возможности ClickHouse: зима/весна 2020</title>
+    <title>ClickHouse Features: Winter/Spring 2020</title>
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -17,23 +17,23 @@
 </head>
 <body class="shower list">
     <header class="caption">
-        <h1>ClickHouse: зима/весна 2020</h1>
+        <h1>ClickHouse: Winter/Spring 2020</h1>
     </header>
     
     <section class="slide">
-        <h1>ClickHouse: зима/весна 2020</h1>
+        <h1>ClickHouse: Winter/Spring 2020</h1>
         <p style="margin-top: 100px;">Zoom: <a href="https://yandex.zoom.us/j/845102379">https://yandex.zoom.us/j/845102379</a></p>
         <p>YouTube: <a href="https://www.youtube.com/c/ClickHouseDB">https://www.youtube.com/c/ClickHouseDB</a></p>
         <p>Telegram chat: <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_ru</a>, <a href="https://telegram.me/clickhouse_en">clickhouse_en</a></p>
-        <p>Яндекс.Еда, промокод: <b>ClickHouse_break</b><br/>(<span style="color: red;">только для первых 100 участников</span>)</p>
+        <p>Yandex.Eda, promo code: <b>ClickHouse_break</b><br/>(<span style="color: red;">only for first 100 participants</span>)</p>
     </section>
 
     <section class="slide" id="cover">
-        <h1 style="margin-top: 180px; font-size: 48pt;"><span>Возможности ClickHouse:<br/>зима/весна 2020</span></h1>
+        <h1 style="margin-top: 180px; font-size: 48pt;"><span>ClickHouse Features:<br/>Winter/Spring 2020</span></h1>
     </section>
 
     <section class="slide">
-        <h2>В предыдущих сериях:</h2>
+        <h2>In previous episodes:</h2>
         <p class="cloud">
             <span>Tiered Storage</span>
             <span>DDL queries for dictionaries</span>
@@ -78,7 +78,7 @@
 
 <section class="slide">
 <h2>Role Based Access Control</h2>
-<p>А также управление пользователями,<br/>доступами и ролями с помощью SQL запросов.</p>
+<p>And also user, access and role management with SQL queries.</p>
 <p>CREATE USER / DROP USER</p>
 <p>CREATE ROLE / DROP ROLE</p>
 <p>GRANT / REVOKE role TO user</p>
@@ -103,26 +103,26 @@ SELECT count() FROM test.hits
 </section>
 
 <section class="slide">
-<h2>Неблокирующие запросы ALTER</h2>
-<p>... и ALTER RENAME COLUMN</p>
+<h2>Non-blocking ALTER Queries</h2>
+<p>... and ALTER RENAME COLUMN</p>
 <p style="margin-top: 100px; font-size: 14pt; color: gray;">Доступно в версии 20.4. Разработчик &mdash; Александр Сапин.</p>
 </section>
 
 <section class="slide">
-<h2>И ещё про ALTER</h2>
+<h2>And More About ALTER</h2>
 <p>ALTER MATERIALIZE TTL</p>
 <p>ALTER MOVE PARTITION</p>
 </section>
 
 <section class="slide">
-<h2>Адаптивный алгоритм для JOIN</h2>
+<h2>Adaptive Algorithm for JOIN</h2>
 <p>SET join_algorithm = 'auto'</p>
-<p>Автоматическое переключение между Hash Join и Merge Join<br/>в зависимости от использования памяти.</p>
+<p>Automatic switching between Hash Join and Merge Join<br/>depending on memory usage.</p>
 <p style="margin-top: 100px; font-size: 14pt; color: green;">Доступно в версии 20.3. Разработчик &mdash; Артём Зуйков.</p>
 </section>
 
 <section class="slide">
-<h2>Адаптивный алгоритм для JOIN</h2>
+<h2>Adaptive Algorithm for JOIN</h2>
 <p>demo?</p>
 <!-- 
 SELECT uniq(a.URL), uniq(b.URL) FROM hits_100m_obfuscated a INNER JOIN hits_100m_obfuscated b ON a.WatchID = b.WatchID;
@@ -133,9 +133,9 @@ SET send_logs_level = 'trace'
 
 <section class="slide">
 <h2>DateTime64</h2>
-<p>Дата с временем с более чем секундной точностью.</p>
-<p>DateTime64(3) &mdash; миллисекунды.</p>
-<p>DateTime64(6) &mdash; микросекунды.</p>
+<p>Date with time with more than second precision.</p>
+<p>DateTime64(3) &mdash; milliseconds.</p>
+<p>DateTime64(6) &mdash; microseconds.</p>
 <p>...</p>
 <p style="margin-top: 100px; font-size: 14pt; color: green;">Доступно в версии 20.1. Разработчик &mdash; Василий Немков, Altinity.</p>
 </section>
@@ -143,21 +143,21 @@ SET send_logs_level = 'trace'
 <section class="slide">
 <h2>DateTime64</h2>
 <p>В разработке &mdash; расширенный диапазон.</p>
-<p>Сейчас 1970&ndash;2106.</p>
+<p>Currently 1970&ndash;2106.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 32pt;">Write-Optimized формат кусков таблиц</h2>
+<h2 style="font-size: 32pt;">Write-Optimized Format of Table Parts</h2>
 <code>CREATE TABLE test.hits_compact AS test.hits
     ENGINE = MergeTree ORDER BY ...
     SETTINGS min_bytes_for_wide_part = '10M'</code>
-<p style="margin-top: 1em;">Ускоряет мелкие вставки.</p>
-<p style="margin-top: 100px; font-size: 14pt; color: red;">Экспериментальная возможность.</p>
+<p style="margin-top: 1em;">Speeds up small inserts.</p>
+<p style="margin-top: 100px; font-size: 14pt; color: red;">Experimental feature.</p>
 <p style="font-size: 14pt; color: green;">Доступно в версии 20.3. Разработчик &mdash; Антон Попов.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 32pt;">Write-Optimized формат кусков таблиц</h2>
+<h2 style="font-size: 32pt;">Write-Optimized Format of Table Parts</h2>
 <p>demo?</p>
 <!--
 time clickhouse benchmark <<< "INSERT INTO test.hits_wide (UserID) VALUES (rand())" -i 1000
@@ -166,58 +166,58 @@ time clickhouse benchmark <<< "INSERT INTO test.hits_compact (UserID) VALUES (ra
 </section>
 
 <section class="slide">
-<h2>Ещё фичи</h2>
-<p>Формат Avro</p>
-<p>Формат Regexp</p>
-<p>Ручка для Prometheus</p>
-<p>Асинхронный режим работы cache словарей</p>
+<h2>More Features</h2>
+<p>Avro Format</p>
+<p>Regexp Format</p>
+<p>Prometheus Handler</p>
+<p>Async mode for cache dictionaries</p>
 <p>Memory Profiler</p>
 <p>system.stack_trace</p>
-<p>Ограничение сетевых соединений</p>
-<p>Полная поддержка h3</p>
+<p>Network connections limiting</p>
+<p>Full h3 support</p>
 </section>
 
 <section class="slide">
-<h2>LTS версии</h2>
-<p>Версия 20.3 (март 2020) становится LTS</p>
+<h2>LTS Versions</h2>
+<p>Version 20.3 (March 2020) becomes LTS</p>
 </section>
 
 <section class="slide">
 <h2>ClickHouse Playground</h2>
 <p>(alpha version)</p>
 <p><a href="https://play.clickhouse.tech/">https://play.clickhouse.tech/</a></p>
-<p>Работает на самом слабом сервере в Яндекс.Облаке.</p>
+<p>Runs on the weakest server in Yandex.Cloud.</p>
 </section>
 
 <section class="slide">
-<h2>Что дальше</h2>
-<p>LDAP для аутентификации</p>
-<p>Kerberos для аутентификации</p>
-<p>LDAP для хранения прав и ролей</p>
+<h2>What's Next</h2>
+<p>LDAP for authentication</p>
+<p>Kerberos for authentication</p>
+<p>LDAP for storing rights and roles</p>
 </section>
 
 <section class="slide">
-<h2>Что дальше</h2>
+<h2>What's Next</h2>
 <p>ALTER RENAME COLUMN</p>
-<p>Неблокирующие запросы CREATE/DROP/RENAME</p>
-<p>Буферизация и WAL для MergeTree</p>
-<p>Хранение холодных данных поверх S3 и HDFS.</p>
-<p>Автосборка FreeBSD x86_64 и Linux ppc64le.</p>
+<p>Non-blocking CREATE/DROP/RENAME queries</p>
+<p>Buffering and WAL for MergeTree</p>
+<p>Cold data storage on top of S3 and HDFS.</p>
+<p>Automated builds for FreeBSD x86_64 and Linux ppc64le.</p>
 </section>
 
 <section class="slide">
-<h2>Что дальше</h2>
-<p>Кэш результатов запросов</p>
-<p>Настраиваемые HTTP handlers</p>
-<p>Шифрование данных на диске</p>
-<p>Географические словари</p>
+<h2>What's Next</h2>
+<p>Query result caching</p>
+<p>Configurable HTTP handlers</p>
+<p>Data encryption at rest</p>
+<p>Geographical dictionaries</p>
 </section>
 
 <section class="slide">
-    <h2>Публичный roadmap 2020!</h2>
+    <h2>Public roadmap 2020!</h2>
     <p><a href="https://clickhouse.tech/docs/ru/extended_roadmap/">https://clickhouse.tech/docs/ru/extended_roadmap/</a></p>
     <p>~ 500 задач с подробным описанием &mdash; зависимости, исполнители...</p>
-    <p>из них 63 уже сделано :)</p>
+    <p>63 of them are already done :)</p>
 </section>
 
 

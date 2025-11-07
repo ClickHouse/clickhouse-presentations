@@ -1,60 +1,60 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Как я ускорил одну агрегатную функцию в ClickHouse</title>
+    <title>How I Optimized One Aggregate Function in ClickHouse</title>
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x10.css">
-    
+
     <style type="text/css">
          code { display: block; white-space: pre; background-color: #EEE; }
     </style>
 </head>
 <body class="shower list">
     <header class="caption">
-        <h1>Как я ускорил одну агрегатную функцию в ClickHouse</h1>
+        <h1>How I Optimized One Aggregate Function in ClickHouse</h1>
     </header>
-    
+
     <section class="slide" id="cover" style="background: #FFF url('pictures/fwdays.svg') no-repeat top right; background-size: 25%;">
-        <h1 style="margin-top: 160px; font-size: 36pt;">Как я ускорил одну<br/>агрегатную функцию в ClickHouse</h1>
+        <h1 style="margin-top: 160px; font-size: 36pt;">How I Optimized One<br/>Aggregate Function in ClickHouse</h1>
     </section>
 
 <section class="slide">
-<h2 style="font-size: 48pt;">ClickHouse не тормозит.</h2>
-<p>А является ли ClickHouse самой быстрой системой во всех сценариях?</p>
+<h2 style="font-size: 48pt;">ClickHouse Doesn't Slow Down.</h2>
+<p>Is ClickHouse the fastest system in all scenarios?</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 48pt;">ClickHouse не тормозит.</h2>
-<p>А является ли ClickHouse самой быстрой системой во всех сценариях?</p>
-<p>&mdash; в частных случаях можно выиграть...<br/>
-&emsp; ... пока я этого не заметил.</p>
+<h2 style="font-size: 48pt;">ClickHouse Doesn't Slow Down.</h2>
+<p>Is ClickHouse the fastest system in all scenarios?</p>
+<p>&mdash; in specific cases someone can win...<br/>
+&emsp; ... until I notice it.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 48pt;">ClickHouse не тормозит.</h2>
-<p>А является ли ClickHouse самой быстрой системой во всех сценариях?</p>
+<h2 style="font-size: 48pt;">ClickHouse Doesn't Slow Down.</h2>
+<p>Is ClickHouse the fastest system in all scenarios?</p>
 <img src="pictures/example1.png"/>
 </section>
 
 <section class="slide">
 <h2 style="font-size: 48pt;">DBMS-X</h2>
-<p>Работает с данными только с помощью mmap.</p>
-<p>Не поддерживает сжатие данных.</p>
-<p>Не поддерживает индексы и не сортирует хранимые данные.</p>
-<p>Почти не поддерживает SQL.</p>
+<p>Works with data only using mmap.</p>
+<p>Doesn't support data compression.</p>
+<p>Doesn't support indexes and doesn't sort stored data.</p>
+<p>Barely supports SQL.</p>
 
-<p style="margin-top: 2em; color: red;">Выполняет один запрос быстрее чем ClickHouse?</p>
+<p style="margin-top: 2em; color: red;">Executes one query faster than ClickHouse?</p>
 </section>
 
 <section class="slide">
 <h2 style="font-size: 48pt;">DBMS-X</h2>
-<p>Выполняет один запрос быстрее чем ClickHouse?</p>
+<p>Executes one query faster than ClickHouse?</p>
 <code>SELECT sum(x) FROM table</code>
 <p style="margin-top: 1em;"><pre>x Nullable(Float64)</pre></p>
 
-<p>&mdash; суммирование 1 млрд чисел double.</p>
+<p>&mdash; summing 1 billion doubles.</p>
 
 <pre>
 ClickHouse: 0.116 sec
@@ -64,38 +64,38 @@ DBMS-X:     0.066 sec</pre>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 36pt;">Sanity Check &mdash; считаем байты</h2>
-<p>Скорость сканирования данных в ГБ/сек.</p>
-<p><b>double</b> &mdash; 8 байт + маска NULL, возможно 1 байт,<br/>всего 9 байт на значение в оперативке.</p>
-<p>Нужно обработать 9 ГБ данных в памяти.</p>
+<h2 style="font-size: 36pt;">Sanity Check &mdash; Counting Bytes</h2>
+<p>Data scanning speed in GB/sec.</p>
+<p><b>double</b> &mdash; 8 bytes + NULL mask, possibly 1 byte,<br/>total 9 bytes per value in memory.</p>
+<p>Need to process 9 GB of data in memory.</p>
 
 <pre>
-ClickHouse: 0.116 sec,  78 ГБ/сек.
-DBMS-X:     0.066 sec, 136 ГБ/сек.
+ClickHouse: 0.116 sec,  78 GB/sec.
+DBMS-X:     0.066 sec, 136 GB/sec.
 
-STREAM benchmark:      160 ГБ/сек.</pre>
+STREAM benchmark:      160 GB/sec.</pre>
 
-<p>160 ГБ/сек. &mdash; максимальная скорость
-<br/>сканирования памяти на данной машине.</p>
+<p>160 GB/sec. &mdash; maximum
+<br/>memory scanning speed on this machine.</p>
 
 </section>
 
 
 <section class="slide">
-<h2 style="font-size: 32pt;">Как быстрее всего суммировать числа?</h2>
-<p>1. Используем доступные ядра CPU
-<br/>&emsp;(делим работу по потокам).</p>
-<p>2. Используем векторную обработку запроса
-<br/>&emsp;(только простые циклы, никаких виртуальных вызовов внутри).</p>
-<p>3. Обрабатываем данные по блокам
-<br/>&emsp;(правильно используем кэш CPU).</p>
-<p>4. Кэшируем несжатые данные в оперативке
-<br/>&emsp;(убираем разжатие, десериализацию, копирования).</p>
+<h2 style="font-size: 32pt;">What's the Fastest Way to Sum Numbers?</h2>
+<p>1. Use available CPU cores
+<br/>&emsp;(divide work across threads).</p>
+<p>2. Use vectorized query processing
+<br/>&emsp;(only simple loops, no virtual calls inside).</p>
+<p>3. Process data in blocks
+<br/>&emsp;(proper CPU cache usage).</p>
+<p>4. Cache uncompressed data in memory
+<br/>&emsp;(eliminate decompression, deserialization, copying).</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 32pt;">Как быстрее всего суммировать числа?</h2>
-<p>Исполняемый базой данных код должен быть таким же,<br/>как если бы вы вручную написали идеальный код на C++.</p>
+<h2 style="font-size: 32pt;">What's the Fastest Way to Sum Numbers?</h2>
+<p>Code executed by the database should be the same<br/>as if you manually wrote perfect C++ code.</p>
 
 <code>template &lt;typename T>
 T sum(const T * ptr, const T * end)
@@ -111,47 +111,47 @@ T sum(const T * ptr, const T * end)
 </section>
 
 <section class="slide">
-<h2 style="font-size: 32pt;">Как быстрее всего суммировать числа?</h2>
+<h2 style="font-size: 32pt;">What's the Fastest Way to Sum Numbers?</h2>
 <code style="margin-top: -1em; margin-bottom: 1em;">while (ptr &lt; end)
 {
     res += *ptr;
     ++ptr;
 }
 </code>
-<p>Но разве это идеальный код на C++?</p>
+<p>But is this perfect C++ code?</p>
 
-<p>&mdash; можно развернуть цикл;<br/>
-&mdash; можно векторизовать цикл;<br/>
-&mdash; выравнивание;<br/>
-&mdash; префетч;</p>
+<p>&mdash; can unroll the loop;<br/>
+&mdash; can vectorize the loop;<br/>
+&mdash; alignment;<br/>
+&mdash; prefetch;</p>
 
-<p style="margin-top: 2em;">Но разве компилятор C++ не обязан сам это делать?</p>
+<p style="margin-top: 2em;">But shouldn't the C++ compiler do this itself?</p>
 </section>
 
-    
-    
+
+
 <section class="slide">
-<h2 style="font-size: 30pt;">Как быстрее всего суммировать числа?</h2>
-<code style="font-size: 16pt; line-height: 1.5">$ g++ -O2 main.cpp &amp;&amp; ./a.out 
+<h2 style="font-size: 30pt;">What's the Fastest Way to Sum Numbers?</h2>
+<code style="font-size: 16pt; line-height: 1.5">$ g++ -O2 main.cpp &amp;&amp; ./a.out
 Res: 499999999067108992.000, time: 2.561, 3.123 GB/sec.
 
-$ g++ -O3 main.cpp &amp;&amp; ./a.out 
+$ g++ -O3 main.cpp &amp;&amp; ./a.out
 Res: 499999999067108992.000, time: 1.590, 5.033 GB/sec.
 
-$ g++ -O3 -msse4.2 main.cpp &amp;&amp; ./a.out 
+$ g++ -O3 -msse4.2 main.cpp &amp;&amp; ./a.out
 Res: 499999999067108992.000, time: 1.560, 5.129 GB/sec.
 
-$ g++ -O3 -mavx2 main.cpp &amp;&amp; ./a.out 
+$ g++ -O3 -mavx2 main.cpp &amp;&amp; ./a.out
 Res: 499999999067108992.000, time: 1.188, 6.733 GB/sec.
 
-$ g++ -O3 -march=native main.cpp &amp;&amp; ./a.out 
+$ g++ -O3 -march=native main.cpp &amp;&amp; ./a.out
 Res: 499999999067108992.000, time: 1.192, 6.710 GB/sec.
 </code>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Как быстрее всего суммировать числа?</h2>
-<code style="font-size: 16pt; line-height: 1.5">$ clang++ -O2 main.cpp &amp;&amp; ./a.out 
+<h2 style="font-size: 30pt;">What's the Fastest Way to Sum Numbers?</h2>
+<code style="font-size: 16pt; line-height: 1.5">$ clang++ -O2 main.cpp &amp;&amp; ./a.out
 Res: 499999999067108992.000, time: 0.726, 11.013 GB/sec.
 
 $ clang++ -O3 main.cpp &amp;&amp; ./a.out
@@ -170,7 +170,7 @@ Res: 499999999067108992.000, time: 0.741, 10.792 GB/sec.
 
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Как быстрее всего суммировать числа?</h2>
+<h2 style="font-size: 30pt;">What's the Fastest Way to Sum Numbers?</h2>
 <code style="font-size: 16pt; line-height: 1.25; margin-bottom: 1em;">$ g++ -O3 -march=native -S main.cpp &amp;&amp; cat main.s
 
 .L11:
@@ -187,12 +187,12 @@ Res: 499999999067108992.000, time: 0.741, 10.792 GB/sec.
     cmpq          %rdx, %rax
     jne           .L11
 </code>
-<p>Цикл развёрнут, но не векторизован.</p>
+<p>Loop is unrolled but not vectorized.</p>
 </section>
 
-    
+
 <section class="slide">
-<h2 style="font-size: 30pt;">Как быстрее всего суммировать числа?</h2>
+<h2 style="font-size: 30pt;">What's the Fastest Way to Sum Numbers?</h2>
 <code style="font-size: 16pt; line-height: 1.25; margin-bottom: 1em;">$ clang++ -O3 -march=native -S main.cpp &amp;&amp; cat main.s
 
 .LBB2_2: # =>This Inner Loop Header: Depth=1
@@ -201,27 +201,27 @@ Res: 499999999067108992.000, time: 0.741, 10.792 GB/sec.
     cmpq    %rsi, %rdi
     jb      .LBB2_2
 </code>
-<p>Цикл не развёрнут, не векторизован... но это лучше на моей машине.</p>
+<p>Loop is not unrolled, not vectorized... but this is better on my machine.</p>
 </section>
 
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Почему компилятор не векторизует цикл?</h2>
-<p>Цикл с <span style="color: red;">double</span>, <span style="color: red;">float</span> &mdash; не векторизует.</p>
-<p>Цикл с <span style="color: green;">int</span> &mdash; векторизует.</p>
+<h2 style="font-size: 30pt;">Why Doesn't the Compiler Vectorize the Loop?</h2>
+<p>Loop with <span style="color: red;">double</span>, <span style="color: red;">float</span> &mdash; not vectorized.</p>
+<p>Loop with <span style="color: green;">int</span> &mdash; vectorized.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Почему компилятор не векторизует цикл?</h2>
-<p>Цикл с <span style="color: red;">double</span>, <span style="color: red;">float</span> &mdash; не векторизует.</p>
-<p>Цикл с <span style="color: green;">int</span> &mdash; векторизует.</p>
-<p>&mdash; Потому что это противоречит стандарту C++ и IEEE-754.</p>
+<h2 style="font-size: 30pt;">Why Doesn't the Compiler Vectorize the Loop?</h2>
+<p>Loop with <span style="color: red;">double</span>, <span style="color: red;">float</span> &mdash; not vectorized.</p>
+<p>Loop with <span style="color: green;">int</span> &mdash; vectorized.</p>
+<p>&mdash; Because it contradicts the C++ standard and IEEE-754.</p>
 <p><pre>(a + b) + c != a + (b + c).</pre></p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Почему компилятор не векторизует цикл?</h2>
-<p style="margin-top: -1em;">Это можно &laquo;исправить&raquo;, надо всего-лишь:</p>
+<h2 style="font-size: 30pt;">Why Doesn't the Compiler Vectorize the Loop?</h2>
+<p style="margin-top: -1em;">This can be "fixed", you just need to:</p>
 
 <code style="font-size: 14pt; margin-bottom: 1em;">$ clang++ -O3 -march=native -f<span style="color: red;">fast-math</span> main.cpp &amp;&amp; ./a.out
 Res: 499999999500000000.000, time: 0.362, <span style="color: green;">22.086</span> GB/sec.
@@ -240,12 +240,12 @@ $ clang++ -O3 -march=native -f<span style="color: red;">fast-math</span> -S main
     cmpq    %rcx, %rdx
     jne     .LBB2_4
 </code>
-<p>Но так делать нельзя :(</p>
+<p>But you can't do this :(</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Почему компилятор не векторизует цикл?</h2>
-<p><b>-ffast-math</b> использовать нельзя.<br/>Потому что это ломает точность вычислений.</p>
+<h2 style="font-size: 30pt;">Why Doesn't the Compiler Vectorize the Loop?</h2>
+<p><b>-ffast-math</b> cannot be used.<br/>Because it breaks calculation precision.</p>
 <p>Kahan Summation:</p>
 <code style="font-size: 14pt; margin-bottom: 1em;">while (ptr &lt; end)
 {
@@ -259,8 +259,8 @@ $ clang++ -O3 -march=native -f<span style="color: red;">fast-math</span> -S main
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Почему компилятор не векторизует цикл?</h2>
-<p><b>-ffast-math</b> использовать нельзя.<br/>Потому что это ломает точность вычислений.</p>
+<h2 style="font-size: 30pt;">Why Doesn't the Compiler Vectorize the Loop?</h2>
+<p><b>-ffast-math</b> cannot be used.<br/>Because it breaks calculation precision.</p>
 <p>Kahan Summation:</p>
 <code style="font-size: 14pt; margin-bottom: 1em;">while (ptr &lt; end)
 {
@@ -274,8 +274,8 @@ $ clang++ -O3 -march=native -f<span style="color: red;">fast-math</span> -S main
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Почему компилятор не векторизует цикл?</h2>
-<p><b>-ffast-math</b> использовать нельзя.<br/>Потому что это ломает точность вычислений.</p>
+<h2 style="font-size: 30pt;">Why Doesn't the Compiler Vectorize the Loop?</h2>
+<p><b>-ffast-math</b> cannot be used.<br/>Because it breaks calculation precision.</p>
 <p>Kahan Summation:</p>
 <code style="font-size: 14pt; margin-bottom: 1em;">while (ptr &lt; end)
 {
@@ -290,7 +290,7 @@ $ clang++ -O3 -march=native -f<span style="color: red;">fast-math</span> -S main
 
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Можно развернуть отдельный цикл вручную</h2>
+<h2 style="font-size: 30pt;">Can Manually Unroll the Loop</h2>
 <code style="font-size: 10pt; margin-top: -1em;">/// Vectorized version
 template &lt;typename Value>
 void NO_INLINE addMany(const Value * __restrict ptr, size_t count)
@@ -324,7 +324,7 @@ void NO_INLINE addMany(const Value * __restrict ptr, size_t count)
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Можно развернуть отдельный цикл вручную</h2>
+<h2 style="font-size: 30pt;">Can Manually Unroll the Loop</h2>
 <code style="font-size: 12pt; margin-bottom: 1em;">#pragma GCC push_options
 <span style="color: green;">#pragma GCC optimize ("-ffast-math")</span>
 
@@ -342,37 +342,37 @@ __attribute__((__noinline__)) T sum(const T * ptr, const T * end)
 
 #pragma GCC pop_options
 </code>
-<p>Только для gcc.</p>
+<p>Only for gcc.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Развернул цикл и...</h2>
-<p>Поднял машину в AWS, воспроизвёл результаты.</p>
+<h2 style="font-size: 30pt;">Unrolled the Loop and...</h2>
+<p>Launched a machine on AWS, reproduced the results.</p>
 
 <p><pre style="line-height: 1.5">
               median, 1000 queries
-ClickHouse:   <span style="color: green;">0.090</span> sec  
+ClickHouse:   <span style="color: green;">0.090</span> sec
 DBMS-X:       0.093 sec</pre></p>
 
-<p>ClickHouse на <span style="color: green;">три миллисекунды</span> быстрее!</p>
+<p>ClickHouse is <span style="color: green;">three milliseconds</span> faster!</p>
 </section>
 
 
 <section class="slide">
-<h2 style="font-size: 48pt;">ClickHouse не тормозит.</h2>
-<p>А является ли ClickHouse самой быстрой системой во всех сценариях?</p>
-<p>Может ли кто-то стать быстрее ClickHouse хотя бы на одном запросе?</p>
+<h2 style="font-size: 48pt;">ClickHouse Doesn't Slow Down.</h2>
+<p>Is ClickHouse the fastest system in all scenarios?</p>
+<p>Can anyone become faster than ClickHouse on at least one query?</p>
 </section>
 
 <section class="slide">
 <h2 style="font-size: 48pt;">DBMS-Y</h2>
-<p style="color: green;">Умеет использовать не только CPU но и GPU.</p>
-<p>Работает только с данными, помещающимися в память.</p>
-<p>Не поддерживает сжатие данных.</p>
-<p>Не поддерживает индексы и не сортирует хранимые данные.</p>
-<p>Почти не поддерживает GROUP BY по строкам.</p>
+<p style="color: green;">Can use not only CPU but also GPU.</p>
+<p>Only works with data that fits in memory.</p>
+<p>Doesn't support data compression.</p>
+<p>Doesn't support indexes and doesn't sort stored data.</p>
+<p>Barely supports GROUP BY on strings.</p>
 
-<p style="margin-top: 2em; color: red;">Выполняет один запрос быстрее чем ClickHouse?</p>
+<p style="margin-top: 2em; color: red;">Executes one query faster than ClickHouse?</p>
 </section>
 
 <section class="slide">
@@ -381,13 +381,13 @@ DBMS-X:       0.093 sec</pre></p>
 
 <section class="slide">
 <h2 style="font-size: 48pt;">DBMS-Y</h2>
-<p style="margin-top: -1em;">Выполняет один запрос быстрее чем ClickHouse?</p>
+<p style="margin-top: -1em;">Executes one query faster than ClickHouse?</p>
 <code>SELECT passenger_count, avg(total_amount)
     FROM trips
     GROUP BY passenger_count</code>
 <p style="margin-top: 1em;"><pre>passenger_count UInt8, total_amount Float32</pre></p>
 
-<p>&mdash; вычисление avg по ключу 0..255.</p>
+<p>&mdash; calculating avg by key 0..255.</p>
 
 <pre>
 ClickHouse: 0.827 sec (MergeTree)
@@ -400,21 +400,21 @@ DBMS-Y:     <span style="color: green;">0.204</span> sec</pre>
 
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Какой был бы идеальный код?</h2>
-<p>Для выполнения запроса:</p>
+<h2 style="font-size: 30pt;">What Would be Ideal Code?</h2>
+<p>For executing the query:</p>
 <code style="margin-bottom: 1em;">SELECT key, avg(value) FROM table GROUP BY key</code>
 
-<p><b>Структура данных:</b></p>
-<p>Lookup таблица, 256 ячеек<br/>
-&mdash; массив пар sum, count.</p>
+<p><b>Data structure:</b></p>
+<p>Lookup table, 256 cells<br/>
+&mdash; array of sum, count pairs.</p>
 
-<p><b>Алгоритм:</b></p>
-<p>Просто цикл по входным данным<br/>
-и обновление состояния в ячейке.</p>
+<p><b>Algorithm:</b></p>
+<p>Just loop through input data<br/>
+and update state in the cell.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Какой был бы &laquo;идеальный&raquo; код?</h2>
+<h2 style="font-size: 30pt;">What Would be "Ideal" Code?</h2>
 <code style="margin-top: -1em; font-size: 13pt;">struct State
 {
     float sum = 0;
@@ -441,30 +441,30 @@ void process(const vector&lt;uint8_t> &amp; keys,
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Какой код реально используется?</h2>
-<p><span style="color: green;">Используется loookup таблица.</span></p>
-<p>Но есть всякие мелочи:</p>
-<p>1. Состояния хранятся не прямо в ней,<br/>&emsp;а по указателю, выделяются в отдельной арене.</p>
-<p>2. В каждой ячейке хранится ещё один бит, занята ли она.</p>
-<p>3. Буфер для lookup таблицы выделяется отдельно.</p>
-<p>4. Размер lookup таблицы хранится отдельно и обновляется при insert.</p>
+<h2 style="font-size: 30pt;">What Code is Actually Used?</h2>
+<p><span style="color: green;">A lookup table is used.</span></p>
+<p>But there are some details:</p>
+<p>1. States are not stored directly in it,<br/>&emsp;but by pointer, allocated in a separate arena.</p>
+<p>2. Each cell stores one more bit, whether it's occupied.</p>
+<p>3. Buffer for the lookup table is allocated separately.</p>
+<p>4. Lookup table size is stored separately and updated on insert.</p>
 
-<p style="margin-top: 2em;">Четыре возможности по оптимизации!</p>
+<p style="margin-top: 2em;">Four optimization opportunities!</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Четыре возможности по оптимизации</h2>
+<h2 style="font-size: 30pt;">Four Optimization Opportunities</h2>
 <img style="float: right;" src="pictures/frustration.jpg"/>
-<p>Я попробовал все.</p>
-<p>Они помогли, но недостаточно.</p>
-<p>Наш код уже &laquo;идеальный&raquo;.</p>
-<p style="margin-top: 3em;">Но он работает недостаточно быстро,<br/> нужна какая-то <b>магия</b>!</p>
+<p>I tried them all.</p>
+<p>They helped, but not enough.</p>
+<p>Our code is already "ideal".</p>
+<p style="margin-top: 3em;">But it doesn't work fast enough,<br/> need some <b>magic</b>!</p>
 </section>
 
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Развернуть цикл</h2>
-<p style="margin-top: -1em;">Создать несколько таблиц состояний.<br/>Агрегировать в разные, а потом слить вместе.</p>
+<h2 style="font-size: 30pt;">Unroll the Loop</h2>
+<p style="margin-top: -1em;">Create multiple state tables.<br/>Aggregate into different ones, then merge together.</p>
 <code style="font-size: 15pt; line-height: 1.25">State map[256 * UNROLL_COUNT]{};
 
 size_t size = keys.size();
@@ -485,7 +485,7 @@ for (; i &lt; size; ++i)
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Развернуть цикл по-другому</h2>
+<h2 style="font-size: 30pt;">Unroll the Loop Differently</h2>
 <code style="font-size: 15pt; line-height: 1.25">struct State4
 {
     float sum[4]{};
@@ -508,7 +508,7 @@ for (size_t i = 0; i &lt; size; i += 4)
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Буферизация и Batching</h2>
+<h2 style="font-size: 30pt;">Buffering and Batching</h2>
 <code style="font-size: 10pt; line-height: 1.25; margin-top: -2em;">State map[256]{};
 
 static constexpr size_t BUF_SIZE = 16384 / 256 / sizeof(float); <span style="color: green;">/// Should fit in L1d.</span>
@@ -544,7 +544,7 @@ for (size_t i = 0; i &lt; 256; ++i)
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Вариация на тему Bucket Sort</h2>
+<h2 style="font-size: 30pt;">Variation on Bucket Sort</h2>
 <code style="font-size: 10pt; line-height: 1.25; margin-top: -2em;">State map[256]{};
 size_t size = keys.size();
 
@@ -580,20 +580,20 @@ for (size_t i = 0; i &lt; HISTOGRAM_SIZE; ++i)
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">А во сколько раз разворачивать цикл?</h2>
-<p>При тестировании на разных серверах получаются разные результаты.</p>
-<p>На процессорах AMD EPYC, Ryzen больше кэш<br/>&mdash; можно разворачивать в 8 раз.</p>
-<p>На процессорах Intel это вызывает ужасные тормоза<br/>&mdash; и можно максимум в 4 раза.</p>
+<h2 style="font-size: 30pt;">By How Much Should We Unroll?</h2>
+<p>Testing on different servers gives different results.</p>
+<p>On AMD EPYC, Ryzen processors there's larger cache<br/>&mdash; can unroll by 8x.</p>
+<p>On Intel processors this causes terrible slowdowns<br/>&mdash; and maximum is 4x.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">А во сколько раз удаётся ускорить?</h2>
-<p>На модельном коде:</p>
+<h2 style="font-size: 30pt;">How Much Speedup Did We Achieve?</h2>
+<p>On model code:</p>
 <pre>
 Baseline:   360 million rows/sec., 1804 MiB/sec.
 Optimized: 1339 million rows/sec., 6695 MiB/sec. x3.72
 </pre>
-<p>Реальный запрос в ClickHouse:</p>
+<p>Real query in ClickHouse:</p>
 <pre>
 ClickHouse (old): <span style="color: red;">0.332</span> sec.
 DBMS-Y:           0.204 sec
@@ -602,25 +602,25 @@ ClickHouse (new): <span style="color: green;">0.197</span> sec. x1.69
 </section>
 
 <section class="slide">
-<h2 style="font-size: 48pt;">Выводы</h2>
-<p>Если какая-то система на каком-то вырожденном запросе
-<br/>&emsp; работает чуть-чуть быстрее ClickHouse
-<br/>&mdash; это значит, что я ещё не оптимизировал код,
-<br/>&emsp; и сделаю это завтра.</p>
+<h2 style="font-size: 48pt;">Conclusions</h2>
+<p>If some system on some degenerate query
+<br/>&emsp; works slightly faster than ClickHouse
+<br/>&mdash; it means I haven't optimized the code yet,
+<br/>&emsp; and I'll do it tomorrow.</p>
 
-<p>Внутреннее устройство ClickHouse позволяет
-<br/>выполнять оптимизации под задачу и железо.</p>
+<p>ClickHouse's internal architecture allows
+<br/>optimizing for the task and hardware.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 36pt;">Бонус</h2>
+<h2 style="font-size: 36pt;">Bonus</h2>
 <p style="margin-top: -1em;">Batch Aggregator:<br/>
 <a href="https://github.com/ClickHouse/ClickHouse/pull/6435">https://github.com/ClickHouse/ClickHouse/pull/6435</a>
 </p>
-<p>Ускорение функции sum:<br/>
+<p>Speeding up sum function:<br/>
 <a href="https://github.com/ClickHouse/ClickHouse/pull/10992">https://github.com/ClickHouse/ClickHouse/pull/10992</a>
 </p>
-<p>Ускорение GROUP BY 8bit key:<br/>
+<p>Speeding up GROUP BY 8bit key:<br/>
 <a href="https://github.com/ClickHouse/ClickHouse/pull/13055">https://github.com/ClickHouse/ClickHouse/pull/13055</a>
 <a href="https://github.com/ClickHouse/ClickHouse/pull/13056">https://github.com/ClickHouse/ClickHouse/pull/13056</a>
 <a href="https://github.com/ClickHouse/ClickHouse/pull/13084">https://github.com/ClickHouse/ClickHouse/pull/13084</a>
@@ -628,7 +628,7 @@ ClickHouse (new): <span style="color: green;">0.197</span> sec. x1.69
 <a href="https://github.com/ClickHouse/ClickHouse/pull/13096">https://github.com/ClickHouse/ClickHouse/pull/13096</a>
 <a href="https://github.com/ClickHouse/ClickHouse/pull/13099">https://github.com/ClickHouse/ClickHouse/pull/13099</a>
 </p>
-<p>И тест с примерами:<br/>
+<p>And test with examples:<br/>
 <a href="https://github.com/ClickHouse/ClickHouse/blob/master/src/Common/tests/average.cpp">https://github.com/ClickHouse/ClickHouse/blob/master/<br/>&emsp;src/Common/tests/average.cpp</a>
 </p>
 </section>

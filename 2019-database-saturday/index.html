@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Субботник по базам данных</title>
+    <title>Database Saturday</title>
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -13,345 +13,345 @@
 </head>
 <body class="shower list">
     <header class="caption">
-        <h1>Субботник по базам данных</h1>
+        <h1>Database Saturday</h1>
     </header>
     <section class="slide" id="cover">
-        <h1 style="margin-top: 150px; font-size: 32pt;"><div>Как перестать бояться</div><div style="text-align: right;">и начать разрабатывать</div><div style="text-align: right;">специализированные структуры данных</div></h1>
+        <h1 style="margin-top: 150px; font-size: 32pt;"><div>How to Stop Being Afraid</div><div style="text-align: right;">and Start Developing</div><div style="text-align: right;">Specialized Data Structures</div></h1>
     </section>
 
     <section class="slide">
-        <h2>Зачем?</h2>
-<p>Зачем самостоятельно писать специализированные структуры данных?</p>
-        
-<p>&mdash; потому что можем?<br/>
-&mdash; просто так захотелось?<br/>
+        <h2>Why?</h2>
+<p>Why write specialized data structures yourself?</p>
+
+<p>&mdash; because we can?<br/>
+&mdash; just felt like it?<br/>
 &mdash; NIH (not invented here).</p>
 
-<p>Лучше вместо этого использовать<br/><br/>... надёжные, современные, масштабируемые, отказоустойчивые, поддерживаемые, проверенные временем, одобренные сообществом технологии, разработанные лучшими инженерами, написавшими идеальный код, который решает в точности нужную вам задачу.</p>
+<p>It's better to use instead<br/><br/>... reliable, modern, scalable, fault-tolerant, supported, time-tested, community-approved technologies, developed by the best engineers, who wrote perfect code that solves exactly the task you need.</p>
     </section>
 
 
     <section class="slide">
-        <h2>Realtime антифрод</h2>
-        
-<p>Для классификации посещений сайтов на человеческие / роботные.</p>
+        <h2>Realtime Anti-fraud</h2>
 
-<p>Разработан в <b>2012</b> году для нужд Яндекс.Метрики.</p>
+<p>For classifying website visits as human / robot.</p>
 
-<p>Я не могу ни подтвердить ни опровергнуть<br/> тот факт, что он до сих пор работает в продакшене.</p>
+<p>Developed in <b>2012</b> for Yandex.Metrica needs.</p>
+
+<p>I can neither confirm nor deny<br/> the fact that it's still running in production.</p>
     </section>
 
 
     <section class="slide">
-        <h2>Realtime антифрод</h2>
+        <h2>Realtime Anti-fraud</h2>
 
-<p>Набор серверов, отправляем в них информацию о трафике.</p>
-<p>Серверы обновляют и выдают статистику по свойствам трафика.</p>
-<p>По статистике работает машинно-обученная формула.</p>
+<p>A set of servers, we send information about traffic to them.</p>
+<p>Servers update and provide statistics on traffic properties.</p>
+<p>A machine-learned formula works on the statistics.</p>
     </section>
 
 
     <section class="slide">
-        <h2>Какие свойства трафика есть</h2>
+        <h2>What Traffic Properties Exist</h2>
 
-<p>&mdash; Время события</p>
-<p>&mdash; IP адрес, IP-сеть, геолокация;</p>
-<p>&mdash; Cookie пользователя;</p>
-<p>&mdash; URL и Referer, а также их домены;</p>
+<p>&mdash; Event time</p>
+<p>&mdash; IP address, IP network, geolocation;</p>
+<p>&mdash; User cookie;</p>
+<p>&mdash; URL and Referer, as well as their domains;</p>
 <p>&mdash; User-Agent;</p>
 <p>...</p>
     </section>
 
 
     <section class="slide">
-        <h2>Какую статистику можно считать</h2>
+        <h2>What Statistics Can Be Calculated</h2>
 
-<p>Счётчики &mdash; число событий по ключу:
-<br/>&mdash; например &mdash; количество хитов для IP-сети класса C за минуту.</p>
+<p>Counters &mdash; number of events by key:
+<br/>&mdash; for example &mdash; number of hits for a class C IP network per minute.</p>
 
-<p>Кардинальности &mdash; число уникальных значений для ключа:
-<br/>&mdash; пример: число уникальных cookie для IP-адреса;
-<br/>&mdash; пример: число уникальных IP-адресов для cookie;
-<br/>&mdash; пример: число уникальных сайтов, посещённых пользователем за час.</p>
+<p>Cardinalities &mdash; number of unique values for a key:
+<br/>&mdash; example: number of unique cookies for an IP address;
+<br/>&mdash; example: number of unique IP addresses for a cookie;
+<br/>&mdash; example: number of unique sites visited by a user per hour.</p>
 
-<p>Статистики по времени:
-<br/>&mdash; пример: дисперсия разницы между соседними событиями.</p>
+<p>Time statistics:
+<br/>&mdash; example: variance of the difference between adjacent events.</p>
     </section>
 
 
     <section class="slide">
-        <h2>Арифметика: Throughput</h2>
+        <h2>Arithmetic: Throughput</h2>
 
-<p>Входящий трафик 600 000 событий в секунду,<br/> &mdash; 30 млрд. событий в сутки.</p>
-<p>На каждое событие, обновляем статистику по 15 ключам<br/> &mdash; 10 млн. key lookups/sec.</p>
+<p>Incoming traffic 600,000 events per second,<br/> &mdash; 30 billion events per day.</p>
+<p>For each event, we update statistics for 15 keys<br/> &mdash; 10 million key lookups/sec.</p>
 
-<p>Какое железо использовать для 10 млн. lookups/sec.?</p>
+<p>What hardware to use for 10 million lookups/sec.?</p>
     </section>
 
 
     <section class="slide">
-        <h2>Арифметика: Throughput</h2>
+        <h2>Arithmetic: Throughput</h2>
 
-<p><b>HDD</b> &mdash; 100..300 lookups/sec.<br/>Потребуется 100 000 HDD без резервирования или ~ 10 000 серверов.</p>
+<p><b>HDD</b> &mdash; 100..300 lookups/sec.<br/>Would need 100,000 HDDs without redundancy or ~10,000 servers.</p>
 
-<p><b>SSD</b> &mdash; ~ 100 000 lookups/sec.<br/>Потребуется 100 SSD без резервирования или 10 серверов?
-<br/>&mdash; но зачёркиваем, так как чтение/запись 1:1.</p>
+<p><b>SSD</b> &mdash; ~100,000 lookups/sec.<br/>Would need 100 SSDs without redundancy or 10 servers?
+<br/>&mdash; but cross out, since read/write ratio is 1:1.</p>
 
-<p><b>RAM</b> &mdash; 10 млн. / 40 млн. / 500 млн. LL cache misses / sec.</p>
+<p><b>RAM</b> &mdash; 10 million / 40 million / 500 million LL cache misses / sec.</p>
     </section>
 
 
     <section class="slide">
-        <h2>Арифметика: Volume</h2>
+        <h2>Arithmetic: Volume</h2>
 
-<p>Хотим хранить данные 1..2 суток.<br/>
-Наиболее жирные ключи &mdash; UserID, URL, Referer, IP.</p>
+<p>Want to store data for 1..2 days.<br/>
+The fattest keys &mdash; UserID, URL, Referer, IP.</p>
 
-<p>Кардинальности:
-<br/>&mdash; URL &mdash; 1.5 млрд. в сутки.
-<br/>&mdash; UserID &mdash; 450 млн. в сутки;
-<br/>&mdash; IP &mdash; 100 млн. в сутки;</p>
+<p>Cardinalities:
+<br/>&mdash; URL &mdash; 1.5 billion per day.
+<br/>&mdash; UserID &mdash; 450 million per day;
+<br/>&mdash; IP &mdash; 100 million per day;</p>
     </section>
 
     <section class="slide">
-        <h2>Арифметика: Volume</h2>
-<p>Всего ~5 млрд ключей.
-<br/>Статистика по одному ключу &mdash; в районе 1 КБ.
-<br/>&mdash; 5 ТБ в сутки.</p>
+        <h2>Arithmetic: Volume</h2>
+<p>Total ~5 billion keys.
+<br/>Statistics per key &mdash; around 1 KB.
+<br/>&mdash; 5 TB per day.</p>
 
-<p>В 2012 году на один сервер использовалось 128 GB оперативки.
-<br/>&mdash; 40 серверов без дублирования.</p>
-    </section>
-
-
-    <section class="slide">
-        <h2 style="font-size: 30pt;">Как поместить статистику по ключу в 1 КБ?</h2>
-
-<p>Даже один URL может быть больше нескольких килобайт.</p>
-<p>&mdash; никогда не храним строки, только 8-байтовые хэши.</p>
+<p>In 2012, 128 GB of RAM was used per server.
+<br/>&mdash; 40 servers without redundancy.</p>
     </section>
 
 
     <section class="slide">
-        <h2 style="font-size: 30pt;">Как поместить статистику по ключу в 1 КБ?</h2>
-<p>Нужно считать очень плохую статистику.</p>
+        <h2 style="font-size: 30pt;">How to Fit Statistics per Key in 1 KB?</h2>
 
-<p>1. Счётчики.</p>
+<p>Even a single URL can be several kilobytes.</p>
+<p>&mdash; never store strings, only 8-byte hashes.</p>
+    </section>
+
+
+    <section class="slide">
+        <h2 style="font-size: 30pt;">How to Fit Statistics per Key in 1 KB?</h2>
+<p>Need to calculate very poor statistics.</p>
+
+<p>1. Counters.</p>
 
 <code style="margin-bottom: 1em;">UInt64 count = 0;
 void update() { ++count; }</code>
 
-<p>8 байт &mdash; отвратительно много.</p>
-<p>Можно ли посчитать от одного до миллиарда, используя один байт?</p>
+<p>8 bytes &mdash; horribly too much.</p>
+<p>Can we count from one to a billion using one byte?</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 30pt;">Как поместить статистику по ключу в 1 КБ?</h2>
+        <h2 style="font-size: 30pt;">How to Fit Statistics per Key in 1 KB?</h2>
 
-<p>Можно ли посчитать от одного до миллиарда, используя один байт?</p>
+<p>Can we count from one to a billion using one byte?</p>
 
-<p>Да &mdash; для этого надо просто использовать генератор случайных чисел.</p>
+<p>Yes &mdash; you just need to use a random number generator.</p>
 
-<p>&mdash; для counter &lt; 8, прибавляем единицу с вероятностью 1.
-<br/>&mdash; для counter [8..16), прибавляем единицу с вероятностью 1/2.
-<br/>&mdash; для counter [16..24), прибавляем единицу с вероятностью 1/4.
+<p>&mdash; for counter &lt; 8, add one with probability 1.
+<br/>&mdash; for counter [8..16), add one with probability 1/2.
+<br/>&mdash; for counter [16..24), add one with probability 1/4.
 <br/>&mdash; ...
-<br/>&mdash; для counter [128..256), прибавляем единицу с вероятностью 1/2<sup>31</sup>.</p>
+<br/>&mdash; for counter [128..256), add one with probability 1/2<sup>31</sup>.</p>
 
-<p>Ожидаемое значение оценивается<br/>методом максимального правдоподобия.</p>
-<p>Метод может быть как недетерминированным, так и детерминированным, если вместо генератора случайных чисел использовать хэш-функцию от данных.</p>
+<p>The expected value is estimated<br/>by the maximum likelihood method.</p>
+<p>The method can be either non-deterministic or deterministic, if you use a hash function on the data instead of a random number generator.</p>
     </section>
 
 
     <section class="slide">
-        <h2 style="font-size: 30pt;">Как поместить статистику по ключу в 1 КБ?</h2>
-<p>2. Кардинальности.</p>
+        <h2 style="font-size: 30pt;">How to Fit Statistics per Key in 1 KB?</h2>
+<p>2. Cardinalities.</p>
 
-<p style="line-height: 1.5em;">Очевидно, что нужно использовать <b>HyperLogLog</b>.<br/>
-2.5 КБ &mdash; ошибка ~1% &mdash; слишком хорошо, надо хуже.<br/>
-24 байта &mdash; ошибка ~50% &mdash; вот теперь нормально.</p>
+<p style="line-height: 1.5em;">Obviously, we need to use <b>HyperLogLog</b>.<br/>
+2.5 KB &mdash; ~1% error &mdash; too good, need worse.<br/>
+24 bytes &mdash; ~50% error &mdash; now that's normal.</p>
 
-<p>Уже можно поместить 50 кардинальностей в 1 КБ.</p>
+<p>Can already fit 50 cardinalities in 1 KB.</p>
     </section>
 
 
     <section class="slide">
-        <h2>Данных слишком много</h2>
+        <h2>Too Much Data</h2>
 
-<p>5 ТБ в сутки &mdash; <span style="color: red;">50 серверов</span> без дублирования.<br/>
-&mdash; но нужна x2 репликация для отказоустойчивости;<br/>
-&mdash; но нужно хранить данные чуть больше суток.</p>
+<p>5 TB per day &mdash; <span style="color: red;">50 servers</span> without redundancy.<br/>
+&mdash; but need x2 replication for fault tolerance;<br/>
+&mdash; but need to store data slightly more than a day.</p>
 
-<p>У нас нет 100 серверов. <span style="color: red;">Задача неразрешима</span>.</p>
+<p>We don't have 100 servers. <span style="color: red;">Task is unsolvable</span>.</p>
     </section>
 
 
     <section class="slide">
-        <h2>Данных слишком много</h2>
+        <h2>Too Much Data</h2>
 
-<p>Решение &mdash; не хранить статистики по ключам,<br/>которые встречаются редко.</p>
-<p>Если мы увидели IP адрес впервые &mdash; ничего про него не храним.<br/>
-Если мы встретили его 16 раз &mdash; начинаем считать статистику.</p>
+<p>Solution &mdash; don't store statistics for keys<br/>that occur rarely.</p>
+<p>If we see an IP address for the first time &mdash; don't store anything about it.<br/>
+If we encounter it 16 times &mdash; start collecting statistics.</p>
 
-<p>Но чтобы понять, что он встретился в шестнадцатый раз<br/>&mdash; надо это где-то хранить.</p>
+<p>But to know that it was encountered for the sixteenth time<br/>&mdash; we need to store this somewhere.</p>
     </section>
 
 
     <section class="slide">
-        <h2>Данных слишком много</h2>
+        <h2>Too Much Data</h2>
 
-<p>Решение &mdash; <b>Counting Bloom Filter</b>.<br/>
-Из 128 GB на сервере, выделим 10..20 GB на CBF.</p>
+<p>Solution &mdash; <b>Counting Bloom Filter</b>.<br/>
+Out of 128 GB per server, allocate 10..20 GB for CBF.</p>
 
-<p>CBF работает как &laquo;губка&raquo;, через которую просеиваются<br/>только важные ключи.</p>
+<p>CBF works like a &laquo;sponge&raquo; through which only<br/>important keys are filtered.</p>
 
-<p>Объём оставшихся данных уменьшается до сотни GB<br/>и помещается на один сервер.</p>
+<p>Remaining data volume decreases to hundreds of GB<br/>and fits on one server.</p>
     </section>
 
 
     <section class="slide">
         <h2>Counting Bloom Filter</h2>
 
-<p>Недостаток &mdash; теперь если использовать 3 хэш-функции, придётся делать в 3 раза больше кэш-промахов.</p>
-<p>10 млн. в секунду -> 30 млн. в секунду.</p>
+<p>Disadvantage &mdash; now if we use 3 hash functions, we'll have to do 3 times more cache misses.</p>
+<p>10 million per second -> 30 million per second.</p>
 
-<p>Это всё ещё может работать... даже на одном сервере.</p>
+<p>This can still work... even on one server.</p>
 
-<p>Или изобрести <b>cache-local</b> Counting Bloom Filter?</p>
+<p>Or invent a <b>cache-local</b> Counting Bloom Filter?</p>
     </section>
 
 
     <section class="slide">
-        <h2>Как отправлять данные на сервер?</h2>
+        <h2>How to Send Data to the Server?</h2>
 
-<p>Предположим, что сервер должен обрабатывать<br/>~ 1 млн. запросов в секунду.</p>
-<p>Какими технологиями написать такой сервер?</p>
+<p>Suppose the server should handle<br/>~1 million requests per second.</p>
+<p>What technologies to use to write such a server?</p>
 
-<p>&mdash; coroutines/fibers?<br/> 
+<p>&mdash; coroutines/fibers?<br/>
 &mdash; DPDK?</p>
     </section>
 
 
     <section class="slide">
-        <h2>Как отправлять данные на сервер?</h2>
+        <h2>How to Send Data to the Server?</h2>
 <img style="float: left; height: 60%; margin-left: -60px; margin-top: -60px; margin-right: 20px;" src="pictures/optimal.webp"/>
-<p>У нас realtime антифрод, но отправлять данные<br/>будем всё-равно пачками по 1000 .. 10 000 событий.</p>
-<p>Задержка в одну секунду приемлима,<br/>а в секунду приходит 600 000 событий.</p>
+<p>We have realtime anti-fraud, but we'll send data<br/>in batches of 1,000 .. 10,000 events anyway.</p>
+<p>One second delay is acceptable,<br/>and there are 600,000 events per second.</p>
 
-<p><br/>Будем использовать обычный HTTP сервер с пулом потоков.</p>
+<p><br/>We'll use a regular HTTP server with a thread pool.</p>
     </section>
 
 
     <section class="slide">
-        <h2>Конкурентная обработка запросов</h2>
-<p>Как обеспечить конкурентную обработку<br/>одновременно приходящих запросов?</p>
+        <h2>Concurrent Request Processing</h2>
+<p>How to ensure concurrent processing<br/>of simultaneously incoming requests?</p>
 
-<p>Может быть использовать lock-free структуры данных?</p>
+<p>Maybe use lock-free data structures?</p>
     </section>
 
 
     <section class="slide">
-        <h2>Конкурентная обработка запросов</h2>
+        <h2>Concurrent Request Processing</h2>
 <img style="float: right; height: 60%; margin-left: -60px; margin-top: -60px; margin-right: 20px;" src="pictures/not_optimal.webp"/>
-<p>Как обеспечить конкурентную обработку<br/>одновременно приходящих запросов?</p>
-<p>Может быть использовать lock-free<br/>структуры данных?</p>
+<p>How to ensure concurrent processing<br/>of simultaneously incoming requests?</p>
+<p>Maybe use lock-free<br/>data structures?</p>
 
-<p><br/>Нет, лучше сделать в сервере один глобальный <b>mutex</b>,&nbsp;и обрабатывать в один момент времени<br/>один запрос, а остальные будут ждать.</p>
-<p>Размениваем <b>latency</b> на <b>throughput</b>.</p>
+<p><br/>No, better to have one global <b>mutex</b> in the server,&nbsp;and process one request at a time<br/>while others wait.</p>
+<p>Trading <b>latency</b> for <b>throughput</b>.</p>
     </section>
 
 
     <section class="slide">
-        <h2>Как распараллелить обработку?</h2>
-<p>Как распараллелить обработку запросов по процессорным ядрам?</p>
+        <h2>How to Parallelize Processing?</h2>
+<p>How to parallelize request processing across CPU cores?</p>
 
-<p>Разбить все данные по остатку от деления хэша от ключа на N корзин.</p>
-<p>Все структуры данных в сервере (Counting Bloom Filter, Hash Tables) имеются в N экземплярах.</p>
-<p>Входящая пачка данных передаётся для обработки пулу потоков, каждый из которых обрабатывает свои ключи.</p>
+<p>Split all data by remainder of key hash divided by N into buckets.</p>
+<p>All data structures in the server (Counting Bloom Filter, Hash Tables) exist in N instances.</p>
+<p>Incoming data batch is passed to a thread pool for processing, each thread processes its own keys.</p>
 
-<p>&mdash; внутреннее шардирование.</p>
+<p>&mdash; internal sharding.</p>
     </section>
 
     <section class="slide">
-        <h2>Как шардировать данные</h2>
-<p>между серверами?</p>
+        <h2>How to Shard Data</h2>
+<p>between servers?</p>
     </section>
 
     <section class="slide">
-        <h2>Как шардировать данные?</h2>
+        <h2>How to Shard Data?</h2>
 
-<p>&mdash; никак :(</p>
-    </section>
-
-
-    <section class="slide">
-        <h2>Как реплицировать данные?</h2>
-
-<p>Каждый сервер записывает на диск лог запросов и позволяет реплике считывать и обрабатывать этот лог.</p>
-<p>Этот же лог используется для восстановления после сбоя.</p>
-<p>Репликация асинхронная <b>eventually inconsistent</b>.</p>
+<p>&mdash; no way :(</p>
     </section>
 
 
     <section class="slide">
-        <h2>Как удалять старые данные?</h2>
+        <h2>How to Replicate Data?</h2>
 
-<p>Три варианта:</p>
-<p>&mdash; разбить все данные на корзины по часам и удалять старые корзины;</p>
-<p>&mdash; экспоненциальное сглаживание: с некоторой периодичностью делить значения счётчиков в два раза;</p>
-<p>&mdash; периодически сбрасываем дамп на диск, перезапускаем сервер и считываем из дампа только актуальные данные.</p>
+<p>Each server writes a request log to disk and allows the replica to read and process this log.</p>
+<p>This same log is used for recovery after failure.</p>
+<p>Replication is asynchronous <b>eventually inconsistent</b>.</p>
     </section>
 
 
     <section class="slide">
-        <h2>Сетевой трафик</h2>
+        <h2>How to Delete Old Data?</h2>
 
-<p>На вход: одно событие &mdash; 50 столбцов UInt64 &mdash; 400 байт<br/>
+<p>Three options:</p>
+<p>&mdash; split all data into buckets by hour and delete old buckets;</p>
+<p>&mdash; exponential smoothing: periodically divide counter values in half;</p>
+<p>&mdash; periodically dump to disk, restart server and read from dump only current data.</p>
+    </section>
+
+
+    <section class="slide">
+        <h2>Network Traffic</h2>
+
+<p>Input: one event &mdash; 50 columns UInt64 &mdash; 400 bytes<br/>
 ~ <span style="color: red;">4 GBit/sec</span>.</p>
 
-<p>На выход:
-<br/>&mdash; передавать все посчитанные статистики<br/>&mdash; 500 столбцов UInt32 &mdash;
-2 КБ ~ <span style="color: red;">20 GBit/sec</span>.
-<br/><br/>&mdash; передавать только результат машинно-обученной формулы<br/>&mdash; float &mdash; 4 байта на событие.</p>
+<p>Output:
+<br/>&mdash; transmit all calculated statistics<br/>&mdash; 500 columns UInt32 &mdash;
+2 KB ~ <span style="color: red;">20 GBit/sec</span>.
+<br/><br/>&mdash; transmit only machine-learned formula result<br/>&mdash; float &mdash; 4 bytes per event.</p>
     </section>
 
 
     <section class="slide">
-        <h2>Сетевой трафик</h2>
+        <h2>Network Traffic</h2>
 
-<p>Но у нас <span style="color: red;">1 GBit</span> сеть :(</p>
+<p>But we have a <span style="color: red;">1 GBit</span> network :(</p>
 
-<p>Просто будем сжимать данные.</p>
+<p>Just compress the data.</p>
 
-<p><b>LZ4</b> &mdash; слишком слабо.<br/>
-<b>QuickLZ</b> &mdash; на 2012 год лучше альтернативы не было,<br/>сейчас не актуально.<br/>
-2019 год &mdash; используйте <b>ZSTD</b> или <b>Brotli</b>.</p>
+<p><b>LZ4</b> &mdash; too weak.<br/>
+<b>QuickLZ</b> &mdash; for 2012, there was no better alternative,<br/>now not relevant.<br/>
+2019 &mdash; use <b>ZSTD</b> or <b>Brotli</b>.</p>
     </section>
 
 
     <section class="slide">
-        <h2>Критерий роботности</h2>
-<p>Как принимать решение о роботности трафика?</p>
+        <h2>Robot Criterion</h2>
+<p>How to make decisions about traffic being robotic?</p>
 
-<p>Машинно-обученная <b>MatrixNet</b> формула.</p>
-<p>Сейчас более совершенная технология доступна<br/>в open-source: <b>CatBoost</b>.</p>
+<p>Machine-learned <b>MatrixNet</b> formula.</p>
+<p>Now more advanced technology is available<br/>in open-source: <b>CatBoost</b>.</p>
 
 <p><a href="https://github.com/catboost/">https://github.com/catboost/</a></p>
     </section>
-    
+
     <section class="slide">
         <img src="pictures/perf.png" style="width: 120%; margin: 0 -10% 0 -10%;" />
     </section>
-    
+
     <section class="slide">
-        <h2>Альтернативы</h2>
+        <h2>Alternatives</h2>
 
 <p>&mdash; Redis;
 <br/>&mdash; Aerospike;
 <br/>&mdash; Couchbase;
 <br/>&mdash; Cassandra.</p>
 
-<p>Бонус:</p>
+<p>Bonus:</p>
 
 <p>&mdash; YT Dynamic Tables;
 <br/>&mdash; RTMR;
@@ -360,25 +360,25 @@ void update() { ++count; }</code>
 
 
     <section class="slide">
-        <h2>Как перестать бояться?</h2>
+        <h2>How to Stop Being Afraid?</h2>
 
-<p>Хорошо представлять возможности железа.
-<br/>Хорошо представлять свойства задачи и её численные характеристики.
-<br/>Хорошо представлять внутреннее устройство доступных хранилищ данных.</p>
+<p>Have a good understanding of hardware capabilities.
+<br/>Have a good understanding of task properties and its numerical characteristics.
+<br/>Have a good understanding of internal structure of available data stores.</p>
 
-<p>Самоуверенность и отвага.</p>
+<p>Confidence and courage.</p>
 
-<p>Использовать арифметику, чтобы соотнести<br/>свойства задачи с возможностью железа.
-<br/><br/>Быть готовым разбираться, если теория не сходится с практикой.</p>
+<p>Use arithmetic to relate<br/>task properties with hardware capabilities.
+<br/><br/>Be ready to investigate when theory doesn't match practice.</p>
     </section>
 
 
     <section class="slide">
-        <h2>Далее</h2>
+        <h2>Next</h2>
 
-<p>База данных истории посетителей.</p>
-<p>Расчёт сессий посетителей.</p>
-<p>&mdash; специализированные структуры данных на SSD+RAM.</p>
+<p>Visitor history database.</p>
+<p>Visitor session calculation.</p>
+<p>&mdash; specialized data structures on SSD+RAM.</p>
     </section>
 
 

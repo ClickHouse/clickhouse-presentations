@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Типичные грабли аналитики на примере данных из Git</title>
+    <title>Typical Pitfalls of Analytics Using Git Data as an Example</title>
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -13,151 +13,151 @@
 </head>
 <body class="shower list">
     <header class="caption">
-        <h1>Типичные грабли аналитики на примере данных из Git</h1>
+        <h1>Typical Pitfalls of Analytics Using Git Data as an Example</h1>
     </header>
     <section class="slide" id="cover" style="background: #000;">
         <img style="float: right; width: 120px; height: 80px; margin-right: -80px;" src="pictures/inner_black.svg" />
-        <h1 style="margin-top: 50px; margin-left: -40px; line-height: 150%; color: white;">Типичные грабли аналитики<br/>на примере данных из Git</h1>
-        <p style="color: #7c55e1; margin-left: 260px; margin-top: 2em;"><b>Алексей Миловидов</b></p>
+        <h1 style="margin-top: 50px; margin-left: -40px; line-height: 150%; color: white;">Typical Pitfalls of Analytics<br/>Using Git Data as an Example</h1>
+        <p style="color: #7c55e1; margin-left: 260px; margin-top: 2em;"><b>Alexey Milovidov</b></p>
     </section>
 
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Эпизод 1</h2>
-<p>Взять данные из <b>Git</b> для анализа процессов разработки.</p>
-<p>На примере этой задачи я расскажу про:</p>
-<p>&mdash; тривиальные факты<br/>
-&mdash; и прописные истины,<br/>
-&emsp; которые все и так уже знают.</p>
+<h2 style="font-size: 30pt;">Episode 1</h2>
+<p>Taking data from <b>Git</b> to analyze development processes.</p>
+<p>Using this task as an example, I will talk about:</p>
+<p>&mdash; trivial facts<br/>
+&mdash; and truisms,<br/>
+&emsp; that everyone already knows.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Что такое Git</h2>
-<p>Чем отличается Git и GitHub?</p>
-<p><b>Git</b> &mdash; распределённая система контроля версий.</p>
-<p><b>GitHub</b> &mdash; централизованный хостинг Git репозиториев<br/>+ социальная сеть для разработчиков.</p>
+<h2 style="font-size: 30pt;">What is Git</h2>
+<p>What is the difference between Git and GitHub?</p>
+<p><b>Git</b> &mdash; a distributed version control system.</p>
+<p><b>GitHub</b> &mdash; a centralized hosting for Git repositories<br/>+ a social network for developers.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Что хотим получить</h2>
+<h2 style="font-size: 30pt;">What We Want to Get</h2>
 <p>
-&mdash; файлы с максимальным и минимальным количеством авторов;<br/>
-&mdash; самые старые строчки кода в репозитории;<br/>
-&mdash; файлы с самой длинной историей;<br/>
-&mdash; любимые файлы для каждого автора;<br/>
-&mdash; большие файлы с маленьким количеством авторов;<br/>
-&mdash; в какие дни недели лучше писать код,<br/>
-&emsp; чтобы у него было меньше шансов быть удалённым;<br/>
-&mdash; файлы отсортированные по возрасту кода;<br/>
-&mdash; кто написал больше всего кода;<br/>
-&mdash; кто написал больше всего кода, который не удалили;<br/>
-&mdash; код каких авторов чаще всего переписывают;<br/>
-&mdash; найти пары авторов, что один пишет код, а другой удаляет их код;<br/>
-&mdash; медиана времени удаления строчек кода;<br/>
-&mdash; какой код больше всего переписывали;<br/>
-&mdash; кто больше любит писать комментарии или тесты;<br/>
+&mdash; files with the maximum and minimum number of authors;<br/>
+&mdash; the oldest lines of code in the repository;<br/>
+&mdash; files with the longest history;<br/>
+&mdash; favorite files for each author;<br/>
+&mdash; large files with a small number of authors;<br/>
+&mdash; on which days of the week is it better to write code,<br/>
+&emsp; so that it has less chance of being deleted;<br/>
+&mdash; files sorted by code age;<br/>
+&mdash; who wrote the most code;<br/>
+&mdash; who wrote the most code that wasn't deleted;<br/>
+&mdash; whose code is most often rewritten;<br/>
+&mdash; find pairs of authors where one writes code and another deletes it;<br/>
+&mdash; median time for deleting lines of code;<br/>
+&mdash; which code was rewritten the most;<br/>
+&mdash; who likes writing comments or tests more;<br/>
 </p>
 </section>
 
 <section class="slide">
 <div style="color: gray; font-size: 50%; line-height: 1; text-align: right; float: right; height: 50%; margin-right: -80px; margin-top: 20px;"><img style="height: 100%;" src="pictures/xkcd.png" /><br/>https://xkcd.com/1597/</div>
-<h2 style="font-size: 30pt;">Модель данных Git</h2>
-<p>Из чего состоит Git репозиторий?</p>
-<p>Репозиторий состоит из blob-ов, деревьев и коммитов.</p>
-<p>Всё имеет хэш, уникально идентифицирующий содержимое.</p>
-<p><b>Blob</b> &mdash; содержимое файла.</p>
-<p><b>Tree</b> &mdash; слепок содержимого директории, ссылается на tree и blob-ы.</p>
-<p><b>Commit</b> &mdash; ссылка на tree и родительские коммиты.</p>
-<p>Коммиты ссылаются друг на друга и образуют граф.</p>
-<p>Если у коммита больше одного родителя &mdash; это merge.</p>
+<h2 style="font-size: 30pt;">Git Data Model</h2>
+<p>What does a Git repository consist of?</p>
+<p>A repository consists of blobs, trees, and commits.</p>
+<p>Everything has a hash that uniquely identifies the content.</p>
+<p><b>Blob</b> &mdash; file content.</p>
+<p><b>Tree</b> &mdash; a snapshot of directory contents, references trees and blobs.</p>
+<p><b>Commit</b> &mdash; a reference to a tree and parent commits.</p>
+<p>Commits reference each other and form a graph.</p>
+<p>If a commit has more than one parent &mdash; it's a merge.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Модель данных Git</h2>
-<p>Важные замечания:</p>
-<p>В git не хранится diff между коммитами.<br/>Хранится слепок содержимого файлов, а diff вычисляется налету.</p>
-<p>В git не хранится авторство строчек кода. Оно вычисляется налету просмотром истории подряд, пока не найдётся нужный diff.</p>
-<p>В git нет линейной истории. Нет возможности представить репозиторий в виде последовательности patch, сохраняя авторство.</p>
-<p>git log &mdash; лишь один из способов обхода графа коммитов</p>
+<h2 style="font-size: 30pt;">Git Data Model</h2>
+<p>Important notes:</p>
+<p>Git doesn't store diffs between commits.<br/>It stores snapshots of file contents, and diffs are computed on the fly.</p>
+<p>Git doesn't store line authorship. It's computed on the fly by viewing the history in sequence until the needed diff is found.</p>
+<p>Git doesn't have linear history. There's no way to represent a repository as a sequence of patches while preserving authorship.</p>
+<p>git log &mdash; is just one way to traverse the commit graph</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Что с этим делать?</h2>
-<p>Засунуть всё в реляционную БД* и гонять SELECT запросы.</p>
-<p>Но модель данных Git не является реляционной<br/>
-&mdash; придётся идти на компромиссы.</p>
-<p style="margin-top: 10em; color: gray; font-size: 75%">* конечно же в ClickHouse.</p>
+<h2 style="font-size: 30pt;">What to Do With This?</h2>
+<p>Put everything into a relational DB* and run SELECT queries.</p>
+<p>But Git's data model is not relational<br/>
+&mdash; we'll have to make compromises.</p>
+<p style="margin-top: 10em; color: gray; font-size: 75%">* of course in ClickHouse.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Способ 1</h2>
-<p>Взять текущее состояние репозитория.</p>
-<p>Вычислить для каждого файла <b>blame</b> (git blame)<br/>&mdash; авторство и время коммита каждой строчки.</p>
-<p>Каждую строчку каждого файла положить в таблицу.</p>
-<p>Объём данных &mdash; это просто LOC.</p>
-<pre style="line-height: 1.25">ClickHouse:      732 048 строк (без contrib)
-LLVM:          9 809 148 строк
-Chromium:     15 063 229 строк (без third_party)
-Linux Kernel: 21 645 046 строк
+<h2 style="font-size: 30pt;">Method 1</h2>
+<p>Take the current state of the repository.</p>
+<p>Calculate <b>blame</b> for each file (git blame)<br/>&mdash; authorship and commit time of each line.</p>
+<p>Put each line of each file into a table.</p>
+<p>Data volume &mdash; is simply LOC.</p>
+<pre style="line-height: 1.25">ClickHouse:      732,048 lines (without contrib)
+LLVM:          9,809,148 lines
+Chromium:     15,063,229 lines (without third_party)
+Linux Kernel: 21,645,046 lines
 
-<span style="color: gray;">Внутренний репозиторий Яндекса: ??? строк.</span></pre>
+<span style="color: gray;">Yandex internal repository: ??? lines.</span></pre>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Способ 1</h2>
+<h2 style="font-size: 30pt;">Method 1</h2>
 <p>
-<span style="color: green;">&mdash; файлы с максимальным и минимальным количеством авторов;</span><br/>
-<span style="color: green;">&mdash; самые старые строчки кода в репозитории;</span><br/>
-<span style="color: green;">&mdash; файлы с самой длинной историей;</span><br/>
-&mdash; любимые файлы для каждого автора;<br/>
-<span style="color: green;">&mdash; большие файлы с маленьким количеством авторов;</span><br/>
-&mdash; в какие дни недели лучше писать код,<br/>
-&emsp; чтобы у него было меньше шансов быть удалённым;<br/>
-<span style="color: green;">&mdash; файлы отсортированные по возрасту кода;</span><br/>
-<span style="color: green;">&mdash; кто написал больше всего кода;</span><br/>
-&mdash; кто написал больше всего кода, который не удалили;<br/>
-&mdash; код каких авторов чаще всего переписывают;<br/>
-&mdash; найти пары авторов, что один пишет код, а другой удаляет их код;<br/>
-&mdash; медиана времени удаления строчек кода;<br/>
-&mdash; какой код больше всего переписывали;<br/>
-&mdash; кто больше любит писать комментарии или тесты;<br/>
+<span style="color: green;">&mdash; files with the maximum and minimum number of authors;</span><br/>
+<span style="color: green;">&mdash; the oldest lines of code in the repository;</span><br/>
+<span style="color: green;">&mdash; files with the longest history;</span><br/>
+&mdash; favorite files for each author;<br/>
+<span style="color: green;">&mdash; large files with a small number of authors;</span><br/>
+&mdash; on which days of the week is it better to write code,<br/>
+&emsp; so that it has less chance of being deleted;<br/>
+<span style="color: green;">&mdash; files sorted by code age;</span><br/>
+<span style="color: green;">&mdash; who wrote the most code;</span><br/>
+&mdash; who wrote the most code that wasn't deleted;<br/>
+&mdash; whose code is most often rewritten;<br/>
+&mdash; find pairs of authors where one writes code and another deletes it;<br/>
+&mdash; median time for deleting lines of code;<br/>
+&mdash; which code was rewritten the most;<br/>
+&mdash; who likes writing comments or tests more;<br/>
 </p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Способ 2</h2>
-<p>Взять все коммиты.<br/>
-Для каждого коммита взять состояние репозитория.</p>
-<p>Объём данных, оценка сверху:
-<br/>число строк сейчас * число коммитов / 2</p>
-<p>ClickHouse &mdash; 732 048 строк * 51 055 коммитов / 2 = 18.6 млрд.<br/>
-Linux Kernel &mdash; 21 645 046 строк * 950 019 коммитов / 2 = <span style="color: red;">10 трлн</span>.</p>
-<p style="color: red;">Всё можно посчитать, но данных слишком много :(</p>
+<h2 style="font-size: 30pt;">Method 2</h2>
+<p>Take all commits.<br/>
+For each commit, take the repository state.</p>
+<p>Data volume, upper bound estimate:
+<br/>number of lines now * number of commits / 2</p>
+<p>ClickHouse &mdash; 732,048 lines * 51,055 commits / 2 = 18.6 billion.<br/>
+Linux Kernel &mdash; 21,645,046 lines * 950,019 commits / 2 = <span style="color: red;">10 trillion</span>.</p>
+<p style="color: red;">Everything can be calculated, but there's too much data :(</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Способ 3</h2>
-<p>Взять все коммиты.</p>
-<p>У каждого коммита получить <b>diff</b> (git show).</p>
-<p>Получим добавленные и удалённые строчки кода.</p>
-<p>Запишем всё в базу!</p>
-<p>Объём данных &mdash; в несколько раз больше LOC.<br/>
-... смотря сколько раз в среднем код переписывался.</p>
+<h2 style="font-size: 30pt;">Method 3</h2>
+<p>Take all commits.</p>
+<p>For each commit, get the <b>diff</b> (git show).</p>
+<p>We get added and deleted lines of code.</p>
+<p>Write everything to the database!</p>
+<p>Data volume &mdash; several times more than LOC.<br/>
+... depending on how many times on average the code was rewritten.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Способ 3</h2>
-<p>Недостатки:<br/>
-<p>Для merge коммитов diff нетривиален,<br/>так как показывает изменения относительно нескольких родителей.</p>
-<p>Решение: просто пропустим merge коммиты.</p>
-<p>Изменения для разрешения конфликтов не попадут в статистику.</p>
-<p>Статистика будет <span style="color: red;">неточной</span>... ну и ладно.</p>
-<p style="color: green;">Зато есть история изменений и всё можно посчитать!</p>
+<h2 style="font-size: 30pt;">Method 3</h2>
+<p>Disadvantages:<br/>
+<p>For merge commits, diff is non-trivial,<br/>as it shows changes relative to several parents.</p>
+<p>Solution: just skip merge commits.</p>
+<p>Changes for conflict resolution won't be included in statistics.</p>
+<p>Statistics will be <span style="color: red;">inaccurate</span>... oh well.</p>
+<p style="color: green;">But we have change history and can calculate everything!</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Определяем модель данных</h2>
-<p style="margin-top: -1em;">Три таблицы:</p>
+<h2 style="font-size: 30pt;">Defining the Data Model</h2>
+<p style="margin-top: -1em;">Three tables:</p>
 <pre style="font-size: 75%"><b>commits</b>
   hash String,
   author LowCardinality(String),
@@ -181,36 +181,36 @@ Linux Kernel &mdash; 21 645 046 строк * 950 019 коммитов / 2 = <spa
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Определяем модель данных</h2>
-<p style="margin-top: -1em;">Принципы:</p>
-<p><b>1. Денормализация.</b><br/>
-В каждую строчку file_changes продублируем все свойства коммита.<br/>
-В каждую строчку line_changes продублируем все свойства file_changes и двух коммитов &mdash; текущего и предыдущего из blame.
+<h2 style="font-size: 30pt;">Defining the Data Model</h2>
+<p style="margin-top: -1em;">Principles:</p>
+<p><b>1. Denormalization.</b><br/>
+In each file_changes row, duplicate all commit properties.<br/>
+In each line_changes row, duplicate all file_changes properties and two commits &mdash; current and previous from blame.
 </p>
-<p><b>2. Обогащение статистикой.</b><br/>
-В каждую строчку commits также добавим:<br/>
-- количество добавленных и удалённых файлов;<br/>
-- количество добавленных и удалённых строк;
+<p><b>2. Enrichment with statistics.</b><br/>
+In each commits row, also add:<br/>
+- number of added and deleted files;<br/>
+- number of added and deleted lines;
 </p>
-<p><b>3. Предвычисление отдельных деталей.</b><br/>
-- вычислим уровень отступа строчки и положим в отдельный столбец;<br/>
-- вычислим, является ли строчка пустой, комментарием, кодом...;<br/>
-- расширение файла тоже сохраним в отдельный столбец.
+<p><b>3. Pre-computation of individual details.</b><br/>
+- calculate the indentation level of the line and put it in a separate column;<br/>
+- calculate whether the line is empty, a comment, code...;<br/>
+- save the file extension in a separate column too.
 </p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Определяем модель данных</h2>
-<p style="margin-top: -1em;">Принципы:</p>
-<p>1. Денормализация.</p>
-<p>2. Обогащение статистикой.</p>
-<p>3. Предвычисление отдельных деталей.</p>
-<p>Эти принципы <span style="color: red;">противопоказаны</span> для транзакционных БД<br/>
-&emsp; и <span style="color: green;">очень хороши</span> для аналитических БД.</p>
+<h2 style="font-size: 30pt;">Defining the Data Model</h2>
+<p style="margin-top: -1em;">Principles:</p>
+<p>1. Denormalization.</p>
+<p>2. Enrichment with statistics.</p>
+<p>3. Pre-computation of individual details.</p>
+<p>These principles are <span style="color: red;">contraindicated</span> for transactional DBs<br/>
+&emsp; and <span style="color: green;">very good</span> for analytical DBs.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Определяем модель данных</h2>
+<h2 style="font-size: 30pt;">Defining the Data Model</h2>
 <pre style="margin-top: -3em; font-size: 43%;">CREATE TABLE git.line_changes
 (
     sign Int8,
@@ -258,34 +258,34 @@ Linux Kernel &mdash; 21 645 046 строк * 950 019 коммитов / 2 = <spa
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Пишем скрипт</h2>
-<p>Я попытался написать скрипт на bash, но потерпел крах.</p>
-<p>Написал скрипт на C++ :) <span style="color: gray">(а мог бы на Python)</span>.</p>
-<p>Это не является рекомендацией.<br/>Вы &mdash; аналитики. Пишите на чём угодно.</p>
+<h2 style="font-size: 30pt;">Writing a Script</h2>
+<p>I tried to write a script in bash but failed.</p>
+<p>Wrote a script in C++ :) <span style="color: gray">(could have been in Python)</span>.</p>
+<p>This is not a recommendation.<br/>You are analysts. Write in whatever you want.</p>
 <p><a href="https://github.com/ClickHouse/ClickHouse/pull/14471">https://github.com/ClickHouse/ClickHouse/pull/14471</a></p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Запускаем скрипт</h2>
+<h2 style="font-size: 30pt;">Running the Script</h2>
 <pre>clickhouse-git-import --help</pre>
-<p>Обработка репозитория и размер таблиц в ClickHouse:</p>
+<p>Repository processing and table sizes in ClickHouse:</p>
 <pre style="line-height: 1.5">
-- ClickHouse:  31 сек;    6 млн строк;  122 МБ;
-- LLVM:         8 мин;   62 млн строк;  1.2 ГБ;
-- Linux:       12 мин;   85 млн строк;  1.7 ГБ;
-- Chromium:    67 мин;  343 млн строк;  6.8 ГБ.
+- ClickHouse:  31 sec;    6M rows;  122 MB;
+- LLVM:         8 min;   62M rows;  1.2 GB;
+- Linux:       12 min;   85M rows;  1.7 GB;
+- Chromium:    67 min;  343M rows;  6.8 GB.
 </pre>
-<p style="color: green;">Копеечный объём данных! Можно анализировать на ноутбуке.</p>
+<p style="color: green;">Tiny data volume! Can be analyzed on a laptop.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Анализируем данные</h2>
-<p>Количество авторов, которые написали больше всего строк кода.</p>
-<p>LOC &mdash; самая тупая метрика из всех :(</p>
-<p>Варианты:<br/>
-&mdash; всё, что написали или только те строчки, которые не удалены?<br/>
-&mdash; только добавленные строчки кода или удаление кода тоже важно?<br/>
-&mdash; как учитывать код, тесты, документацию?
+<h2 style="font-size: 30pt;">Analyzing Data</h2>
+<p>Number of authors who wrote the most lines of code.</p>
+<p>LOC &mdash; the dumbest metric of all :(</p>
+<p>Options:<br/>
+&mdash; everything written or only lines that weren't deleted?<br/>
+&mdash; only added lines of code or is deleting code also important?<br/>
+&mdash; how to account for code, tests, documentation?
 </p>
 </section>
 
@@ -297,13 +297,13 @@ GROUP BY k ORDER BY c DESC LIMIT 20
 
 ┌─k────────────────────┬───────c─┐
 │ Alexey Milovidov     │ 1061697 │
-│ <b>proller</b>              │  200704 │ &lt;-- коммиты third-party кода
+│ <b>proller</b>              │  200704 │ &lt;-- commits of third-party code
 │ Nikolai Kochetov     │  183370 │
 │ Alexey Arno          │  107018 │
 │ Vitaly Baranov       │   93296 │
 │ Andrey Mironov       │   92973 │
-│ <b>Guillaume Tassery</b>    │   89530 │ &lt;-- коммит и удаление
-│ alesapin             │   86999 │  автогенерированных файлов
+│ <b>Guillaume Tassery</b>    │   89530 │ &lt;-- commit and deletion
+│ alesapin             │   86999 │  of auto-generated files
 │ Vitaliy Lyudvichenko │   85609 │
 │ Michael Kolupaev     │   69178 │
 │ CurtizJ              │   62607 │
@@ -311,27 +311,27 @@ GROUP BY k ORDER BY c DESC LIMIT 20
 │ Alexey Zatelepin     │   49331 │
 │ zhang2014            │   48352 │
 │ Alexander Tokmakov   │   46371 │
-│ <b>alexey-milovidov</b>     │   41518 │ &lt;-- дубликат
-│ <b>peshkurov</b>            │   36525 │ &lt;-- испорчена история git,
-│ Nikita Mikhaylov     │   30226 │  закоммичен snapshot без parent.
+│ <b>alexey-milovidov</b>     │   41518 │ &lt;-- duplicate
+│ <b>peshkurov</b>            │   36525 │ &lt;-- corrupted git history,
+│ Nikita Mikhaylov     │   30226 │  snapshot committed without parent.
 │ Nikita Vasilev       │   28182 │
 │ Artem Zuikov         │   25176 │
 └──────────────────────┴─────────┘</code>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Предостережения</h2>
-<p>Запрос выполнен за 0.009 сек. А чтобы разобраться, почему результат является мусором, потребуются часы разбирательств.</p>
-<p>Нельзя считать производительность разработчиков<br/>по физическим свойствам репозитория.</p>
-<p>Количество строк кода &mdash; очень плохая метрика.</p>
-<p><b>Если вы агрегируете данные и считаете топ<br/>&mdash; вы будете видеть, в первую очередь, выбросы данных.</b></p>
-<p>В выбросах придётся разбираться, а данные придётся чистить.</p>
-<p>Один агрегированный отчёт не является результатом.</p>
+<h2 style="font-size: 30pt;">Warnings</h2>
+<p>Query executed in 0.009 sec. But to understand why the result is garbage will take hours of investigation.</p>
+<p>You cannot measure developer productivity<br/>by physical properties of the repository.</p>
+<p>Lines of code &mdash; is a very poor metric.</p>
+<p><b>If you aggregate data and calculate top N<br/>&mdash; you will see, first of all, data outliers.</b></p>
+<p>You'll have to investigate outliers, and data will need to be cleaned.</p>
+<p>One aggregated report is not the result.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Что-то более интересное</h2>
-<p style="margin-top: -1em;">Авторы и доля их кода, удалённая другими авторами:</p>
+<h2 style="font-size: 30pt;">Something More Interesting</h2>
+<p style="margin-top: -1em;">Authors and the share of their code deleted by other authors:</p>
 <code style="font-size: 75%; line-height: 1.1;">SELECT k, written_code.c, removed_code.c,
     round(removed_code.c * 100 / written_code.c) AS remove_ratio
 FROM (
@@ -354,8 +354,8 @@ ORDER BY c DESC LIMIT 500</code>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Что-то более интересное</h2>
-<p style="margin-top: -1em;">Авторы и доля их кода, удалённая другими авторами:</p>
+<h2 style="font-size: 30pt;">Something More Interesting</h2>
+<p style="margin-top: -1em;">Authors and the share of their code deleted by other authors:</p>
 <code style="font-size: 75%; line-height: 1.1;">┌─k───────────────────────┬──────c─┬─removed_code.c─┬─remove_ratio─┐
 │ Alexey Milovidov        │ 426656 │         113306 │           27 │
 │ Nikolai Kochetov        │  83479 │          16999 │           20 │
@@ -380,37 +380,37 @@ ORDER BY c DESC LIMIT 500</code>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Выводы</h2>
-<p>Полученный инструмент является хорошей игрушкой.</p>
-<p>Метрики из этих данных считать можно...<br/>но слепо ориентироваться на них &mdash; нет.</p>
-<p>Инструмент можно давать в руки человеку, который будет<br/><span style="color: green;">сомневаться, думать и перепроверять данные</span>.</p>
+<h2 style="font-size: 30pt;">Conclusions</h2>
+<p>The resulting tool is a good toy.</p>
+<p>Metrics can be calculated from this data...<br/>but blindly relying on them &mdash; no.</p>
+<p>The tool can be given to a person who will<br/><span style="color: green;">doubt, think, and double-check the data</span>.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Эпизод 2</h2>
-<p><b>GitHub</b> &mdash; централизованный хостинг <b>Git</b> репозиториев;<br/>
-+ социальная сеть для разработчиков;<br/>
-+ инструменты совместной работы.</p>
-<p>В данных <b>Git</b> репозитория нет:<br/>
-&mdash; issues (таск трекера);<br/>
+<h2 style="font-size: 30pt;">Episode 2</h2>
+<p><b>GitHub</b> &mdash; centralized hosting for <b>Git</b> repositories;<br/>
++ a social network for developers;<br/>
++ collaboration tools.</p>
+<p>What's not in <b>Git</b> repository data:<br/>
+&mdash; issues (task tracker);<br/>
 &mdash; pull requests;<br/>
-&mdash; code review, звёзд, лайков и комментариев.</p>
-<p>Это реализует сам <b>GitHub</b>.</p>
-<p>Я хочу все данные достать и проанализировать!</p>
+&mdash; code review, stars, likes and comments.</p>
+<p>This is implemented by <b>GitHub</b> itself.</p>
+<p>I want to extract and analyze all the data!</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Импорт данных GitHub</h2>
+<h2 style="font-size: 30pt;">Importing GitHub Data</h2>
 <p>&mdash; GitHub API;</p>
 <p>&mdash; GH Archive: <a href="https://www.gharchive.org/">https://www.gharchive.org/</a>.</p>
-<p>Данные о событиях, которые происходили в репозиториях.</p>
-<p>GH Archive &mdash; обновляемый архив данных о всех репозиториях GitHub!</p>
+<p>Data about events that occurred in repositories.</p>
+<p>GH Archive &mdash; an updated archive of data about all GitHub repositories!</p>
 </section>
 
 <section class="slide">
 <img style="float: right; height: 105%; margin-right: -100px; margin-top: -21px;" src="pictures/json.png" />
-<h2 style="font-size: 30pt;">Импорт данных GitHub</h2>
-<p style="margin-top: -1em;">Типы событий GitHub API:</p>
+<h2 style="font-size: 30pt;">Importing GitHub Data</h2>
+<p style="margin-top: -1em;">GitHub API event types:</p>
 <p>&mdash; CommitCommentEvent;<br/>
 &mdash; CreateEvent;<br/>
 &mdash; DeleteEvent;<br/>
@@ -430,36 +430,36 @@ ORDER BY c DESC LIMIT 500</code>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Импорт данных GitHub</h2>
+<h2 style="font-size: 30pt;">Importing GitHub Data</h2>
 <pre style="font-size: 80%;">wget --continue \
 https://data.gharchive.org/{2015..2020}-{01..12}-{01..31}-{0..23}.json.gz</pre>
-<p>Все данные открыты и вы можете их скачать!</p>
-<p>Просто ждём несколько дней пока скачается<br/>
-84 264 файла размером 1.2 TB.</p>
-<p style="color: gray">Можно ускорить, разбив по серверам, но зачем...<br/>когда можно просто оставить на выходные и забыть.</p>
+<p>All data is open and you can download it!</p>
+<p>Just wait a few days while downloading<br/>
+84,264 files totaling 1.2 TB.</p>
+<p style="color: gray">Can be accelerated by splitting across servers, but why...<br/>when you can just leave it for the weekend and forget.</p>
 </section>
 
 <section class="slide">
 <img style="float: right; height: 60%; margin-right: -47px; margin-top: -50px; margin-left: 20px;" src="pictures/not_optimal.webp"/>
-<h2 style="font-size: 30pt;">Анализ данных GitHub</h2>
-<p>Как анализировать 1.2 TB .json.gz файлов?</p>
-<p>Способ 1. Прямо как есть. Никуда не загружаем.<br/>
-Анализируем с помощью <b>clickhouse-local</b>:</p>
+<h2 style="font-size: 30pt;">Analyzing GitHub Data</h2>
+<p>How to analyze 1.2 TB of .json.gz files?</p>
+<p>Method 1. As is. Don't load anywhere.<br/>
+Analyze using <b>clickhouse-local</b>:</p>
 <code style="margin-bottom: 1em; font-size: 14pt; line-height: 1.3"><b>clickhouse-local</b> --query "
     SELECT count() FROM <b>file</b>('*.json.gz', TSV, 'data String')
     WHERE <b>JSONExtractString</b>(data, 'actor', 'login') = 'alexey-milovidov'"</code>
-<p>Запрос упирается в диск и выполняется ~30 минут.<br/>
-Узкое место &mdash; чтение всех имеющихся данных.</p>
-<p>Это не оптимально!</p>
+<p>Query hits disk and takes ~30 minutes.<br/>
+Bottleneck &mdash; reading all available data.</p>
+<p>This is not optimal!</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Анализ данных GitHub</h2>
-<p>Как анализировать 1.2 TB .json.gz файлов?</p>
-<p>Способ 2. Переложить в таблицу в <b>ClickHouse</b>.</p>
-<p>Но у данных очень <span style="color: red;">сложная структура</span>.<br/>
-&mdash; 15 разных событий, у каждого много своих атрибутов.</p>
-<p>Решение: <span style="color: green;">упростить структуру</span>!</p>
+<h2 style="font-size: 30pt;">Analyzing GitHub Data</h2>
+<p>How to analyze 1.2 TB of .json.gz files?</p>
+<p>Method 2. Put into a table in <b>ClickHouse</b>.</p>
+<p>But the data has a very <span style="color: red;">complex structure</span>.<br/>
+&mdash; 15 different events, each with many attributes.</p>
+<p>Solution: <span style="color: green;">simplify the structure</span>!</p>
 </section>
 
 <section class="slide">
@@ -566,11 +566,11 @@ gzip -cd {} | <b>jq</b> -c '
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Загрузка данных GitHub в ClickHouse</h2>
-<p>Что получили:</p>
-<p>Одна плоская таблица со всеми типами событий.</p>
-<p>Много столбцов &mdash; разные свойства разных событий.</p>
-<p>Легко анализировать разные события без JOIN.</p>
+<h2 style="font-size: 30pt;">Loading GitHub Data into ClickHouse</h2>
+<p>What we got:</p>
+<p>One flat table with all event types.</p>
+<p>Many columns &mdash; different properties of different events.</p>
+<p>Easy to analyze different events without JOIN.</p>
 <pre>SELECT
     sum(event_type = 'WatchEvent') AS stars,
     sum(event_type = 'PullRequestEvent'
@@ -580,50 +580,50 @@ GROUP BY repo_name</pre>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Загрузка данных GitHub в ClickHouse</h2>
+<h2 style="font-size: 30pt;">Loading GitHub Data into ClickHouse</h2>
 <img style="float: left; height: 60%; margin-left: -60px; margin-top: -75px; margin-right: 20px;" src="pictures/optimal.webp"/>
-<p>Что получили:</p>
-<p>&mdash; 2.5 млрд строк;<br/>
-&mdash; 150 ГБ в сжатом виде;<br/>
-&mdash; 140 млн репозиториев;<br/>
-&mdash; запросы выполняются за секунды.</p>
-<p style="margin-top: 2em;">Вывод:</p>
-<p>Все события за всю историю во всех репозиториях на GitHub:<br/>
-&mdash; это не &laquo;Big Data&raquo;;<br/>
-&mdash; это <span style="color: green;">&laquo;Fits on Your Laptop&raquo;</span> Data.</p>
+<p>What we got:</p>
+<p>&mdash; 2.5 billion rows;<br/>
+&mdash; 150 GB compressed;<br/>
+&mdash; 140 million repositories;<br/>
+&mdash; queries run in seconds.</p>
+<p style="margin-top: 2em;">Conclusion:</p>
+<p>All events in all repositories throughout GitHub history:<br/>
+&mdash; is not "Big Data";<br/>
+&mdash; is <span style="color: green;">"Fits on Your Laptop"</span> Data.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Данные GitHub в ClickHouse</h2>
-<p>Могу быстро ответить почти на любой вопрос<br/>про Open-Source экосистему*:</p>
+<h2 style="font-size: 30pt;">GitHub Data in ClickHouse</h2>
+<p>Can quickly answer almost any question<br/>about the Open-Source ecosystem*:</p>
 <p style="font-size: 90%; line-height: 1.5;">
-&mdash; топ репозиториев по звёздам, за всё время, за этот год;<br/>
-&mdash; самые выросшие за квартал или стагнирующие из крупных репозиториев;<br/>
-&mdash; графики числа звёзд, issues, contributors для любого репозитория;<br/>
-&mdash; наиболее плодовитые авторы кода;<br/>
-&mdash; кто больше всего проводит code review;<br/>
-&mdash; репозитории с наибольшей активностью в комментариях;<br/>
-&mdash; все репозитории связанные с ClickHouse;<br/>
-&mdash; все мои комментарии... и чужие тоже.</p>
-<p style="color: gray; font-size: 80%">* про её часть, доступную на GitHub.</p>
+&mdash; top repositories by stars, all time, this year;<br/>
+&mdash; fastest growing for the quarter or stagnating among large repositories;<br/>
+&mdash; graphs of star count, issues, contributors for any repository;<br/>
+&mdash; most prolific code authors;<br/>
+&mdash; who does the most code review;<br/>
+&mdash; repositories with the most comment activity;<br/>
+&mdash; all repositories related to ClickHouse;<br/>
+&mdash; all my comments... and others' too.</p>
+<p style="color: gray; font-size: 80%">* about the part available on GitHub.</p>
 </section>
 
 <!-- TODO demo -->
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Выводы</h2>
-<p>Чтобы анализировать данные, надо:</p>
-<p>&mdash; изучить исходную модель и природу данных;<br/>
-&mdash; выбрать правильное представление для их анализа;<br/>
-&mdash; выполнить подготовку и очистку данных;<br/>
-&mdash; срезать углы где можно;<br/>
-&mdash; уметь написать простой скрипт на любом языке;<br/>
-&mdash; никогда не бояться больших данных;<br/>
-&mdash; исследовать выбросы и внутренности данных;<br/>
-&mdash; быть готовым всё выкинуть и начать сначала;<br/>
-&mdash; никогда не останавливаться на одном отчёте;</p>
+<h2 style="font-size: 30pt;">Conclusions</h2>
+<p>To analyze data, you need to:</p>
+<p>&mdash; study the source model and nature of the data;<br/>
+&mdash; choose the right representation for analysis;<br/>
+&mdash; perform data preparation and cleaning;<br/>
+&mdash; cut corners where possible;<br/>
+&mdash; be able to write a simple script in any language;<br/>
+&mdash; never be afraid of big data;<br/>
+&mdash; investigate outliers and data internals;<br/>
+&mdash; be ready to throw everything away and start over;<br/>
+&mdash; never stop at one report;</p>
 <p
->... и ещё понадобится отвага.</p>
+>... and you'll also need courage.</p>
 </section>
 
 <section class="slide">
@@ -639,4 +639,3 @@ GROUP BY repo_name</pre>
     <!--/Video plugin-->
 </body>
 </html>
-

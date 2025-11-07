@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" style="background-color: #FFF;">
 <head>
-    <title>ClickHouse meetup в Санкт-Петербурге</title>
+    <title>ClickHouse meetup in Saint Petersburg</title>
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -9,20 +9,20 @@
 </head>
 <body class="shower list">
     <header class="caption">
-        <h1>ClickHouse meetup в Санкт-Петербурге</h1>
+        <h1>ClickHouse meetup in Saint Petersburg</h1>
     </header>
 
     <section class="slide" id="cover">
-        <h1 style="margin-top: 200px">ClickHouse meetup<br/>в Санкт-Петербурге</h1>
+        <h1 style="margin-top: 200px">ClickHouse meetup<br/>in Saint Petersburg</h1>
     </section>
 
     <section class="slide">
-        <h2>ClickHouse: настоящее и будущее</h2>
+        <h2>ClickHouse: Present and Future</h2>
     </section>
 
     <section class="slide">
-        <h2>Команда</h2>
-        <p>Теперь 5 разработчиков.</p>
+        <h2>Team</h2>
+        <p>Now 5 developers.</p>
         <p>
             <img src="pictures/milovidov.jpg" style="height:150px;">
             <img src="pictures/vludv.jpg" style="height:150px;">
@@ -34,19 +34,19 @@
 
 <section class="slide">
 
-<h2>В предыдущих сериях</h2>
+<h2>Previously</h2>
 
-<p>&mdash; HTTP и executable источники;</p>
-<p>&mdash; оптимизация мержей, вертикальный мерж;</p>
-<p>&mdash; трассировка распределённых запросов;</p>
+<p>&mdash; HTTP and executable sources;</p>
+<p>&mdash; merge optimization, vertical merge;</p>
+<p>&mdash; distributed query tracing;</p>
 <p>&mdash; clickhouse-local;</p>
-<p>&mdash; операторы BETWEEN, ||;</p>
-<p>&mdash; функции UUID - text;</p>
+<p>&mdash; BETWEEN, || operators;</p>
+<p>&mdash; UUID - text functions;</p>
 
 </section>
 <section class="slide">
 
-<h2>Новое в языке запросов</h2>
+<h2>New in Query Language</h2>
 
 <p>&mdash; KILL QUERY;</p>
 <p>&mdash; LIMIT BY;</p>
@@ -55,79 +55,79 @@
 </section>
 <section class="slide">
 
-<h2>Интерфейсы</h2>
+<h2>Interfaces</h2>
 
-<p>&mdash; возможность получить прогресс выполнения в HTTP заголовках;</p>
-<p>&mdash; возможность пропуска ошибок в текстовых форматах;</p>
-<p>&mdash; правильные коды ответа в HTTP интерфейсе;</p>
-
-</section>
-<section class="slide">
-
-<h2>Сборка</h2>
-
-<p>&mdash; &laquo;правильная&raquo; сборка и пакеты;</p>
-<p>&mdash; Таблица system.build_options;</p>
+<p>&mdash; ability to get progress in HTTP headers;</p>
+<p>&mdash; ability to skip errors in text formats;</p>
+<p>&mdash; proper HTTP response codes;</p>
 
 </section>
 <section class="slide">
 
-<h2>Словари</h2>
+<h2>Build</h2>
 
-<p>&mdash; производительность кэшируемых внешних словарей;</p>
-<p>&mdash; инструментирование кэшируемых внешних словарей;</p>
-<p>&mdash; HTTPS словари;</p>
-
-</section>
-<section class="slide">
-
-<h2>Инструментирование</h2>
-
-<p>&mdash; информация об использовании памяти под индекс;</p>
-<p>&mdash; информация о размере столбцов в несжатом виде;</p>
-<p>&mdash; метрики по потреблению оперативки кэшами;</p>
-<p>&mdash; метрики про мержи;</p>
+<p>&mdash; &laquo;proper&raquo; build and packages;</p>
+<p>&mdash; system.build_options table;</p>
 
 </section>
 <section class="slide">
 
-<h2>Оптимизации</h2>
+<h2>Dictionaries</h2>
 
-<p>&mdash; оптимизация DISTINCT;</p>
-<p>&mdash; производительность gzip в HTTP интерфейсе;</p>
-<p>&mdash; оптимизация mark cache;</p>
+<p>&mdash; cached external dictionary performance;</p>
+<p>&mdash; cached external dictionary instrumentation;</p>
+<p>&mdash; HTTPS dictionaries;</p>
 
 </section>
 <section class="slide">
 
-<h2>Функции</h2>
+<h2>Instrumentation</h2>
 
-<p>&mdash; правильная логика сравнений, least, greatest;</p>
-<p>&mdash; groupUniqArray для всех типов данных;</p>
+<p>&mdash; information about index memory usage;</p>
+<p>&mdash; information about uncompressed column sizes;</p>
+<p>&mdash; metrics for cache RAM consumption;</p>
+<p>&mdash; metrics about merges;</p>
+
+</section>
+<section class="slide">
+
+<h2>Optimizations</h2>
+
+<p>&mdash; DISTINCT optimization;</p>
+<p>&mdash; gzip performance in HTTP interface;</p>
+<p>&mdash; mark cache optimization;</p>
+
+</section>
+<section class="slide">
+
+<h2>Functions</h2>
+
+<p>&mdash; proper comparison logic, least, greatest;</p>
+<p>&mdash; groupUniqArray for all data types;</p>
 <p>&mdash; decodeURLComponent;</p>
 
 </section>
 <section class="slide">
 
-<h2>Что-то ещё</h2>
+<h2>Something Else</h2>
 
-<p>&mdash; защита от случайного DROP TABLE;</p>
-<p>&mdash; use_client_time_zone; timezone в конфиге;</p>
+<p>&mdash; protection against accidental DROP TABLE;</p>
+<p>&mdash; use_client_time_zone; timezone in config;</p>
 <p>&mdash; fsync_metadata;</p>
 
 </section>
 <section class="slide">
 
-<h2>Сообщество</h2>
+<h2>Community</h2>
 
-<p>&mdash; интеграция с Grafana, Redash, Apache Zeppelin, Superset;</p>
-<p>&mdash; правильные пакеты для CentOS, RHEL, GosLinux;</p>
-<p>&mdash; драйвер native протокола для Go и C++;</p>
-<p>&mdash; возможность передавать заголовки X-ClickHouse-*;</p>
-<p>&mdash; бенчмарки NYC Taxi, Percona (Spark);</p>
-<p>&mdash; бенчмарк Greenplum;</p>
-<p>&mdash; англоязычный Telegram чат;</p>
-<p>&mdash; встречи и доклады (Брюссель, Париж);</p>
+<p>&mdash; integration with Grafana, Redash, Apache Zeppelin, Superset;</p>
+<p>&mdash; proper packages for CentOS, RHEL, GosLinux;</p>
+<p>&mdash; native protocol driver for Go and C++;</p>
+<p>&mdash; ability to pass X-ClickHouse-* headers;</p>
+<p>&mdash; benchmarks NYC Taxi, Percona (Spark);</p>
+<p>&mdash; Greenplum benchmark;</p>
+<p>&mdash; English Telegram chat;</p>
+<p>&mdash; meetings and talks (Brussels, Paris);</p>
 
 </section>
 
@@ -144,25 +144,25 @@
 
 <section class="slide">
 
-<h2>TODO (март-апрель 2017)</h2>
+<h2>TODO (March-April 2017)</h2>
 
-<p>&mdash; распределённые DDL запросы;</p>
-<p>&mdash; конфиги в ZooKeeper;</p>
-<p>&mdash; полная поддержка NULL;</p>
+<p>&mdash; distributed DDL queries;</p>
+<p>&mdash; configs in ZooKeeper;</p>
+<p>&mdash; full NULL support;</p>
 
 </section>
 <section class="slide">
 
-<h2>TODO (весна-лето 2017)</h2>
+<h2>TODO (Spring-Summer 2017)</h2>
 
-<p>&mdash; работоспособность ODBC драйвера под Windows;</p>
-<p>&mdash; переделать анализ запроса: правильная поддержка JOIN;</p>
+<p>&mdash; ODBC driver functionality on Windows;</p>
+<p>&mdash; rewrite query analysis: proper JOIN support;</p>
 
 </section>
 
 <section class="slide">
 
-<h2>Дополнительно</h2>
+<h2>Additional</h2>
 
 <p>job-clickhouse@yandex-team.ru</p>
 

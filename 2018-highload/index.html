@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Анализ производительности запросов в ClickHouse</title>
+    <title>Query Performance Analysis in ClickHouse</title>
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -9,82 +9,82 @@
 </head>
 <body class="shower list">
     <header class="caption">
-        <h1>Анализ производительности запросов в ClickHouse</h1>
+        <h1>Query Performance Analysis in ClickHouse</h1>
     </header>
 
     <section class="slide" id="cover" style="background: #FFF url('pictures/title.png') no-repeat; background-size: 100%;">
-        <h1 style="margin-top: 200px; font-size: 32pt;">Анализ производительности<br/>запросов в ClickHouse</h1>
+        <h1 style="margin-top: 200px; font-size: 32pt;">Query Performance Analysis<br/>in ClickHouse</h1>
     </section>
 
     <section class="slide">
-        <h2>Обо мне</h2>
-        <p>Алексей, разработчик ClickHouse.</p>
+        <h2>About Me</h2>
+        <p>Alexey, ClickHouse developer.</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">Анализ производительности запросов</h2>
-        <p><ul><li>Достаточно ли быстро работает запрос?</li>
-        <li>Если нет, то почему?</li>
-        <li>Можно ли выполнить запрос быстрее?</li></ul></p>
+        <h2 style="font-size: 32pt;">Query Performance Analysis</h2>
+        <p><ul><li>Is the query running fast enough?</li>
+        <li>If not, why not?</li>
+        <li>Can the query be executed faster?</li></ul></p>
     </section>
 
     <section class="slide">
-        <h2>Тривиальные факты</h2>
-        <p>... и прописные истины.</p>
+        <h2>Trivial Facts</h2>
+        <p>... and common truths.</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">Какие ресурсы используются в системе?</h2>
-        <p>&mdash; процессор;</p>
-        <p>&mdash; память;</p>
-        <p>&mdash; диск;</p>
-        <p>&mdash; сеть.</p>
-        <p style="font-size: 12pt;">... а ещё программа может упираться в sleep.</p>
+        <h2 style="font-size: 32pt;">What Resources Are Used in the System?</h2>
+        <p>&mdash; processor;</p>
+        <p>&mdash; memory;</p>
+        <p>&mdash; disk;</p>
+        <p>&mdash; network.</p>
+        <p style="font-size: 12pt;">... and the program might also be blocked on sleep.</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">Какие ресурсы используются в системе?</h2>
-        <p>Утилизация ресурса &mdash; агрегированная величина, <br/>которая обычно не даёт полной картины.</p>
-        <p>Если ресурс утилизирован &laquo;на 100%&raquo;<br/> &mdash; это ещё не значит, что нельзя сделать лучше.</p>
-        <p>Если ресурс утилизирован менее чем на 100%<br/> &mdash; это ещё не значит, что можно сделать лучше.</p>
+        <h2 style="font-size: 32pt;">What Resources Are Used in the System?</h2>
+        <p>Resource utilization is an aggregated value,<br/>which usually doesn't give the full picture.</p>
+        <p>If a resource is utilized at &laquo;100%&raquo;<br/> &mdash; it doesn't mean we can't do better.</p>
+        <p>If a resource is utilized at less than 100%<br/> &mdash; it doesn't mean we can do better.</p>
     </section>
 
     <section class="slide">
-        <h2>Пример 1, CPU</h2>
-        <p>Смотрим утилизацию CPU в <b>top</b>, <b>htop</b>, etc.</p>
-<p>Если показывают, что ядро CPU загружено на 100%, значит процессор выполняет инструкции, но:</p>
-<p>&mdash; процессор может выполнять разное количество инструкций за такт;</p>
-<p>&mdash; процессор может ожидать загрузки данных из памяти или из кэша,<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;но это время тоже учитывается как утилизация CPU (<b>perf record</b>);</p>
-<p>&mdash; процессор может работать на пониженной частоте (<b>turbostat</b>, <b>dmesg</b>);</p>
+        <h2>Example 1, CPU</h2>
+        <p>Looking at CPU utilization in <b>top</b>, <b>htop</b>, etc.</p>
+<p>If they show that a CPU core is loaded at 100%, the processor is executing instructions, but:</p>
+<p>&mdash; the processor can execute different numbers of instructions per cycle;</p>
+<p>&mdash; the processor can wait for data loading from memory or cache,<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;but this time is also counted as CPU utilization (<b>perf record</b>);</p>
+<p>&mdash; the processor can run at reduced frequency (<b>turbostat</b>, <b>dmesg</b>);</p>
         </section>
 
     <section class="slide">
-        <h2>Пример 1, CPU</h2>
-<p>Если показывают, что суммарно CPU загружен на 50%:</p>
-<p>&mdash; возможно, что больше не имеет смысла,<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;если на вашем коде Hyper-Threading даёт мало профита;</p>
-<p>&mdash; возможно, что вы смотрите усреднённую величину, тогда как<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;в&nbsp;отдельные моменты времени, процессор загружен полностью.</p>
+        <h2>Example 1, CPU</h2>
+<p>If they show that CPU is loaded at 50% in total:</p>
+<p>&mdash; perhaps more doesn't make sense,<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if Hyper-Threading doesn't give much benefit on your code;</p>
+<p>&mdash; perhaps you're looking at an averaged value, while<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;at certain moments in time, the processor is fully loaded.</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 24pt;">Чем занят CPU? Во что упирается запрос?</h2>
+        <h2 style="font-size: 24pt;">What is the CPU busy with? What is the query bottlenecked on?</h2>
 
         <img style="margin-top: -30px;" src="pictures/random_set_query.png"/>
         <img src="pictures/perf.png"/>
     </section>
 
     <section class="slide">
-        <h2>Пример 2, диски</h2>
-        <p>... или SSD.</p>
-        <p>Программа тратит всё время на чтение с дисков, но <b>iostat</b> показывает утилизацию меньше 100%:<br/>
-&mdash; у вас RAID-массив, но вы читаете с недостаточным размером буфера<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;с O_DIRECT или без readahead &mdash; диски используются<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;не все параллельно;<br/>
-&mdash; у вас RAID-10, но вы создали его с <b>near</b>, а не <b>far</b> layout в mdadm;<br/>
-&mdash; у вас RAID-5/6, но установлен неправильный <b>stripe cache size</b>;<br/>
-&mdash; вы делаете случайные чтения с недостаточной степенью<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;параллелизма
-(для SSD используйте только AIO (<b>io_submit</b>)<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;для случайных чтений).</p>
-<p><b>И ещё</b>: всегда сжимайте данные, хранящиеся на диске.</p>
+        <h2>Example 2, Disks</h2>
+        <p>... or SSD.</p>
+        <p>The program spends all time reading from disks, but <b>iostat</b> shows utilization less than 100%:<br/>
+&mdash; you have a RAID array, but you're reading with insufficient buffer size<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;with O_DIRECT or without readahead &mdash; disks are used<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;not all in parallel;<br/>
+&mdash; you have RAID-10, but you created it with <b>near</b>, not <b>far</b> layout in mdadm;<br/>
+&mdash; you have RAID-5/6, but incorrect <b>stripe cache size</b> is set;<br/>
+&mdash; you're doing random reads with insufficient degree<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;of parallelism
+(for SSD use only AIO (<b>io_submit</b>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;for random reads).</p>
+<p><b>Also</b>: always compress data stored on disk.</p>
     </section>
 
     <section class="slide">
@@ -96,31 +96,31 @@
     </section>
 
     <section class="slide">
-        <h2>Бонус</h2>
-        <p>Если вы не уверены, стоит ли сжимать данные, хранящиеся на диске,<br/>
-        смотрите доклад HighLoad++ Siberia 2018 &laquo;<b>Как ускорить разжатие LZ4</b>&raquo;:<br/>
+        <h2>Bonus</h2>
+        <p>If you're not sure whether to compress data stored on disk,<br/>
+        see the HighLoad++ Siberia 2018 talk &laquo;<b>How to Speed Up LZ4 Decompression</b>&raquo;:<br/>
         <br/><a href="https://www.youtube.com/watch?v=V2CqQBICt7M">https://youtu.be/V2CqQBICt7M</a>
         </p>
     </section>
 
     <section class="slide">
-        <h2>Пример 3, память</h2>
-<p>Linux показывает, что в системе почти нет свободной памяти:<br/>
-&mdash; не смотрите на free память: <a href="https://www.linuxatemyram.com/">https://www.linuxatemyram.com/</a>.</p>
-<p>Top показывает, что процесс занял памяти больше, чем есть:<br/>
-&mdash; не смотрите на VIRT память у процесса (большой размер адресного пространства &mdash; это нормально, смотрите на RSS).</p>
-<p>На графиках видно, что процесс не освобождает память:<br/>
-&mdash; современные аллокаторы (почти) не отдают память системе напрямую.</p>
-<p><b>И ещё</b>: не включайте swap;</p>
+        <h2>Example 3, Memory</h2>
+<p>Linux shows that the system has almost no free memory:<br/>
+&mdash; don't look at free memory: <a href="https://www.linuxatemyram.com/">https://www.linuxatemyram.com/</a>.</p>
+<p>Top shows that the process used more memory than available:<br/>
+&mdash; don't look at VIRT memory for the process (large address space size is normal, look at RSS).</p>
+<p>Graphs show that the process doesn't release memory:<br/>
+&mdash; modern allocators (almost) don't return memory to the system directly.</p>
+<p><b>Also</b>: don't enable swap;</p>
     </section>
 
     <section class="slide">
-        <h2>Пример 4, сеть</h2>
-<p>Программа тратит всё время на передачу данных по сети,<br/>но сеть не утилизирована:</p>
-<p>&mdash; возможно, вы создаёте новые TCP соединения<br/>на каждую передачу данных;</p>
-<p>&mdash; возможно, вы используете одно TCP соединение<br/>для передачи файлов в сети с существенной потерей пакетов;</p>
-<p>&mdash; возможно, вы отправляете данные маленькими кусочками<br/>с TCP_NODELAY.</p>
-<p><b>И ещё</b>: всегда сжимайте данные, передаваемые по сети.</p>
+        <h2>Example 4, Network</h2>
+<p>The program spends all time transferring data over the network,<br/>but the network is not utilized:</p>
+<p>&mdash; perhaps you're creating new TCP connections<br/>for each data transfer;</p>
+<p>&mdash; perhaps you're using one TCP connection<br/>for transferring files on a network with significant packet loss;</p>
+<p>&mdash; perhaps you're sending data in small chunks<br/>with TCP_NODELAY.</p>
+<p><b>Also</b>: always compress data transmitted over the network.</p>
     </section>
 
     <section class="slide" style="background: #FFF url('pictures/linux_observability_tools.png') center no-repeat; background-size: 75%;">
@@ -128,17 +128,17 @@
     </section>
 
     <section class="slide">
-        <h2>Базовый набор</h2>
-        <p><b>top</b>, <b>htop</b>: CPU, память по процессам;</p>
-        <p><b>dstat</b>: IO, сеть, ...;</p>
-        <p><b>iostat</b>: IO по устройствам;</p>
-        <p><b>iotop</b>: IO по процессам;</p>
-        <p><b>iftop</b>: сеть по хостам;</p>
-        <p><b>perf top</b>: CPU по функциям в процессах;</p>
+        <h2>Basic Toolkit</h2>
+        <p><b>top</b>, <b>htop</b>: CPU, memory by processes;</p>
+        <p><b>dstat</b>: IO, network, ...;</p>
+        <p><b>iostat</b>: IO by devices;</p>
+        <p><b>iotop</b>: IO by processes;</p>
+        <p><b>iftop</b>: network by hosts;</p>
+        <p><b>perf top</b>: CPU by functions in processes;</p>
     </section>
 
     <section class="slide">
-        <h2>Пример: top по потокам</h2>
+        <h2>Example: top by threads</h2>
     </section>
 
     <section class="slide">
@@ -146,7 +146,7 @@
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">Пример: clickhouse-benchmark + perf top</h2>
+        <h2 style="font-size: 32pt;">Example: clickhouse-benchmark + perf top</h2>
     </section>
 
     <section class="slide">
@@ -154,15 +154,15 @@
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">Потребление ресурсов внутри ClickHouse</h2>
+        <h2 style="font-size: 32pt;">Resource Consumption Inside ClickHouse</h2>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">Что происходит прямо сейчас?</h2>
+        <h2 style="font-size: 32pt;">What's Happening Right Now?</h2>
         <p>
         <code>SHOW PROCESSLIST</code>
         </p><p>
-        Или <code>SELECT * FROM system.processes</code>
+        Or <code>SELECT * FROM system.processes</code>
         </p><p>
         <code>SELECT * FROM system.merges</code>
         </p><p>
@@ -176,35 +176,35 @@
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">Что происходило раньше?</h2>
+        <h2 style="font-size: 32pt;">What Happened Before?</h2>
         <p><b>system.query_log</b><br/>
-        &mdash; включается глобально, на пользователя, на сессию или на запрос;<br/>
-        &mdash; настройка <b>log_queries</b> = 1;<br/>
-        &mdash; запросы логгируются дважды: в начале и в конце выполнения.</p>
+        &mdash; enabled globally, per user, per session, or per query;<br/>
+        &mdash; setting <b>log_queries</b> = 1;<br/>
+        &mdash; queries are logged twice: at the beginning and end of execution.</p>
         <p><b>system.part_log</b><br/>
-        &mdash; включается глобально в config.xml;<br/>
-        &mdash; логгируются все операции с данными MergeTree.</p>
-        <p>Запись в системные таблицы производится асинхронно.<br>
-        (раз в 7 секунд). <b>SYSTEM FLUSH LOGS</b> для принудительного сброса.</p>
+        &mdash; enabled globally in config.xml;<br/>
+        &mdash; all operations with MergeTree data are logged.</p>
+        <p>Writing to system tables is asynchronous.<br>
+        (once every 7 seconds). <b>SYSTEM FLUSH LOGS</b> for forced flush.</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">Что можно с query_log?</h2>
-        <p>&mdash; выгрузить ленту запросов<br/>и нагрузить с помощью <b>clickhouse-benchmark</b>:</p>
+        <h2 style="font-size: 32pt;">What Can You Do with query_log?</h2>
+        <p>&mdash; export query stream<br/>and load using <b>clickhouse-benchmark</b>:</p>
         <p><code style="display: block; white-space: pre;">clickhouse-client --query="
   SELECT query FROM system.query_log
   WHERE type = 2 AND event_date = today()
   " > queries.tsv</code></p>
         <p><code>clickhouse-benchmark &lt; queries.tsv</code></p>
-        <p>&mdash; найти первый запрос, после которого всё стало плохо;</p>
-        <p>&mdash; посмотреть разбивку ресурсов по пользователям.</p>
+        <p>&mdash; find the first query after which everything went bad;</p>
+        <p>&mdash; look at resource breakdown by users.</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">Трассировка запросов</h2>
+        <h2 style="font-size: 32pt;">Query Tracing</h2>
         <p><code>SET <b>send_logs_level</b> = 'trace'</code></p>
-        <p>&mdash; логи отправляются со всех серверов,<br/> участвующих в обработке запроса<br/>
-        (распределённая трассировка);</p>
+        <p>&mdash; logs are sent from all servers<br/> participating in query processing<br/>
+        (distributed tracing);</p>
     </section>
 
     <section class="slide">
@@ -212,20 +212,20 @@
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">Счётчики ресурсов</h2>
-        <p>Глобальные:<br/>
+        <h2 style="font-size: 32pt;">Resource Counters</h2>
+        <p>Global:<br/>
         &mdash; system.<b>events</b>;<br/>
         &mdash; system.<b>metrics</b>;<br/>
         &mdash; system.<b>asynchronous_metrics</b>.</p>
-        <p>На каждый запрос:<br/>
+        <p>Per query:<br/>
         &mdash; system.<b>processes</b>;<br/>
         &mdash; system.<b>query_log</b>.</p>
-        <p>На каждый поток выполнения запроса:<br/>
+        <p>Per query execution thread:<br/>
         &mdash; system.<b>query_thread_log</b>.</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">Счётчики ресурсов</h2>
+        <h2 style="font-size: 32pt;">Resource Counters</h2>
         <p><b>User-space</b>:<br/>
         &mdash; FileOpen;<br/>
         &mdash; NetworkReceiveElapsedMicroseconds;<br/>
@@ -248,17 +248,17 @@
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">Счётчики ресурсов на запрос</h2>
+        <h2 style="font-size: 32pt;">Per-Query Resource Counters</h2>
         <p><table style="line-height: 1.5;">
-        <tr><th>Метрика</th><th>Первый запуск</th><th>Второй запуск</th></tr>
-        <tr><td>Общее время</td><td>6.7 сек</td><td style="color: green;">1.3 сек</td></tr>
+        <tr><th>Metric</th><th>First Run</th><th>Second Run</th></tr>
+        <tr><td>Total time</td><td>6.7 sec</td><td style="color: green;">1.3 sec</td></tr>
         <tr><td>...FileDescriptorReadBytes</td><td>2.56 GiB</td><td>2.56 GiB</td></tr>
         <tr><td>ReadChars</td><td>2.56 GiB</td><td>2.56 GiB</td></tr>
         <tr><td>ReadBytes</td><td>3.23 GiB</td><td style="color: green;">3.13 MiB</td></tr>
-        <tr><td>IOWait</td><td>87.3 сек</td><td style="color: green;">0.023 сек</td></tr>
-        <tr><td>CPUWait</td><td>0.027 сек</td><td>0.045 сек</td></tr>
-        <tr><td>UserTime</td><td>9.9 сек</td><td>13.4 сек</td></tr>
-        <tr><td>SystemTime</td><td>2.4 сек</td><td>2.2 сек</td></tr>
+        <tr><td>IOWait</td><td>87.3 sec</td><td style="color: green;">0.023 sec</td></tr>
+        <tr><td>CPUWait</td><td>0.027 sec</td><td>0.045 sec</td></tr>
+        <tr><td>UserTime</td><td>9.9 sec</td><td>13.4 sec</td></tr>
+        <tr><td>SystemTime</td><td>2.4 sec</td><td>2.2 sec</td></tr>
         </table>
     </section>
 
@@ -267,18 +267,18 @@
     </section>
 
     <section class="slide">
-        <h2>Сообщество</h2>
-        <p>Сайт: <a href="https://clickhouse.com/">https://clickhouse.com/</a></p>
+        <h2>Community</h2>
+        <p>Website: <a href="https://clickhouse.com/">https://clickhouse.com/</a></p>
         <p>Google groups: <a href="https://groups.google.com/forum/#!forum/clickhouse">https://groups.google.com/forum/#!forum/clickhouse</a></p>
-        <p>Рассылка: clickhouse-feedback@yandex-team.com</p>
-        <p>Telegram чат: <a href="https://telegram.me/clickhouse_en">https://telegram.me/clickhouse_en</a> и <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_ru</a> (уже 2000 участников)</p>
-        <p>GitHub: <a href="https://github.com/ClickHouse/ClickHouse/">https://github.com/ClickHouse/ClickHouse/</a> (уже 5300 звёзд)</p>
-        <p>+ встречи. Следующая в <b>Амстердаме 15 ноября</b>!<br/>
+        <p>Mailing list: clickhouse-feedback@yandex-team.com</p>
+        <p>Telegram chat: <a href="https://telegram.me/clickhouse_en">https://telegram.me/clickhouse_en</a> and <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_ru</a> (already 2000 members)</p>
+        <p>GitHub: <a href="https://github.com/ClickHouse/ClickHouse/">https://github.com/ClickHouse/ClickHouse/</a> (already 5300 stars)</p>
+        <p>+ meetups. Next one in <b>Amsterdam on November 15</b>!<br/>
         <a href="https://events.yandex.com/events/meetings/15-11-2018/">https://events.yandex.com/events/meetings/15-11-2018/</a></p>
     </section>
 
     <section class="slide">
-        <h2>Спасибо!</h2>
+        <h2>Thank You!</h2>
     </section>
 
 

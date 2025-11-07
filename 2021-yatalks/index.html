@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>ClickHouse: настоящее и будущее</title>
+    <title>ClickHouse: Present and Future</title>
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -15,17 +15,17 @@
 </head>
 <body class="shower list">
     <header class="caption">
-        <h1>ClickHouse: настоящее и будущее</h1>
+        <h1>ClickHouse: Present and Future</h1>
     </header>
     <section class="slide" id="cover">
-        <h1 style="margin-top: 80px; line-height: 150%; color: black; font-size: 48pt">ClickHouse:<br/>настоящее и будущее</h1>
+        <h1 style="margin-top: 80px; line-height: 150%; color: black; font-size: 48pt">ClickHouse:<br/>Present and Future</h1>
     </section>
 
 <section class="slide">
-<h2>Я расскажу:</h2>
-<p>— почему ClickHouse — хорошая система;</p>
-<p>— почему ClickHouse — плохая система;</p>
-<p>— и что с этим делать.</p>
+<h2>I Will Tell You:</h2>
+<p>— why ClickHouse is a good system;</p>
+<p>— why ClickHouse is a bad system;</p>
+<p>— and what to do about it.</p>
 </section>
 
 
@@ -78,45 +78,45 @@
 
 
 <section class="slide">
-<h2>ClickHouse — хорошая система</h2>
+<h2>ClickHouse is a Good System</h2>
 <img style="float: left; height: 80%; margin-top: -3em;" src="pictures/optimal.webp"/>
 </section>
 
 <section class="slide">
-<h2>ClickHouse не тормозит</h2>
-<p>Система создана из практических задач, для работы в бою.</p>
-<p>Разработана &laquo;снизу-вверх&raquo; исходя из конкретных сценариев.</p>
-<p>Внимание к деталям и специализация под сценарии нагрузки.</p>
-<p style="margin-top: 5em; color: gray; font-size: 14pt;">Доклад &laquo;секреты оптимизации производительности ClickHouse&raquo;
+<h2>ClickHouse Doesn't Lag</h2>
+<p>The system was created from practical tasks, for real-world use.</p>
+<p>Developed "bottom-up" based on specific scenarios.</p>
+<p>Attention to detail and specialization for workload scenarios.</p>
+<p style="margin-top: 5em; color: gray; font-size: 14pt;">Talk "Secrets of ClickHouse Performance Optimization"
 <br/><a href="https://www.youtube.com/watch?v=ltg8vstuHUU">https://www.youtube.com/watch?v=ltg8vstuHUU</a></p>
 </section>
 
 <section class="slide">
-<h2>ClickHouse — надёжная система</h2>
-<p>— кросс-ДЦ master-master репликация;</p>
-<p>— надёжная запись и хранение данных;</p>
-<p>— защита от сбоев железа;</p>
-<p>— защита от ошибок пользователя;</p>
-<p>— защита от ошибок конфигурации;</p>
-<p>— шифрование трафика и хранимых данных, аутентификация;</p>
-<p>— все доступные средства тестирования в CI;</p>
+<h2>ClickHouse is a Reliable System</h2>
+<p>— cross-datacenter master-master replication;</p>
+<p>— reliable writing and data storage;</p>
+<p>— protection against hardware failures;</p>
+<p>— protection against user errors;</p>
+<p>— protection against configuration errors;</p>
+<p>— traffic and stored data encryption, authentication;</p>
+<p>— all available testing tools in CI;</p>
 </section>
 
 <section class="slide">
-<h2>ClickHouse — удобная система</h2>
-<p>Язык SQL, адаптированный для удобства аналитики:</p>
-<p>— алиасы в любом месте запроса;
-<br/>— массивы, кортежи, лямбда функции;
-<br/>— комбинаторы агрегатных функций;
+<h2>ClickHouse is a Convenient System</h2>
+<p>SQL language adapted for analytics convenience:</p>
+<p>— aliases anywhere in the query;
+<br/>— arrays, tuples, lambda functions;
+<br/>— aggregate function combinators;
 <br/>— LIMIT BY, ASOF JOIN, ANY/SEMI JOIN, argMin/argMax;</p>
-<p>Функции для предметной области из коробки:</p>
-<p>— click-stream: функции обработки URL и IP-адресов.
-<br/>— performance monitoring: квантили;
+<p>Domain-specific functions out of the box:</p>
+<p>— click-stream: URL and IP address processing functions.
+<br/>— performance monitoring: quantiles;
 <br/>— geospatial: geoDistance, pointInPolygon, H3, S2;</p>
 </section>
 
 <section class="slide">
-<h2>ClickHouse — гибкая система</h2>
+<h2>ClickHouse is a Flexible System</h2>
 <p class="cloud" style="font-size: 12pt;">
 <span>Web analytics.</span><span>Mobile app analytics.</span>
 <span>Ads analytics.</span><span>Realtime bidding.</span>
@@ -147,167 +147,167 @@
 </section>
 
 <section class="slide">
-<h2>ClickHouse — доступная система</h2>
-<p>ClickHouse можно развернуть:</p>
-<p>— на своих серверах;
-<br/>— в облаках; с Kubernetes;
-<br/>— на инфраструктуре заказчика;
-<br/>— на личном ноутбуке.</p>
-<p>ClickHouse доступен под разные платформы:</p>
+<h2>ClickHouse is an Accessible System</h2>
+<p>ClickHouse can be deployed:</p>
+<p>— on your own servers;
+<br/>— in clouds; with Kubernetes;
+<br/>— on customer infrastructure;
+<br/>— on a personal laptop.</p>
+<p>ClickHouse is available for different platforms:</p>
 <p>— x86_64, aarch64 (ARM), <span style="color: gray;">PowerPC 64, RISC-V</span>;
 <br/>— Linux, FreeBSD, mac OS.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 36pt;">ClickHouse — настоящий open-source</h2>
-<p>Исходники доступны публично.</p>
-<p>Патчи от сообщества принимаются.</p>
-<p>Открытые процессы разработки.</p>
-<p>Низкий порог входа для контрибьюторов.</p>
-<p>Максимальное поощрение и вовлечение сообщества.</p>
+<h2 style="font-size: 36pt;">ClickHouse is True Open-Source</h2>
+<p>Source code is publicly available.</p>
+<p>Patches from the community are accepted.</p>
+<p>Open development processes.</p>
+<p>Low barrier to entry for contributors.</p>
+<p>Maximum encouragement and community engagement.</p>
 
-<p style="margin-top: 5em; color: gray; font-size: 14pt;">Доклад &laquo;как организовать живое сообщество вокруг open-source продукта&raquo;
+<p style="margin-top: 5em; color: gray; font-size: 14pt;">Talk "How to Build a Thriving Community Around an Open-Source Product"
 <br/><a href="https://www.youtube.com/watch?v=xddKLojmkus&amp;t=4165s">https://www.youtube.com/watch?v=xddKLojmkus&amp;t=4165s</a></p>
 </section>
 
 
 <section class="slide">
-<h2>ClickHouse — плохая<span style="color: gray;">*</span> система</h2>
+<h2>ClickHouse is a Bad<span style="color: gray;">*</span> System</h2>
 <img style="float: right; height: 80%; margin-top: -3em;" src="pictures/not_optimal.webp"/>
-<p style="margin-top: 20em; font-size: 14pt; color: gray;">* — не идеальная.</p>
+<p style="margin-top: 20em; font-size: 14pt; color: gray;">* — not perfect.</p>
 </section>
 
 
 <section class="slide">
-<h2>Репликация требует ZooKeeper</h2>
-<p style="line-height: 1.5;"><b>ZooKeeper</b> — отдельный от ClickHouse компонент,
-<br/>написанный на Java, требующий тщательной настройки<br/> и отдельных серверов.</p>
+<h2>Replication Requires ZooKeeper</h2>
+<p style="line-height: 1.5;"><b>ZooKeeper</b> — a component separate from ClickHouse,
+<br/>written in Java, requiring careful configuration<br/> and separate servers.</p>
 </section>
 
 <section class="slide">
-<h2>ZooKeeper уходит!</h2>
-<p>1. <b>clickhouse-keeper</b> &mdash; 100% совместимый с ZooKeeper<br/>по протоколу и модели данных.</p>
+<h2>ZooKeeper is Going Away!</h2>
+<p>1. <b>clickhouse-keeper</b> &mdash; 100% compatible with ZooKeeper<br/>by protocol and data model.</p>
 <p>&mdash; compressed logs and snapshots;
 <br/>&mdash; no issues with zxid overflow;
 <br/>&mdash; no issues with large packets;
 <br/>&mdash; better memory usage;
 <br/>&mdash; no issues with GC and Java heap;</p>
-<p>2. Может запускаться <b>встроенным</b> в clickhouse-server.</p>
-<p>&mdash; нет необходимости в отдельном сервисе;</p>
-<p style="color: gray">Разработчик: Alexander Sapin.</p>
+<p>2. Can be run <b>embedded</b> in clickhouse-server.</p>
+<p>&mdash; no need for a separate service;</p>
+<p style="color: gray">Developer: Alexander Sapin.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 32pt;">Данные необходимо вставлять пачками</h2>
-<p>Можно вставлять <span style="color: green;">миллионы строк в секунду</span> на каждый сервер.</p>
-<p>Но эти строки должны быть всего лишь в <span style="color: red;">нескольких пачках в секунду</span>.</p>
-<p style="margin-top: 2em;">Можно использовать <b>Kafka</b> или <b>RabbitMQ</b> таблицы.</p>
+<h2 style="font-size: 32pt;">Data Must Be Inserted in Batches</h2>
+<p>You can insert <span style="color: green;">millions of rows per second</span> per server.</p>
+<p>But those rows must be in just <span style="color: red;">a few batches per second</span>.</p>
+<p style="margin-top: 2em;">You can use <b>Kafka</b> or <b>RabbitMQ</b> tables.</p>
 </section>
 
 <section class="slide">
-<h2>Асинхронные INSERT запросы</h2>
-<p>Возможность делать много частых INSERT.</p>
-<p>Из множества параллельных соединений.</p>
-<p style="color: green;"><b>Без Kafka и без Buffer таблиц!</b></p>
-<p>Множество мелких INSERTs комбинируются вместе<br/>
-в одну пачку в оперативной памяти.</p>
-<p>Вставки надёжные по-умолчанию:<br/>клиент получает ответ, когда данные записаны в таблицу.</p>
-<p style="color: gray;">Уже в продакшене! Разработчики: Anton Popov, Ivan Lezhankin.</p>
+<h2>Asynchronous INSERT Queries</h2>
+<p>Ability to make many frequent INSERTs.</p>
+<p>From multiple parallel connections.</p>
+<p style="color: green;"><b>Without Kafka and without Buffer tables!</b></p>
+<p>Multiple small INSERTs are combined together<br/>
+into one batch in memory.</p>
+<p>Inserts are reliable by default:<br/>client receives a response when data is written to the table.</p>
+<p style="color: gray;">Already in production! Developers: Anton Popov, Ivan Lezhankin.</p>
 </section>
 
 <section class="slide">
-<h2>Отсутствие поддержки транзакций</h2>
-<p>Зачем в ClickHouse транзакции?</p>
-<p>&mdash; для атомарной вставки в несколько таблиц и представлений.</p>
-<p>&mdash; для атомарной вставки на кластер.</p>
-<p>&mdash; для выполнения множества SELECT из одного снапшота.</p>
-<p style="color: gray; margin-top: 2em;">В разработке, запланировано на Q2 2022.</p>
+<h2>No Transaction Support</h2>
+<p>Why do we need transactions in ClickHouse?</p>
+<p>— for atomic insertion into multiple tables and views.</p>
+<p>— for atomic cluster insertion.</p>
+<p>— for executing multiple SELECTs from one snapshot.</p>
+<p style="color: gray; margin-top: 2em;">In development, planned for Q2 2022.</p>
 </section>
 
 <section class="slide">
-<h2>Недостаточная совместимость SQL</h2>
-<p>Язык SQL в ClickHouse изначально сделан нестандартным для удобства.</p>
-<p>Из-за сложного механизма разрешения имён и типов,<br/>запросы сложно анализировать.</p>
-<p style="margin-top: 2em; color: green;">Есть способ поддержать все возможности стандарта<br/> и сохранить все расширения ClickHouse!</p>
+<h2>Insufficient SQL Compatibility</h2>
+<p>SQL language in ClickHouse was initially made non-standard for convenience.</p>
+<p>Due to a complex name and type resolution mechanism,<br/>queries are difficult to analyze.</p>
+<p style="margin-top: 2em; color: green;">There is a way to support all standard capabilities<br/> and keep all ClickHouse extensions!</p>
 <p style="margin-top: 2em;">2021: Window Functions, ANY/ALL, EXISTS, GROUPING SETS...</p>
 <p>2022: Correlated Subqueries</p>
 </section>
 
 <section class="slide">
-<h2>Отсутствие оптимизаций JOIN</h2>
-<p>Не учитывается сортировка таблицы для JOIN.</p>
-<p>Нет cost based optimizer для переупорядочивания JOIN.</p>
-<p>Нет grace hash алгоритма для JOIN.</p>
-<p>Нет shuffle для распределённых JOIN.</p>
-<p>И вообще распределённые JOIN плохо работают.</p>
+<h2>Lack of JOIN Optimizations</h2>
+<p>Table sorting is not considered for JOIN.</p>
+<p>No cost-based optimizer for JOIN reordering.</p>
+<p>No grace hash algorithm for JOIN.</p>
+<p>No shuffle for distributed JOINs.</p>
+<p>And in general, distributed JOINs work poorly.</p>
 </section>
 
 <section class="slide">
-<h2>Отсутствие UPSERT</h2>
-<p>Отсутствие точечных UPDATE и DELETE,<br/>
-а также UNIQUE KEY CONSTRAINT.</p>
-<p>Реализовать unique key в распределённой системе
-<br/>&mdash; нетривиальная задача.</p>
+<h2>No UPSERT</h2>
+<p>No point UPDATE and DELETE,<br/>
+as well as UNIQUE KEY CONSTRAINT.</p>
+<p>Implementing unique key in a distributed system
+<br/>&mdash; is a non-trivial task.</p>
 </section>
 
 <section class="slide">
-<h2>Сложность масштабирования</h2>
-<p style="color: green;">ClickHouse прекрасно масштабируется<br/>до тысяч серверов и 100 ПБ данных.</p>
-<p>Но изменение числа серверов в кластере &mdash; <span style="color: red;">боль</span>.</p>
-<p>Нужно заботиться о конфигурации шардов и реплик.</p>
-<p>Перешардирование данных <span style="color: red;">осуществляется вручную</span>.</p>
+<h2>Scaling Complexity</h2>
+<p style="color: green;">ClickHouse scales perfectly<br/>to thousands of servers and 100 PB of data.</p>
+<p>But changing the number of servers in a cluster is <span style="color: red;">painful</span>.</p>
+<p>You need to worry about shard and replica configuration.</p>
+<p>Data resharding <span style="color: red;">is done manually</span>.</p>
 
-<p style="margin-top: 2em;">Решение &mdash; cloud-native ClickHouse.</p>
-<p style="color: gray;">Кстати, а что это значит?</p>
+<p style="margin-top: 2em;">Solution &mdash; cloud-native ClickHouse.</p>
+<p style="color: gray;">By the way, what does that mean?</p>
 </section>
 
 <section class="slide">
-<h2>Сложность разделения ресурсов</h2>
-<p>Разделение CPU и IO между запросами.</p>
-<p>Приоритеты запросов.</p>
+<h2>Resource Separation Complexity</h2>
+<p>Separation of CPU and IO between queries.</p>
+<p>Query priorities.</p>
 <p>Memory overcommit.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Недостаточные возможности по интеграции</h2>
-<p>Нет родного UI для ClickHouse</p>
-<p>Не хватает официальных интеграций с BI и ETL.</p>
-<h2 style="font-size: 30pt; margin-top: 2em;">Недостаточная известность в США и Европе</h2>
-<p>Недостаточно развитая документация.</p>
-<p>Отсутствие обучающих материалов, курсов и поддержки.</p>
+<h2 style="font-size: 30pt;">Insufficient Integration Capabilities</h2>
+<p>No native UI for ClickHouse</p>
+<p>Not enough official integrations with BI and ETL.</p>
+<h2 style="font-size: 30pt; margin-top: 2em;">Insufficient Awareness in USA and Europe</h2>
+<p>Insufficiently developed documentation.</p>
+<p>Lack of educational materials, courses, and support.</p>
 </section>
 
 <section class="slide">
-<h2>И что с этим делать?</h2>
+<h2>And What to Do About It?</h2>
 </section>
 
 <section class="slide">
-<h2>Компания ClickHouse, Inc</h2>
-<p>Создана вместе с Яндексом.</p>
-<p>Уже привлекли 300 млн $ при оценке 2 млрд.</p>
+<h2>ClickHouse, Inc</h2>
+<p>Created together with Yandex.</p>
+<p>Already raised $300M at a $2B valuation.</p>
 </section>
 
 <section class="slide">
-<h2>Направления работы ClickHouse Inc</h2>
+<h2>ClickHouse Inc Work Directions</h2>
 <ol>
-<li style="line-height: 1.5;">Создать облачный сервис для ClickHouse<br/>
-в serverless формате с динамическим масштабированием.</li>
-<li style="line-height: 1.5; margin-top: 1.5em;">Развитие и поддержка ClickHouse в open-source<br/>
-с целью увеличения размера рынка ClickHouse.</li>
-<li style="line-height: 1.5; margin-top: 1.5em;">Исследования и эксперименты<br/>
-для поиска новых ниш и возможностей ClickHouse.</li>
+<li style="line-height: 1.5;">Create a cloud service for ClickHouse<br/>
+in serverless format with dynamic scaling.</li>
+<li style="line-height: 1.5; margin-top: 1.5em;">Development and support of ClickHouse in open-source<br/>
+to increase ClickHouse market size.</li>
+<li style="line-height: 1.5; margin-top: 1.5em;">Research and experiments<br/>
+to find new niches and opportunities for ClickHouse.</li>
 </ol>
 </section>
 
 <section class="slide">
-<h2>Новые горизонты для ClickHouse</h2>
-<p style="line-height: 1.5;">Поддержка полуструктурированных данных.<br/>
-Функции обработки текста на естественном языке.<br/>
-Потоковые запросы и complex event processing.<br/>
-Key-value витрины данных, инкрементальная агрегация в оперативке.<br/>
-Выполнение запросов с использованием GPU.<br/>
-Интеграция с ML &amp; AI.<br/>
-Обработка графов.<br/>
+<h2>New Horizons for ClickHouse</h2>
+<p style="line-height: 1.5;">Support for semistructured data.<br/>
+Natural language text processing functions.<br/>
+Streaming queries and complex event processing.<br/>
+Key-value data marts, incremental aggregation in memory.<br/>
+Query execution using GPU.<br/>
+Integration with ML &amp; AI.<br/>
+Graph processing.<br/>
 Batch jobs.<br/>
 Data Hub.</p>
 </section>
@@ -408,9 +408,9 @@ type: Tuple(                                           &lt;-- inferred type
 </section>
 
 <section class="slide">
-<h2>Выводы</h2>
-<p style="line-height: 1.5;">Вместе с новой компанией и open-source сообществом
-<br/>мы сделаем ClickHouse лучшей аналитической СУБД в мире!</p>
+<h2>Conclusions</h2>
+<p style="line-height: 1.5;">Together with the new company and the open-source community
+<br/>we will make ClickHouse the best analytical DBMS in the world!</p>
 </section>
 
     <div class="progress"></div>
@@ -422,4 +422,3 @@ type: Tuple(                                           &lt;-- inferred type
     <!--/Video plugin-->
 </body>
 </html>
-

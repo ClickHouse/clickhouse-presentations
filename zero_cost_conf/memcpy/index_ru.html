@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Как перекладывать байты</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>Как перекладывать байты</h1>
+    </header>
+
+    <section class="slide" id="cover" style="background: #FFF url('pictures/title.png') no-repeat; background-size: 100%;">
+        <h1 style="margin-top: 200px; margin-left: 25px; font-size: 42pt; font-weight: 400; color: #e8e8d2;">Как перекладывать байты</h1>
+        <p style="margin-top: 100px; margin-left: 25px; line-height: 1.5; color: #808093">Алексей Миловидов<br/>Разработчик ClickHouse</p>
+    </section>
+
+    <section class="slide">
+        <h2>Как писать быстрый код?</h2>
+        <p>Высокоуровневая оптимизация:</p>
+        <p>&mdash; выбор правильного алгоритма;
+        <br/>&mdash; использование подходящих структур данных;
+        <br/>&mdash; выбор интерфейсов, соответствующих задаче;</p>
+        <p>Низкоуровневая оптимизация:</p>
+        <p>&mdash; избавиться от лишних копирований и аллокаций;
+        <br/>&mdash; проследить, чтобы генерировались правильные инструкции;
+        <br/>&mdash; проследить, чтобы данные в памяти были хорошо расположены;</p>
+    </section>
+
+    <section class="slide">
+        <h2>Как писать быстрый код?</h2>
+        <p>Профилировать его:</p>
+        <pre style="line-height: 1.5; font-size: 14pt;">
+4,47%  libstdc++.so.6.0.28  [.] __dynamic_cast
+1,42%  libstdc++.so.6.0.28  [.] __cxxabiv1::__vmi_class_type_info::__do_dyncast
+1,37%  libstdc++.so.6.0.28  [.] std::operator>>&lt;char, std::char_traits&lt;char>, std::allocator&lt;char> >
+1,18%  libstdc++.so.6.0.28  [.] __cxxabiv1::__si_class_type_info::__do_dyncast
+0,83%  libstdc++.so.6.0.28  [.] std::basic_ios&lt;char, std::char_traits&lt;char> >::_M_cache_locale
+0,75%  libstdc++.so.6.0.28  [.] std::locale::id::_M_id
+0,73%  libstdc++.so.6.0.28  [.] std::use_facet&lt;std::ctype&lt;char> >
+0,64%  libstdc++.so.6.0.28  [.] std::ios_base::_M_init
+0,64%  libc-2.31.so         [.] __strcmp_avx2
+0,63%  libstdc++.so.6.0.28  [.] std::ostream::_M_insert&lt;unsigned long></pre>
+    </section>
+
+    <section class="slide" style="background: #FFF; color: #000;">
+        <h2>Как писать быстрый код?</h2>
+        <img style="position: absolute; height: 80%;" src="pictures/crying.png"/>
+        <p>Профилировать его:</p>
+        <pre style="line-height: 1.5; font-size: 14pt; color: #666;">
+4,47%  libstdc++.so.6.0.28  [.] __dynamic_cast
+1,42%  libstdc++.so.6.0.28  [.] __cxxabiv1::__vmi_class_type_info::__do_dyncast
+1,37%  libstdc++.so.6.0.28  [.] std::operator>>&lt;char, std::char_traits&lt;char>, std::allocator&lt;char> >
+1,18%  libstdc++.so.6.0.28  [.] __cxxabiv1::__si_class_type_info::__do_dyncast
+0,83%  libstdc++.so.6.0.28  [.] std::basic_ios&lt;char, std::char_traits&lt;char> >::_M_cache_locale
+0,75%  libstdc++.so.6.0.28  [.] std::locale::id::_M_id
+0,73%  libstdc++.so.6.0.28  [.] std::use_facet&lt;std::ctype&lt;char> >
+0,64%  libstdc++.so.6.0.28  [.] std::ios_base::_M_init
+0,64%  libc-2.31.so         [.] __strcmp_avx2
+0,63%  libstdc++.so.6.0.28  [.] std::ostream::_M_insert&lt;unsigned long></pre>
+    </section>
+
+    <section class="slide">
+        <h2>Вопрос</h2>
+        <p style="line-height: 1.5;">Удалить <b>std::stringstream</b> из внутреннего цикла<br/>&mdash; это высокоуровневая или низкоуровневая оптимизация?</p>
+    </section>
+
+    <section class="slide">
+        <h2>Как писать быстрый код?</h2>
+        <p>Профилировать его:</p>
+        <pre style="line-height: 1.5; font-size: 14pt;">
+12,96%  clickhouse  [.] memcpy                                    - <b style="color: red;">копирование</b>
+10,37%  [kernel]    [k] copy_user_generic_string                  - <b style="color: red;">копирование</b>
+ 5,73%  clickhouse  [.] DB::deserializeBinarySSE2&lt;1>           - десериализация
+ 4,50%  clickhouse  [.] DB::deserializeBinarySSE2&lt;4>           - десериализация
+ 4,47%  clickhouse  [.] LZ4::(anonymous namespace)::decompressImpl&lt;32ul, false>
+ 4,34%  clickhouse  [.] LZ4::(anonymous namespace)::decompressImpl&lt;8ul, true>
+ 4,10%  clickhouse  [.] LZ4::(anonymous namespace)::decompressImpl&lt;16ul, false>
+ 3,96%  clickhouse  [.] LZ4::(anonymous namespace)::decompressImpl&lt;16ul, true>
+        </pre>
+    </section>
+
+    <section class="slide">
+        <h2>Как уменьшить затраты на memcpy?</h2>
+        <p><b>memcpy</b> &mdash; копирование данных.</p>
+        <p>Как убрать <b>memcpy</b> из профиля?</p>
+        <p>1. <span style="color: green;">Меньше копировать данные.</span>
+        <br/>Не всегда возможно.
+        <br/>Часто данные нужно переложить, чтобы всё ускорить.
+        </p>
+        <p>2. <span style="color: red;">Оптимизировать реализацию memcpy.</span>
+        <br/>Но её уже все оптимизировали?
+        </p>
+    </section>
+
+    <section class="slide">
+        <h2>Важные факты про <b>memcpy</b></h2>
+
+        <p>&laquo;It's the world's most popular function &mdash; one all programmers love&raquo;</p>
+        <p>&mdash; Alexandra Justine Roberts Tunney.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Важные факты про <b>memcpy</b></h2>
+
+        <p style="line-height: 1.5; margin-top: -1em;">1. Компилятор может заменять <b>memcpy</b> на встроенную реализацию.
+        <br/>И делает это, если размер небольшой и известен во время компиляции.</p>
+
+        <pre>memcpy(dst, src, 8);
+
+movq    (%rsi), %rax
+movq    %rax, (%rdi)</pre>
+
+        <p>Это контролируется параметром -fbuiltin-memcpy, -fno-builtin-memcpy.</p>
+        <p>Встроенную реализацию можно указать явно:<br/>
+        __builtin_memcpy(dst, src, size).</p>
+        <p>Для неизвестных размеров она будет заменена на вызов memcpy.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Важные факты про <b>memcpy</b></h2>
+
+        <p style="line-height: 1.5; margin-top: -1em;">1. Компилятор может заменять <b>memcpy</b> на встроенную реализацию.
+        <br/>И делает это, если размер небольшой и известен во время компиляции.</p>
+
+        <pre>memcpy(dst, src, 16):
+
+movups  (%rsi), %xmm0
+movups  %xmm0, (%rdi)</pre>
+
+        <pre>memcpy(dst, src, 15):
+
+movq    (%rsi), %rax
+movq    7(%rsi), %rcx
+movq    %rcx, 7(%rdi)
+movq    %rax, (%rdi)</pre>
+    </section>
+
+
+    <section class="slide">
+        <h2>Важные факты про <b>memcpy</b></h2>
+
+        <p style="line-height: 1.5; margin-top: -1em;">2. Компилятор может заменять ваш код на вызов <b>memcpy</b>.
+        <br/>И делает это, если вы пишете что-то похожее.</p>
+
+        <pre style="font-size: 14pt;">void f(char * __restrict dst, const char * __restrict src, size_t size)
+{
+    for (size_t i = 0; i &lt; size; ++i)
+        dst[i] = src[i];
+}
+
+f(char*, char const*, unsigned long):
+        testq   %rdx, %rdx
+        je      .LBB2_2
+        pushq   %rax
+        <b>callq   memcpy@PLT</b>
+        addq    $8, %rsp
+.LBB2_2:
+        retq
+</pre>
+
+        <p>Это контролируется параметром -fbuiltin-memcpy (clang)
+        <br/> или -ftree-loop-distribute-patterns (gcc).</p>
+    </section>
+
+    <section class="slide">
+        <h2>Важные факты про <b>memcpy</b></h2>
+
+        <p style="line-height: 1.5; margin-top: -1em;">2. Компилятор может заменять ваш код на вызов <b>memcpy</b>.
+        <br/>И делает это, если вы пишете что-то похожее.</p>
+
+        <pre style="font-size: 14pt;">void memcpy(
+    char * __restrict dst,
+    const char * __restrict src,
+    size_t size)
+{
+    for (size_t i = 0; i &lt; size; ++i)
+        dst[i] = src[i];
+}
+</pre>
+
+        <p>Segmentation fault (stack overflow).</p>
+    </section>
+
+    <section class="slide">
+        <h2>Важные факты про <b>memcpy</b></h2>
+
+        <p style="line-height: 1.5; margin-top: -1em;">3. GLibc содержит много реализаций <b>memcpy</b>,
+        <br/>из которых выбирается подходящая под конкретный набор инструкций.</p>
+
+        <pre style="font-size: 14pt;">__memcpy_erms
+__memcpy_sse2_unaligned
+__memcpy_ssse3
+__memcpy_ssse3_back
+__memcpy_avx_unaligned
+__memcpy_avx_unaligned_erms
+__memcpy_avx512_unaligned
+__memcpy_avx512_unaligned_erms
+__memcpy_avx512_no_vzeroupper</pre>
+
+        <p>Это происходит с помощью механизма GNU IFUNC (indirect functions)
+        <br/>во время первого использования функции из shared library,
+        <br/>с помощью dynamic loader.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Важные факты про <b>memcpy</b></h2>
+
+        <p style="line-height: 1.5; margin-top: -1em;">4. Функция <b>memcpy</b> встроена в процессор
+        <br/>и может быть выполнена за одну инструкцию!</p>
+
+        <pre style="line-height: 1.5;"><b>rep movsb</b>  %ds:(%rsi), %es:(%rdi)</pre>
+
+        <p>Эта инструкция присутствует во всех x86 CPU с самого начала.</p>
+        <p style="line-height: 1.5;">Если <b>memcpy</b> реализована в железе,<br/>то почему бы эту реализацию не использовать?</p>
+    </section>
+
+<!-- Друзья memcpy - memmove и копирование повторяющегося шаблона -->
+
+    <section class="slide">
+        <h2>Как оптимизировать memcpy?</h2>
+
+        <p style="line-height: 1.5;">Каждый уважающий себя разработчик<br/>хотя бы раз в жизни пытался оптимизировать memcpy.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Перед тем, как начать...</h2>
+
+        <p>Есть ли у вас воспроизводимые тесты производительности<br/>под репрезентативной нагрузкой?</p>
+        <p>Можно ли оптимизировать код на высоком уровне,<br/>убрав лишние копирования?</p>
+        <p>Может быть, нужна функция с немного другим интерфейсом?</p>
+    </section>
+
+    <section class="slide">
+        <h2>На чём писать memcpy?</h2>
+
+        <p>На языке Ассемблера:</p>
+
+        <p>memcpy.s</p>
+
+        <p><span style="color: green;">+</span> вы точно контролируете выбор инструкций и регистров,
+        <br/>&ensp; их порядок и даже выравнивание.</p>
+        <p><span style="color: red;">&minus;</span> функция не инлайнится.</p>
+        <p><span style="color: red;">&minus;</span> не работает link time optimization.</p>
+    </section>
+
+    <section class="slide">
+        <h2>На чём писать memcpy?</h2>
+
+        <p>&mdash; на языке Ассемблера;</p>
+        <p>&mdash; на C;</p>
+        <p>&mdash; на C++;</p>
+        <p>&mdash; на C или C++ с inline ассемблером;</p>
+    </section>
+
+    <section class="slide">
+        <h2>Из чего состоит memcpy?</h2>
+
+        <p>1. Копирование &laquo;хвостов&raquo; &mdash; маленьких невыровненных<br/>&emsp;кусков данных в начале и в конце.</p>
+        <p>2. Развёрнутый цикл с использованием широких инструкций.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Производительность memcpy</h2>
+
+        <p>Для <b>маленьких размеров</b>, неизвестных во время компиляции.<br/>
+        Пример: копирование std::string, размера ~50 байт.</p>
+
+        <p>Стоимость вызова функции:</p>
+        <p>&mdash; если функция расположена в shared library,
+        <br/>&emsp; то её вызов косвенный, через PLT;</p>
+        <p>&mdash; если функция расположена в отдельной единице трансляции,
+        <br/>&emsp; то она не может быть подставлена и должна вызываться
+        <br/>&emsp; (в случае asm не помогает LTO);</p>
+        <p>&mdash; сохранение регистров в месте вызова функции;</p>
+    </section>
+
+    <section class="slide">
+        <h2>Производительность memcpy</h2>
+
+        <p>Для <b>больших размеров</b>:</p>
+
+        <p>&mdash; Какие инструкции используются для копирования.</p>
+        <p>&mdash; Как развёрнут цикл.</p>
+        <p>&mdash; В каком порядке обходить данные.</p>
+        <p>&mdash; Используются ли выровненные инструкции.</p>
+        <p>&mdash; Non temporary stores.</p>
+        <p>&mdash; Сброс верхних половин регистров.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Производительность memcpy</h2>
+
+        <p>Очень сильно зависит от:</p>
+        <p>&mdash; распределения данных и нагрузки;</p>
+        <p>&mdash; модели процессора;</p>
+    </section>
+
+    <section class="slide">
+        <h2>Производительность memcpy</h2>
+
+        <p>Пример: <b>repne movsb</b>.</p>
+        <p>Одна инструкция. Реализована с помощью микрокода.</p>
+        <p>Для большинства старых CPU &mdash; работает медленно в любом случае.</p>
+        <p>Для многих CPU &mdash; работает быстро, но большой оверхед на старт.</p>
+        <p>На новых процессорах Intel есть флаг erms (Enhanced Repne MovSb)
+        <br/>и она работает быстро во всех случаях... но не на AMD.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Производительность memcpy</h2>
+
+        <p>Пример: копирование с <b>AVX</b> инструкциями.</p>
+        <p>Для большинства CPU работает быстрее, чем с SSE инструкциями.</p>
+        <p>Но если остальной код программы использует SSE,
+        <br/>то после AVX, все SSE инструкции замедляются навечно.</p>
+        <p>Чтобы было не дорогое, надо вызывать инструкцию <b>vzeroupper</b>.</p>
+        <p>Но инструкция <b>vzeroupper</b> сама дорогая.</p>
+        <p>Но на самых новых CPU переключение не дорогое
+        <br/> и <b>vzeroupper</b> вызывать не надо.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Производительность memcpy</h2>
+
+        <p>Пример: копирование с <b>AVX-512</b> инструкциями.</p>
+        <p>На не самых новых процессорах медленнее, чем AVX
+        <br/>и вызывает уменьшение частоты.</p>
+        <p>... если использовать одновременно на многих ядрах.</p>
+        <p>Но на новых процессорах уже не вызывает.</p>
+        <p>Но AVX-512 нет на AMD.</p>
+    </section>
+
+    <section class="slide">
+        <img style="height: 95%;" src="pictures/cpu.jpg"/>
+    </section>
+
+    <section class="slide">
+        <h2>Производительность memcpy</h2>
+
+        <p>Пример: копирование с non-temporary stores.</p>
+        <p>Функции <b>_mm_stream*</b>, инструкция <b>movnt*</b>, <b>vmovnt*</b>.</p>
+        <p>Записывает данные в память, минуя кэш.</p>
+        <p style="color: green;">Ускоряет memcpy для больших размеров в 1.5 раза.</p>
+        <p style="color: red;">Полностью бесполезно в продакшене.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Производительность memcpy</h2>
+
+        <p style="color: red;">Лучше не пытайтесь оптимизировать memcpy!</p>
+        <p>На вашей машине и вашем бенчмарке всё ускорится.
+        <br/>А на продакшене у пользователей &mdash; замедлится.</p>
+
+        <p style="margin-top: 3em; color: gray;">... но я попробую.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Пишем бенчмарк memcpy</h2>
+
+        <p>Используем разные размеры буфера.</p>
+        <p>Используем разные размеры для вызова memcpy.</p>
+        <p>Используем размеры из случайных распределений,<br/>чтобы предсказателю переходов не было слишком хорошо.</p>
+        <p>Используем разное количество потоков.</p>
+        <p>Копируем между буферами в разнах направлениях.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Пишем бенчмарк memcpy</h2>
+
+        <p>&mdash; 9 реализаций из glibc.</p>
+        <p>&mdash; Cosmopolitan libc.</p>
+        <p>&mdash; repne movsb.</p>
+        <p>&mdash; Реализация простым циклом:<br/>
+        &emsp; loop peeling, loop unrolling and vectorization &mdash; делает компилятор.</p>
+        <p>&mdash; &laquo;Китайский memcpy&raquo;, 2 варианта.</p>
+        <p>&mdash; Моя реализация, издали похожая на остальные.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Пишем бенчмарк memcpy</h2>
+
+        <p>Запускаем на разных машинах:</p>
+        <p>&mdash; Intel Cascade Lake;</p>
+        <p>&mdash; Intel Ivy Bridge;</p>
+        <p>&mdash; AMD EPYC;</p>
+        <p>&mdash; AMD Ryzen.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Пишем бенчмарк memcpy</h2>
+
+        <p><a href="https://github.com/ClickHouse/ClickHouse/tree/master/utils/memcpy-bench">https://github.com/ClickHouse/ClickHouse/tree/master<br/>/utils/memcpy-bench</a></p>
+
+        <pre style="font-size: 14pt;">for size in 4096 16384 50000 65536 100000 1000000 10000000 100000000; do
+  for threads in 1 2 4 $(($(nproc) / 2)) $(nproc); do
+    for distribution in 1 2 3 4 5; do
+      for variant in {1..13} {21..29}; do
+        for i in {1..10}; do
+          ./memcpy-bench --tsv --size $size --variant $variant \
+            --threads $threads --distribution $distribution;
+        done;
+      done;
+    done;
+  done;
+done | tee result.tsv</pre>
+
+        <p>42 000 измерений с одной машины.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Пишем бенчмарк memcpy</h2>
+
+        <p>Результат: <span style="color: red;">нет одного лучшего memcpy</span>.</p>
+        <p>Есть хорошие:</p>
+        <p>&mdash; <b>__memcpy_avx_unaligned</b> из glibc;<br/>&emsp; но его нельзя вставить inline в код из-за лицензии<br/>&emsp; и надо приделывать свой CPU dispatch.</p>
+        <p>&mdash; MemCpy из <b>Cosmopolitan libc</b> ok,<br/>&emsp; но проигрывает на маленьких размерах.</p>
+
+        <p style="color: green;">Всё ещё есть надежда сделать свой, лучший memcpy :)</p>
+    </section>
+
+    <section class="slide">
+        <h2>Обобщённый memcpy</h2>
+
+        <pre style="margin-top: -1em; font-size: 14pt; line-height: 1.1;">#define VEC_SIZE 16
+#define VZEROUPPER 0
+#include "memcpy_medium_every_unroll.inl.h"
+#undef VEC_SIZE
+#undef VZEROUPPER
+
+#define VEC_SIZE 32
+#define VZEROUPPER 1
+#include "memcpy_medium_every_unroll.inl.h"
+#undef VEC_SIZE
+#undef VZEROUPPER
+
+#define VEC_SIZE 64
+#define VZEROUPPER 1
+#include "memcpy_medium_every_unroll.inl.h"
+#undef VEC_SIZE
+#undef VZEROUPPER</pre>
+    </section>
+
+    <section class="slide">
+        <h2>Обобщённый memcpy</h2>
+
+        <pre style="margin-top: -1em; font-size: 14pt;">#define UNROLL_COUNT 1
+#include "memcpy_medium.inl.h"
+#undef UNROLL_COUNT
+
+#define UNROLL_COUNT 2
+#include "memcpy_medium.inl.h"
+#undef UNROLL_COUNT
+
+#define UNROLL_COUNT 3
+#include "memcpy_medium.inl.h"
+#undef UNROLL_COUNT
+
+...
+
+#define UNROLL_COUNT 15
+#include "memcpy_medium.inl.h"
+#undef UNROLL_COUNT
+
+#define UNROLL_COUNT 16
+#include "memcpy_medium.inl.h"
+#undef UNROLL_COUNT</pre>
+    </section>
+
+    <section class="slide">
+        <h2>Обобщённый memcpy</h2>
+
+        <pre style="margin-top: -1em; font-size: 14pt; line-height: 1.1;">#if VEC_SIZE == 16
+    #define NAME_PART sse
+    #define VEC_REGISTER "xmm"
+    #define VEC_MOV_UNALIGNED "movdqu"
+    #define VEC_MOV_ALIGNED "movdqa"
+    #define VEC_SIZE_MINUS_1 "0x0f"
+    #define VEC_SIZEx1 "0x10"
+    ...
+    #define VEC_SIZEx16 "0x100"
+#elif VEC_SIZE == 32
+    #define NAME_PART avx
+    #define VEC_REGISTER "ymm"
+    #define VEC_MOV_UNALIGNED "vmovdqu"
+    #define VEC_MOV_ALIGNED "vmovdqa"
+    #define VEC_SIZE_MINUS_1 "0x1f"
+    #define VEC_SIZEx1 "0x20"
+    ...
+    #define VEC_SIZEx16 "0x200"
+#elif VEC_SIZE == 64
+    ...</pre>
+    </section>
+
+    <section class="slide">
+        <h2>Обобщённый memcpy</h2>
+
+        <pre style="margin-top: -1em; font-size: 12pt; line-height: 1;">void * NAME_FORWARD_UNROLLED(void * __restrict destination, const void * __restrict source, size_t size)
+{
+    void * __restrict ret = destination;
+
+    __asm__ __volatile__ (
+    "mov %[dst], %[ret] \n"
+
+    VEC_MOV_UNALIGNED " (%[src]), %%" VEC_REGISTER "15 \n"
+    VEC_MOV_UNALIGNED " %%" VEC_REGISTER "15, (%[dst]) \n"
+
+    "lea    -" VEC_SIZEx1 "(%[dst],%[size],1), %%rcx \n"
+    "mov    %[dst], %%r8 \n"
+    "and    $" VEC_SIZE_MINUS_1 ", %%r8 \n"
+    "sub    $" VEC_SIZEx1 ", %%r8 \n"
+    "sub    %%r8, %[src] \n"
+    "sub    %%r8, %[dst] \n"
+    "add    %%r8, %[size] \n"
+
+"1: \n"
+    VEC_MOV_UNALIGNED " (%[src]), %%" VEC_REGISTER "0 \n"
+#if UNROLL_COUNT >= 2
+    VEC_MOV_UNALIGNED " " VEC_SIZEx1 "(%[src]), %%" VEC_REGISTER "1 \n"
+#endif
+...
+
+    "add    $" VEC_SIZExUNROLL ", %[src] \n"
+    "sub    $" VEC_SIZExUNROLL ", %[size] \n"
+
+    VEC_MOV_ALIGNED " %%" VEC_REGISTER "0, (%[dst]) \n"
+#if UNROLL_COUNT >= 2
+    VEC_MOV_ALIGNED " %%" VEC_REGISTER "1, " VEC_SIZEx1 "(%[dst]) \n"
+#endif
+...
+
+    "add    $" VEC_SIZExUNROLL ", %[dst] \n"
+    "cmp    $" VEC_SIZExUNROLL ", %[size] \n"
+    "ja     1b \n"
+
+    VEC_MOV_UNALIGNED " -" VEC_SIZEx1 "(%[src],%[size],1), %%" VEC_REGISTER "0 \n"
+#if UNROLL_COUNT >= 2
+    VEC_MOV_UNALIGNED " -" VEC_SIZEx2 "(%[src],%[size],1), %%" VEC_REGISTER "1 \n"
+#endif
+...
+
+    VEC_MOV_UNALIGNED " %%" VEC_REGISTER "0, (%%rcx) \n"
+#if UNROLL_COUNT >= 2
+    VEC_MOV_UNALIGNED " %%" VEC_REGISTER "1, -" VEC_SIZEx1 "(%%rcx) \n"
+#endif
+...
+
+    VZEROUPPER_INSTRUCTION
+
+    : [dst]"+r"(destination), [src]"+r"(source), [size]"+r"(size), [ret]"=rax"(ret)
+    :
+    : "rcx", "r8", "r11",
+      VEC_REGISTER "0", VEC_REGISTER "1", VEC_REGISTER "2", VEC_REGISTER "3",
+      VEC_REGISTER "4", VEC_REGISTER "5", VEC_REGISTER "6", VEC_REGISTER "7",
+      VEC_REGISTER "8", VEC_REGISTER "9", VEC_REGISTER "10", VEC_REGISTER "11",
+      VEC_REGISTER "12", VEC_REGISTER "13", VEC_REGISTER "14", VEC_REGISTER "15",
+      "memory");
+
+    return ret;
+}</pre>
+    </section>
+
+    <section class="slide">
+        <h2>Самооптимизирующийся memcpy</h2>
+        <p>Идея: сделать так, чтобы для больших размеров,
+        <br/>memcpy сам выбирал лучший вариант на основе статистики!</p>
+        <p>Поставим порог 30 000 байт. Если меньше &mdash; обычная реализация.</p>
+        <p>Если больше &mdash; запускаем случайный вариант, собираем статистику.</p>
+        <p>memcpy в L1 кэше &mdash; <span style="color: green;">50..100 GB/sec</span>,<br/>то есть копирование 30 КБ &mdash; от 300 нс.</p>
+        <p>На сбор статистики хотелось бы тратить до нескольких процентов<br/> &mdash; <span style="color: red;">максимум 10 наносекунд.</span></p>
+    </section>
+
+    <section class="slide">
+        <h2>Самооптимизирующийся memcpy</h2>
+        <img style="float: right; margin-top: -10px;" src="pictures/self_tuned_qr.png" />
+        <p>Идея: сделать так, чтобы для больших размеров,
+        <br/>memcpy сам выбирал лучший вариант на основе статистики!</p>
+        <p style="color: red;">Сбор статистики и выбор варианта<br/>&mdash; максимум 10 наносекунд.</p>
+
+        <p><a href="https://github.com/ClickHouse/ClickHouse/blob/38d665/utils/memcpy-bench/memcpy-bench.cpp#L497">https://github.com/ClickHouse/ClickHouse/blob/38d665<br/>/utils/memcpy-bench/memcpy-bench.cpp#L497</a></p>
+    </section>
+
+    <section class="slide">
+    <pre style="font-size: 12pt; margin-left: -60px;">ALWAYS_INLINE void * call(void * __restrict dst, const void * __restrict src, size_t size)
+{
+    size_t current_count = count++;
+
+    if (likely(current_count % probability_distribution_buckets &lt; exploration_probability_threshold))
+    {
+        <b style="color: green;">/// Exploitation mode.</b>
+        return selected_variant.load(std::memory_order_relaxed)(dst, src, size);
+    }
+    else
+    {
+        <b style="color: green;">/// Exploration mode.</b>
+        return explore(dst, src, size);
+    }
+}
+
+void * explore(void * __restrict dst, const void * __restrict src, size_t size)
+{
+    size_t current_exploration_count = exploration_count++;
+
+    size_t hash = current_exploration_count;
+    hash *= 0xff51afd7ed558ccdULL;
+    hash ^= hash >> 33;
+
+    VariantWithStatistics &amp; variant = variants[hash % num_cells];
+
+    UInt32 time1 = rdtsc();
+    void * ret = variant.func.load(std::memory_order_relaxed)(dst, src, size);
+    UInt32 time2 = rdtsc();
+    UInt32 time = time2 - time1;
+
+    if (time &lt; size)
+    {
+        ++variant.count;
+        variant.bytes += size;
+        variant.time += time;
+    }</pre>
+    </section>
+
+    <section class="slide">
+        <h2>Самооптимизирующийся memcpy</h2>
+        <p style="color: green;">Обучение на лету успешно работает в бенчмарке.</p>
+        <p>Выбирает лучший вариант и работает со скоростью лучшего.</p>
+
+        <p>Дальше я поставил самооптимизирующийся memcpy в ClickHouse<br/>
+        и стал тестировать на настоящих запросах...</p>
+    </section>
+
+    <section class="slide">
+        <h2>Самооптимизирующийся memcpy</h2>
+        <p style="color: green;">Обучение на лету успешно работает в бенчмарке.</p>
+        <p>Выбирает лучший вариант и работает со скоростью лучшего.</p>
+
+        <p>Дальше я поставил самооптимизирующийся memcpy в ClickHouse<br/>
+        и стал тестировать на настоящих запросах...</p>
+
+        <p style="color: red;">И ничего не ускорилось!</p>
+        <p style="color: red;">Самоооптимизирующийся memcpy не может стабильно<br/>выбрать лучший вариант на настоящей нагрузке.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Самооптимизирующийся memcpy</h2>
+        <img src="pictures/frustration.jpg"/>
+    </section>
+
+    <section class="slide">
+        <h2>Самооптимизирующийся memcpy</h2>
+        <img style="float: left; margin-right: 1em;" src="pictures/frustration.jpg"/>
+        <p style="color: gray;">На реальной нагрузке, при использовании многих потоков, memcpy упирается в пропускную способность памяти, поэтому между разными тестируемыми вариантами отсутствует заметная разница.</p><p style="color: gray;">Самооптимизирующийся memcpy не может выбрать лучший вариант и запускает случайные. А это негативно влияет на кэш инструкций.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Вся работа бесполезна?</h2>
+        <p>Не совсем :)</p>
+        <p>По итогам экспериментов, я всё-таки заменил один memcpy на другой.</p>
+        <p>Он показал преимущества в продакшене<br/>за счёт более эффективной обработки маленьких размеров.</p>
+        <p><a href="https://github.com/ClickHouse/ClickHouse/pull/21520">https://github.com/ClickHouse/ClickHouse/pull/21520</a></p>
+    </section>
+
+    <section class="slide">
+        <h2>Выводы</h2>
+        <p>Оптимизируйте ваш код.</p>
+        <p>Пробуйте безумные идеи.</p>
+        <p>Никогда не сдавайтесь.</p>
+    </section>
+
+    <section class="slide" style="background: #FFF url('pictures/title.png') no-repeat; background-size: 100%;">
+        <h1 style="margin-top: 200px; margin-left: 25px; font-size: 42pt; font-weight: 400; color: #e8e8d2;">Спасибо!</h1>
+        <p style="margin-top: 100px; margin-left: 25px; line-height: 1.5; color: #808093">Алексей Миловидов<br/>Разработчик ClickHouse</p>
+    </section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>

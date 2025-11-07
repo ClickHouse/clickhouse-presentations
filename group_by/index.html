@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Параллельный и распределённый GROUP BY</title>
+    <title>Parallel and Distributed GROUP BY</title>
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -9,33 +9,33 @@
 </head>
 <body class="shower list">
     <header class="caption">
-        <h1>Параллельный и распределённый GROUP BY</h1>
+        <h1>Parallel and Distributed GROUP BY</h1>
     </header>
 
     <section class="slide" id="cover">
-        <h1 style="margin-top: 200px">Параллельный и распределённый GROUP BY</h1>
+        <h1 style="margin-top: 200px">Parallel and Distributed GROUP BY</h1>
     </section>
 
     <section class="slide">
-        <h2>Обо мне</h2>
-        <p>Алексей, разработчик ClickHouse.</p>
-        <p>С 2008 занимался движком обработки данных в Яндекс.Метрике.</p>
+        <h2>About Me</h2>
+        <p>Alexey, ClickHouse developer.</p>
+        <p>Since 2008, I worked on the data processing engine for Yandex.Metrica.</p>
     </section>
 
     <section class="slide">
         <h2>&nbsp;</h2>
-        <p><b>ClickHouse</b> &mdash; это аналитическая СУБД.</p>
-        <p>Один запрос &mdash; много данных на входе, мало на выходе.</p>
-        <p>Данные нужно агрегировать налету.</p>
+        <p><b>ClickHouse</b> &mdash; is an analytical DBMS.</p>
+        <p>One query &mdash; a lot of data on input, little on output.</p>
+        <p>Data needs to be aggregated on the fly.</p>
     </section>
 
     <section class="slide">
-        <h2>Метрика 2.0</h2>
+        <h2>Metrica 2.0</h2>
         <img src="pictures/metrika2.png" style="height:70%"/>
     </section>
 
     <section class="slide">
-        <h2>Пример запроса</h2>
+        <h2>Example Query</h2>
         <p style="font-family: Monospace">SELECT MobilePhoneModel, COUNT(DISTINCT UserID) AS u<br />
     FROM hits<br />
     WHERE MobilePhoneModel != ''<br />
@@ -45,30 +45,30 @@
 
     <section class="slide">
         <h2>&nbsp;</h2>
-        <p>Чтобы быстро обрабатывать запросы, данные необходимо:</p>
+        <p>To process queries quickly, data needs to be:</p>
         <ul>
-            <li>быстро читать;</li>
-            <li><b>быстро считать.</b></li>
+            <li>read quickly;</li>
+            <li><b>computed quickly.</b></li>
         </ul>
         <p>&nbsp;</p>
-        <p>Конвейер выполнения запроса:</p>
-        <p>&mdash; фильтрация, JOIN, <b>агрегация</b>, сортировка...</p>
+        <p>Query execution pipeline:</p>
+        <p>&mdash; filtering, JOIN, <b>aggregation</b>, sorting...</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 45px;">Как тестировать производительность?</h2>
-        <p>Бенчмарки должны быть:</p>
+        <h2 style="font-size: 45px;">How to Test Performance?</h2>
+        <p>Benchmarks should be:</p>
         <ul>
-            <li>на реальных данных;</li>
-            <li>на разных наборах данных, покрывающих разные кейсы;</li>
-            <li>воспроизводимые;</li>
-            <li>автоматизированные.</li>
+            <li>on real data;</li>
+            <li>on different datasets covering different use cases;</li>
+            <li>reproducible;</li>
+            <li>automated.</li>
         </ul>
     </section>
 
     <section class="slide">
-        <h2>Пример бенчмарка (не лучшего)</h2>
-        <pre style="white-space: pre; font-family: Monospace; font-size: 14px; line-height: 1.25em;">/** Выполнять так:
+        <h2>Benchmark Example (not the best)</h2>
+        <pre style="white-space: pre; font-family: Monospace; font-size: 14px; line-height: 1.25em;">/** Run like this:
 for file in <b>MobilePhoneModel PageCharset Params URLDomain UTMSource Referer URL Title</b>; do
  for size in <b>30000 100000 300000 1000000 5000000</b>; do
   echo
@@ -97,458 +97,458 @@ done
     </section>
 
     <section class="slide">
-        <h2>Агрегация</h2>
+        <h2>Aggregation</h2>
     </section>
 
     <section class="slide">
-        <h2>Одна машина, одно ядро</h2>
+        <h2>Single Machine, Single Core</h2>
     </section>
 
     <section class="slide">
-        <h2>Плохой способ</h2>
-        <p>Читаем данные в массив; сортируем по ключу;
-идём по группам ключей и считаем агрегатные функции.</p>
-        <p>Достоинства:</p>
-        <p>+ простота интерфейса агрегатных функций;
-+ возможность более эффективной реализации агрегатных функций;
-+ можно запускать произвольные скрипты для reduce в режиме streaming.</p>
-        <p>Недостатки:</p>
-        <p>&minus; пусть N &mdash; общее число данных, а M &mdash; количество ключей;
-Отвратительно работает при N > M &mdash; в типичном случае.
-Тратится O(N) оперативки на промежуточные данные вместо O(M).</p>
+        <h2>Bad Approach</h2>
+        <p>Read data into array; sort by key;
+iterate through key groups and calculate aggregate functions.</p>
+        <p>Advantages:</p>
+        <p>+ simple aggregate function interface;
++ possibility of more efficient aggregate function implementation;
++ can run arbitrary reduce scripts in streaming mode.</p>
+        <p>Disadvantages:</p>
+        <p>&minus; let N be total data size, and M be number of keys;
+Works terribly when N > M &mdash; in typical case.
+Wastes O(N) RAM on intermediate data instead of O(M).</p>
     </section>
 
     <section class="slide">
-        <h2>Хороший способ</h2>
-        <p>Читаем данные, кладём в ассоциативный массив</p>
+        <h2>Good Approach</h2>
+        <p>Read data, put it in an associative array</p>
         <p><b>key tuple</b> -> <b>states of aggregate functions</b></p>
-        <p>обновляем состояния агрегатных функций.</p>
+        <p>update states of aggregate functions.</p>
     </section>
 
     <section class="slide">
-        <h2>Какой ассоциативный массив?</h2>
-        <p>Lookup-таблица. Хэш-таблица.</p>
-<p>Бинарное дерево. Skip-лист. B-дерево. </p>
-<p>Трай. Трай+хэш-таблица...</p>
+        <h2>Which Associative Array?</h2>
+        <p>Lookup table. Hash table.</p>
+<p>Binary tree. Skip-list. B-tree. </p>
+<p>Trie. Trie+hash table...</p>
     </section>
 
     <section class="slide">
-        <h2>Бинарное дерево</h2>
-<p>&minus; слишком большой оверхед на элемент;</p>
-<p>&minus; отвратительная кэш-локальность;</p>
-<p>&minus; вообще тормозит.</p>
+        <h2>Binary Tree</h2>
+<p>&minus; too much overhead per element;</p>
+<p>&minus; terrible cache locality;</p>
+<p>&minus; generally slow.</p>
     </section>
 
     <section class="slide">
-        <h2>Skip-лист. Трай. B-дерево...</h2>
-<p>&minus; вообще для другой задачи;</p>
+        <h2>Skip-list. Trie. B-tree...</h2>
+<p>&minus; designed for a different problem;</p>
     </section>
 
     <section class="slide">
-        <h2>Lookup-таблица</h2>
-<p>+ прекрасно для агрегации по числовым ключам не более ~16 бит;</p>
-<p>&minus; не подходит для чуть более сложных случаев.</p>
+        <h2>Lookup Table</h2>
+<p>+ perfect for aggregation by numeric keys of no more than ~16 bits;</p>
+<p>&minus; doesn't work for slightly more complex cases.</p>
     </section>
 
     <section class="slide">
-        <h2>Хэш-таблица</h2>
-<p>+ моя любимая структура данных;</p>
-<p>&minus; много деталей.</p>
+        <h2>Hash Table</h2>
+<p>+ my favorite data structure;</p>
+<p>&minus; many details.</p>
     </section>
 
     <section class="slide">
-        <h2>Трай+хэш-таблица</h2>
-<p>+ иногда кое что в этом есть, см. далее;</p>
+        <h2>Trie+Hash Table</h2>
+<p>+ sometimes there's something to it, see below;</p>
     </section>
 
     <section class="slide">
-        <h2>Одна машина, много ядер</h2>
+        <h2>Single Machine, Multiple Cores</h2>
     </section>
 
 <section class="slide">
-<h2>1. Тривиальный способ</h2>
+<h2>1. Trivial Approach</h2>
 
-<p>Разные потоки читают разные данные по мере возможности.
-Агрегируют независимо в свои локальные хэш-таблицы.
-Когда все данные прочитаны, мержим все хэш-таблицы в одну.
-Например, идём по всем локальным хэш-таблицам кроме первой
- и перекладываем всё в первую.
+<p>Different threads read different data as possible.
+They aggregate independently into their local hash tables.
+When all data is read, merge all hash tables into one.
+For example, iterate through all local hash tables except the first
+ and move everything to the first one.
 
-Фаза чтения данных и предварительной агрегации распараллеливается.
-Фаза мержа выполняется последовательно.
+Read and preliminary aggregation phase is parallelized.
+Merge phase is sequential.
 
-Пусть N &mdash; общее число данных, а M &mdash; количество ключей.
-O(M) работы выполняется последовательно
- и при большом M (кардинальность GROUP BY)
- работа плохо распараллеливается.
+Let N be total data size, and M be number of keys.
+O(M) work is done sequentially
+ and with large M (GROUP BY cardinality)
+ work doesn't parallelize well.
 
-Достоинства: тривиально.
+Advantages: trivial.
 
-Недостатки: не масштабируется при большой кардинальности.</p>
+Disadvantages: doesn't scale with high cardinality.</p>
 </section>
 
 
 <section class="slide">
-<h2>2. Partitioning способ</h2>
+<h2>2. Partitioning Approach</h2>
 
-<p>Для каждого блока данных, выполняем агрегацию в две стадии:
+<p>For each data block, perform aggregation in two stages:
 
-Стадия 1.
-Разные потоки будут обрабатывать разные куски блока, какие успеют.
-В каждом потоке, с помощью отдельной хэш-функции,
- хэшируем ключ в номер потока и запоминаем его.
+Stage 1.
+Different threads will process different chunks of the block, whichever they can.
+In each thread, using a separate hash function,
+ hash the key to thread number and remember it.
 
  hash:  key -> bucket_num
 
-Стадия 2.
-Каждый поток идёт по всему блоку данных
- и берёт для агрегации только строки с нуждым номером корзины.
+Stage 2.
+Each thread iterates through entire data block
+ and takes for aggregation only rows with the needed bucket number.
 
-Модификация: можно всё в одну стадию &mdash; тогда каждый поток
-будет вычислять хэш-функцию от всех строк заново:
- подходит, если это дёшево.
+Modification: can do everything in one stage &mdash; then each thread
+will calculate hash function from all rows again:
+ works if it's cheap.
 </section>
 
 <section class="slide">
 <p>
-Достоинства:
-+ хорошо масштабируется при большой кардинальности
- и равномерном распределении ключей;
-+ идейная простота.
+Advantages:
++ scales well with high cardinality
+ and uniform key distribution;
++ conceptual simplicity.
 
-Недостатки:
-&minus; если объём данных распределён неравномерно по ключам,
- то стадия 2 плохо масштабируется.
-Это типичный случай.
-Почти всегда объём данных по ключам распределён по power law.
+Disadvantages:
+&minus; if data volume is distributed unevenly across keys,
+ then stage 2 doesn't scale well.
+This is a typical case.
+Data volume by keys is almost always distributed by power law.
 
-Ещё недостатки:
-&minus; если размер блока маленький, то получается слишком
-  мелко-гранулированная многопоточность:
-  большой оверхед на синхронизацию;
-&minus; если размер блока большой, то плохая кэш-локальность;
-&minus; на второй стадии, часть memory bandwidth умножается на число потоков;
-&minus; нужно вычислять ещё одну хэш-функцию,
-  она должна быть независима от той, что в хэш-таблице;</p>
+More disadvantages:
+&minus; if block size is small, the result is too
+  fine-grained multithreading:
+  high synchronization overhead;
+&minus; if block size is large, poor cache locality;
+&minus; on second stage, part of memory bandwidth is multiplied by number of threads;
+&minus; need to compute another hash function,
+  it should be independent from the one in hash table;</p>
 </section>
 
 
 <section class="slide">
-<h2>3. Параллельный мерж хэш-таблиц</h2>
+<h2>3. Parallel Hash Table Merge</h2>
 
-<p>Отресайзим полученные в разных потоках хэш-таблицы к одному размеру.
-Разобъём их неявно на разные подмножества ключей.
-В разных потоках будем мержить соответствующие
- подмножества ключей хэш-таблиц.
+<p>Resize hash tables obtained in different threads to the same size.
+Split them implicitly into different subsets of keys.
+In different threads merge corresponding
+ subsets of hash table keys.
 
-Рисунок на доске.
+Picture on the board.
 
-Недостаток:
-&minus; очень сложный код.</p>
+Disadvantage:
+&minus; very complex code.</p>
 </section>
 
 
 <section class="slide">
-<h2>4. Ordered мерж хэш-таблиц</h2>
+<h2>4. Ordered Hash Table Merge</h2>
 
-<p>Для open addressing linear probing хэш-таблиц, или для chaining хэш-таблиц,
-данные в хэш-таблице расположены почти упорядоченно
-по остатку от деления хэш-функции на размер хэш-таблицы
-&mdash; с точностью до цепочек разрешения коллизий.
+<p>For open addressing linear probing hash tables, or for chaining hash tables,
+data in hash table is located almost ordered
+by remainder of dividing hash function by hash table size
+&mdash; up to collision resolution chains.
 
-Отресайзим полученные в разных потоках хэш-таблицы к одному размеру.
-Сделаем ordered iterator, который будет
- перебирать данные в хэш-таблице в фиксированном порядке.
+Resize hash tables obtained in different threads to the same size.
+Make ordered iterator, which will
+ enumerate data in hash table in fixed order.
 
-Объём работы на итерирование:
- количество цепочек разрешения коллизий * средний квадрат длин цепочек.
+Iteration work volume:
+ number of collision resolution chains * average square of chain lengths.
 
-Сделаем merging iterator, который с помощью heap (priority queue)
- будет перебирать все хэш-таблицы разом.
+Make merging iterator, which using heap (priority queue)
+ will enumerate all hash tables at once.
 </section>
 
 <section class="slide">
-<p>Достоинства:
+<p>Advantages:
 
-+ не нужно никуда перекладывать элементы: мерж делается inplace.
++ no need to move elements anywhere: merge is done inplace.
 
-+ бонус: подходит для внешней памяти.
-
-
-Недостатки:
-
-&minus; отвратительно сложный код;
-
-&minus; для open addressing linear probing хэш-таблиц,
-  средний квадрат длин цепочек разрешения коллизий слишком большой;
-
-&minus; priority queue тормозит;
-
-&minus; стадия мержа не распараллеливается*
++ bonus: suitable for external memory.
 
 
-* &mdash; можно совместить с предыдущим способом.</p>
-</section>
+Disadvantages:
+
+&minus; terribly complex code;
+
+&minus; for open addressing linear probing hash tables,
+  average square of collision resolution chain lengths is too large;
+
+&minus; priority queue is slow;
+
+&minus; merge stage doesn't parallelize*
 
 
-<section class="slide">
-<h2 style="font-size: 40px;">5. Robin Hood ordered мерж хэш-таблиц</h2>
-
-<p>Если использовать Robin Hood хэш-таблицу, то данные
-(за исключением O(1) граничных цепочек разрешения коллизий)
-будут полностью упорядочены
-по остатку от деления хэш-функции на размер хэш-таблицы.
-
-Достоинства:
-+ вроде бы красивый алгоритм.
-+ бонус: подходит для внешней памяти.
-
-Недостатки:
-&minus; вынуждает использовать robin-hood probing;
-&minus; priority queue тормозит;
-&minus; стадия мержа не распараллеливается*</p>
+* &mdash; can be combined with previous approach.</p>
 </section>
 
 
 <section class="slide">
-<h2 style="font-size: 40px;">6. Shared хэш-таблица под mutex-ом</h2>
+<h2 style="font-size: 40px;">5. Robin Hood Ordered Hash Table Merge</h2>
 
-<p>Достоинства: очень просто.
+<p>If using Robin Hood hash table, the data
+(except for O(1) boundary collision resolution chains)
+will be completely ordered
+by remainder of dividing hash function by hash table size.
 
-Недостатки: отрицательная масштабируемость.</p>
+Advantages:
++ seems like a beautiful algorithm.
++ bonus: suitable for external memory.
+
+Disadvantages:
+&minus; forces use of robin-hood probing;
+&minus; priority queue is slow;
+&minus; merge stage doesn't parallelize*</p>
 </section>
 
 
 <section class="slide">
-<h2 style="font-size: 30px;">7. Много мелких хэш-таблиц под разными mutex-ами</h2>
+<h2 style="font-size: 40px;">6. Shared Hash Table Under Mutex</h2>
 
-<p>В какую класть &mdash; выбирается с помощью отдельной хэш-функции.
+<p>Advantages: very simple.
 
-Недостатки:
-
-&minus; в типичном случае данные распределены сильно неравномерно,
-  и потоки будут конкурировать на одной горячей корзине.
-
-&minus; в случае маленькой хэш-таблицы, слишком тормозит.
-
-Достоинства: если данные почему-то распределены равномерно,
- то кое-как масштабируется.</p>
+Disadvantages: negative scalability.</p>
 </section>
 
 
 <section class="slide">
-<h2 style="font-size: 35px;">8. Shared хэш-таблица и в каждой ячейке spin-lock</h2>
+<h2 style="font-size: 30px;">7. Multiple Small Hash Tables Under Different Mutexes</h2>
 
-<p>Недостатки:
+<p>Which one to use &mdash; chosen using separate hash function.
 
-&minus; spin-lock &mdash; это очень опасно;
-  очень сложно тестировать производительность;
-  вы обязательно сделаете отстой.
+Disadvantages:
 
-&minus; в типичном случае данные распределены сильно неравномерно,
-  и потоки будут конкурировать на одной горячей ячейке.</p>
+&minus; in typical case data is distributed very unevenly,
+  and threads will compete on one hot bucket.
+
+&minus; in case of small hash table, too slow.
+
+Advantages: if data is somehow distributed uniformly,
+ it scales somewhat.</p>
 </section>
 
 
 <section class="slide">
-<h2>9. Lock free shared хэш-таблица</h2>
+<h2 style="font-size: 35px;">8. Shared Hash Table with Spin-lock in Each Cell</h2>
 
-<p>Недостатки:
+<p>Disadvantages:
 
-&minus; lock free хэш-таблицы либо нельзя ресайзить, либо они очень сложные;
+&minus; spin-lock &mdash; is very dangerous;
+  very hard to test performance;
+  you will definitely make garbage.
 
-&minus; в типичном случае данные распределены сильно неравномерно,
-  и потоки будут конкурировать на одной горячей ячейке:
-  false sharing, тормоза.
-
-&minus; сложный код, много инструкций, всё тормозит;
-
-&minus; я вообще недолюбливаю lock-free алгоритмы.</p>
+&minus; in typical case data is distributed very unevenly,
+  and threads will compete on one hot cell.</p>
 </section>
 
 
 <section class="slide">
-<h2 style="font-size: 35px;">10. Shared хэш-таблица + thread local хэш-таблицы</h2>
+<h2>9. Lock Free Shared Hash Table</h2>
 
-<p>Пытаемся положить в shared хэш-таблицу путём блокирования ячейки;
-если ячейка уже заблокирована &mdash; кладём к локальную хэш-таблицу.
+<p>Disadvantages:
 
-Тогда горячие ключи попадут в локальные хэш-таблицы.
-Локальные хэш-таблицы будут маленькими.
-В конце мержим все локальные хэш-таблицы в глобальную.
+&minus; lock free hash tables either cannot be resized, or they are very complex;
 
-Дополнения: можно сначала смотреть
-  на наличие ключа в локальной хэш-таблице.
+&minus; in typical case data is distributed very unevenly,
+  and threads will compete on one hot cell:
+  false sharing, slow.
 
-Достоинства:
-+ отлично масштабируется;
-+ сравнительно простая реализация.
+&minus; complex code, many instructions, everything is slow;
 
-Недостатки:
-&minus; много лукапов, много инструкций &mdash; в целом довольно медленно.
-
-Даже не смотря на то, что thread local хэш-таблица
- зачастую ещё и cache local.</p>
+&minus; I generally don't like lock-free algorithms.</p>
 </section>
 
 
 <section class="slide">
-<h2>11. Two-level хэш-таблица</h2>
+<h2 style="font-size: 35px;">10. Shared Hash Table + Thread Local Hash Tables</h2>
 
-<p>На первой стадии, в каждом потоке независимо
-кладём данные в свои num_buckets = 256 хэш-таблиц,
-хранящих разные ключи.
+<p>Try to put in shared hash table by locking cell;
+if cell is already locked &mdash; put in local hash table.
 
-В какую из них класть (номер корзины)
-определяется другой хэш-функцией,
-либо отдельным байтом хэш-функции.
+Then hot keys will go into local hash tables.
+Local hash tables will be small.
+At the end merge all local hash tables into global.
 
-Имеем num_threads * num_buckets хэш-таблиц.
+Additions: can first check
+  for key presence in local hash table.
 
-На второй стадии мержим состояния
-num_threads * num_buckets хэш-таблиц
-в одни num_buckets хэш-таблиц,
-распараллеливая мерж по bucket-ам.
+Advantages:
++ scales excellently;
++ relatively simple implementation.
+
+Disadvantages:
+&minus; many lookups, many instructions &mdash; overall quite slow.
+
+Even though thread local hash table
+ is often also cache local.</p>
+</section>
+
+
+<section class="slide">
+<h2>11. Two-level Hash Table</h2>
+
+<p>On first stage, in each thread independently
+put data into their num_buckets = 256 hash tables,
+storing different keys.
+
+Which one to put into (bucket number)
+is determined by another hash function,
+or by separate byte of hash function.
+
+Have num_threads * num_buckets hash tables.
+
+On second stage merge states
+num_threads * num_buckets hash tables
+into one num_buckets hash tables,
+parallelizing merge by buckets.
 </section>
 
 <section class="slide">
 <p>
-Достоинства:
+Advantages:
 
-+ отлично масштабируется;
-+ простота реализации;
++ scales excellently;
++ simple implementation;
 
-+ бонус: ресайзы хэш-таблиц амортизируются;
++ bonus: hash table resizes are amortized;
 
-+ бонус: нахаляву получаем в результате partitioning,
-  который полезен для других стадий конвейера.
++ bonus: get partitioning for free,
+  which is useful for other pipeline stages.
 
-+ бонус: подходит для внешней памяти.
++ bonus: suitable for external memory.
 
-Недостатки:
+Disadvantages:
 
-&minus; при большой кардинальности, во время мержа
-  делается до такого же объёма работ как на первой стадии;
+&minus; with high cardinality, during merge
+  same amount of work is done as in first stage;
 
-&minus; при маленькой кардинальности,
-  слишком много отдельных хэш-таблиц;
+&minus; with low cardinality,
+  too many separate hash tables;
 
-&minus; при маленькой кардинальности,
-  работает несколько медленнее тривиального способа;</p>
+&minus; with low cardinality,
+  works somewhat slower than trivial approach;</p>
 </section>
 
 
 <section class="slide">
-<h2 style="font-size: 40px;">12. Тривиальный + two-level хэш-таблица</h2>
+<h2 style="font-size: 40px;">12. Trivial + Two-level Hash Table</h2>
 
-<p>Используем тривиальный способ.
+<p>Use trivial approach.
 
-Когда разных ключей много, конвертируем в two-level.</p>
+When there are many different keys, convert to two-level.</p>
 <p>
-Именно такой способ используется в ClickHouse :)
+This is exactly the approach used in ClickHouse :)
 </p>
 </section>
 
 
 <section class="slide">
-<h2>Много машин, много ядер</h2>
+<h2>Multiple Machines, Multiple Cores</h2>
 
-<p>На разных машинах расположены части данных,
-которые надо обработать.
+<p>On different machines are located parts of data,
+which need to be processed.
 
-Отличия от shared memory:
+Differences from shared memory:
 
-&mdash; почти отсутствует возможность work stealing;
-&mdash; нужно явно передавать данные по сети.</p>
+&mdash; almost no possibility of work stealing;
+&mdash; need to explicitly transfer data over network.</p>
 </section>
 
 
 <section class="slide">
-<h2>1. Тривиальный способ</h2>
+<h2>1. Trivial Approach</h2>
 
-<p>Передаём промежуточные результаты на сервер-инициатор запроса.
-Последовательно кладём всё в одну хэш-таблицу.
+<p>Transfer intermediate results to initiator server.
+Sequentially put everything into one hash table.
 
-Достоинства:
+Advantages:
 
-+ тривиально;
-+ хорошо масштабируется при маленькой кардинальности.
++ trivial;
++ scales well with low cardinality.
 
-Недостатки:
+Disadvantages:
 
-&minus; при большой кардинальности не масштабируется;
-&minus; требуется оперативка на весь результат.</p>
+&minus; doesn't scale with high cardinality;
+&minus; requires RAM for entire result.</p>
 </section>
 
 
 <section class="slide">
-<h2>2. Ordered merge</h2>
+<h2>2. Ordered Merge</h2>
 
-<p>Передаём промежуточные результаты на сервер-инициатор запроса
-в заданном порядке. Мержим.
+<p>Transfer intermediate results to initiator server
+in specified order. Merge.
 
-Достоинства:
-+ тратится O(1) оперативки;
+Advantages:
++ uses O(1) RAM;
 
-Недостатки:
-&minus; при большой кардинальности не масштабируется;
-&minus; мерж сортированных потоков (heap) &mdash; это медленная операция;
-&minus; требуется либо сортировать результаты на удалённых серверах,
-  либо использовать один из тех fancy алгоритмов выше.</p>
+Disadvantages:
+&minus; doesn't scale with high cardinality;
+&minus; merging sorted streams (heap) &mdash; is slow operation;
+&minus; requires either sorting results on remote servers,
+  or using one of those fancy algorithms above.</p>
 </section>
 
 
 <section class="slide">
-<h2>3. Partitioned merge</h2>
+<h2>3. Partitioned Merge</h2>
 
-<p>Передаём промежуточные результаты на сервер-инициатор запроса,
-разбитыми на отдельные согласованные корзины-партиции,
-в заданном порядке корзин.
+<p>Transfer intermediate results to initiator server,
+split into separate coordinated bucket-partitions,
+in specified order of buckets.
 
-Мержим по одной или по несколько корзин одновременно.
+Merge one or several buckets at a time.
 
-Достоинства:
-+ тратится до в num_buckets раз меньше оперативки, чем размер результата;
-+ можно легко распараллелить, мержа сразу несколько корзин
-   &mdash; отлично масштабируется по ядрам.
+Advantages:
++ uses up to num_buckets times less RAM than result size;
++ can easily parallelize, merging several buckets at once
+   &mdash; scales excellently by cores.
 
-Недостатки:
-&minus; мерж делается на одном сервере &mdash; инициаторе запроса
-   &mdash; эта стадия не масштабируется по серверам.</p>
+Disadvantages:
+&minus; merge is done on one server &mdash; query initiator
+   &mdash; this stage doesn't scale by servers.</p>
 
 <p>
-Именно такой способ используется в ClickHouse :)
+This is exactly the approach used in ClickHouse :)
 </p>
 </section>
 
 
 <section class="slide">
-<h2>4. Reshuffle + partitioned merge</h2>
+<h2>4. Reshuffle + Partitioned Merge</h2>
 
-<p>На удалённых серверах получаем промежуточные результаты,
-разбитые на согласованные партиции.
+<p>On remote servers get intermediate results,
+split into coordinated partitions.
 
-Затем передаём партиции между серверами так,
-чтобы на разных серверах были разные партиции,
-а данные одной партиции оказались на одном сервере.
+Then transfer partitions between servers so,
+that on different servers are different partitions,
+and data of one partition ends up on one server.
 
-Мержим на всех серверах параллельно, да ещё и используя многие ядра.
+Merge on all servers in parallel, also using multiple cores.
 
-Достоинства:
-+ прекрасно масштабируется;
-+ при INSERT SELECT, результат можно
-  вовсе не передавать на сервер-инициатор,
-  а сразу сохранить в распределённую таблицу на кластере.
+Advantages:
++ scales beautifully;
++ for INSERT SELECT, result can
+  not be transferred to initiator server at all,
+  but immediately saved into distributed table on cluster.
 
-Недостатки:
-&minus; сложная координация серверов;</p>
+Disadvantages:
+&minus; complex server coordination;</p>
 </section>
 
 
 <section class="slide">
-<h2 style="font-size: 100px;">Всё</h2>
+<h2 style="font-size: 100px;">The End</h2>
 
-<p style="font-size: 50px;">Можно задавать вопросы.</p>
+<p style="font-size: 50px;">Questions welcome.</p>
 </section>
 
 

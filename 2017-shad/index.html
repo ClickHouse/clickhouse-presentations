@@ -1,77 +1,77 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Секреты эффективной работы ClickHouse</title>
+    <title>Secrets of ClickHouse Performance</title>
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x10.css">
-    
+
 <!--    <style type="text/css">
          span { padding: 1px 10px; background: rgba(255, 255, 255, 0.75); }
     </style>-->
 </head>
 <body class="shower list">
     <header class="caption">
-        <h1>Секреты эффективной работы ClickHouse</h1>
+        <h1>Secrets of ClickHouse Performance</h1>
     </header>
     <section class="slide" id="cover">
-        <h1 style="margin-top: 200px;"><span>Секреты эффективной работы<br/>ClickHouse</span></h1>
+        <h1 style="margin-top: 200px;"><span>Secrets of ClickHouse<br/>Performance</span></h1>
     </section>
     <section class="slide">
-        <h2>Обо мне</h2>
-        <p>Алексей, разработчик ClickHouse.</p>
+        <h2>About Me</h2>
+        <p>Alexey, ClickHouse developer.</p>
     </section>
     <section class="slide">
-        <h2>Что такое ClickHouse?</h2>
-        <p>ClickHouse &mdash; распределённая аналитическая column-oriented СУБД.</p>
-        <p><br/>Я расскажу про несколько деталей работы ClickHouse,<br/>которые считаю важными.</p>
+        <h2>What is ClickHouse?</h2>
+        <p>ClickHouse is a distributed analytical column-oriented DBMS.</p>
+        <p><br/>I will talk about several details of ClickHouse's operation<br/>that I consider important.</p>
     </section>
-    
+
     <section class="slide">
-        <h2>Как хранятся данные в таблицах</h2>
+        <h2>How Data is Stored in Tables</h2>
     </section>
-    
+
     <section class="slide">
-        <h2>Как хранятся данные в таблицах</h2>
-        <p>ClickHouse &mdash; модульная система.</p>
-        <p>Поддерживает работу различных storage engines.</p>
-        <p>Storage engine отвечает за:</p><p>
-            &mdash; хранение, чтение и запись данных;<br/>
-            &mdash; синхронизацию доступа к данным;<br/>
-            &mdash; репликацию данных.
+        <h2>How Data is Stored in Tables</h2>
+        <p>ClickHouse is a modular system.</p>
+        <p>It supports various storage engines.</p>
+        <p>Storage engine is responsible for:</p><p>
+            &mdash; storing, reading and writing data;<br/>
+            &mdash; synchronizing data access;<br/>
+            &mdash; data replication.
         </p>
     </section>
-    
+
     <section class="slide">
-        <h2>Как хранятся данные в таблицах</h2>
-        <p>Примеры простых Storage Engines:</p>
+        <h2>How Data is Stored in Tables</h2>
+        <p>Examples of simple Storage Engines:</p>
         <p>Memory, File, TinyLog.</p>
-        <p>Если вы хотите добавить в ClickHouse свой движок таблиц,<br/>начните смотреть самые простые.</p>
+        <p>If you want to add your own table engine to ClickHouse,<br/>start by looking at the simplest ones.</p>
     </section>
-    
+
     <section class="slide">
-        <h2>Как хранятся данные в таблицах</h2>
-        <p>Примеры специализированных Storage Engines:</p>
+        <h2>How Data is Stored in Tables</h2>
+        <p>Examples of specialized Storage Engines:</p>
         <p>Distributed, Merge, View, Null.</p>
     </section>
-    
+
     <section class="slide">
-        <h2>Как хранятся данные в таблицах</h2>
-        <p>Для серьёзных применений, используйте таблицы семейства MergeTree</p>
+        <h2>How Data is Stored in Tables</h2>
+        <p>For serious applications, use MergeTree family tables</p>
     </section>
-    
+
     <section class="slide">
-        <h2>Как хранятся данные в MergeTree</h2>
-        <p>Похоже на LSM-Tree (HBase, Cassandra, RocksDB&hellip;), но хуже.</p>
-        <p>Таблица состоит из набора &laquo;кусков&raquo; данных.</p>
-        <p>Каждый кусок лексикографически упорядочен<br />по значению первичного ключа.</p>
-        <p>Разные куски полностью независимы<br />и могут пересекаться по значениям ключа.</p>
+        <h2>How Data is Stored in MergeTree</h2>
+        <p>Similar to LSM-Tree (HBase, Cassandra, RocksDB&hellip;), but worse.</p>
+        <p>The table consists of a set of data "parts".</p>
+        <p>Each part is lexicographically sorted<br />by the primary key value.</p>
+        <p>Different parts are completely independent<br />and may overlap in key values.</p>
     </section>
-    
+
     <section class="slide">
-        <h2>Как хранятся данные в MergeTree</h2>
-        <pre style="line-height: 1.5em; color: #AAA; background-color: #000; padding: 5px;">/opt/clickhouse/data/default/hits_single_partition# 
+        <h2>How Data is Stored in MergeTree</h2>
+        <pre style="line-height: 1.5em; color: #AAA; background-color: #000; padding: 5px;">/opt/clickhouse/data/default/hits_single_partition#
 du -h --max-depth=1 | sort -k2 -V
 102G    .
 40G     ./all_1_1026_4
@@ -80,19 +80,19 @@ du -h --max-depth=1 | sort -k2 -V
 1.1G    ./all_2613_2640_2
 2.2M    ./all_2641_2641_0</pre>
     </section>
-    
+
     <section class="slide">
-        <h2>Как хранятся данные в MergeTree</h2>
-        <p>В одном куске, каждый столбец хранится в отдельном файле.</p>
-        <p>Данные столбца &mdash; сериализованные значения, уложенные подряд,</p>
-        <p>затем сжатые по блокам. Размер блока до сжатия &mdash; 64 KB .. 1 MB.</p>
+        <h2>How Data is Stored in MergeTree</h2>
+        <p>Within one part, each column is stored in a separate file.</p>
+        <p>Column data is serialized values laid out sequentially,</p>
+        <p>then compressed in blocks. Block size before compression is 64 KB .. 1 MB.</p>
     </section>
-    
+
 <section class="slide">
-        <h2>Как хранятся данные в MergeTree</h2>
+        <h2>How Data is Stored in MergeTree</h2>
         <pre style="line-height: 1.5em; color: #AAA; background-color: #000; padding: 5px;">all_1_1026_4# ls -1
-AdvEngineID.bin
-AdvEngineID.mrk
+ AdvEngineID.bin
+ AdvEngineID.mrk
 Age.bin
 Age.mrk
 BrowserCountry.bin
@@ -105,214 +105,214 @@ primary.idx</pre>
     </section>
 
     <section class="slide">
-        <h2>Как хранятся данные в MergeTree</h2>
-        <p>Весь кусок отсортирован по первичному ключу.</p>
-        <p>Данные каждого столбца имеют соответствующий друг другу порядок.</p>
-        <p>(N-й строке соответствуют N-ые значения в каждом файле столбцов)</p>
+        <h2>How Data is Stored in MergeTree</h2>
+        <p>The entire part is sorted by primary key.</p>
+        <p>Data from each column has a corresponding order.</p>
+        <p>(The N-th row corresponds to the N-th values in each column file)</p>
     </section>
-    
+
     <section class="slide">
-        <h2>Как хранятся данные в MergeTree</h2>
-        <p>При SELECT, в худшем случае, выполняется чтение из всех кусков.</p>
-        <p>На всякий случай, для каждого куска есть minmax индекс ключа партиционирования.</p>
+        <h2>How Data is Stored in MergeTree</h2>
+        <p>During SELECT, in the worst case, reading from all parts is performed.</p>
+        <p>Just in case, each part has a minmax index of the partitioning key.</p>
 
-        <p>При INSERT, пачка вставляемых данных сортируется и формируется новый кусок в файловой системе.</p>
+        <p>During INSERT, the batch of inserted data is sorted and a new part is formed in the file system.</p>
 
-        <p>В фоне, несколько кусков сливаются вместе в один более крупный кусок.</p>
+        <p>In the background, several parts are merged together into one larger part.</p>
     </section>
-    
+
     <section class="slide" style="padding:0; margin: 0">
         <video style="width: 100%; margin-top: 0px;"><source src="video/insertion.ogv" type="video/ogg"></video>
     </section>
-    
+
     <section class="slide">
-        <h2>Как устроен индекс</h2>
+        <h2>How the Index Works</h2>
     </section>
-    
+
     <section class="slide">
-        <h2>Как устроен индекс</h2>
-        <p>Один индекс, называемый &laquo;первичным ключом&raquo;.</p>
-        <p>Первичный ключ не обязан быть уникальным
-        <br/>- это всего лишь ключ для упорядочивания данных.
+        <h2>How the Index Works</h2>
+        <p>One index, called the "primary key".</p>
+        <p>The primary key does not have to be unique
+        <br/>- it's just a key for ordering data.
         <br/>(clustered index)</p>
-        <p>Индекс разреженный.</p>
+        <p>The index is sparse.</p>
     </section>
-    
+
     <section class="slide">
-        <h2 style="font-size: 48px;">Недостатки разреженного индекса</h2>
-        <p>Плохо работает для точечных lookup запросов.</p>
-        
-        <p>Разреженный индекс адресует не каждую запись в таблице,<br/>
-        а диапазон из нескольких тысяч записей.</p>
-        
-        <p>Вместо чтения одной строки придётся читать по крайней мере пачку.</p>
-        
-        <p>&hellip; а ещё придётся разжимать сжатые блоки.</p>
+        <h2 style="font-size: 48px;">Disadvantages of Sparse Index</h2>
+        <p>Does not work well for point lookup queries.</p>
+
+        <p>A sparse index addresses not every record in the table,<br/>
+        but a range of several thousand records.</p>
+
+        <p>Instead of reading one row, you have to read at least a batch.</p>
+
+        <p>&hellip; and you also have to decompress compressed blocks.</p>
     </section>
-    
+
     <section class="slide">
-        <h2 style="font-size: 48px;">Недостатки разреженного индекса</h2>
-        <p>Требует упорядоченности данных.</p>
-        
-        <p>На одну таблицу &mdash; только один разреженный индекс.</p>
-        
-        <p>Вместо чтения одной строки придётся читать по крайней мере пачку.</p>
-        
-        <p>&hellip; а ещё придётся разжимать сжатые блоки.</p>
+        <h2 style="font-size: 48px;">Disadvantages of Sparse Index</h2>
+        <p>Requires data ordering.</p>
+
+        <p>For one table &mdash; only one sparse index.</p>
+
+        <p>Instead of reading one row, you have to read at least a batch.</p>
+
+        <p>&hellip; and you also have to decompress compressed blocks.</p>
     </section>
-    
+
     <section class="slide">
-        <h2 style="font-size: 48px;">Достоинства разреженного индекса</h2>
-        
-        <p>Очень компактный, помещается в оперативку.</p>
+        <h2 style="font-size: 48px;">Advantages of Sparse Index</h2>
+
+        <p>Very compact, fits in memory.</p>
     </section>
-    
+
     <section class="slide">
-        <h2 style="font-size: 48px;">Достоинства разреженного индекса</h2>
-        
-        <p>Поддержка сложных логических выражений.</p>
-        <p>&mdash; бинарный поиск с троичной логикой и интервальной арифметикой.</p>
-        
-        <p>Пример. Есть сложное условие<br/>
+        <h2 style="font-size: 48px;">Advantages of Sparse Index</h2>
+
+        <p>Support for complex logical expressions.</p>
+        <p>&mdash; binary search with ternary logic and interval arithmetic.</p>
+
+        <p>Example. There is a complex condition<br/>
         WHERE a AND (b OR NOT c)...</p>
-        
-        <p>Последовательно разбиваем множество всех данных<br/>на диапазоны-гранулы, где условие:</p><p>
-        &mdash; всегда ложно;<br/>
-        &mdash; всегда истинно;<br/>
-        &mdash; может быть и ложно и истинно.
+
+        <p>We sequentially split the set of all data<br/>into range granules, where the condition is:</p><p>
+        &mdash; always false;<br/>
+        &mdash; always true;<br/>
+        &mdash; can be both false and true.
         </p>
     </section>
-    
+
     <section class="slide" style="padding:0; margin: 0">
         <img style="height: 100%;" src="pictures/tribool_search.jpg"/>
     </section>
-    
+
     <section class="slide">
-        <h2 style="font-size: 48px;">Достоинства разреженного индекса</h2>
-        
-        <p>Индекс работает даже при условии на не префикс первичного ключа.</p>
-        <p>Пример. PK: (CounterID, Date).</p>
+        <h2 style="font-size: 48px;">Advantages of Sparse Index</h2>
+
+        <p>The index works even with a condition on a non-prefix of the primary key.</p>
+        <p>Example. PK: (CounterID, Date).</p>
         <p>WHERE Date BETWEEN '2017-11-20' AND '2017-11-29'</p>
-        <p>&mdash; сможет отсекать диапазоны, если<br/>для фиксированного CounterID есть достаточно длинный диапазон.</p>
+        <p>&mdash; will be able to filter ranges, if<br/>there is a sufficiently long range for a fixed CounterID.</p>
     </section>
-    
+
     <section class="slide" style="padding:0; margin: 0">
         <img style="height: 100%;" src="pictures/non_prefix.jpg"/>
     </section>
-    
+
     <section class="slide">
-        <h2 style="font-size: 48px;">Достоинства разреженного индекса</h2>
-        
-        <p>Индекс работает всегда не хуже чем full scan.</p>
-        <p>Даже если по индексу выбирается 95% данных,<br/>это лучше, чем читать 100%.</p>
+        <h2 style="font-size: 48px;">Advantages of Sparse Index</h2>
+
+        <p>The index always works no worse than full scan.</p>
+        <p>Even if 95% of the data is selected by the index,<br/>it's better than reading 100%.</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 48px;">Достоинства разреженного индекса</h2>
-        
-        <p>Поддержка условий с частично монотонными функциями от столбцов.</p>
-        <p>Пример. PK: Date</p>
+        <h2 style="font-size: 48px;">Advantages of Sparse Index</h2>
+
+        <p>Support for conditions with partially monotonic functions on columns.</p>
+        <p>Example. PK: Date</p>
         <p>WHERE toDayOfMonth(Date) = 29</p>
     </section>
-    
+
     <section class="slide" style="padding:0; margin: 0">
         <img style="height: 100%;" src="pictures/monotonic.jpg"/>
     </section>
-    
+
     <section class="slide">
-        <h2 style="font-size: 48px;">Достоинства разреженного индекса</h2>
-        
-        <p>Пример: параллелограммный анализ индекса.</p>
+        <h2 style="font-size: 48px;">Advantages of Sparse Index</h2>
+
+        <p>Example: parallelogram index analysis.</p>
     </section>
-    
+
     <section class="slide" style="padding:0; margin: 0">
         <img style="height: 100%;" src="pictures/parallelogram.jpg"/>
     </section>
-    
-    
+
+
     <section class="slide">
-        <h2>Векторная обработка запроса</h2>
+        <h2>Vectorized Query Execution</h2>
         <p>(vectorized query execution)</p>
     </section>
-    
+
     <section class="slide">
-        <h2 style="line-height: 1.1em;">Как обрабатывать запросы<br/> в аналитической СУБД</h2>
-        
-        <p>Два способа:</p>
-        
-        <p>1. Компиляция запросов.</p>
-        <p>Примеры: MemSQL, Impala.</p>
-        
-        <p>2. Векторная обработка.</p>
-        <p>Примеры: kdb, VectorWise (Actian Vector).</p>
-        
-        <p>Лучше &mdash; и то, и другое вместе.</p>
+        <h2 style="line-height: 1.1em;">How to Process Queries<br/> in an Analytical DBMS</h2>
+
+        <p>Two ways:</p>
+
+        <p>1. Query compilation.</p>
+        <p>Examples: MemSQL, Impala.</p>
+
+        <p>2. Vectorized processing.</p>
+        <p>Examples: kdb, VectorWise (Actian Vector).</p>
+
+        <p>Better &mdash; both together.</p>
     </section>
-    
+
     <section class="slide">
-        <h2>Векторная обработка запроса</h2>
-        
+        <h2>Vectorized Query Execution</h2>
+
         <p>ClickHouse &mdash; vectorized query execution</p>
-        <p>&hellip; с незначительными возможностями по компиляции запросов.</p>
-        
-        <p>Данные обрабатываются &laquo;блоками&raquo;<br/>&mdash; небольшими кусочками столбцов.</p>
-        <p>Каждый столбец в оперативке &mdash; плоский массив (один или несколько).</p>
-        <p>(Structure of Arrays, см. также Apache Arrow).</p>
-        <p>Размер блока выбирается небольшим для кэш-локальности.</p>
+        <p>&hellip; with minor query compilation capabilities.</p>
+
+        <p>Data is processed in "blocks"<br/>&mdash; small pieces of columns.</p>
+        <p>Each column in memory is a flat array (one or more).</p>
+        <p>(Structure of Arrays, see also Apache Arrow).</p>
+        <p>Block size is chosen small for cache locality.</p>
     </section>
-    
+
     <section class="slide">
-        <h2>Векторная обработка запроса</h2>
-        
-        <p>Достоинства:</p>
-        <p>&mdash; нет издержек на диспетчеризацию операций;</p>
-        <p>&mdash; возможности по применению SIMD инструкций;</p>
-        <p>&mdash; возможности по применению операций сразу ко всему массиву<br/>
-        (пример &mdash; поиск подстроки в строке);</p>
-        <p>&mdash; хорошая изоляция кода;</p>
-        
+        <h2>Vectorized Query Execution</h2>
+
+        <p>Advantages:</p>
+        <p>&mdash; no overhead for operation dispatching;</p>
+        <p>&mdash; possibilities for applying SIMD instructions;</p>
+        <p>&mdash; possibilities for applying operations to the entire array at once<br/>
+        (example &mdash; substring search in a string);</p>
+        <p>&mdash; good code isolation;</p>
+
     </section>
-    
+
      <section class="slide">
-        <h2>Векторная обработка запроса</h2>
-        
-        <p>Недостатки:</p>
-        <p>&mdash; разрастание объёма скомпилированного кода из-за поддержки специализаций для разных типов данных;</p>
-        <p>&mdash; издержки на чтение и запись временных данных в кэш;</p>
-        <p>&mdash; возможно меньшее instructions per clock<br/>из-за одной операции в каждом цикле;</p>
-        <p>&mdash; сложность с реализацией short-curcuit операций;</p>
-        <p>&mdash; сложный интерфейс для UDF (пользовательских функций);</p>
+        <h2>Vectorized Query Execution</h2>
+
+        <p>Disadvantages:</p>
+        <p>&mdash; code bloat due to supporting specializations for different data types;</p>
+        <p>&mdash; overhead for reading and writing temporary data to cache;</p>
+        <p>&mdash; possibly lower instructions per clock<br/>due to one operation in each loop;</p>
+        <p>&mdash; complexity with implementing short-circuit operations;</p>
+        <p>&mdash; complex interface for UDFs (user-defined functions);</p>
     </section>
-    
+
     <section class="slide">
-        <h2>Выполнение GROUP BY</h2>
+        <h2>GROUP BY Execution</h2>
     </section>
-    
+
     <section class="slide">
-        <h2>Выполнение GROUP BY</h2>
-        
-        <p>Параллельная агрегация.</p>
-        <p>Распределённая агрегация.</p>
-        <p>Агрегация во внешней памяти.</p>
-        <p>Инкрементальная агрегация.</p>
+        <h2>GROUP BY Execution</h2>
+
+        <p>Parallel aggregation.</p>
+        <p>Distributed aggregation.</p>
+        <p>External memory aggregation.</p>
+        <p>Incremental aggregation.</p>
     </section>
 
 
     <section class="slide">
-        <h2><span>Сообщество</span></h2>
-        <p><span>Сайт: <a href="https://clickhouse.com/">https://clickhouse.com/</a></span></p>
+        <h2><span>Community</span></h2>
+        <p><span>Website: <a href="https://clickhouse.com/">https://clickhouse.com/</a></span></p>
         <p><span>Google groups: <a href="https://groups.google.com/forum/#!forum/clickhouse">https://groups.google.com/forum/#!forum/clickhouse</a></span></p>
-        <p><span>Рассылка: clickhouse-feedback@yandex-team.com</span></p>
-        <p><span>Telegram чат: <a href="https://telegram.me/clickhouse_en">https://telegram.me/clickhouse_en</a> и <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_ru</a> (уже 1100 участников)</span></p>
+        <p><span>Email: clickhouse-feedback@yandex-team.com</span></p>
+        <p><span>Telegram chat: <a href="https://telegram.me/clickhouse_en">https://telegram.me/clickhouse_en</a> and <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_ru</a> (already 1100 participants)</span></p>
         <p><span>GitHub: <a href="https://github.com/ClickHouse/ClickHouse/">https://github.com/ClickHouse/ClickHouse/</a></span></p>
         <p><span>Twitter: <a href="https://twitter.com/ClickHouseDB">https://twitter.com/ClickHouseDB</a></span></p>
-        <p><span>+ встречи. Москва, Санкт-Петербург, Новосибирск,<br/>Екатеринбург, Минск, Берлин, Пало-Альто, Нижний Новгород&hellip;<br/>далее снова Москва.</span></p>
+        <p><span>+ meetups. Moscow, Saint Petersburg, Novosibirsk,<br/>Yekaterinburg, Minsk, Berlin, Palo Alto, Nizhny Novgorod&hellip;<br/>then Moscow again.</span></p>
     </section>
 
 
     <div class="progress"></div>
     <script src="shower/shower.min.js"></script>
-    
+
         <!--Video plugin-->
     <link rel="stylesheet" href="shower/shower-video.css">
     <script src="shower/shower-video.js"></script>

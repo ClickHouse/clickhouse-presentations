@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Секреты оптимизации производительности ClickHouse</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x10.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.5; }
+         p.cloud span { font-size: 13pt; color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>Секреты оптимизации производительности ClickHouse</h1>
+    </header>
+
+    <section class="slide" id="cover">
+        <h1 style="margin-top: 150px; font-size: 42pt; line-height: 150%;"><span style="background: rgba(255, 255, 255, 0.75)">Секреты оптимизации производительности ClickHouse</span></h1>
+    </section>
+
+<section class="slide">
+<h2>Тривиальные факты</h2>
+<p>и основные принципы.</p>
+</section>
+
+<section class="slide">
+<h2>Принципы разработки</h2>
+<p style="font-size: 36pt;">Разработка &laquo;сверху-вниз&raquo;
+<br/>или &laquo;снизу-вверх&raquo;?</p>
+</section>
+
+<section class="slide">
+<h2>Принципы разработки</h2>
+<img style="float: right; height: 60%; margin-left: -60px; margin-top: -60px; margin-right: 20px;" src="pictures/not_optimal.webp"/>
+<p>Сверху-вниз:</p>
+<p>&mdash; определим архитектуру проекта;</p>
+<p>&mdash; определим, какие классы будут в коде;</p>
+<p>&mdash; нарисуем диаграммы;</p>
+</section>
+
+<section class="slide">
+<h2>Принципы разработки</h2>
+<img style="float: left; height: 60%; margin-left: -60px; margin-top: -60px; margin-right: 20px;" src="pictures/optimal.webp"/>
+<p>Снизу-вверх:</p>
+<p>&mdash; как будет работать внутренний цикл?</p>
+<p>&mdash; какой memory-layout данных в памяти?</p>
+<p>&mdash; какие байты куда перекладываются?</p>
+</section>
+
+<section class="slide">
+<h2>Как появился ClickHouse</h2>
+<p>ClickHouse появился из прототипа,<br/>
+реализованного в 2008 году<br/>
+для решения единственной задачи:<br/>
+&mdash; эффективно выполнять фильтрацию и агрегацию данных.</p>
+<p>&mdash; то есть, эффективно выполнять <b>GROUP BY</b>.</p>
+<p><a href="https://habr.com/en/company/yandex/blog/273305/">https://habr.com/en/company/yandex/blog/273305/</a></p>
+</section>
+
+<section class="slide">
+<h2>Как появился ClickHouse</h2>
+<img style="height: 80%; margin-top: -1em;" src="pictures/constructor.png"/>
+</section>
+
+<section class="slide">
+<h2>Расчёт на возможности железа</h2>
+<p>1. Какие характеристики (throughput, latency, volume...) 
+<br/>&emsp;имеет наше железо (CPU, оперативка, SSD, диски, сеть...)
+<br/>&emsp;и на каких операциях?</p>
+<p>2. Какие структуры данных мы используем
+<br/>&emsp;и как они работают с нашим железом?</p>
+<p>3. Используем арифметику...</p>
+</section>
+
+<section class="slide">
+<h2>Расчёт на возможности железа</h2>
+<p>Пример:</p>
+<p>&mdash; будем делать GROUP BY в оперативке;</p>
+<p>&mdash; будем складывать данные в хэш-таблицу;</p>
+<p>&mdash; если хэш-таблица большая, то она не помещается в L3 кэш CPU;</p>
+<p>&mdash; если ключи распределены не локально,<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; то на каждую строку &mdash; L3 кэш-промах;</p>
+<p>&mdash; L3 кэш-промах имеет latency 70..100 нс;</p>
+<p>Сколько ключей в секунду сможет обрабатывать запрос с GROUP BY?</p>
+</section>
+
+<section class="slide">
+<h2>Расчёт на возможности железа</h2>
+<p>Пример:</p>
+<code style="font-size: 32pt;">SELECT rand() % 10000000 AS k
+    FROM system.numbers_mt
+    GROUP BY k</code>
+<p style="margin-top: 1em;"><b>175.52</b> million rows/s.</p>
+</section>
+
+<section class="slide">
+<h2>Расчёт на возможности железа</h2>
+<p>L3 кэш-промах имеет throughput 40 млн ops/sec. на одном ядре CPU</p>
+<p>и ~ 500 млн. ops/sec*. на 32 hyper-threading ядрах CPU<br/>(Xeon E5-2650v2).</p>
+<p style="margin-top: 2em;">Никогда не путайте latency и throughput!</p>
+<p style="margin-top: 5em; font-size: 80%; color: gray;">* а у нас получилось только 175 млн. строк в секунду. ClickHouse тормозит?</p>
+</section>
+
+<section class="slide">
+<h2>Абстракции подчинены алгоритмам</h2>
+<p>Если нужна максимальная эффективность<br/>
+&mdash; <b>интерфейсы в коде определяются алгоритмами</b>, а на наоборот!</p>
+</section>
+
+<section class="slide">
+<h2>Абстракции подчинены алгоритмам</h2>
+<p>Пример: поиск подстроки в строке:</p>
+<p>&mdash; в языке C: <b>strstr</b>, <b>memmem</b>;</p>
+<p>&mdash; в языке C++: <b>std::search</b>, <b>std::string::find</b>.</p>
+<p>Эти функции тормозят (при некотором сценарии использования).</p>
+</section>
+
+<section class="slide">
+<h2>Абстракции подчинены алгоритмам</h2>
+<p>Поиск подстроки в строке:</p>
+<code style="margin-left: -15px; margin-right: -15px;">void * memmem(const void * haystack, size_t haystacklen,
+              const void * needle, size_t needlelen);</code>
+<p style="margin-top: 1em;">&mdash; нет отдельной функции инициализации;
+<br/>&mdash; требования по reentrable &mdash; нельзя внутри выделять память.</p>
+<p>А если ищем одну и ту же <b>needle</b> в 1&nbsp;000&nbsp;000 разных <b>haystack</b>?</p>
+<code style="margin-left: -15px; margin-right: -15px;">Searcher searcher(needle);
+for (const auto &amp; haystack : haystacks)
+    searcher.search(haystack);</code>
+</section>
+
+<section class="slide">
+<h2>Абстракции подчинены алгоритмам</h2>
+<p>Поиск подстроки в строке:</p>
+<code style="margin-left: -15px; margin-right: -15px;">void * memmem(const void * haystack, size_t haystacklen,
+              const void * needle, size_t needlelen);</code>
+<p style="margin-top: 1em;">Если ищем одну и ту же <b>needle</b> в 1&nbsp;000&nbsp;000 разных <b>haystack</b>,
+<br/>то ни одна из функций <b>strstr</b>, <b>memmem</b>, <b>std::search</b>, <b>std::string::find</b>
+<br/>не будет работать хорошо, так как этого <span style="color: red;">не позволяет их интерфейс</span>.</p>
+<p>Не меняя абстракцию, код не сделать максимально эффективным.</p>
+</section>
+
+<section class="slide">
+<h2>Всегда можно сделать лучше</h2>
+<p>Если вы лучше знаете свою задачу.</p>
+<p>&mdash; поиск подстроки в строке;
+<br/>(но ведь умные люди уже написали <b>std::search</b>)</p>
+<p>&mdash; сортировка массива;
+<br/>(но ведь умные люди уже написали <b>std::sort</b>)</p>
+<p>&mdash; хэш-таблица;
+<br/>(но ведь умные люди уже написали <b>std::unordered_map</b>)</p>
+</section>
+
+<section class="slide">
+<h2>Каждая задача &mdash; это ландшафт</h2>
+<p>Поиск подстроки в строке:</p>
+<p>&mdash; точный или приближённый поиск?
+<br/>&mdash; одной или множества строк?
+<br/>&mdash; явно заданного множества или заданного языком?
+<br/>&mdash; сравнительно коротких или длинных подстрок?
+<br/>&mdash; подстрока &mdash; это подпоследовательность 
+<br/>байт / кодовых точек unicode / символов с учётом collation / слов?
+<br/>&mdash; поиск в заранее неизвестной или фиксированной строке?
+<br/>&mdash; расположенной в памяти целиком или в виде потока данных? 
+<br/>&mdash; со строгими гарантиями на время или без?</p>
+</section>
+
+<section class="slide">
+<p class="cloud">
+<span>Brute Force algorithm</span>
+<span>Deterministic Finite Automaton algorithm</span>
+<span>Karp-Rabin algorithm</span>
+<span>Shift Or algorithm</span>
+<span>Morris-Pratt algorithm</span>
+<span>Knuth-Morris-Pratt algorithm</span>
+<span>Simon algorithm</span>
+<span>Colussi algorithm</span>
+<span>Galil-Giancarlo algorithm</span>
+<span>Apostolico-Crochemore algorithm</span>
+<span>Not So Naive algorithm</span>
+<span>Boyer-Moore algorithm</span>
+<span>Turbo BM algorithm</span>
+<span>Apostolico-Giancarlo algorithm</span>
+<span>Reverse Colussi algorithm</span>
+<span>Horspool algorithm</span>
+<span>Quick Search algorithm</span>
+<span>Tuned Boyer-Moore algorithm</span>
+<span>Zhu-Takaoka algorithm</span>
+<span>Berry-Ravindran algorithm</span>
+<span>Smith algorithm</span>
+<span>Raita algorithm</span>
+<span>Reverse Factor algorithm</span>
+<span>Turbo Reverse Factor algorithm</span>
+<span>Forward Dawg Matching algorithm</span>
+<span>Backward Nondeterministic Dawg Matching algorithm</span>
+<span>Backward Oracle Matching algorithm</span>
+<span>Galil-Seiferas algorithm</span>
+<span>Two Way algorithm</span>
+<span>String Matching on Ordered Alphabets algorithm</span>
+<span>Optimal Mismatch algorithm</span>
+<span>Maximal Shift algorithm</span>
+<span>Skip Search algorithm</span>
+<span>KMP Skip Search algorithm</span>
+<span>Alpha Skip Search algorithm</span>
+</p>
+<p><a href="https://www-igm.univ-mlv.fr/~lecroq/string/">https://www-igm.univ-mlv.fr/~lecroq/string/</a></p>
+<p>Ни один из этих алгоритмов не используется в ClickHouse.</p>
+</section>
+
+<section class="slide">
+<h2>Каждая задача &mdash; это ландшафт</h2>
+<p>В ClickHouse используется:<br/>
+<br/>&mdash; алгоритм <b>Volnitsky</b> для константного needle;
+<br/>&mdash; SIMD вариант brute-force для неконстантного needle;
+<br/>&mdash; алгоритм <b>Volnitsky</b> для небольшого множества константных needle;
+<br/>&mdash; re2 и hyperscan для регулярных выражений.
+</p>
+<p><a href="https://habr.com/en/company/yandex/blog/466183/">https://habr.com/en/company/yandex/blog/466183/</a></p>
+</section>
+
+<section class="slide">
+<h2>Каждая задача &mdash; это ландшафт</h2>
+<p>Сортировка</p>
+<p>&mdash; массива чисел / кортежей / строк / структур?</p>
+<p>&mdash; доступного целиком в оперативной памяти?</p>
+<p>&mdash; методом сравнений / 3-way сравнений /<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;параллельных сравнений / поразрядно?</p>
+<p>&mdash; непосредственная / косвенная?</p>
+<p>&mdash; stable / non-stable?</p>
+<p>&mdash; полная / частичная / n-th element?</p>
+<p>&mdash; досортировка / слияние / сортировка не до конца?</p>
+</section>
+
+<section class="slide">
+<h2>Каждая задача &mdash; это ландшафт</h2>
+<p>В ClickHouse используются <b>pdqsort</b> и <b>radix sort</b>,<br/>
+а вообще всё плохо, надо переделать.</p>
+</section>
+
+<section class="slide">
+<h2>Каждая задача &mdash; это ландшафт</h2>
+<p>Хэш-таблица</p>
+<p>
+&mdash; выбор хэш-функции;<br/>
+&mdash; memory layout: open-addressing vs. chaining;<br/>
+&mdash; большие или маленькие значения;<br/>
+&mdash; нужна ли поддержка неперемещаемых значений;<br/> 
+&mdash; memory layout: ключи и значения в одном массиве или в разных;<br/>
+&mdash; способ разрешения коллизий;<br/>
+&mdash; способ удаления значений;<br/>
+&mdash; fill factor; как и когда ресайзить;<br/>
+&mdash; как перекладывать значения при ресайзе;<br/>
+&mdash; быстрый probing с помощью битовых масок;<br/>
+&mdash; inline размещение строковых ключей;<br/>
+&mdash; prefetch и batching;
+</p>
+</section>
+
+<section class="slide">
+<h2>Хэш-таблица</h2>
+<p>В ClickHouse используется самая лучшая* хэш-таблица.</p>
+<p>* для своей задачи.<br/>
+* не одна, а много разных.<br/>
+* а сейчас сделаем ещё чуть лучше:<br/><br/>
+<a href="https://github.com/ClickHouse/ClickHouse/pull/5417">https://github.com/ClickHouse/ClickHouse/pull/5417</a></p>
+</section>
+
+<section class="slide">
+<h2>Всегда можно сделать лучше</h2>
+<p>Если вы лучше знаете свою задачу.</p>
+<p style="color: green;">&mdash; поиск подстроки в строке;</p>
+<p style="color: green;">&mdash; сортировка массива;</p>
+<p style="color: green;">&mdash; хэш-таблица;</p>
+<p>...</p>
+<p>&mdash; аллокатор памяти (<b>malloc</b>);</p>
+<p>&mdash; перекладывание байт (<b>memcpy</b>);</p>
+</section>
+
+<section class="slide">
+<h2>Всегда можно сделать лучше</h2>
+<p>В ClickHouse используется:</p>
+<p>&mdash; &laquo;китайский&raquo; memcpy;</p>
+<p>&mdash; memcpy для gather коротких кусков памяти:<br/>
+<br/><b>memcpySmallAllowReadWriteOverflow15</b></p>
+</section>
+
+<section class="slide">
+<h2>Всегда можно сделать лучше</h2>
+<p>или взять лучшее!</p>
+<p>Если кто-то в интернете написал, что его алгоритм &laquo;самый лучший&raquo;
+<br/>&mdash; тащим его в ClickHouse.</p>
+<p>... а потом выкидываем, если он не самый лучший.</p>
+<p>Пример: <b>simdjson</b> &mdash; взяли, не выкинули.</p>
+<p>Пример: <b>mimalloc</b> &mdash; взяли, выкинули.</p>
+</section>
+
+
+
+<section class="slide">
+<h2>Специализация под задачи</h2>
+<p>Тривиальный пример:</p>
+<code>WHERE str LIKE '%hello%world!%'</code>
+<p>&mdash; регулярное выражение re2<br/>но перед этим &mdash; поиск подстроки "world!";</p>
+<code>WHERE str LIKE '%hello%'</code>
+<p>&mdash; поиск подстроки в строке;</p>
+<code>WHERE str LIKE 'hello%'</code>
+<p>&mdash; сравнение префикса.</p>
+<p style="color: gray">Похожая оптимизация есть даже в MySQL.</p>
+</section>
+
+<section class="slide">
+<h2>Специализация под задачи</h2>
+<p style="margin-top: -1em;">Специализация под типы данных (на примере GROUP BY):</p>
+
+<code style="font-size: 12pt; margin-left: -20px; margin-right: -40px;">using AggregatedDataWithoutKey = AggregateDataPtr;
+
+...UInt8Key = <b>FixedHashMap</b>&lt;UInt8, AggregateDataPtr>;
+...UInt16Key = FixedHashMap&lt;UInt16, AggregateDataPtr>;
+
+...UInt64Key = HashMap&lt;UInt64, AggregateDataPtr, <b>HashCRC32</b>&lt;UInt64>>;
+...StringKey = HashMap<b>WithSavedHash</b>&lt;StringRef, AggregateDataPtr>;
+...Keys128 = HashMap&lt;UInt128, AggregateDataPtr, UInt128HashCRC32>;
+...Keys256 = HashMap&lt;UInt256, AggregateDataPtr, UInt256HashCRC32>;
+
+...UInt64KeyTwoLevel = <b>TwoLevel</b>HashMap&lt;UInt64, AggregateDataPtr, HashCRC32&lt;UInt64>>;
+...StringKeyTwoLevel = TwoLevelHashMapWithSavedHash&lt;StringRef, AggregateDataPtr>;
+...Keys128TwoLevel = TwoLevelHashMap&lt;UInt128, AggregateDataPtr, UInt128HashCRC32>;
+...Keys256TwoLevel = TwoLevelHashMap&lt;UInt256, AggregateDataPtr, UInt256HashCRC32>;
+
+...UInt64KeyHash64 = HashMap&lt;UInt64, AggregateDataPtr, <b>DefaultHash</b>&lt;UInt64>>;
+...StringKeyHash64 = HashMapWithSavedHash&lt;StringRef, AggregateDataPtr, StringRefHash64>;
+...Keys128Hash64 = HashMap&lt;UInt128, AggregateDataPtr, UInt128Hash>;
+...Keys256Hash64 = HashMap&lt;UInt256, AggregateDataPtr, UInt256Hash>;
+</code>
+<p>&mdash; <a href="https://github.com/ClickHouse/ClickHouse/blob/master/dbms/src/Interpreters/Aggregator.h">dbms/src/Interpreters/Aggregator.h</a></p>
+</section>
+
+
+<section class="slide">
+<h2>Специализация под задачи</h2>
+<p>Специализация под количество данных.</p>
+<p>Пример: функция <b>quantileTiming</b>:<br/>
+&mdash; до 64 значений &mdash; плоский массив в арене;<br/>
+&mdash; до 5670 значений &mdash; плоский массив в куче;<br/>
+&mdash; больше &mdash; гистограмма фиксированного вида.<br/>
+(<a href="https://github.com/ClickHouse/ClickHouse/blob/master/dbms/src/AggregateFunctions/QuantileTiming.h">QuantileTiming.h</a>)
+</p>
+<p>Пример: функция <b>uniqCombined</b>:<br/>
+&mdash; плоский массив;<br/>
+&mdash; хэш-таблица;<br/>
+&mdash; HyperLogLog.<br/>
+(<a href="https://github.com/ClickHouse/ClickHouse/blob/master/dbms/src/Common/CombinedCardinalityEstimator.h">CombinedCardinalityEstimator.h</a>)
+</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 32pt; line-height: 1.5;">Структуры данных рассматриваются<br/>в контексте задачи</h2>
+<p>Как выбрать структуру данных?</p>
+<p>&mdash; определить, что она делает нужное и ненужное.</p>
+<p>Тривиальный пример: <b>std::string</b>:</p>
+<p>&mdash; самостоятельно управляет памятью для строки.</p>
+<p>&mdash; позволяет модифицировать строку,<br/>&emsp; например дописать ещё один символ.</p>
+<p>&mdash; самостоятельно знает размер строки.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt; line-height: 1.5;">Структуры данных рассматриваются<br/>в контексте задачи</h2>
+<p>Тривиальный пример: как выполнить GROUP BY?</p>
+<p>Вариант 1:<br/>&mdash; отсортировать массив;<br/>&mdash; затем пройтись по нему,<br/>&emsp; вычисляя агрегатные функции для одинаковых ключей.</p>
+<p>Вариант 2:<br/>&mdash; складывать ключи в хэш-таблицу;<br/>&mdash; встретив уже существующий ключ,<br/>&emsp; обновляем состояния агрегатных функций.</p>
+<p style="color: gray;">Ответ: второй вариант лучше; но если данные почти отсортированы, то лучше их досортировать и вариант 1; а если данные не помещаются в память, то разбить на корзины (partition), а затем вариант 2.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 28pt;">Алгоритмы учитывают распределение данных</h2>
+<code style="font-size: 12pt; margin-top: -1em;">#ifdef __SSE2__
+/** A slightly more optimized version.
+  * Based on the assumption that often sequences of consecutive values
+  *  completely pass or do not pass the filter.
+  * Therefore, we will optimistically check the sequences of SIMD_BYTES values.
+  */
+
+static constexpr size_t SIMD_BYTES = 16;
+const __m128i zero16 = _mm_setzero_si128();
+const UInt8 * filt_end_sse = filt_pos + size / SIMD_BYTES * SIMD_BYTES;
+
+while (filt_pos &lt; filt_end_sse)
+{
+    int mask = _mm_movemask_epi8(
+        _mm_cmpgt_epi8(
+            _mm_loadu_si128(reinterpret_cast<const __m128i *>(filt_pos)), zero16));
+
+    if (0 == mask)
+    {
+        /// Nothing is inserted.
+    }
+    else if (0xFFFF == mask)
+    {
+        res_data.insert(data_pos, data_pos + SIMD_BYTES);
+    }
+    else
+</code>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 28pt;">Алгоритмы учитывают распределение данных</h2>
+<code style="font-size: 12pt; margin-top: -1em;">static inline int digits10(uint128_t x)
+{
+    if (x &lt; 10ULL)
+        return 1;
+    if (x &lt; 100ULL)
+        return 2;
+    if (x &lt; 1000ULL)
+        return 3;
+
+    if (x &lt; 1000000000000ULL)
+    {
+        if (x &lt; 100000000ULL)
+        {
+            if (x &lt; 1000000ULL)
+            {
+                if (x &lt; 10000ULL)
+                    return 4;
+                else
+                    return 5 + (x >= 100000ULL);
+            }
+
+            return 7 + (x >= 10000000ULL);
+        }
+
+        if (x &lt; 10000000000ULL)
+            return 9 + (x >= 1000000000ULL);
+
+        return 11 + (x >= 100000000000ULL);
+    }
+
+    return 12 + digits10(x / 1000000000000ULL);
+}
+</code>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 28pt;">Алгоритмы обучаются на данных</h2>
+<video style="width: 100%;"><source src="video/bandits.ogv" type="video/ogg"></video>
+<p style="font-size: 12pt; color: #888;">Источник: <a href="https://learnforeverlearn.com/bandits/">https://learnforeverlearn.com/bandits/</a></p>
+</section>
+
+<section class="slide">
+<h2>Многорукие бандиты</h2>
+
+<p>&mdash; выбираем разные варианты случайно;</p>
+<p>&mdash; считаем статистику для каждого;</p>
+<p>&mdash; рассматриваем время каждого варианта как случайную величину;</p>
+<p>&mdash; оцениваем распределение времени для каждого варианта;</p>
+</section>
+
+<section class="slide">
+<h2>Thompson Sampling</h2>
+<p>&mdash; &laquo;разыгрываем в уме&raquo; случайную величину для каждого варианта;</p>
+<p>&mdash; выбираем тот, для которого разыгранное значение оказалось лучше.</p>
+<p>Используется для оптимизации разжатия LZ4 в ClickHouse.</p>
+<p><a href="https://habr.com/en/company/yandex/blog/452778/">https://habr.com/en/company/yandex/blog/452778/</a>
+</section>
+
+
+<section class="slide">
+<h2>Тестирование на реальных данных</h2>
+<p>Пример:</p>
+<p>Пусть мы тестируем производительность
+<br/>не аналитической СУБД, а чего-нибудь попроще:
+<br/>например, хэш-таблиц.</p>
+<p>Скорость работы хэш-таблиц зависит от баланса<br/>между качеством и скоростью работы хэш-функции.</p>
+</section>
+
+
+<section class="slide">
+<h2>Важны настоящие данные</h2>
+<div style="background-color: #DEF; line-height: 1.25; width: 50%; padding: 10px; border-radius: 25px;">
+um, it's just a trivial test ...
+<br/>clickhouse hashmap takes 10GB
+<br/>this only takes 2
+<br/>and it's 60% faster
+</div>
+
+<div style="background-color: #DFD; line-height: 1.25; width: 60%; padding: 10px; border-radius: 25px; margin-left: 30%;">
+Alexey Milovidov
+<br/>This test almost doesn't make sense...
+<br/>Let me share a dataset with real strings...
+<br/>[ File : data.tar ]
+</div>
+
+<div style="background-color: #DEF; line-height: 1.25; width: 50%; padding: 10px; border-radius: 25px;">
+clickhouse hashmap is faster
+<br/>from 2 times to 5 times
+</div>
+</section>
+
+<section class="slide">
+<h2>Обфускация данных</h2>
+<code style="margin-left: -100px; margin-right: -100px; margin-top: -1em; margin-bottom: 1em;">Проградар-детей беременны отправления или Дачна Невестика и МО | Холодеи. - Плакаты пустить в Аксессуаро
+Проградар-детей бережье — Яндекс.Деньги: Оплатного журнал пять велосипеды на Lore - dfghf — я.ру - недвижимость в Москва) по 473682 объявленов - Продаже Компром
+Проградар-детей бесплатно! в большом ассоте»в Москве - Вышивку — Омский Оплатно в Самые босоножка рост
+Проградар-детей бесплатно! в большом ассоте»в Москве, странспортал
+Проградар-детей бердянский Модов. Рецепт c фотогалерея и прикрыло громной футбола Московье@Mail.Ru - Поиск
+Проградар-детей бережнева продажа Смотрите лучшей цене, сообществе 2010 | Проектиролабор СНОВНЫЕ. Доста
+Проградар-детей бесплатно! в большом ассотруди Цена: 820 0000 км., Таганде квартиры в Санкт-Пет
+Проградар-детей бережный месяцам - DoramaTv.ru - Платья повсему мире. Интернет-продажа авто б.у. и на со скидкой
+Проградар-детей беремховой комн. в 2013 год, болисменной подержанны в Ставропавлины и коляски ->  Магнитаз 80 сотовим.РУ
+Проградар-детей бережена - Официальный форумы Калинин (Украины. Авториа Бакслера Кудрявцева поставка, вакансионны, продаже отеля
+Проградар-детей беременность подробная д. 5, 69, общения W*ойчивом - Яндекс.Карты, дома, какой цены эвакуатор форум игры World of Tanks
+Проградар-детей берец, отечестве и в розовый стр. 2 из кабинет поиск по доровье@Mail.Ru
+Проградар-детей беремени програда в Китая верты Баре, попогода Манику. Записи в Смоленское</code>
+<p>С помощью утилиты <b>clickhouse-obfuscator</b>.</p>
+</section>
+
+
+<section class="slide">
+<h2>Ещё принципы...</h2>
+<p>Доступ разработчиков в продакшен.</p>
+<p>Инструментирование, мониторинг, диагностика.</p>
+<p>Быстрый релизный цикл.</p>
+</section>
+
+
+<section class="slide">
+<h2>Выводы</h2>
+<p>Чтобы ваш код работал быстро, надо всего лишь:</p>
+<p>&mdash; учитывать нижние уровни при проектировании системы;<br/>
+&mdash; исходить из возможностей железа;<br/>
+&mdash; выбирать структуры данных и абстракции исходя из задачи;<br/>
+&mdash; применять специализации под частные случаи;<br/>
+&mdash; пробовать новые, &laquo;самые лучшие&raquo; алгоритмы,<br/>&emsp; о которых вы прочитали вчера;<br/>
+&mdash; выбирать варианты алгоритмов в runtime исходя из статистик;<br/>
+&mdash; тестировать на реальных данных;<br/>
+&mdash; контролировать производительность в CI;<br/>
+&mdash; всё измерять и смотреть;<br/>
+&mdash; в том числе, на продакшене;<br/>
+&mdash; и постоянно всё переделывать;</p>
+</section>
+
+
+
+<section class="slide">
+<h2><span style="background: rgba(255, 255, 255, 0.75)">.</span></h2>
+<p>Анализ производительности запросов в ClickHouse: <br/><a href="https://youtu.be/ondHe_JUyW4">https://youtu.be/ondHe_JUyW4</a></p>
+<p>Как устроены хэш-таблицы в ClickHouse: <br/><a href="https://youtu.be/EoX82TEz2sQ">https://youtu.be/EoX82TEz2sQ</a></p>
+<p>Параллельный и распределённый GROUP BY: <br/><a href="https://youtu.be/SrucFOs8Y6c">https://youtu.be/SrucFOs8Y6c</a></p>
+<p>Как ускорить разжатие LZ4: <br/><a href="https://youtu.be/V2CqQBICt7M">https://youtu.be/V2CqQBICt7M</a></p>
+<p>Обфускация баз данных: <br/><a href="https://youtu.be/2iR7i4akL44">https://youtu.be/2iR7i4akL44</a></p>
+</section>
+
+    <section class="slide">
+        <h2>.</h2>
+        <p>Web site: <a href="https://clickhouse.com/">https://clickhouse.com/</a></p>
+        <p>Maillist: clickhouse-feedback@yandex-team.com</p>
+        <p>YouTube: <a href="https://www.youtube.com/c/ClickHouseDB">https://www.youtube.com/c/ClickHouseDB</a></p>
+        <p>Telegram chat: <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_ru</a>, <a href="https://telegram.me/clickhouse_en">clickhouse_en</a></p>
+        <p>GitHub: <a href="https://github.com/ClickHouse/ClickHouse/">https://github.com/ClickHouse/ClickHouse/</a></p>
+        <p>Twitter: <a href="https://twitter.com/ClickHouseDB">https://twitter.com/ClickHouseDB</a></p>
+        <p>Google groups: <a href="https://groups.google.com/forum/#!forum/clickhouse">https://groups.google.com/forum/#!forum/clickhouse</a></p>
+    </section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+    
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>

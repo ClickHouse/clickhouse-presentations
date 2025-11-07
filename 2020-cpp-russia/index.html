@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Как собирать переносимые бинарники для Linux</title>
+    <title>How to Build Portable Binaries for Linux</title>
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -13,32 +13,32 @@
 </head>
 <body class="shower list">
     <header class="caption">
-        <h1>Как собирать переносимые бинарники для Linux</h1>
+        <h1>How to Build Portable Binaries for Linux</h1>
     </header>
 
     <section class="slide" id="cover">
-        <h1 style="margin-top: 200px;"><span style="background: rgba(255, 255, 255, 0.75)">Как собирать переносимые <br/>бинарники для Linux</span></h1>
+        <h1 style="margin-top: 200px;"><span style="background: rgba(255, 255, 255, 0.75)">How to Build Portable <br/>Binaries for Linux</span></h1>
     </section>
 
 <section class="slide">
-<h2>Проблема</h2>
-<p>Существует много дистрибутивов Linux</p>
+<h2>The Problem</h2>
+<p>There are many Linux distributions</p>
 <p>&mdash; Debian, Ubuntu, Red Hat, CentOS, Fedora, Gentoo, Arch, Suse, Amazon...</p>
-<p>Существует много версий каждого дистрибутива</p>
-<p>&mdash; Ubuntu: 25 версий используется в продакшене: 8.04 .. 20.04.</p>
-<p>Нужно ли собирать наши программы под все из них?</p>
+<p>There are many versions of each distribution</p>
+<p>&mdash; Ubuntu: 25 versions used in production: 8.04 .. 20.04.</p>
+<p>Do we need to build our programs for all of them?</p>
 </section>
 
 <section class="slide">
-<h2>Проблема</h2>
-<img style="float: right; height: 60%; margin-right: -80px; margin-top: -100px; margin-left: 0px;" src="pictures/not_optimal.webp"/><p>Нужно ли собирать наши программы под все из них?</p>
-<p>&mdash; конечно не нужно!</p>
-<p>&mdash; ещё не хватало делать сто вариантов сборок<br/>&emsp; и потом их всех отлаживать.</p>
-<p>Просто соберём бинарник, который работает на любом Linux.</p>
+<h2>The Problem</h2>
+<img style="float: right; height: 60%; margin-right: -80px; margin-top: -100px; margin-left: 0px;" src="pictures/not_optimal.webp"/><p>Do we need to build our programs for all of them?</p>
+<p>&mdash; of course not!</p>
+<p>&mdash; we don't want to make a hundred build variants<br/>&emsp; and then debug them all.</p>
+<p>Let's just build a binary that works on any Linux.</p>
 </section>
 
 <section class="slide">
-<h2>Давайте попробуем!</h2>
+<h2>Let's Try!</h2>
 <code style="font-size: 14pt; margin-top: -2em;">#include &lt;vector>
 #include &lt;thread>
 #include &lt;iostream>
@@ -65,8 +65,8 @@ int main(int, char **)
 
 
 <section class="slide">
-<h2>Давайте попробуем!</h2>
-<p>Скомпилирую бинарник на своей машине<br/>и запущу на сервере с Ubuntu 12.04.</p>
+<h2>Let's Try!</h2>
+<p>I'll compile a binary on my machine<br/>and run it on a server with Ubuntu 12.04.</p>
 
 <code style="font-size: 14pt; margin-top: 2em;">$ g++ -pthread main.cpp
 $ ./a.out
@@ -84,33 +84,33 @@ $ docker run -it --rm --volume $(pwd):/test ubuntu:precise /test/a.out
 
 
 <section class="slide">
-<h2>Будем разбираться</h2>
+<h2>Let's Figure This Out</h2>
 <img style="float: right; width: 40%; margin-top: -60px; margin-right: -50px;" src="pictures/fixing_a_lightbulb.png"/>
-<p>1. Как собираются программы на C++?</p>
-<p>2. Как программы на C++ работают в ОС?</p>
-<p>3. Как программы исполняются на CPU?</p>
+<p>1. How are C++ programs built?</p>
+<p>2. How do C++ programs work in the OS?</p>
+<p>3. How do programs execute on the CPU?</p>
 <p style="font-size: 8pt; color: gray; margin-top: 60px; margin-right: -50px; text-align: right;">Malcolm in the Middle S03E06 - Health Scare, Fox Network, 2001</p>
 </section>
 
 
 
 <section class="slide">
-<h2>Как собираются программы на C++</h2>
+<h2>How C++ Programs are Built</h2>
 <code>g++ -pthread main.cpp</code>
 <code>g++ <b>-v</b> -pthread main.cpp</code>
-<code style="font-size: 12pt; margin-top: 2em;">/usr/lib/gcc/x86_64-linux-gnu/9/collect2 
--plugin /usr/lib/gcc/x86_64-linux-gnu/9/liblto_plugin.so 
--plugin-opt=/usr/lib/gcc/x86_64-linux-gnu/9/lto-wrapper 
--plugin-opt=-fresolution=/tmp/ccKFcsUf.res 
--plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc 
--plugin-opt=-pass-through=-lpthread -plugin-opt=-pass-through=-lc 
--plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc 
---build-id --eh-frame-hdr -m elf_x86_64 --hash-style=gnu --as-needed 
--dynamic-linker /lib64/ld-linux-x86-64.so.2 <b>-pie</b> -z now -z relro 
+<code style="font-size: 12pt; margin-top: 2em;">/usr/lib/gcc/x86_64-linux-gnu/9/collect2
+-plugin /usr/lib/gcc/x86_64-linux-gnu/9/liblto_plugin.so
+-plugin-opt=/usr/lib/gcc/x86_64-linux-gnu/9/lto-wrapper
+-plugin-opt=-fresolution=/tmp/ccKFcsUf.res
+-plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc
+-plugin-opt=-pass-through=-lpthread -plugin-opt=-pass-through=-lc
+-plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc
+--build-id --eh-frame-hdr -m elf_x86_64 --hash-style=gnu --as-needed
+-dynamic-linker /lib64/ld-linux-x86-64.so.2 <b>-pie</b> -z now -z relro
 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/<b>Scrt1.o</b>
 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/<b>crti.o</b>
 /usr/lib/gcc/x86_64-linux-gnu/9/<b>crtbeginS.o</b>
--L/usr/lib/gcc/x86_64-linux-gnu/9 -L/usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/9/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/9/../../.. /tmp/ccZP10ce.o 
+-L/usr/lib/gcc/x86_64-linux-gnu/9 -L/usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/9/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/9/../../.. /tmp/ccZP10ce.o
 <b>-lstdc++ -lm -lgcc_s -lgcc -lpthread -lc -lgcc_s -lgcc</b>
 /usr/lib/gcc/x86_64-linux-gnu/9/<b>crtendS.o</b>
 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/<b>crtn.o</b></code>
@@ -118,151 +118,151 @@ $ docker run -it --rm --volume $(pwd):/test ubuntu:precise /test/a.out
 
 
 <section class="slide" style="font-size: 95%">
-<h2 style="font-size: 32pt;">Какие библиотеки используются неявно?</h2>
-<p>1. Стандартная библиотека C++</p>
-<p>Пример, что реализует: std::string</p>
-<p>Разные реализации:<br/>
-&mdash; <b>libstdc++</b> &mdash; по-умолчанию при сборке с помощью gcc и clang в Linux;<br/>
-&mdash; <b>libc++</b> &mdash; по-умолчанию при сборке с помощью clang в FreeBSD, Darwin;<br/>
-&mdash; вы можете вовсе не использовать стандартную библиотеку C++<br/>&emsp; или даже написать её сами.</p>
-<p>Все варианты можно использовать как с gcc так и с clang.</p>
-<p>Можно использовать разные версии библиотек<br/>почти независимо от версии компилятора:<br/>
-&mdash; пример: libc++ 11 (master) можно использовать с clang-10 и с gcc-9.3.</p>
+<h2 style="font-size: 32pt;">What Libraries are Used Implicitly?</h2>
+<p>1. C++ Standard Library</p>
+<p>Example implementation: std::string</p>
+<p>Different implementations:<br/>
+&mdash; <b>libstdc++</b> &mdash; default when building with gcc and clang on Linux;<br/>
+&mdash; <b>libc++</b> &mdash; default when building with clang on FreeBSD, Darwin;<br/>
+&mdash; you can choose not to use the C++ standard library at all<br/>&emsp; or even write your own.</p>
+<p>All variants can be used with both gcc and clang.</p>
+<p>You can use different library versions<br/>almost independently of the compiler version:<br/>
+&mdash; example: libc++ 11 (master) can be used with clang-10 and gcc-9.3.</p>
 </section>
 
 
 <section class="slide" style="font-size: 95%">
-<h2 style="font-size: 32pt;">Какие библиотеки используются неявно?</h2>
-<p style="margin-top: -1em;">2. Библиотека C++ ABI</p>
-<p>Пример, что реализует: <b>__cxa_throw</b></p>
-<p>Прослойка между стандартной библиотекой* C++<br/>и платформо-специфичной реализацией таких деталей как:<br/>
-&mdash; обработка исключений;<br/>
-&mdash; RTTI (dynamic_cast и всё, что рядом);<br/>
-&mdash; thread_local переменные с нетривиальным деструктором;<br/>
-&mdash; static переменные в функциях с нетривиальной инициализацией;</p>
-<p>Эта библиотека имеет C интерфейс, и разные реализации стандартной библиотеки C++ используют один и тот же интерфейс C++ ABI.</p>
-<p>Разные реализации:<br/>
-&mdash; libstdc++ &mdash; по-умолчанию при сборке с помощью gcc и clang в Linux;<br/>
-&mdash; libc++abi &mdash; по-умолчанию при сборке с clang в FreeBSD, Darwin;<br/>
-&mdash; вы можете вовсе не использовать обработку исключений, RTTI...</p>
+<h2 style="font-size: 32pt;">What Libraries are Used Implicitly?</h2>
+<p style="margin-top: -1em;">2. C++ ABI Library</p>
+<p>Example implementation: <b>__cxa_throw</b></p>
+<p>A layer between the C++ standard library*<br/>and platform-specific implementation of details such as:<br/>
+&mdash; exception handling;<br/>
+&mdash; RTTI (dynamic_cast and everything around it);<br/>
+&mdash; thread_local variables with non-trivial destructors;<br/>
+&mdash; static variables in functions with non-trivial initialization;</p>
+<p>This library has a C interface, and different C++ standard library implementations use the same C++ ABI interface.</p>
+<p>Different implementations:<br/>
+&mdash; libstdc++ &mdash; default when building with gcc and clang on Linux;<br/>
+&mdash; libc++abi &mdash; default when building with clang on FreeBSD, Darwin;<br/>
+&mdash; you can choose not to use exception handling, RTTI...</p>
 </section>
 
 
 <section class="slide" style="font-size: 95%">
-<h2 style="font-size: 32pt;">Какие библиотеки используются неявно?</h2>
-<p>C++ ABI &mdash; это не только библиотека.</p>
-<p>Определяет layout структур данных, соглашения о вызовах, интерфейсы...</p>
-<p>Примеры:<br/>
-&mdash; как устроен mangling имён в объектных файлах;<br/>
-&mdash; где расположена и как устроена таблица виртуальных функций;<br/>
-&mdash; как именно выполнять обработку исключений;</p>
-<p>Если вы пишете на C++, ваша программа использует C++ ABI.</p>
-<p>Существуют разные C++ ABI для разных платформ.</p>
-<p>Для Linux amd64 &mdash; Itanium* C++ ABI.</p>
-<p style="font-size: 50%;">* Почему оно так называется?</p>
+<h2 style="font-size: 32pt;">What Libraries are Used Implicitly?</h2>
+<p>C++ ABI is not just a library.</p>
+<p>It defines data structure layouts, calling conventions, interfaces...</p>
+<p>Examples:<br/>
+&mdash; how name mangling is done in object files;<br/>
+&mdash; where the virtual function table is located and how it's structured;<br/>
+&mdash; how exactly to perform exception handling;</p>
+<p>If you write in C++, your program uses C++ ABI.</p>
+<p>There are different C++ ABIs for different platforms.</p>
+<p>For Linux amd64 &mdash; Itanium* C++ ABI.</p>
+<p style="font-size: 50%;">* Why is it called that?</p>
 </section>
 
 
 <section class="slide" style="font-size: 95%">
-<h2 style="font-size: 32pt;">Какие библиотеки используются неявно?</h2>
-<p>Библиотека C++ABI может использовать разные реализации<br/>отдельных деталей внутри.</p>
-<p style="margin-top: 1em;">3. Библиотека обработки исключений.</p>
-<p>Пример, что реализует: <b>__Unwind_RaiseException</b></p>
+<h2 style="font-size: 32pt;">What Libraries are Used Implicitly?</h2>
+<p>The C++ ABI library can use different implementations<br/>of individual details internally.</p>
+<p style="margin-top: 1em;">3. Exception Handling Library.</p>
+<p>Example implementation: <b>__Unwind_RaiseException</b></p>
 
-<p style="font-size: 70%; color: gray;">C++ ABI определяет механизм обработки исключений: какие функции вызываются при обработке исключений, где должны быть расположены данные для их работы (расположение блоков catch, какие деструкторы вызвать перед тем как туда попасть...), как эти данные закодированы в бинарнике...<br/>А библиотека обработки исключений реализует эти механизмы.</p>
+<p style="font-size: 70%; color: gray;">C++ ABI defines the exception handling mechanism: which functions are called when handling exceptions, where the data for their operation should be located (location of catch blocks, which destructors to call before getting there...), how this data is encoded in the binary...<br/>The exception handling library implements these mechanisms.</p>
 
-<p>Даже для Itanium C++ ABI есть разные реализации:<br/>
-&mdash; libgcc_eh.a, libgcc_s.so &mdash; по-умолчанию при сборке gcc и clang в Linux;<br/>
+<p>Even for Itanium C++ ABI there are different implementations:<br/>
+&mdash; libgcc_eh.a, libgcc_s.so &mdash; default when building with gcc and clang on Linux;<br/>
 &mdash; libunwind "nongnu" (HP);<br/>
-&mdash; libunwind из LLVM;<br/>
-&mdash; вы можете вовсе не использовать обработку исключений.</p>
+&mdash; libunwind from LLVM;<br/>
+&mdash; you can choose not to use exception handling at all.</p>
 </section>
 
 
 <section class="slide" style="font-size: 95%">
-<h2 style="font-size: 32pt;">Как обрабатываются исключения?</h2>
-<p>Itanium C++ ABI &mdash; &laquo;zero-cost exception handling&raquo;.</p>
-<p>Если вы не кидаете исключения &mdash; это бесплатно*<br/>
-* &mdash; ну, почти.</p>
-<p>Бросание исключения &mdash; очень дорого (миллионы процессорных тактов<br/>+ загрузка холодной информации из бинарника).</p>
+<h2 style="font-size: 32pt;">How are Exceptions Handled?</h2>
+<p>Itanium C++ ABI &mdash; "zero-cost exception handling".</p>
+<p>If you don't throw exceptions &mdash; it's free*<br/>
+* &mdash; well, almost.</p>
+<p>Throwing an exception is very expensive (millions of CPU cycles<br/>+ loading cold information from the binary).</p>
 <p><a href="https://itanium-cxx-abi.github.io/cxx-abi/abi-eh.html">https://itanium-cxx-abi.github.io/cxx-abi/abi-eh.html</a><br/>
 <a href="https://monoinfinito.wordpress.com/series/exception-handling-in-c/">https://monoinfinito.wordpress.com/series/exception-handling-in-c/</a></p>
-<p>ARM, POWER C++ ABI &mdash; тоже &laquo;zero-cost exception handling&raquo;.</p>
-<p>Альтернатива: SJLJ &mdash; setjmp/longjmp exception handling.<br/>
-&mdash; можно использовать и на amd64 для &laquo;самодостаточных&raquo; программ, если эксепшены не прокидываются между библиотеками с разным EH ABI.</p>
+<p>ARM, POWER C++ ABI &mdash; also "zero-cost exception handling".</p>
+<p>Alternative: SJLJ &mdash; setjmp/longjmp exception handling.<br/>
+&mdash; can also be used on amd64 for "self-contained" programs, if exceptions are not thrown between libraries with different EH ABI.</p>
 </section>
 
 
 <section class="slide">
-<h2 style="font-size: 32pt;">Какие библиотеки используются неявно?</h2>
-<p>Библиоту libunwind можно использовать не только для обработки исключений.</p>
-<p>Можно вызывать её методы вручную для раскрутки стека и переключения контекста.</p>
+<h2 style="font-size: 32pt;">What Libraries are Used Implicitly?</h2>
+<p>The libunwind library can be used not only for exception handling.</p>
+<p>You can call its methods manually for stack unwinding and context switching.</p>
 
-<p>И собрать её можно тоже двумя способами:<br/>
-&mdash; с функциями C++ ABI;<br/>
-&mdash; с другими именами функций, чтобы не замещать C++ ABI.</p>
+<p>And it can also be built in two ways:<br/>
+&mdash; with C++ ABI functions;<br/>
+&mdash; with different function names so as not to replace the C++ ABI.</p>
 
-<p>Можно даже использовать несколько библиотек в одной программе:<br/>
-&mdash; libgcc_eh для обработки исключений согласно C++ ABI;<br/>
-&mdash; libunwind nongnu для раскрутки стека вручную.</p>
+<p>You can even use multiple libraries in one program:<br/>
+&mdash; libgcc_eh for exception handling according to C++ ABI;<br/>
+&mdash; libunwind nongnu for manual stack unwinding.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 32pt;">Какие библиотеки используются неявно?</h2>
-<p style="margin-top: -1em;">4. Библиотека libc.</p>
-<p>Реализует совершенно разные вещи:</p>
-<p>&mdash; реализация стандартной библиотеки C<br/>&emsp; пример: <b>strchr</b>, <b>memcpy</b>, <b>exp</b>;<br/>
-&mdash; реализация функций стандарта POSIX<br/>&emsp; пример: <b>getaddrinfo</b>, <b>pthread_create</b>, <b>dlopen</b>;<br/>
-&mdash; обёртки над системными вызовами<br/>&emsp; пример: <b>mremap</b>;<br/>
-&mdash; и не только...</p>
-<p>Разные реализации:<br/>
-&mdash; <b>glibc</b> &mdash; по-умолчанию при сборке в Linux;<br/>
+<h2 style="font-size: 32pt;">What Libraries are Used Implicitly?</h2>
+<p style="margin-top: -1em;">4. The libc Library.</p>
+<p>Implements completely different things:</p>
+<p>&mdash; implementation of the C standard library<br/>&emsp; example: <b>strchr</b>, <b>memcpy</b>, <b>exp</b>;<br/>
+&mdash; implementation of POSIX standard functions<br/>&emsp; example: <b>getaddrinfo</b>, <b>pthread_create</b>, <b>dlopen</b>;<br/>
+&mdash; wrappers around system calls<br/>&emsp; example: <b>mremap</b>;<br/>
+&mdash; and much more...</p>
+<p>Different implementations:<br/>
+&mdash; <b>glibc</b> &mdash; default when building on Linux;<br/>
 &mdash; <b>Musl</b>, DietLibc, UCLibc...<br/>
-&mdash; конечно, вы можете вовсе не использовать libc :)<br/>
-&emsp; (но см. <b>-fno-builtin-...</b>)</p>
+&mdash; of course, you can choose not to use libc at all :)<br/>
+&emsp; (but see <b>-fno-builtin-...</b>)</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 32pt;">Какие библиотеки используются неявно?</h2>
-<p style="margin-top: -1em;">5. Библиотека compiler builtins / runtime.</p>
-<p>Реализует функциональность, требующуюся для возможностей языка или его расширений, но выделенную из кода компилятора для реализации на разных платформах.</p>
-<p>Пример: деление __int128: вызов функции <b>__divti3</b>;</p>
-<p>Интерфейс компиляторо-специфичный. У clang и gcc разные,<br/>не взаимозаменяемые библиотеки compiler builtins.</p>
-<p>Реализации:<br/>
+<h2 style="font-size: 32pt;">What Libraries are Used Implicitly?</h2>
+<p style="margin-top: -1em;">5. Compiler builtins / runtime Library.</p>
+<p>Implements functionality required for language features or extensions, but separated from the compiler code for implementation on different platforms.</p>
+<p>Example: __int128 division: calling the <b>__divti3</b> function;</p>
+<p>The interface is compiler-specific. clang and gcc have different,<br/>non-interchangeable compiler builtin libraries.</p>
+<p>Implementations:<br/>
 &mdash; libgcc_s;<br/>
 &mdash; libclang_rt.builtins-x86_64.</p>
-<p>Отдельные библиотеки для поддержки функций<br/>разных режимов сборки: coverage, sanitizers.</p>
+<p>Separate libraries for supporting functions<br/>of different build modes: coverage, sanitizers.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 32pt;">Какие библиотеки используются неявно?</h2>
+<h2 style="font-size: 32pt;">What Libraries are Used Implicitly?</h2>
 <p style="margin-top: -1em;">6. Startup Files.</p>
 <p>Scrt1.o, crti.o, crtbeginS.o, crtendS.o, crtn.o</p>
-<p>Entry point, глобальная инициализация.</p>
-<p>Пример что реализует: __start.</p>
-<p>Зависят от libc и входят в поставку libc.</p>
+<p>Entry point, global initialization.</p>
+<p>Example implementation: __start.</p>
+<p>Depends on libc and comes with libc distribution.</p>
 </section>
 
 
 <section class="slide">
-<h2>Будем разбираться</h2>
-<p style="color: green;">1. Как собираются программы на C++?</p>
-<p>2. Как программы на C++ работают в ОС?</p>
-<p>3. Как программы исполняются на CPU?</p>
+<h2>Let's Figure This Out</h2>
+<p style="color: green;">1. How are C++ programs built?</p>
+<p>2. How do C++ programs work in the OS?</p>
+<p>3. How do programs execute on the CPU?</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 32pt;">Как программы на C++ работают с ОС?</h2>
-<p>На самом деле, любые программы... тут уже без разницы.</p>
-<p>1. Системные вызовы.</p>
-<p>2. Обработчики сигналов.</p>
-<p>3. Механизм виртуальной памяти.</p>
+<h2 style="font-size: 32pt;">How C++ Programs Work with the OS?</h2>
+<p>Actually, any programs... it doesn't matter here.</p>
+<p>1. System calls.</p>
+<p>2. Signal handlers.</p>
+<p>3. Virtual memory mechanism.</p>
 <p>...</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 32pt;">Как программы на C++ работают с ОС?</h2>
-<p>1. Системные вызовы.</p>
+<h2 style="font-size: 32pt;">How C++ Programs Work with the OS?</h2>
+<p>1. System calls.</p>
 <code>std::cerr &lt;&lt; "Hello, world\n";</code>
 <p>&mdash; C++</p>
 <code style="margin-top: 1em;">write(2, "Hello, world\n", 13);</code>
@@ -275,48 +275,48 @@ $ docker run -it --rm --volume $(pwd):/test ubuntu:precise /test/a.out
 </section>
 
 <section class="slide">
-<h2 style="font-size: 32pt;">Как программы на C++ работают с ОС?</h2>
-<p>1. Системные вызовы, хорошие факты:</p>
-<p>Номера системных вызовов в Linux не меняются.</p>
-<p>Старые системные вызовы не удаляются и продолжают работать.</p>
-<p>Старое поведение системных вызовов стараются не менять, лишь добавляя новые возможности.</p>
-<p>Старые программы должны работать на новой версии ядра Linux (обратное неверно).</p>
+<h2 style="font-size: 32pt;">How C++ Programs Work with the OS?</h2>
+<p>1. System calls, good facts:</p>
+<p>System call numbers in Linux do not change.</p>
+<p>Old system calls are not removed and continue to work.</p>
+<p>Old behavior of system calls is kept, only new features are added.</p>
+<p>Old programs should work on new versions of the Linux kernel (the reverse is not true).</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 32pt;">Как программы на C++ работают с ОС?</h2>
-<p>2. Обработчики сигналов.</p>
-<p>3. Механизм виртуальной памяти.</p>
-<p>Пример: page fault вызывает прерывание, ядро ОС подкладывает нам нужные данные для memory mapped files и возобновляет выполнение программы.</p>
-<p>Пример: ОС постоянно обновляет содержимое страницы vdso, которая используется функциями libc как например, clock_gettime (не всегда).</p>
-<p>Пример: page fault вызывает прерывание, ядро ОС вызывает обработчик сигнала SEGV в нашей программе, если он есть.</p>
-<p>Загадка: из-за проезда по памяти в программе htop внезапно и непоправимо замедлились все остальные программы.</p>
+<h2 style="font-size: 32pt;">How C++ Programs Work with the OS?</h2>
+<p>2. Signal handlers.</p>
+<p>3. Virtual memory mechanism.</p>
+<p>Example: page fault causes an interrupt, the OS kernel provides the necessary data for memory mapped files and resumes program execution.</p>
+<p>Example: The OS constantly updates the content of the vdso page, which is used by libc functions such as clock_gettime (not always).</p>
+<p>Example: page fault causes an interrupt, the OS kernel calls the SEGV signal handler in our program, if it exists.</p>
+<p>Puzzle: due to a memory traversal in htop, all other programs suddenly and permanently slowed down.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Как собираются и запускаются программы?</h2>
-<p>Статическая линковка vs динамическая линковка?</p>
-<p>Всего два варианта?</p>
+<h2 style="font-size: 30pt;">How are Programs Built and Run?</h2>
+<p>Static linking vs dynamic linking?</p>
+<p>Just two options?</p>
 
-<p>Нет. Есть много способов собрать вашу программу...<br/><br/>
+<p>No. There are many ways to build your program...<br/><br/>
 &mdash; statically linked executable;<br/>
 &mdash; dynamically linked executable;<br/>
 &mdash; dynamically linked shared object;<br/>
-&emsp; &mdash; могут использовать разные dynamic loader (interp);<br/>
-&emsp; &mdash; зависимости могут быть статически линкованы в бинарник<br/>
-&emsp; &emsp; или требоваться в виде динамических библиотек;<br/>
-&mdash; дополнительно можно загружать часть библиотек<br/>&emsp; в runtime с помощью dlopen;</p>
+&emsp; &mdash; can use different dynamic loaders (interp);<br/>
+&emsp; &mdash; dependencies can be statically linked into the binary<br/>
+&emsp; &emsp; or required as dynamic libraries;<br/>
+&mdash; additionally, you can load some libraries<br/>&emsp; at runtime using dlopen;</p>
 </section>
 
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Как программы исполняются на CPU?</h2>
-<p style="margin-top: -1em;">Какой набор инструкций они используют?</p>
+<h2 style="font-size: 30pt;">How do Programs Execute on the CPU?</h2>
+<p style="margin-top: -1em;">What instruction set do they use?</p>
 <p>amd64 (x86_64):</p>
 <p>&mdash; SSE 2 / SSE 3 / SSSE 3 / SSE 4.1 / SSE 4.2<br/> / POPCNT / CLMUL / AVX / AVX 2 / AVX 512...</p>
-<p>Набор инструкций задаётся -m флагами компилятора,<br/>например -msse4.2.</p>
-<p>Можно собирать отдельные translation units<br/>с разным набором инструкций и линковать вместе.</p>
-<p>Можно собирать отдельные функции с разным набором инструкций:<br/>
+<p>The instruction set is specified by -m compiler flags,<br/>for example -msse4.2.</p>
+<p>You can build separate translation units<br/>with different instruction sets and link them together.</p>
+<p>You can build separate functions with different instruction sets:<br/>
 __attribute__((target("avx2")))<br/>
 _Pragma("GCC target(\"avx2\")"<br/>
 __attribute__((ifunc("resolve_func")));</p>
@@ -324,17 +324,17 @@ __attribute__((ifunc("resolve_func")));</p>
 
 
 <section class="slide">
-<h2>Теперь мы всё знаем!</h2>
-<p style="color: green;">1. Как собираются программы на C++?</p>
-<p style="color: green;">2. Как программы на C++ работают в ОС?</p>
-<p style="color: green;">3. Как программы исполняются на CPU?</p>
+<h2>Now We Know Everything!</h2>
+<p style="color: green;">1. How are C++ programs built?</p>
+<p style="color: green;">2. How do C++ programs work in the OS?</p>
+<p style="color: green;">3. How do programs execute on the CPU?</p>
 <p>&nbsp;</p>
-<p>Как собирать портируемые бинарники под Linux?</p>
+<p>How to build portable binaries for Linux?</p>
 </section>
 
 
 <section class="slide">
-<h2>Проблемы</h2>
+<h2>Problems</h2>
 <code style="font-size: 14pt; margin-top: 2em;">$ g++ -pthread main.cpp
 $ ./a.out
 
@@ -352,47 +352,47 @@ $ docker run -it --rm --volume $(pwd):/test ubuntu:precise /test/a.out
 </section>
 
 <section class="slide">
-<h2>Проблемы</h2>
-<p>Причина: другая версия динамической библиотеки <b>libstdc++</b><br/> на target системе.</p>
-<p>А кто сказал, что там вообще есть библиотека <b>libstdc++</b>?</p>
-<p>А кто сказал, что из репозитория установится<br/> правильная версия этой библиотеки?</p>
-<p>А если мы хотим использовать <b>libc++</b> вместо <b>libstdc++</b>?</p>
+<h2>Problems</h2>
+<p>Reason: different version of the <b>libstdc++</b> dynamic library<br/> on the target system.</p>
+<p>Who said there's even a <b>libstdc++</b> library there?</p>
+<p>Who said that installing from the repository<br/> will give you the right version of this library?</p>
+<p>What if we want to use <b>libc++</b> instead of <b>libstdc++</b>?</p>
 </section>
 
 <section class="slide">
-<h2>Проблемы</h2>
-<p>Решение:</p>
-<p>Статическая линковка библиотек c++, c++abi в бинарник.</p>
-<p>Сам бинарник может остаться динамическим и зависить от других динамических библиотек.</p>
-<p>Потенциальные проблемы:</p>
-<p>Если линкуется динамически другая библиотека на C++, и эта библиотека была скомпилирована с несовпадающей версией C++ ABI...
+<h2>Problems</h2>
+<p>Solution:</p>
+<p>Static linking of c++, c++abi libraries into the binary.</p>
+<p>The binary itself can remain dynamic and depend on other dynamic libraries.</p>
+<p>Potential problems:</p>
+<p>If another C++ library is dynamically linked, and this library was compiled with a mismatched version of C++ ABI...
 </p>
 </section>
 
 <section class="slide">
-<h2>Проблемы</h2>
-<p>Если линкуется динамически другая библиотека на C++, и эта библиотека была скомпилирована с несовпадающей версией C++ ABI, то есть следующие варианты:</p>
-<p>1. Программа не соберётся из-за различий в именах символов.</p>
-<p>2. Программа соберётся, но будет работать неправильно из-за использования другой реализации ABI в нашем бинарнике.<br/>Пример: <b>std::terminate</b> при выкидывании исключения из библиотеки.</p>
-<p>3. Каким-то чудом всё будет хорошо.</p>
+<h2>Problems</h2>
+<p>If another C++ library is dynamically linked, and this library was compiled with a mismatched version of C++ ABI, there are the following options:</p>
+<p>1. The program won't build due to differences in symbol names.</p>
+<p>2. The program will build but will work incorrectly due to using a different ABI implementation in our binary.<br/>Example: <b>std::terminate</b> when throwing an exception from the library.</p>
+<p>3. By some miracle everything will be fine.</p>
 </section>
 
 <section class="slide">
-<h2>Проблемы</h2>
-<p style="margin-top: -1em;">Решение:</p>
-<p><b>Все</b> библиотеки на C++ должны собираться из исходников с одинаковыми настройками сборки и линковаться статически в бинарник.</p>
+<h2>Problems</h2>
+<p style="margin-top: -1em;">Solution:</p>
+<p><b>All</b> C++ libraries must be built from source with the same build settings and statically linked into the binary.</p>
 
-<p>Если существуют shared библиотеки на C++, которые невозможно пересобрать:<br/>
-&mdash; у них должен быть plain-C интерфейс, все зависимости слинкованы во-внутрь, нельзя кидать исключения между границами библиотек;<br/>
-&mdash; также можно вообще не линковаться с библиотекой, а вынести взаимодействие в отдельный процесс, пример: <b>clickhouse-odbc-bridge</b>.<br/>
-&mdash; неработающие варианты: RTLD_DEEPBIND, dl<b>m</b>open.
+<p>If there are shared C++ libraries that cannot be rebuilt:<br/>
+&mdash; they must have a plain-C interface, all dependencies linked inside, you can't throw exceptions across library boundaries;<br/>
+&mdash; you can also avoid linking with the library altogether and move the interaction to a separate process, example: <b>clickhouse-odbc-bridge</b>.<br/>
+&mdash; non-working options: RTLD_DEEPBIND, dl<b>m</b>open.
 </p>
 
-<p>Вывод: shared библиотеки с C++ интерфейсом не должны существовать.</p>
+<p>Conclusion: shared libraries with C++ interfaces should not exist.</p>
 </section>
 
 <section class="slide">
-<h2>Проблемы</h2>
+<h2>Problems</h2>
 <code style="font-size: 14pt; margin-top: 2em;">$ g++ -pthread -static-libstdc++ -static-libgcc main.cpp
 
 $ g++ -nodefaultlibs main.cpp -lstdc++ -lgcc_eh \
@@ -410,7 +410,7 @@ $ clang++ -std=c++2a -fuse-ld=lld -pthread -nodefaultlibs -nostdinc++ \
 
 
 <section class="slide">
-<h2>Проблемы</h2>
+<h2>Problems</h2>
 <code style="font-size: 14pt; margin-top: 2em; margin-bottom: 2em;">$ docker run -it --rm --volume $(pwd):/test ubuntu:precise /test/a.out
 
 /test/a.out: /lib/x86_64-linux-gnu/libc.so.6:
@@ -422,55 +422,55 @@ $ clang++ -std=c++2a -fuse-ld=lld -pthread -nodefaultlibs -nostdinc++ \
 
 
 <section class="slide">
-<h2>Простые решения</h2>
-<p>Собирать нашу программу в Docker<br/>и так же распространять для использования.</p>
-<p>Достоинства:</p>
-<p>&mdash; многие уже привыкли к такому издевательству;</p>
-<p>Недостатки:</p>
-<p>&mdash; неудобно распространять (пример: не работает scp на сервер);<br/>
-&mdash; неудобно настраивать работу с системой;<br/>
-&mdash; неудобно отлаживать;</p>
-<p>Задача сборки портируемого бинарника так не решается.</p>
+<h2>Simple Solutions</h2>
+<p>Build our program in Docker<br/>and distribute it for use the same way.</p>
+<p>Advantages:</p>
+<p>&mdash; many are already used to this kind of suffering;</p>
+<p>Disadvantages:</p>
+<p>&mdash; inconvenient to distribute (example: scp to server doesn't work);<br/>
+&mdash; inconvenient to configure system interaction;<br/>
+&mdash; inconvenient to debug;</p>
+<p>The task of building a portable binary is not solved this way.</p>
 </section>
 
 <section class="slide" style="font-size: 95%">
-<h2>Простые решения</h2>
-<p style="margin-top: -1em;">Собирать нашу программу и поставлять<br/>все shared библиотеки вместе с ней для установки.</p>
-<p>&mdash; изменить <b>rpath</b> в бинарнике либо сделать скрипт,<br/>выставляющий <b>LD_LIBRARY_PATH</b> перед запуском.<br/>
-&mdash; изменить <b>interp</b> в бинарнике.</p>
+<h2>Simple Solutions</h2>
+<p style="margin-top: -1em;">Build our program and supply<br/>all shared libraries with it for installation.</p>
+<p>&mdash; change <b>rpath</b> in the binary or make a script<br/>that sets <b>LD_LIBRARY_PATH</b> before launch.<br/>
+&mdash; change <b>interp</b> in the binary.</p>
 <p><a href="https://github.com/orivej/ldcp">https://github.com/orivej/ldcp</a></p>
-<p>Достоинства:<br/>
-&mdash; работает;</p>
-<p>Недостатки:<br/>
-&mdash; неудобно распространять (пример: не работает scp на сервер);</p>
-<p>Задача сборки портируемого бинарника так не решается.</p>
+<p>Advantages:<br/>
+&mdash; it works;</p>
+<p>Disadvantages:<br/>
+&mdash; inconvenient to distribute (example: scp to server doesn't work);</p>
+<p>The task of building a portable binary is not solved this way.</p>
 </section>
 
 <section class="slide">
-<h2>Простые решения</h2>
-<p>Собирать нашу программу в <b>AppImage</b> / <b>Snap</b> / <b>Flatpak</b>.</p>
-<p>Достоинства:</p>
-<p>&mdash; всё окружение засовывается в один бинарник;</p>
-<p>Недостатки:</p>
-<p>&mdash; неудобно работать с системой;<br/>
-&mdash; программа долго запускается;</p>
-<p>Подходит скорее для клиентских приложений.</p>
+<h2>Simple Solutions</h2>
+<p>Build our program as <b>AppImage</b> / <b>Snap</b> / <b>Flatpak</b>.</p>
+<p>Advantages:</p>
+<p>&mdash; the entire environment is packed into one binary;</p>
+<p>Disadvantages:</p>
+<p>&mdash; inconvenient to work with the system;<br/>
+&mdash; the program takes a long time to start;</p>
+<p>More suitable for client applications.</p>
 </section>
 
 
 <section class="slide">
-<h2>Проблемы</h2>
+<h2>Problems</h2>
 <code style="font-size: 14pt; margin-top: 2em; margin-bottom: 2em;">version `GLIBC_2.18' not found (required by /test/a.out)</code>
-<p>Как версионируются shared библиотеки?</p>
-<p>Почему для нашей программы нужна такая версия GLIBC?</p>
-<p>Можно ли подключить libc статически?</p>
+<p>How are shared libraries versioned?</p>
+<p>Why does our program need this version of GLIBC?</p>
+<p>Can we link libc statically?</p>
 </section>
 
 <section class="slide">
-<h2>Проблемы</h2>
-<p>Как версионируются shared библиотеки?</p>
-<p>1. По номеру версии в имени: <b>libc.so.6</b> - libc версии 6.</p>
-<code style="font-size: 14pt; margin-top: 2em; margin-bottom: 2em;">$ ldd ./a.out 
+<h2>Problems</h2>
+<p>How are shared libraries versioned?</p>
+<p>1. By version number in the name: <b>libc.so.6</b> - libc version 6.</p>
+<code style="font-size: 14pt; margin-top: 2em; margin-bottom: 2em;">$ ldd ./a.out
     linux-vdso.so.1 (0x00007ffd639d9000)
     libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007fddc8404000)
     libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007fddc82b5000)
@@ -478,19 +478,19 @@ $ clang++ -std=c++2a -fuse-ld=lld -pthread -nodefaultlibs -nostdinc++ \
     libpthread.so.0 => /lib/x86_64-linux-gnu/libpthread.so.0 (0x00007fddc8287000)
     libdl.so.2 => /lib/x86_64-linux-gnu/libdl.so.2 (0x00007fddc8281000)
     /lib64/ld-linux-x86-64.so.2 (0x00007fddc8619000)</code>
-<p>2. По номерам версий для отдельных символов.</p>
+<p>2. By version numbers for individual symbols.</p>
 </section>
 
 <section class="slide">
-<h2>Проблемы</h2>
-<p>Как версионируются shared библиотеки?</p>
-<p>2. По номерам версий для отдельных символов.</p>
-<p>Возможность иметь несколько реализаций одной функции со слегка отличающимся поведением, чтобы старые программы продолжали использовать старую версию для совместимости.</p>
-<p>Канонический пример: <b>memcpy</b>.</p>
+<h2>Problems</h2>
+<p>How are shared libraries versioned?</p>
+<p>2. By version numbers for individual symbols.</p>
+<p>The ability to have multiple implementations of one function with slightly different behavior, so that old programs continue to use the old version for compatibility.</p>
+<p>Canonical example: <b>memcpy</b>.</p>
 </section>
 
 <section class="slide">
-<h2>Проблемы</h2>
+<h2>Problems</h2>
 <code style="font-size: 14pt; margin-left: -50px; margin-right: -50px; margin-top: 2em; margin-bottom: 2em;">$ ldd -v ./a.out
 Version information:
 ./a.out:
@@ -504,128 +504,129 @@ $ readelf -s -V ./a.out | grep -P '2\.(14|23)'
 </section>
 
 <section class="slide">
-<h2>Проблемы</h2>
-<p>Совместимость в одну сторону:</p>
-<p>&mdash; программы, собранные со старой версией символов,<br/>&emsp; работают на новых системах;<br/>
-&mdash; программы, собранные с новыми версиями символов,<br/>&emsp; не работают на старых системах;</p>
-<p>При сборке выбирается самая новая версия символа</p>
-<p>&mdash; потому что &laquo;так правильно&raquo;.</p>
+<h2>Problems</h2>
+<p>One-way compatibility:</p>
+<p>&mdash; programs built with old symbol versions<br/>&emsp; work on new systems;<br/>
+&mdash; programs built with new symbol versions<br/>&emsp; don't work on old systems;</p>
+<p>During the build, the newest symbol version is chosen</p>
+<p>&mdash; because "that's the right way".</p>
 </section>
 
 <section class="slide">
-<h2>Решения, которые не работают</h2>
-<p>1. Полностью статическая линковка с GLibc.</p>
-<p>Просто указать <b>-static</b> при сборке.</p>
-<p>&mdash; glibc построена на <span style="color: red;">сложной системе плагинов</span>, которые динамически загружают другие библиотеки для DNS lookup, для locale conversion и backtrace. При статической линковке эта функциональность полностью отключается и вы не можете использовать getaddrinfo.</p>
-<p>&mdash; из полностью статических бинарников нельзя делать dlopen.</p>
-<p>Вывод:<br/>Более-менее сложные программы нельзя статически собрать с glibc.</p>
+<h2>Solutions That Don't Work</h2>
+<p>1. Fully static linking with GLibc.</p>
+<p>Just specify <b>-static</b> when building.</p>
+<p>&mdash; glibc is built on a <span style="color: red;">complex plugin system</span> that dynamically loads other libraries for DNS lookup, locale conversion, and backtrace. With static linking this functionality is completely disabled and you can't use getaddrinfo.</p>
+<p>&mdash; you can't do dlopen from fully static binaries.</p>
+<p>Conclusion:<br/>More or less complex programs cannot be statically built with glibc.</p>
 </section>
 
 <section class="slide">
-<h2>Решения, которые не работают</h2>
-<p>2. Использование <b>Musl</b> вместо GLibc.</p>
-<p>&mdash; низкая скорость работы (malloc, memcpy, ...).</p>
-<p>&mdash; из полностью статического бинарника нельзя делать dlopen.</p>
-<p>&mdash; при линковке динамического бинарника с musl, может использоваться только загрузчик <b>ld-musl.so</b>, и его надо тащить с собой.</p>
-<p>&mdash; из-за небольших отличий, некоторые библиотеки не будут собираться с Musl без патчей.</p>
-<p>Вывод:<br/>Более-менее сложные программы трудно собрать с Musl.</p>
+<h2>Solutions That Don't Work</h2>
+<p>2. Using <b>Musl</b> instead of GLibc.</p>
+<p>&mdash; low performance (malloc, memcpy, ...).</p>
+<p>&mdash; you can't do dlopen from a fully static binary.</p>
+<p>&mdash; when linking a dynamic binary with musl, only the <b>ld-musl.so</b> loader can be used, and you have to carry it with you.</p>
+<p>&mdash; due to small differences, some libraries won't build with Musl without patches.</p>
+<p>Conclusion:<br/>More or less complex programs are difficult to build with Musl.</p>
 </section>
 
 <section class="slide">
-<h2>Решения, которые не работают</h2>
-<p>3. Просьба для линкера прописать зависимости<br/>&emsp; от старых версий символов.</p>
+<h2>Solutions That Don't Work</h2>
+<p>3. Asking the linker to prescribe dependencies<br/>&emsp; on old symbol versions.</p>
 <p><a href="https://github.com/wheybags/glibc_version_header">https://github.com/wheybags/glibc_version_header</a></p>
 <code style="font-size: 14pt; margin-bottom: 1em;">__asm__(".symver _Exit,_Exit@GLIBC_2.2.5");
 __asm__(".symver _IO_2_1_stderr_,_IO_2_1_stderr_@GLIBC_2.2.5");
 __asm__(".symver _IO_2_1_stdin_,_IO_2_1_stdin_@GLIBC_2.2.5");
 __asm__(".symver _IO_2_1_stdout_,_IO_2_1_stdout_@GLIBC_2.2.5");
 ...</code>
-<p>Если в правильном порядке линковать с этим файлом,<br/>то пропишутся старые версии символов...</p>
-<p>Но некоторые символы, от которых зависит ваша программа,<br/>могут вообще отсутствовать в старой версии libc.</p>
+<p>If you link with this file in the right order,<br/>old symbol versions will be prescribed...</p>
+<p>But some symbols that your program depends on<br/>may be completely absent in the old version of libc.</p>
 </section>
 
 <section class="slide">
-<h2>Решения, которые не работают</h2>
-<p>4. Пропатчить бинарник после сборки,<br/>заменив версии символов на weak.</p>
+<h2>Solutions That Don't Work</h2>
+<p>4. Patch the binary after building,<br/>replacing symbol versions with weak ones.</p>
 <p><a href="http://www.lightofdawn.org/wiki/wiki.cgi/NewAppsOnOldGlibc">http://www.lightofdawn.org/wiki/wiki.cgi/NewAppsOnOldGlibc</a></p>
-<p>Не работает так же, как предыдущий способ.</p>
+<p>Doesn't work for the same reason as the previous method.</p>
 </section>
 
 <section class="slide">
-<h2>Решения, которые не работают</h2>
-<p>5. Сборка со старой версией libc.</p>
-<p>&mdash; в старой системе в <b>Docker</b>;<br/>
-&emsp; потребуется принести туда новый компилятор... и чтобы он работал;</p>
-<p>&mdash; в <b>chroot</b>;</p>
-<p>&mdash; просто <b>-nodefaultlibs</b> и явно указать путь<br/>&emsp; к достаточно старой версии libc;</p>
-<p>&mdash; вариант &mdash; <b>-sysroot</b>, CMake Toolchain.</p>
+<h2>Solutions That Don't Work</h2>
+<p>5. Building with an old version of libc.</p>
+<p>&mdash; in an old system in <b>Docker</b>;<br/>
+&emsp; you'll need to bring a new compiler there... and make it work;</p>
+<p>&mdash; in <b>chroot</b>;</p>
+<p>&mdash; just <b>-nodefaultlibs</b> and explicitly specify the path<br/>&emsp; to a sufficiently old version of libc;</p>
+<p>&mdash; variant &mdash; <b>-sysroot</b>, CMake Toolchain.</p>
 </section>
 
 <section class="slide">
-<h2>Решения, которые не работают</h2>
-<p>5. Сборка со старой версией libc.</p>
-<p>Плохо, потому что так получим старый, неэффективный код.</p>
-<p>Не работает, потому что в старой версии кое-чего нет:</p>
+<h2>Solutions That Don't Work</h2>
+<p>5. Building with an old version of libc.</p>
+<p>Bad because you'll get old, inefficient code.</p>
+<p>Doesn't work because the old version is missing some things:</p>
 <code style="margin-bottom: 1em;">__cxa_thread_atexit_impl</code>
-<p>Просто так собрать программу на C++11<br/>со старой версией libc не получится.</p>
-<p>А мы уже используем C++20 :)</p>
+<p>You can't just build a C++11 program<br/>with an old version of libc.</p>
+<p>And we're already using C++20 :)</p>
 </section>
 
 
 <section class="slide">
-<h2>Решение, которое работает</h2>
+<h2>A Solution That Works</h2>
 </section>
 
 <section class="slide">
-<h2>Решение, которое работает</h2>
-<p>Чтобы собирать портируемые бинарники под Linux, надо всего лишь...</p>
-<p>1. libc++, libc++abi, libunwind собирать из исходников<br/>&emsp; и линковать статически.</p>
-<p>2. Все third-party библиотеки кроме libc собирать из исходников<br/>&emsp; и линковать статически.</p>
-<p>3. Использовать отдельные реализации аллокатора<br/>&emsp; вместо libc (jemalloc / tcmalloc).</p>
-<p>4. Использовать отдельную реализацию memcpy<br/>&emsp; вместо libc (у нас &mdash; &laquo;китайский&raquo; memcpy).</p>
-<p>5. Использовать фиксированные заголовочные файлы libc (-nostdinc).</p>
+<h2>A Solution That Works</h2>
+<p>To build portable binaries for Linux, you just need to...</p>
+<p>1. Build libc++, libc++abi, libunwind from source<br/>&emsp; and link statically.</p>
+<p>2. Build all third-party libraries except libc from source<br/>&emsp; and link statically.</p>
+<p>3. Use separate allocator implementations<br/>&emsp; instead of libc (jemalloc / tcmalloc).</p>
+<p>4. Use a separate memcpy implementation<br/>&emsp; instead of libc (ours is "Chinese" memcpy).</p>
+<p>5. Use fixed libc header files (-nostdinc).</p>
 </section>
 
 <section class="slide">
-<h2>Решение, которое работает</h2>
-<p>6. Все функции, которые имеют слишком новые версии в glibc, взять<br/>&emsp; из Musl, поместить в отдельную библиотеку и линковать перед glibc.</p>
-<p>7. Все функции, которые отсутствуют в старых версиях glibc, взять<br/>&emsp; из Musl и поместить туда же.</p>
-<p>8. Сконфигурировать third-party библиотеки, чтобы у них не было<br/>&emsp; зависимостей от слишком новых функций из libc (C11 threads)<br/>&emsp; и слишком новых возможностей ядра Linux.</p>
-<p>9. Наш бинарник всё ещё остаётся dynamically linked executable,<br/>&emsp; но зависит только от libc и не зависит от новых версий символов.</p>
-<p>10. Мы всё ещё можем делать dlopen, но очень аккуратно.</p>
+<h2>A Solution That Works</h2>
+<p>6. Take all functions that have too new versions in glibc<br/>&emsp; from Musl, put them in a separate library and link before glibc.</p>
+<p>7. Take all functions that are missing in old glibc versions<br/>&emsp; from Musl and put them there too.</p>
+<p>8. Configure third-party libraries so they don't have<br/>&emsp; dependencies on too new libc functions (C11 threads)<br/>&emsp; and too new Linux kernel features.</p>
+<p>9. Our binary still remains a dynamically linked executable,<br/>&emsp; but depends only on libc and doesn't depend on new symbol versions.</p>
+<p>10. We can still do dlopen, but very carefully.</p>
 </section>
 
 <section class="slide">
-<h2>Решение, которое работает</h2>
-<p>11. Компилировать весь код с достаточно старым набором инструкций<br/>
-(SSE 4.2 для ClickHouse), а отдельные функции и translation units<br/>&mdash; с более новыми.</p>
-<p>Выбирать подходящую реализацию в рантайме<br/>с помощью проверки cpuid.</p>
+<h2>A Solution That Works</h2>
+<p>11. Compile all code with a sufficiently old instruction set<br/>
+(SSE 4.2 for ClickHouse), and individual functions and translation units<br/>
+&mdash; with newer ones.</p>
+<p>Choose the appropriate implementation at runtime<br/>using cpuid checks.</p>
 </section>
 
 <section class="slide">
-<h2>Решение, которое работает</h2>
-<p>Просто линковать в программу кусок из Musl статически,<br/>а затем GLibc динамически???</p>
+<h2>A Solution That Works</h2>
+<p>Just link a piece from Musl statically into the program,<br/>and then GLibc dynamically???</p>
 <img style="float: right; width: 200px; margin-right: -50px;" src="pictures/magic.webp" />
-<p style="color: green;"><b>... это работает.</b></p>
+<p style="color: green;"><b>... it works.</b></p>
 
-<p>Один бинарник clickhouse собирается на любом Linux,<br/>работает одинаково на Ubuntu 8.04+, CentOS 5+ (12&nbsp;лет), GosLinux, etc...</p>
-<p>+ сборка и тесты с любыми опциями сборки и со всеми санитайзерами.</p>
-<p>+ простая кросс-компиляция на Linux amd64 под<br/>&ensp; Linux AArch64, FreeBSD и Darwin.</p>
+<p>A single clickhouse binary is built on any Linux,<br/>works the same on Ubuntu 8.04+, CentOS 5+ (12 years), GosLinux, etc...</p>
+<p>+ builds and tests with any build options and all sanitizers.</p>
+<p>+ simple cross-compilation on Linux amd64 for<br/>&ensp; Linux AArch64, FreeBSD and Darwin.</p>
 
 <p style="font-size: 8pt; color: gray;">Image: Pusheen the cat, Claire Belton, 2010; Aura, Telegram sticker.</p>
 </section>
 
 
 <section class="slide">
-<h2>Где посмотреть</h2>
+<h2>Where to Look</h2>
     <p><a href="https://github.com/ClickHouse/ClickHouse/tree/master/base/glibc-compatibility">https://github.com/ClickHouse/ClickHouse/tree/master/<br/>&ensp;base/glibc-compatibility</a><br/>
-    &mdash; библиотека с функциями для замещения символов glibc.</p>
-    
+    &mdash; library with functions to replace glibc symbols.</p>
+
     <p><a href="https://github.com/ClickHouse/ClickHouse/blob/master/cmake/linux/default_libs.cmake">https://github.com/ClickHouse/ClickHouse/blob/master/<br/>&ensp;cmake/linux/default_libs.cmake</a><br/>
-    &mdash; как описать сборку в CMake (сложно).</p>
-    
+    &mdash; how to describe the build in CMake (complicated).</p>
+
     <p><a href="https://clickhouse-builds.s3.yandex.net/12043/15cddc3c6e659cec18f4b16f7fc4cd3b3b36a1cb/clickhouse_build_check/report.html">https://clickhouse-builds.s3.yandex.net/<br/>&ensp;12043/15cddc3c6e659cec18f4b16f7fc4cd3b3b36a1cb/<br/>&ensp;clickhouse_build_check/report.html</a><br/>
-    &mdash; билды на каждый коммит, логи сборок.</p>
+    &mdash; builds on every commit, build logs.</p>
 </section>
 
 

@@ -3,38 +3,38 @@
 
 <html lang="en">
 <head>
-    <title>Конвейер выполнения запроса ClickHouse</title>
+    <title>ClickHouse Query Execution Pipeline</title>
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     <link rel="stylesheet" href="themes/yandex2/styles/screen-16x9.css">
     <style>
-/* собственные стили можно писать здесь!! */
+/* custom styles can be written here!! */
 </style>
 </head>
 <body class="shower list">
     <header class="caption">
-        <h1>Конвейер выполнения запроса ClickHouse</h1>
-        <p>Николай Кочетов, Yandex</p>
+        <h1>ClickHouse Query Execution Pipeline</h1>
+        <p>Nikolay Kochetov, Yandex</p>
 
     </header>
 
-    
 
-<!-- slide #1 -->        
+
+<!-- slide #1 -->
 <section class="slide cover"><div><h2><img src="themes/yandex2/images/logo-ru.svg" alt="" class="logo" /></h2>
 
 </div></section>
 
 <!-- slide #2 -->
-<section class="slide title" id="Конвейер-выполнения-запроса-clickhouse"><div><h2>Конвейер выполнения запроса ClickHouse</h2>
+<section class="slide title" id="clickhouse-query-execution-pipeline"><div><h2>ClickHouse Query Execution Pipeline</h2>
 
 <h3 id="-1"><img src="themes/yandex2/images/title-logo-ru.svg" alt="" /></h3>
 
 <div class="authors">
 
-<p>Николай Кочетов</p>
-<p>Разработчик ClickHouse</p>
+<p>Nikolay Kochetov</p>
+<p>ClickHouse Developer</p>
 
 
 
@@ -44,118 +44,118 @@
 </div></section>
 
 <!-- slide #3 -->
-<section class="slide section" id="Зачем-понадобился--конвейер-в-СУБД"><div><h2>Зачем понадобился <br /> конвейер в СУБД</h2>
+<section class="slide section" id="why-is-pipeline-needed-in-dbms"><div><h2>Why Is Pipeline Needed <br /> in a DBMS</h2>
 
 </div></section>
 
 <!-- slide #4 -->
-<section class="slide" id="Цепочка-независимых-вычислений"><div><h2>Цепочка независимых вычислений</h2>
+<section class="slide" id="chain-of-independent-computations"><div><h2>Chain of Independent Computations</h2>
 
 <p class="image-right"><img src="pictures/pipeline_simple_1.svg" alt="" /></p>
 
 <figure class="highlight"><pre><code class="language-sql" data-lang="sql"><span class="k">SELECT</span> <span class="k">avg</span><span class="p">(</span><span class="k">length</span><span class="p">(</span><span class="n">URL</span><span class="p">))</span> <span class="k">FROM</span> <span class="n">hits</span> <span class="k">WHERE</span> <span class="n">URL</span> <span class="o">!=</span> <span class="s1">''</span></code></pre></figure>
 
 <ul>
-  <li>Чтение столбца <code class="highlighter-rouge">URL</code></li>
-  <li>Вычисление <code class="highlighter-rouge">URL != ''</code></li>
-  <li>Фильтрация</li>
-  <li>Вычисление <code class="highlighter-rouge">length(URL)</code></li>
-  <li>Агрегация</li>
+  <li>Reading <code class="highlighter-rouge">URL</code> column</li>
+  <li>Computing <code class="highlighter-rouge">URL != ''</code></li>
+  <li>Filtering</li>
+  <li>Computing <code class="highlighter-rouge">length(URL)</code></li>
+  <li>Aggregation</li>
 </ul>
 
-<p><strong>Каждая операция может быть выполнена независимо</strong></p>
+<p><strong>Each operation can be executed independently</strong></p>
 
 </div></section>
 
 <!-- slide #5 -->
-<section class="slide" id="Задачи-конвейера-выполнения"><div><h2>Задачи конвейера выполнения</h2>
-<p><strong>Что дает использование конвейера вычислений?</strong></p>
+<section class="slide" id="pipeline-execution-tasks"><div><h2>Pipeline Execution Tasks</h2>
+<p><strong>What benefits does using a computational pipeline provide?</strong></p>
 <ul>
-  <li>Абстрагирование вычислений от порядка выполнения операций</li>
-  <li>Распараллеливание вычислений</li>
-  <li>Балансировка вычислительных ресурсов (CPU, GPU, FPGA)</li>
+  <li>Abstraction of computations from operation execution order</li>
+  <li>Parallelization of computations</li>
+  <li>Balancing computational resources (CPU, GPU, FPGA)</li>
 </ul>
 
 </div></section>
 
 <!-- slide #6 -->
-<section class="slide" id="volcano--an-extensible-and-parallel-query-evaluation-system"><div><h2>Volcano — An Extensible and Parallel Query Evaluation System</h2>
+<section class="slide" id="volcano-an-extensible-and-parallel-query-evaluation-system"><div><h2>Volcano — An Extensible and Parallel Query Evaluation System</h2>
 
-<p>Конвейер представлен в виде графа операторов (Exchange operator)</p>
+<p>Pipeline represented as a graph of operators (Exchange operator)</p>
 
-<p><strong>Каждый оператор (реляционной алгебры) поддерживает интерфейс:</strong></p>
+<p><strong>Each operator (of relational algebra) supports the interface:</strong></p>
 <ul>
-  <li>open() - подготовка к исполнению</li>
-  <li>next() - отдать очередную строку (или EOF)</li>
-  <li>close() - завершаем выполнение</li>
+  <li>open() - prepare for execution</li>
+  <li>next() - return next row (or EOF)</li>
+  <li>close() - finish execution</li>
 </ul>
 
-<p><strong>Построчное выполнение запроса (tuple-at-time)</strong></p>
+<p><strong>Row-by-row query execution (tuple-at-time)</strong></p>
 
 </div></section>
 
 <!-- slide #7 -->
 <section class="slide" id="volcano"><div><h2>Volcano</h2>
 
-<p><strong>Преимущества</strong></p>
+<p><strong>Advantages</strong></p>
 <ul>
-  <li>Простой интерфейс</li>
-  <li>Старый проверенный метод</li>
-  <li>Поддерживает многозадачность</li>
+  <li>Simple interface</li>
+  <li>Old proven method</li>
+  <li>Supports multitasking</li>
 </ul>
 
-<p><strong>Недостатки</strong></p>
+<p><strong>Disadvantages</strong></p>
 <ul>
-  <li>Много инструкций в расчете на строку</li>
-  <li>Низкое значение IPC (Instructions Per Cycle)</li>
-  <li>Нет поддержки векторных операций</li>
+  <li>Many instructions per row</li>
+  <li>Low IPC (Instructions Per Cycle) value</li>
+  <li>No support for vector operations</li>
 </ul>
 
 </div></section>
 
 <!-- slide #8 -->
-<section class="slide" id="Вычисления-над-столбцами"><div><h2>Вычисления над столбцами</h2>
+<section class="slide" id="column-computations"><div><h2>Column Computations</h2>
 
 <p>MonetDB/X100: Hyper-Pipelining Query Execution</p>
 
-<p><strong>Идея</strong></p>
+<p><strong>Idea</strong></p>
 <ul>
-  <li>Все вычисления проводятся над частями столбцов (размера 1024)</li>
-  <li>Разработан язык MIL для записи операций над столбцами</li>
-  <li>Быстрый векторный движок X100</li>
+  <li>All computations are performed on column chunks (size 1024)</li>
+  <li>Developed MIL language for writing operations on columns</li>
+  <li>Fast vectorized X100 engine</li>
 </ul>
 
 </div></section>
 
 <!-- slide #9 -->
-<section class="slide" id="Вычисления-над-столбцами-1"><div><h2>Вычисления над столбцами</h2>
-<p><strong>Итог:</strong></p>
+<section class="slide" id="column-computations-1"><div><h2>Column Computations</h2>
+<p><strong>Result:</strong></p>
 <ul>
-  <li>Уменьшили число операций на строку</li>
-  <li>Повысили IPC за счет векторных операций</li>
-  <li>Запросы стали memory-bound вместо CPU-bound</li>
+  <li>Reduced number of operations per row</li>
+  <li>Increased IPC through vector operations</li>
+  <li>Queries became memory-bound instead of CPU-bound</li>
 </ul>
 
-<p><strong>Недостатки</strong></p>
+<p><strong>Disadvantages</strong></p>
 <ul>
-  <li>Повысилось потребление памяти</li>
+  <li>Increased memory consumption</li>
 </ul>
 
 </div></section>
 
 <!-- slide #10 -->
-<section class="slide section" id="Как-выполняется-конвейер-запроса"><div><h2>Как выполняется конвейер запроса</h2>
+<section class="slide section" id="how-query-pipeline-is-executed"><div><h2>How Query Pipeline Is Executed</h2>
 
 </div></section>
 
 <!-- slide #11 -->
-<section class="slide" id="Выполнение-конвейера-запроса"><div><h2>Выполнение конвейера запроса</h2>
+<section class="slide" id="query-pipeline-execution"><div><h2>Query Pipeline Execution</h2>
 
-<p><strong>Выполнять конвейер можно по-разному</strong></p>
+<p><strong>Pipeline can be executed differently</strong></p>
 <ul>
-  <li>push: “прямой” порядок выполнения. Запихиваем данные в начало.</li>
-  <li>pull: “обратный” порядок выполнения. Вытягиваем данные из конца.</li>
-  <li>произвольный порядок в ограничениях топологической сортировки</li>
+  <li>push: "forward" execution order. Push data into the beginning.</li>
+  <li>pull: "backward" execution order. Pull data from the end.</li>
+  <li>arbitrary order within topological sort constraints</li>
 </ul>
 
 <p><br /></p>
@@ -165,30 +165,30 @@
 </div></section>
 
 <!-- slide #12 -->
-<section class="slide" id="Выполнение-конвейера-запроса-1"><div><h2>Выполнение конвейера запроса</h2>
+<section class="slide" id="query-pipeline-execution-1"><div><h2>Query Pipeline Execution</h2>
 
-<p><strong>Рассмотрим задачу в обобщенном виде</strong></p>
+<p><strong>Let's consider the task in a generalized form</strong></p>
 <ul>
-  <li>Операция знает, как выполниться</li>
-  <li>Необходимо только уметь получать очередную операцию конвейера</li>
-  <li>Представим конвейер в виде структуры данных, которую нужно уметь обходить</li>
+  <li>Operation knows how to execute itself</li>
+  <li>Only need to be able to get the next pipeline operation</li>
+  <li>Represent pipeline as a data structure that needs to be traversed</li>
 </ul>
 
-<p><strong>Итерация структуры данных</strong></p>
+<p><strong>Data structure iteration</strong></p>
 <ul>
-  <li>Выбор очередного элемента</li>
-  <li>Операция над данными</li>
+  <li>Selecting next element</li>
+  <li>Operation on data</li>
 </ul>
 
 </div></section>
 
 <!-- slide #13 -->
-<section class="slide" id="Виды-итерации-данных"><div><h2>Виды итерации данных</h2>
-<p><strong>Внешняя</strong></p>
+<section class="slide" id="types-of-data-iteration"><div><h2>Types of Data Iteration</h2>
+<p><strong>External</strong></p>
 <ul>
-  <li>Выбор очередного элемента описан снаружи</li>
-  <li>Пример: цикл for, итераторы</li>
-  <li>Управление порядком перебора и моментом завершения</li>
+  <li>Selecting next element is described externally</li>
+  <li>Example: for loop, iterators</li>
+  <li>Control over iteration order and termination moment</li>
 </ul>
 
 <figure class="highlight"><pre><code class="language-c--" data-lang="c++"><span class="k">for</span> <span class="p">(</span><span class="n">element</span> <span class="o">:</span> <span class="n">array</span><span class="p">)</span>  <span class="c1">/// Outer iteration.
@@ -202,12 +202,12 @@
 </div></section>
 
 <!-- slide #14 -->
-<section class="slide" id="Виды-итерации-данных-1"><div><h2>Виды итерации данных</h2>
-<p><strong>Внутренняя</strong></p>
+<section class="slide" id="types-of-data-iteration-1"><div><h2>Types of Data Iteration</h2>
+<p><strong>Internal</strong></p>
 <ul>
-  <li>Выбор очередного элемента задается структурой данных</li>
-  <li>Не можем выбирать порядок и завершить итерацию заранее</li>
-  <li>Есть стек вызовов, код упрощается</li>
+  <li>Selecting next element is determined by data structure</li>
+  <li>Cannot choose order or terminate iteration early</li>
+  <li>Has call stack, code is simplified</li>
 </ul>
 
 <figure class="highlight"><pre><code class="language-c--" data-lang="c++"><span class="kt">void</span> <span class="n">Tree</span><span class="o">::</span><span class="n">inOrder</span><span class="p">(</span><span class="k">auto</span> <span class="o">&amp;</span> <span class="n">function</span><span class="p">)</span>
@@ -224,89 +224,89 @@
 </div></section>
 
 <!-- slide #15 -->
-<section class="slide" id="Выполнение-конвейера-запроса-2"><div><h2>Выполнение конвейера запроса</h2>
-<p><strong>push и pull подходы реализуются внутренней итерацией</strong></p>
+<section class="slide" id="query-pipeline-execution-2"><div><h2>Query Pipeline Execution</h2>
+<p><strong>push and pull approaches are implemented with internal iteration</strong></p>
 <ul>
-  <li>сложно добиться вертикального распараллеливания</li>
-  <li>специальная обработка предварительного завершения запроса</li>
-  <li>поток выполнения привязан к потоку данных (т.к. используется стек)</li>
+  <li>difficult to achieve vertical parallelization</li>
+  <li>special handling of premature query termination</li>
+  <li>execution flow tied to data flow (since stack is used)</li>
 </ul>
 
-<p><strong>Представление в виде графа позволяет осуществить внешнюю итерацию</strong></p>
+<p><strong>Graph representation allows external iteration</strong></p>
 
-<p>Пример: LocustDB</p>
+<p>Example: LocustDB</p>
 <ul>
-  <li>Все данные хранятся в памяти</li>
-  <li>Выполнение запроса в порядке топологической сортировки</li>
-  <li>Каждая операция обрабатывает кусочек данных</li>
+  <li>All data stored in memory</li>
+  <li>Query execution in topological sort order</li>
+  <li>Each operation processes a chunk of data</li>
 </ul>
 
 </div></section>
 
 <!-- slide #16 -->
-<section class="slide" id="Выполнение-конвейера-в-clickhouse"><div><h2>Выполнение конвейера в ClickHouse</h2>
+<section class="slide" id="pipeline-execution-in-clickhouse"><div><h2>Pipeline Execution in ClickHouse</h2>
 
-<p>Смешанная схема</p>
+<p>Mixed scheme</p>
 <ul>
-  <li>IBlockInputStream - поток чтения данных (pull)</li>
-  <li>IBlockOutputStream - поток записи данных (push)</li>
-  <li>BlockIO - точка соединения потоков</li>
+  <li>IBlockInputStream - data read stream (pull)</li>
+  <li>IBlockOutputStream - data write stream (push)</li>
+  <li>BlockIO - stream connection point</li>
 </ul>
 
-<p>Выполнение запроса - перекладывание из InputStream в OutputStream</p>
+<p>Query execution - transferring from InputStream to OutputStream</p>
 
-<p><strong>Некоторые операции над блоками совпадают для InputStream и OutputStream</strong></p>
+<p><strong>Some block operations are the same for InputStream and OutputStream</strong></p>
 
 </div></section>
 
 <!-- slide #17 -->
-<section class="slide section" id="Как-распараллелить-выполнение-запроса"><div><h2>Как распараллелить выполнение запроса</h2>
+<section class="slide section" id="how-to-parallelize-query-execution"><div><h2>How to Parallelize Query Execution</h2>
 
 </div></section>
 
 <!-- slide #18 -->
-<section class="slide" id="Параллельное-выполнение-запроса"><div><h2>Параллельное выполнение запроса</h2>
+<section class="slide" id="parallel-query-execution"><div><h2>Parallel Query Execution</h2>
 
-<p><strong>Подходы:</strong></p>
+<p><strong>Approaches:</strong></p>
 <ul>
-  <li>по операциям (intra-operator): исполняем медленные операции <br /> (IO, sort, group by) в несколько потоков</li>
-  <li>по данным (bushy): копируем конвейер на поток</li>
-  <li>по частям конвейера (vertical): разные части в разных потоках</li>
+  <li>by operations (intra-operator): execute slow operations <br /> (IO, sort, group by) in multiple threads</li>
+  <li>by data (bushy): copy pipeline per thread</li>
+  <li>by pipeline parts (vertical): different parts in different threads</li>
 </ul>
 
 </div></section>
 
 <!-- slide #19 -->
-<section class="slide" id="Вертикальное-распараллеливание-конвейера"><div><h2>Вертикальное распараллеливание конвейера</h2>
+<section class="slide" id="vertical-pipeline-parallelization"><div><h2>Vertical Pipeline Parallelization</h2>
 
 <p class="image-right"><img src="pictures/pipeline_async.svg" alt="" /></p>
 
 <p><strong>Volcano: exchange operator</strong></p>
 <ul>
-  <li>open() - создать новый процесс</li>
+  <li>open() - create new process</li>
   <li>next() - RPC call</li>
 </ul>
 
 <p><strong>ClickHouse: AsynchronousBlockInputStream</strong></p>
 <ul>
-  <li>Создает новый поток</li>
-  <li>Увеличение latency запроса</li>
-  <li>Используется в “особых случаях”</li>
+  <li>Creates new thread</li>
+  <li>Increases query latency</li>
+  <li>Used in "special cases"</li>
 </ul>
 
 </div></section>
 
 <!-- slide #20 -->
-<section class="slide" id="Параллельное-выполнение-в-clickhouse"><div><h2>Параллельное выполнение в ClickHouse</h2>
+<section class="slide" id="parallel-execution-in-clickhouse"><div><h2>Parallel Execution in ClickHouse</h2>
 
-<p><strong>Параллельность по данным</strong></p>
+<p><strong>Data parallelism</strong></p>
 <ul>
-  <li>Источники данных возвращают несколько потоков для чтения</li>
-  <li>Конвейер строится одновременно для всех потоков</li>
-  <li>Потоки объединяются в один в некоторых операциях (order by, group by)</li>
+  <li>Data sources return multiple streams for reading</li>
+  <li>Pipeline is built simultaneously for all streams</li>
+  <li>Streams are merged into one in some operations (order by, group by)</li>
 </ul>
 
-<p><strong>Пример</strong></p>
+<p><strong>Example</strong></p>
 
 <figure class="highlight"><pre><code class="language-sql" data-lang="sql"><span class="k">SELECT</span> <span class="k">length</span><span class="p">(</span><span class="n">URL</span><span class="p">)</span> <span class="k">AS</span> <span class="n">l</span><span class="p">,</span> <span class="k">count</span><span class="p">()</span> <span class="k">FROM</span> <span class="n">hits</span> <span class="k">GROUP</span> <span class="k">BY</span> <span class="n">l</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">l</span></code></pre></figure>
 
@@ -315,66 +315,66 @@
 </div></section>
 
 <!-- slide #21 -->
-<section class="slide" id="Параллельное-выполнение-в-clickhouse-1"><div><h2>Параллельное выполнение в ClickHouse</h2>
-<p>Посмотрим на результат выполнения запроса</p>
+<section class="slide" id="parallel-execution-in-clickhouse-1"><div><h2>Parallel Execution in ClickHouse</h2>
+<p>Let's look at query execution result</p>
 
 <p><img src="pictures/dense_1.png" alt="" /></p>
 
-<p><strong>Распределение длин урлов имеет тяжелый хвост</strong></p>
+<p><strong>URL length distribution has a heavy tail</strong></p>
 
 </div></section>
 
 <!-- slide #22 -->
-<section class="slide" id="Параллельное-выполнение-в-clickhouse-2"><div><h2>Параллельное выполнение в ClickHouse</h2>
-<p><strong>Данные обрабатываются с разной скоростью</strong></p>
+<section class="slide" id="parallel-execution-in-clickhouse-2"><div><h2>Parallel Execution in ClickHouse</h2>
+<p><strong>Data is processed at different speeds</strong></p>
 
 <p><img src="pictures/time_chart_half.png" alt="" /></p>
 
 </div></section>
 
 <!-- slide #23 -->
-<section class="slide" id="Параллельное-выполнение-в-clickhouse-3"><div><h2>Параллельное выполнение в ClickHouse</h2>
-<p><strong>Решение проблемы - “кража” задач соседнего потока при чтении</strong></p>
+<section class="slide" id="parallel-execution-in-clickhouse-3"><div><h2>Parallel Execution in ClickHouse</h2>
+<p><strong>Solution - "stealing" tasks from neighboring thread during reading</strong></p>
 
 <p><img src="pictures/time_chart.png" alt="" /></p>
 
 </div></section>
 
 <!-- slide #24 -->
-<section class="slide" id="Параллельное-выполнение-в-clickhouse-4"><div><h2>Параллельное выполнение в ClickHouse</h2>
-<p><strong>Кража задач решает не все проблемы</strong></p>
+<section class="slide" id="parallel-execution-in-clickhouse-4"><div><h2>Parallel Execution in ClickHouse</h2>
+<p><strong>Task stealing doesn't solve all problems</strong></p>
 <ul>
-  <li>Все еще не умеем параллелиться вертикально</li>
-  <li>Произвольный порядок чтения данных</li>
+  <li>Still can't parallelize vertically</li>
+  <li>Arbitrary data reading order</li>
 </ul>
 
-<p><strong>Пример: чтение в порядке первичного ключа (оптимизация)</strong></p>
+<p><strong>Example: reading in primary key order (optimization)</strong></p>
 
-<figure class="highlight"><pre><code class="language-sql" data-lang="sql"><span class="k">SELECT</span> <span class="n">value</span> <span class="k">FROM</span> <span class="k">table</span> <span class="k">LIMIT</span> <span class="mi">10</span>                 <span class="c1">-- Любые 10 строк</span>
-<span class="k">SELECT</span> <span class="n">value</span> <span class="k">FROM</span> <span class="k">table</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">value</span> <span class="k">LIMIT</span> <span class="mi">10</span>  <span class="c1">-- Все данные</span></code></pre></figure>
+<figure class="highlight"><pre><code class="language-sql" data-lang="sql"><span class="k">SELECT</span> <span class="n">value</span> <span class="k">FROM</span> <span class="k">table</span> <span class="k">LIMIT</span> <span class="mi">10</span>                 <span class="c1">-- Any 10 rows</span>
+<span class="k">SELECT</span> <span class="n">value</span> <span class="k">FROM</span> <span class="k">table</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">value</span> <span class="k">LIMIT</span> <span class="mi">10</span>  <span class="c1">-- All data</span></code></pre></figure>
 
-<p>Что, если данные уже частично отсортированы (в рамках куска)?</p>
+<p>What if data is already partially sorted (within a part)?</p>
 <ul>
-  <li>Можем оптимизировать, если правильно читаем</li>
-  <li><b>Не можем красть задачи</b></li>
+  <li>Can optimize if reading correctly</li>
+  <li><b>Cannot steal tasks</b></li>
 </ul>
 
 </div></section>
 
 <!-- slide #25 -->
-<section class="slide section" id="Как-изменится-конвейер-выполнения-в-clickhouse"><div><h2>Как изменится конвейер выполнения в ClickHouse</h2>
+<section class="slide section" id="how-pipeline-execution-will-change-in-clickhouse"><div><h2>How Pipeline Execution Will Change in ClickHouse</h2>
 
 </div></section>
 
 <!-- slide #26 -->
-<section class="slide" id="Процессоры-в-clickhouse"><div><h2>Процессоры в ClickHouse</h2>
-<p><strong>Представление конвейера обработки запроса в виде графа</strong></p>
+<section class="slide" id="processors-in-clickhouse"><div><h2>Processors in ClickHouse</h2>
+<p><strong>Representing query processing pipeline as a graph</strong></p>
 
-<p>Состав:</p>
+<p>Components:</p>
 <ul>
-  <li>Процессор (processsor): произвольная операция над блоком</li>
-  <li>Порт (port): вход или выход для процессора (хранит блок данных)</li>
-  <li>Порты (входной и выходной) могут соединяться функцией connect()</li>
+  <li>Processor (processsor): arbitrary operation on a block</li>
+  <li>Port (port): input or output for processor (stores data block)</li>
+  <li>Ports (input and output) can be connected with connect() function</li>
 </ul>
 
 <p><img src="pictures/processors_items.svg" alt="" /></p>
@@ -382,13 +382,13 @@
 </div></section>
 
 <!-- slide #27 -->
-<section class="slide" id="Процессоры-в-clickhouse-1"><div><h2>Процессоры в ClickHouse</h2>
+<section class="slide" id="processors-in-clickhouse-1"><div><h2>Processors in ClickHouse</h2>
 
-<p>Виды процессоров</p>
+<p>Types of processors</p>
 <ul>
-  <li>source, sink - файлы, таблицы, табличные функции, …</li>
-  <li>простая операция (вызов функции, фильтрация, добавление столбца)</li>
-  <li>resize - произвольное изменение числа потоков данных</li>
+  <li>source, sink - files, tables, table functions, …</li>
+  <li>simple operation (function call, filtering, adding column)</li>
+  <li>resize - arbitrary change in number of data streams</li>
 </ul>
 
 <p><br />
@@ -397,36 +397,36 @@
 </div></section>
 
 <!-- slide #28 -->
-<section class="slide" id="Выполнение-конвейера"><div><h2>Выполнение конвейера</h2>
+<section class="slide" id="pipeline-execution"><div><h2>Pipeline Execution</h2>
 
-<p><strong>Процессоры находятся в разных состояниях</strong></p>
+<p><strong>Processors are in different states</strong></p>
 <ul>
-  <li>NeedData, PortFull, Unneeded - нужно переложить данные</li>
-  <li>Ready, Finished - можем продолжить/закончить работу</li>
-  <li>Async, Wait - асинхронное выполнение</li>
+  <li>NeedData, PortFull, Unneeded - need to transfer data</li>
+  <li>Ready, Finished - can continue/finish work</li>
+  <li>Async, Wait - asynchronous execution</li>
 </ul>
 
-<p><strong>Выполнение конвейера - тоже процессор</strong></p>
+<p><strong>Pipeline execution - also a processor</strong></p>
 <ul>
-  <li>Однопоточное исполнение - в порядке топологического обхода</li>
-  <li>Многопоточное - обход графа в несколько потоков с использованием эвристик</li>
+  <li>Single-threaded execution - in topological traversal order</li>
+  <li>Multi-threaded - graph traversal in multiple threads using heuristics</li>
 </ul>
 
 </div></section>
 
 <!-- slide #29 -->
-<section class="slide" id="Выполнение-конвейера-1"><div><h2>Выполнение конвейера</h2>
+<section class="slide" id="pipeline-execution-1"><div><h2>Pipeline Execution</h2>
 
-<p><strong>Процессоры</strong></p>
+<p><strong>Processors</strong></p>
 <ul>
-  <li>Белый - нужны входные данные</li>
-  <li>Желтый - готов к выполнению</li>
-  <li>Красный - выходной порт переполнен</li>
+  <li>White - needs input data</li>
+  <li>Yellow - ready for execution</li>
+  <li>Red - output port is full</li>
 </ul>
 
-<p><strong>Порты</strong></p>
+<p><strong>Ports</strong></p>
 <ul>
-  <li>Белый - свободен, желтый - занят</li>
+  <li>White - free, yellow - occupied</li>
 </ul>
 
 <p><img src="pictures/merge/merge_1.svg" alt="" /></p>
@@ -434,18 +434,18 @@
 </div></section>
 
 <!-- slide #30 -->
-<section class="slide" id="Выполнение-конвейера-2"><div><h2>Выполнение конвейера</h2>
+<section class="slide" id="pipeline-execution-2"><div><h2>Pipeline Execution</h2>
 
-<p><strong>Процессоры</strong></p>
+<p><strong>Processors</strong></p>
 <ul>
-  <li>Белый - нужны входные данные</li>
-  <li>Желтый - готов к выполнению</li>
-  <li>Красный - выходной порт переполнен</li>
+  <li>White - needs input data</li>
+  <li>Yellow - ready for execution</li>
+  <li>Red - output port is full</li>
 </ul>
 
-<p><strong>Порты</strong></p>
+<p><strong>Ports</strong></p>
 <ul>
-  <li>Белый - свободен, желтый - занят</li>
+  <li>White - free, yellow - occupied</li>
 </ul>
 
 <p><img src="pictures/merge/merge_2.svg" alt="" /></p>
@@ -453,18 +453,18 @@
 </div></section>
 
 <!-- slide #31 -->
-<section class="slide" id="Выполнение-конвейера-3"><div><h2>Выполнение конвейера</h2>
+<section class="slide" id="pipeline-execution-3"><div><h2>Pipeline Execution</h2>
 
-<p><strong>Процессоры</strong></p>
+<p><strong>Processors</strong></p>
 <ul>
-  <li>Белый - нужны входные данные</li>
-  <li>Желтый - готов к выполнению</li>
-  <li>Красный - выходной порт переполнен</li>
+  <li>White - needs input data</li>
+  <li>Yellow - ready for execution</li>
+  <li>Red - output port is full</li>
 </ul>
 
-<p><strong>Порты</strong></p>
+<p><strong>Ports</strong></p>
 <ul>
-  <li>Белый - свободен, желтый - занят</li>
+  <li>White - free, yellow - occupied</li>
 </ul>
 
 <p><img src="pictures/merge/merge_3.svg" alt="" /></p>
@@ -472,18 +472,18 @@
 </div></section>
 
 <!-- slide #32 -->
-<section class="slide" id="Выполнение-конвейера-4"><div><h2>Выполнение конвейера</h2>
+<section class="slide" id="pipeline-execution-4"><div><h2>Pipeline Execution</h2>
 
-<p><strong>Процессоры</strong></p>
+<p><strong>Processors</strong></p>
 <ul>
-  <li>Белый - нужны входные данные</li>
-  <li>Желтый - готов к выполнению</li>
-  <li>Красный - выходной порт переполнен</li>
+  <li>White - needs input data</li>
+  <li>Yellow - ready for execution</li>
+  <li>Red - output port is full</li>
 </ul>
 
-<p><strong>Порты</strong></p>
+<p><strong>Ports</strong></p>
 <ul>
-  <li>Белый - свободен, желтый - занят</li>
+  <li>White - free, yellow - occupied</li>
 </ul>
 
 <p><img src="pictures/merge/merge_4.svg" alt="" /></p>
@@ -491,18 +491,18 @@
 </div></section>
 
 <!-- slide #33 -->
-<section class="slide" id="Выполнение-конвейера-5"><div><h2>Выполнение конвейера</h2>
+<section class="slide" id="pipeline-execution-5"><div><h2>Pipeline Execution</h2>
 
-<p><strong>Процессоры</strong></p>
+<p><strong>Processors</strong></p>
 <ul>
-  <li>Белый - нужны входные данные</li>
-  <li>Желтый - готов к выполнению</li>
-  <li>Красный - выходной порт переполнен</li>
+  <li>White - needs input data</li>
+  <li>Yellow - ready for execution</li>
+  <li>Red - output port is full</li>
 </ul>
 
-<p><strong>Порты</strong></p>
+<p><strong>Ports</strong></p>
 <ul>
-  <li>Белый - свободен, желтый - занят</li>
+  <li>White - free, yellow - occupied</li>
 </ul>
 
 <p><img src="pictures/merge/merge_5.svg" alt="" /></p>
@@ -510,18 +510,18 @@
 </div></section>
 
 <!-- slide #34 -->
-<section class="slide" id="Выполнение-конвейера-6"><div><h2>Выполнение конвейера</h2>
+<section class="slide" id="pipeline-execution-6"><div><h2>Pipeline Execution</h2>
 
-<p><strong>Процессоры</strong></p>
+<p><strong>Processors</strong></p>
 <ul>
-  <li>Белый - нужны входные данные</li>
-  <li>Желтый - готов к выполнению</li>
-  <li>Красный - выходной порт переполнен</li>
+  <li>White - needs input data</li>
+  <li>Yellow - ready for execution</li>
+  <li>Red - output port is full</li>
 </ul>
 
-<p><strong>Порты</strong></p>
+<p><strong>Ports</strong></p>
 <ul>
-  <li>Белый - свободен, желтый - занят</li>
+  <li>White - free, yellow - occupied</li>
 </ul>
 
 <p><img src="pictures/merge/merge_6.svg" alt="" /></p>
@@ -529,18 +529,18 @@
 </div></section>
 
 <!-- slide #35 -->
-<section class="slide" id="Выполнение-конвейера-7"><div><h2>Выполнение конвейера</h2>
+<section class="slide" id="pipeline-execution-7"><div><h2>Pipeline Execution</h2>
 
-<p><strong>Процессоры</strong></p>
+<p><strong>Processors</strong></p>
 <ul>
-  <li>Белый - нужны входные данные</li>
-  <li>Желтый - готов к выполнению</li>
-  <li>Красный - выходной порт переполнен</li>
+  <li>White - needs input data</li>
+  <li>Yellow - ready for execution</li>
+  <li>Red - output port is full</li>
 </ul>
 
-<p><strong>Порты</strong></p>
+<p><strong>Ports</strong></p>
 <ul>
-  <li>Белый - свободен, желтый - занят</li>
+  <li>White - free, yellow - occupied</li>
 </ul>
 
 <p><img src="pictures/merge/merge_7.svg" alt="" /></p>
@@ -548,18 +548,18 @@
 </div></section>
 
 <!-- slide #36 -->
-<section class="slide" id="Выполнение-конвейера-8"><div><h2>Выполнение конвейера</h2>
+<section class="slide" id="pipeline-execution-8"><div><h2>Pipeline Execution</h2>
 
-<p><strong>Процессоры</strong></p>
+<p><strong>Processors</strong></p>
 <ul>
-  <li>Белый - нужны входные данные</li>
-  <li>Желтый - готов к выполнению</li>
-  <li>Красный - выходной порт переполнен</li>
+  <li>White - needs input data</li>
+  <li>Yellow - ready for execution</li>
+  <li>Red - output port is full</li>
 </ul>
 
-<p><strong>Порты</strong></p>
+<p><strong>Ports</strong></p>
 <ul>
-  <li>Белый - свободен, желтый - занят</li>
+  <li>White - free, yellow - occupied</li>
 </ul>
 
 <p><img src="pictures/merge/merge_8.svg" alt="" /></p>
@@ -567,18 +567,18 @@
 </div></section>
 
 <!-- slide #37 -->
-<section class="slide" id="Выполнение-конвейера-9"><div><h2>Выполнение конвейера</h2>
+<section class="slide" id="pipeline-execution-9"><div><h2>Pipeline Execution</h2>
 
-<p><strong>Процессоры</strong></p>
+<p><strong>Processors</strong></p>
 <ul>
-  <li>Белый - нужны входные данные</li>
-  <li>Желтый - готов к выполнению</li>
-  <li>Красный - выходной порт переполнен</li>
+  <li>White - needs input data</li>
+  <li>Yellow - ready for execution</li>
+  <li>Red - output port is full</li>
 </ul>
 
-<p><strong>Порты</strong></p>
+<p><strong>Ports</strong></p>
 <ul>
-  <li>Белый - свободен, желтый - занят</li>
+  <li>White - free, yellow - occupied</li>
 </ul>
 
 <p><img src="pictures/merge/merge_9.svg" alt="" /></p>
@@ -586,18 +586,18 @@
 </div></section>
 
 <!-- slide #38 -->
-<section class="slide" id="Выполнение-конвейера-10"><div><h2>Выполнение конвейера</h2>
+<section class="slide" id="pipeline-execution-10"><div><h2>Pipeline Execution</h2>
 
-<p><strong>Процессоры</strong></p>
+<p><strong>Processors</strong></p>
 <ul>
-  <li>Белый - нужны входные данные</li>
-  <li>Желтый - готов к выполнению</li>
-  <li>Красный - выходной порт переполнен</li>
+  <li>White - needs input data</li>
+  <li>Yellow - ready for execution</li>
+  <li>Red - output port is full</li>
 </ul>
 
-<p><strong>Порты</strong></p>
+<p><strong>Ports</strong></p>
 <ul>
-  <li>Белый - свободен, желтый - занят</li>
+  <li>White - free, yellow - occupied</li>
 </ul>
 
 <p><img src="pictures/merge/merge_10.svg" alt="" /></p>
@@ -605,18 +605,18 @@
 </div></section>
 
 <!-- slide #39 -->
-<section class="slide" id="Выполнение-конвейера-11"><div><h2>Выполнение конвейера</h2>
+<section class="slide" id="pipeline-execution-11"><div><h2>Pipeline Execution</h2>
 
-<p><strong>Процессоры</strong></p>
+<p><strong>Processors</strong></p>
 <ul>
-  <li>Белый - нужны входные данные</li>
-  <li>Желтый - готов к выполнению</li>
-  <li>Красный - выходной порт переполнен</li>
+  <li>White - needs input data</li>
+  <li>Yellow - ready for execution</li>
+  <li>Red - output port is full</li>
 </ul>
 
-<p><strong>Порты</strong></p>
+<p><strong>Ports</strong></p>
 <ul>
-  <li>Белый - свободен, желтый - занят</li>
+  <li>White - free, yellow - occupied</li>
 </ul>
 
 <p><img src="pictures/merge/merge_11.svg" alt="" /></p>
@@ -624,18 +624,18 @@
 </div></section>
 
 <!-- slide #40 -->
-<section class="slide" id="Выполнение-конвейера-12"><div><h2>Выполнение конвейера</h2>
+<section class="slide" id="pipeline-execution-12"><div><h2>Pipeline Execution</h2>
 
-<p><strong>Процессоры</strong></p>
+<p><strong>Processors</strong></p>
 <ul>
-  <li>Белый - нужны входные данные</li>
-  <li>Желтый - готов к выполнению</li>
-  <li>Красный - выходной порт переполнен</li>
+  <li>White - needs input data</li>
+  <li>Yellow - ready for execution</li>
+  <li>Red - output port is full</li>
 </ul>
 
-<p><strong>Порты</strong></p>
+<p><strong>Ports</strong></p>
 <ul>
-  <li>Белый - свободен, желтый - занят</li>
+  <li>White - free, yellow - occupied</li>
 </ul>
 
 <p><img src="pictures/merge/merge_12.svg" alt="" /></p>
@@ -643,18 +643,18 @@
 </div></section>
 
 <!-- slide #41 -->
-<section class="slide" id="Выполнение-конвейера-13"><div><h2>Выполнение конвейера</h2>
+<section class="slide" id="pipeline-execution-13"><div><h2>Pipeline Execution</h2>
 
-<p><strong>Процессоры</strong></p>
+<p><strong>Processors</strong></p>
 <ul>
-  <li>Белый - нужны входные данные</li>
-  <li>Желтый - готов к выполнению</li>
-  <li>Красный - выходной порт переполнен</li>
+  <li>White - needs input data</li>
+  <li>Yellow - ready for execution</li>
+  <li>Red - output port is full</li>
 </ul>
 
-<p><strong>Порты</strong></p>
+<p><strong>Ports</strong></p>
 <ul>
-  <li>Белый - свободен, желтый - занят</li>
+  <li>White - free, yellow - occupied</li>
 </ul>
 
 <p><img src="pictures/merge/merge_13.svg" alt="" /></p>
@@ -662,18 +662,18 @@
 </div></section>
 
 <!-- slide #42 -->
-<section class="slide" id="Выполнение-конвейера-14"><div><h2>Выполнение конвейера</h2>
+<section class="slide" id="pipeline-execution-14"><div><h2>Pipeline Execution</h2>
 
-<p><strong>Процессоры</strong></p>
+<p><strong>Processors</strong></p>
 <ul>
-  <li>Белый - нужны входные данные</li>
-  <li>Желтый - готов к выполнению</li>
-  <li>Красный - выходной порт переполнен</li>
+  <li>White - needs input data</li>
+  <li>Yellow - ready for execution</li>
+  <li>Red - output port is full</li>
 </ul>
 
-<p><strong>Порты</strong></p>
+<p><strong>Ports</strong></p>
 <ul>
-  <li>Белый - свободен, желтый - занят</li>
+  <li>White - free, yellow - occupied</li>
 </ul>
 
 <p><img src="pictures/merge/merge_14.svg" alt="" /></p>
@@ -681,18 +681,18 @@
 </div></section>
 
 <!-- slide #43 -->
-<section class="slide" id="Выполнение-конвейера-15"><div><h2>Выполнение конвейера</h2>
+<section class="slide" id="pipeline-execution-15"><div><h2>Pipeline Execution</h2>
 
-<p><strong>Процессоры</strong></p>
+<p><strong>Processors</strong></p>
 <ul>
-  <li>Белый - нужны входные данные</li>
-  <li>Желтый - готов к выполнению</li>
-  <li>Красный - выходной порт переполнен</li>
+  <li>White - needs input data</li>
+  <li>Yellow - ready for execution</li>
+  <li>Red - output port is full</li>
 </ul>
 
-<p><strong>Порты</strong></p>
+<p><strong>Ports</strong></p>
 <ul>
-  <li>Белый - свободен, желтый - занят</li>
+  <li>White - free, yellow - occupied</li>
 </ul>
 
 <p><img src="pictures/merge/merge_15.svg" alt="" /></p>
@@ -700,18 +700,18 @@
 </div></section>
 
 <!-- slide #44 -->
-<section class="slide" id="Выполнение-конвейера-16"><div><h2>Выполнение конвейера</h2>
+<section class="slide" id="pipeline-execution-16"><div><h2>Pipeline Execution</h2>
 
-<p><strong>Процессоры</strong></p>
+<p><strong>Processors</strong></p>
 <ul>
-  <li>Белый - нужны входные данные</li>
-  <li>Желтый - готов к выполнению</li>
-  <li>Красный - выходной порт переполнен</li>
+  <li>White - needs input data</li>
+  <li>Yellow - ready for execution</li>
+  <li>Red - output port is full</li>
 </ul>
 
-<p><strong>Порты</strong></p>
+<p><strong>Ports</strong></p>
 <ul>
-  <li>Белый - свободен, желтый - занят</li>
+  <li>White - free, yellow - occupied</li>
 </ul>
 
 <p><img src="pictures/merge/merge_16.svg" alt="" /></p>
@@ -719,18 +719,18 @@
 </div></section>
 
 <!-- slide #45 -->
-<section class="slide" id="Выполнение-конвейера-17"><div><h2>Выполнение конвейера</h2>
+<section class="slide" id="pipeline-execution-17"><div><h2>Pipeline Execution</h2>
 
-<p><strong>Процессоры</strong></p>
+<p><strong>Processors</strong></p>
 <ul>
-  <li>Белый - нужны входные данные</li>
-  <li>Желтый - готов к выполнению</li>
-  <li>Красный - выходной порт переполнен</li>
+  <li>White - needs input data</li>
+  <li>Yellow - ready for execution</li>
+  <li>Red - output port is full</li>
 </ul>
 
-<p><strong>Порты</strong></p>
+<p><strong>Ports</strong></p>
 <ul>
-  <li>Белый - свободен, желтый - занят</li>
+  <li>White - free, yellow - occupied</li>
 </ul>
 
 <p><img src="pictures/merge/merge_17.svg" alt="" /></p>
@@ -738,18 +738,18 @@
 </div></section>
 
 <!-- slide #46 -->
-<section class="slide" id="Выполнение-конвейера-18"><div><h2>Выполнение конвейера</h2>
+<section class="slide" id="pipeline-execution-18"><div><h2>Pipeline Execution</h2>
 
-<p><strong>Процессоры</strong></p>
+<p><strong>Processors</strong></p>
 <ul>
-  <li>Белый - нужны входные данные</li>
-  <li>Желтый - готов к выполнению</li>
-  <li>Красный - выходной порт переполнен</li>
+  <li>White - needs input data</li>
+  <li>Yellow - ready for execution</li>
+  <li>Red - output port is full</li>
 </ul>
 
-<p><strong>Порты</strong></p>
+<p><strong>Ports</strong></p>
 <ul>
-  <li>Белый - свободен, желтый - занят</li>
+  <li>White - free, yellow - occupied</li>
 </ul>
 
 <p><img src="pictures/merge/merge.gif" alt="" /></p>
@@ -757,33 +757,33 @@
 </div></section>
 
 <!-- slide #47 -->
-<section class="slide" id="Общий-конвейер-выполнения"><div><h2>Общий конвейер выполнения</h2>
+<section class="slide" id="shared-pipeline-execution"><div><h2>Shared Pipeline Execution</h2>
 
-<p>Пример из QueryLog</p>
+<p>Example from QueryLog</p>
 
 <figure class="highlight"><pre><code class="language-sql" data-lang="sql"><span class="k">SELECT</span> <span class="k">sum</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="k">FROM</span> <span class="k">table</span> <span class="k">WHERE</span> <span class="n">foo</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
 <span class="k">SELECT</span> <span class="k">sum</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="k">FROM</span> <span class="k">table</span> <span class="k">WHERE</span> <span class="n">foo</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">=</span> <span class="mi">5</span><span class="p">;</span>
 <span class="k">SELECT</span> <span class="k">sum</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="k">FROM</span> <span class="k">table</span> <span class="k">WHERE</span> <span class="n">foo</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">=</span> <span class="mi">7</span><span class="p">;</span></code></pre></figure>
 
-<p><strong>Можем составить общий конвейер для нескольких запросов</strong></p>
+<p><strong>Can compose shared pipeline for multiple queries</strong></p>
 
 <p><img src="pictures/many_q.svg" alt="" /></p>
 
 </div></section>
 
 <!-- slide #48 -->
-<section class="slide" id="Оптимизации-конвейера"><div><h2>Оптимизации конвейера</h2>
-<p><strong>Оптимизации запроса можно производить на этапе построения конвейера</strong></p>
+<section class="slide" id="pipeline-optimizations"><div><h2>Pipeline Optimizations</h2>
+<p><strong>Query optimizations can be performed at pipeline construction stage</strong></p>
 <ul>
-  <li>На основе потоков данных и их свойств (<i>надежно, соответствует сути</i>)</li>
-  <li>Альтернатива оптимизациям AST (<i>трудоемко, подвержено ошибкам</i>)</li>
+  <li>Based on data flows and their properties (<i>reliable, corresponds to essence</i>)</li>
+  <li>Alternative to AST optimizations (<i>laborious, error-prone</i>)</li>
 </ul>
 
-<p><strong>Примеры:</strong></p>
+<p><strong>Examples:</strong></p>
 <ul>
-  <li>Информация о монотонности столбца</li>
-  <li>Статистика: число строк, число различных значений, распределение</li>
-  <li>Объединение частей конвейера с одинаковым результатом</li>
+  <li>Information about column monotonicity</li>
+  <li>Statistics: number of rows, number of distinct values, distribution</li>
+  <li>Merging pipeline parts with the same result</li>
 </ul>
 
 <figure class="highlight"><pre><code class="language-sql" data-lang="sql"><span class="k">SELECT</span> <span class="n">value</span> <span class="k">IN</span> <span class="p">(</span><span class="k">SELECT</span> <span class="n">x</span> <span class="k">FROM</span> <span class="k">table</span><span class="p">)</span> <span class="k">WHERE</span> <span class="p">(</span><span class="n">value</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="k">IN</span> <span class="p">(</span><span class="k">SELECT</span> <span class="n">x</span> <span class="k">FROM</span> <span class="k">table</span><span class="p">)</span></code></pre></figure>
@@ -791,77 +791,77 @@
 </div></section>
 
 <!-- slide #49 -->
-<section class="slide" id="Распределение-ресурсов"><div><h2>Распределение ресурсов</h2>
+<section class="slide" id="resource-allocation"><div><h2>Resource Allocation</h2>
 
-<p><strong>Объединенный конвейер позволяет прозрачно делить CPU между пользователями</strong></p>
+<p><strong>Unified pipeline allows transparent CPU sharing between users</strong></p>
 <ul>
-  <li>Процессор создается для отдельного пользователя (возможно, нескольких)</li>
-  <li>Обработка блока процессором — расход ресурса пользователя</li>
-  <li>Можем ограничивать ресурсы только при высокой нагрузке</li>
-  <li>Выбор приоритета выполнения операций</li>
+  <li>Processor is created for individual user (possibly multiple)</li>
+  <li>Block processing by processor — user's resource consumption</li>
+  <li>Can limit resources only under high load</li>
+  <li>Choice of operation execution priority</li>
 </ul>
 
 </div></section>
 
 <!-- slide #50 -->
-<section class="slide" id="Язык-описания-конвейера"><div><h2>Язык описания конвейера</h2>
+<section class="slide" id="pipeline-description-language"><div><h2>Pipeline Description Language</h2>
 
-<p><strong>Идея: сделать язык описания конвейера выполнения запроса</strong></p>
+<p><strong>Idea: create language for describing query execution pipeline</strong></p>
 <ul>
-  <li>Описывает узлы и их связи</li>
-  <li>Позволяет делать (де)сериализацию конвейера</li>
+  <li>Describes nodes and their connections</li>
+  <li>Allows pipeline (de)serialization</li>
 </ul>
 
-<p><strong>Дополнительные возможности</strong></p>
+<p><strong>Additional capabilities</strong></p>
 <ul>
-  <li>Передача готовых конвейеров на шарды: экономия на анализе запросов</li>
-  <li>Низкоуровневый интерфейс</li>
-  <li>Конвейеры, не описываемые через SQL синтаксис</li>
+  <li>Transfer ready pipelines to shards: savings on query analysis</li>
+  <li>Low-level interface</li>
+  <li>Pipelines not describable through SQL syntax</li>
 </ul>
 
 </div></section>
 
 <!-- slide #51 -->
-<section class="slide" id="Интроспекция"><div><h2>Интроспекция</h2>
+<section class="slide" id="introspection"><div><h2>Introspection</h2>
 
-<p><strong>Внешняя</strong></p>
+<p><strong>External</strong></p>
 <ul>
-  <li>План запроса в виде дерева (уже реализовано)</li>
-  <li>Пошаговый результат оптимизаций</li>
+  <li>Query plan as tree (already implemented)</li>
+  <li>Step-by-step optimization results</li>
 </ul>
 
-<p><strong>Внутренняя</strong></p>
+<p><strong>Internal</strong></p>
 <ul>
-  <li>Отладочные процессоры со статистикой и логами</li>
-  <li>Информация о процессе создания</li>
-  <li>Более понятный стек вызова</li>
+  <li>Debug processors with statistics and logs</li>
+  <li>Information about creation process</li>
+  <li>More understandable call stack</li>
 </ul>
 
 </div></section>
 
 <!-- slide #52 -->
-<section class="slide" id="Что-ожидаем-от-нового-конвейера"><div><h2>Что ожидаем от нового конвейера</h2>
+<section class="slide" id="what-we-expect-from-new-pipeline"><div><h2>What We Expect from New Pipeline</h2>
 <ul>
-  <li>Вертикальное распараллеливание</li>
-  <li>Интроспекция (EXPLAIN, глобальный план) запроса</li>
-  <li>Дешевая отмена запроса</li>
-  <li>Сериализация (язык описания) конвейера</li>
-  <li>Статистика по данным (оптимизация ORDER BY по PK)</li>
-  <li>Разделение ресурсов и приоритеты пользователей</li>
-  <li>Обработка нескольких запросов одновременно</li>
-  <li>Уменьшение количества потоков</li>
-  <li>Упрощение реализации shuffle distributed join</li>
+  <li>Vertical parallelization</li>
+  <li>Introspection (EXPLAIN, global plan) of query</li>
+  <li>Cheap query cancellation</li>
+  <li>Serialization (description language) of pipeline</li>
+  <li>Data statistics (ORDER BY optimization on PK)</li>
+  <li>Resource sharing and user priorities</li>
+  <li>Processing multiple queries simultaneously</li>
+  <li>Reducing number of threads</li>
+  <li>Simplifying shuffle distributed join implementation</li>
 </ul>
 
 </div></section>
 
 <!-- slide #53 -->
-<section class="slide contacts" id="Контакты"><div><h2>Контакты</h2>
+<section class="slide contacts" id="contacts"><div><h2>Contacts</h2>
 
 <ul>
   <li class="site">Web site: <a href="https://clickhouse.com/">https://clickhouse.com</a></li>
   <li class="site">Google groups: <a href="https://groups.google.com/forum/#!forum/clickhouse">https://groups.google.com/forum/#!forum/clickhouse</a></li>
-  <li class="telegram">Telegram (Ru): <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_ru</a> (более 1900 участников)</li>
+  <li class="telegram">Telegram (Ru): <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_ru</a> (over 1900 members)</li>
   <li class="telegram">Telegram (En): <a href="https://telegram.me/clickhouse_en">https://telegram.me/clickhouse_en</a></li>
   <li class="github">Github: <a href="https://github.com/ClickHouse/ClickHouse/">https://github.com/ClickHouse/ClickHouse</a></li>
   <li class="twitter">Twitter: <a href="https://twitter.com/ClickHouseDB">https://twitter.com/ClickHouseDB</a></li>
@@ -870,11 +870,11 @@
 
 </div></section>
 
-    
-    
+
+
     <footer class="badge"><a href="https://github.yandex-team.ru/presentation/jekyller">Fork me on Github</a></footer>
 
     <script src="shower.min.js"></script>
-    <!-- Copyright © 2018 Николай Кочетов, Yandex -->
+    <!-- Copyright © 2018 Nikolay Kochetov, Yandex -->
 </body>
 </html>

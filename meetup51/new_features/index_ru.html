@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse, весна 2021</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x10.css">
+
+    <style type="text/css">
+         p.cloud { text-align: center; line-height: 2; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         pre { display: block; white-space: pre; background-color: #EEE; padding: 5px; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse, весна 2021</h1>
+    </header>
+
+    <section class="slide">
+        <h1 style="font-size: 34pt;">ClickHouse Meetup онлайн</h1>
+        <p style="margin-top: 1em;">YouTube трансляция:<br/>
+            <a href="https://www.youtube.com/c/ClickHouseDB">https://www.youtube.com/c/ClickHouseDB</a>:<br/>
+            <a href="https://youtu.be/HPJOgzQkRls">https://youtu.be/HPJOgzQkRls</a></p>
+        <p>Telegram chat: <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_ru</a>, <a href="https://telegram.me/clickhouse_en">clickhouse_en</a></p>
+
+        <p style="margin-top: 3em;"><b>Футболки за вопросы!</b><br/><br/>Если вы задали вопрос через Zoom<br/>&mdash; напишите после мероприятия мне в Telegram в личку:<br/>
+        свой вопрос, размер футболки и адрес для доставки курьером.</p>
+    </section>
+
+    <section class="slide" id="cover">
+        <h1 style="margin-top: 180px; font-size: 48pt;"><span>Возможности ClickHouse, весна 2021</h1>
+    </section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">В предыдущих сериях: осень/зима 2020</h2>
+<p class="cloud" style="font-size: 24pt;">
+<span>EXPLAIN queries</span>
+<span>Compact and In-memory data parts</span>
+<span>PostgreSQL wire protocol</span>
+<span>LDAP authentication</span>
+<span>Atomic database</span>
+<span>Background data recompression</span>
+<span>Column transformers</span>
+<span>RabbitMQ integration</span>
+<span>256 bit Decimal</span>
+<span>Kerberos for Kafka and HDFS</span>
+<span>Query obfuscation and normalization</span>
+<span>Embedded Web UI</span>
+</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Если вы пропустили...</h2>
+<p>Улучшения внешних словарей &mdash; Максим Кита.</p>
+<p>Родная интеграция с PostgreSQL &mdash; Ксения Сумарокова.</p>
+<p>Реплицированные базы данных &mdash; Александр Токмаков.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Протокол GRPC</h2>
+<p>Включите в конфиге: <code>&lt;grpc_port>9100&lt;/grpc_port></code>.</p>
+<p>Доступны все возможности родного протокола:</p>
+<p>
+&mdash; TLS, compression, query progress,<br/>
+&emsp; query cancellation, sessions, external data...</p>
+<p>Пример: clickhouse-client с помощью GRPC на Python.</p>
+<p><code>utils/grpc-client/clickhouse-grpc-client.py</code></p>
+
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Разработчик &mdash; Виталий Баранов. <span style="color: green;">Доступно с версии 21.1.</span></p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Хеджированные запросы</h2>
+
+<p>Позволяет отправить запрос на другую реплику,<br/>
+если одна из реплик долго отвечает,<br/>
+и выбрать из нескольких реплик самую быструю.</p>
+
+<p>&mdash; для избавления от tail latencies на очень больших кластерах.</p>
+
+<p style="color: gray;">Доступно с версии 21.3.</p>
+
+<p style="font-size: 80%; margin-top: 2em; color: #888;">* Самый большой ClickHouse кластер в Яндексе &mdash; >630 серверов,<br/>но в других компаниях есть кластера намного больше.</p>
+
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Разработчик &mdash; Павел Круглов и Николай Кочетов.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Поддержка OpenTelemetry</h2>
+<p>Для трассировки ClickHouse запросов в рамках большой инфраструктуры:</p>
+<p>&mdash; включено по-умолчанию;</p>
+<p>&mdash; понимает HTTP заголовки opentelemetry;</p>
+<p>&mdash; множество spans уже размечено внутри ClickHouse;</p>
+<p>&mdash; данные записываются в <code>system.opentelemetry_log</code>;</p>
+
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Разработчик &mdash; Александр Кузьменков. <span style="color: green;">Доступно с версии 20.11.</span></p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Форматы сжатия для импорта и экспорта</h2>
+<p>Прозрачная работа со сжатыми файлами:</p>
+<p>&mdash; gz, brotli;<br/>
+<b style="color: green;">&mdash; xz, zstd;</b></p>
+<p>Example:<br/>
+<pre style="font-size: 16pt;">CREATE TABLE github_events_url
+(
+...
+) ENGINE = URL(
+  'https://datasets.clickhouse.tech/github_events_v2.native.<b>xz</b>',
+  Native);</pre>
+
+<p style="margin-top: 50px; font-size: 14pt; color: gray;">Разработчик &mdash; Аби Палагашвили. <span style="color: green;">Доступно с версии 21.1.</span></p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Улучшения совместимости SQL</h2>
+<p>&mdash; UNION DISTINCT;</p>
+<p>&mdash; REPLACE TABLE and CREATE OR REPLACE TABLE;</p>
+<p>&mdash; aggregate_functions_null_for_empty;</p>
+<p>&mdash; Extended CTE;</p>
+<p>&mdash; Type cast for IN subquery;</p>
+<p>&mdash; SHOW [CHANGED] SETTINGS;</p>
+<p>&mdash; POSITION(needle IN haystack);</p>
+<p>&mdash; DIV / MOD;</p>
+<p>&mdash; SELECT ALL;</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">ANTLR грамматика</h2>
+<p>&mdash; экспериментальная и неполная;</p>
+<p>&mdash; поможет в разработке сторонних инструментов,
+<br/>&emsp; работающих с ClickHouse запросами;</p>
+<p>Например: подсветка синтаксиса в редакторе кода.</p>
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Разработчик &mdash; Иван Лежанкин. <span style="color: green;">Доступно с версии 21.1.</span></p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Тип данных Map</h2>
+<p>Example: <code>map Map(String, String)</code></p>
+<p><code>SELECT map['hello']</code></p>
+<p style="font-size: 14pt; color: gray;">Разработчик &mdash; Hexiaoting.</span>
+<h2 style="font-size: 30pt;">Движок таблиц EmbeddedRocksDB</h2>
+<p>&mdash; для key-value запросов;</p>
+<p>&mdash; идеально как источник для словаря;</p>
+<p style="font-size: 14pt; color: gray;">Разработчик &mdash; Sundy Li.</span>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Улучшения ALTER</h2>
+<p>ALTER UPDATE / DELETE IN PARTITION:</p>
+<p>&mdash; ограничение области мутаций.</p>
+<p>ALTER DROP PART:</p>
+<p>&mdash; теперь и для Replicated таблиц.</p>
+<p>TTL теперь удаляет пустые куски:</p>
+<p>&mdash; нет путаницы с оставшимися кусками.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Поиск полудубликатов текстов</h2>
+<p>Анализ текстов с помощью алгоритмов Min-Hash и Sim-Hash<br/>
+для поиска похожих или скопированных кусков.</p>
+
+<p>Алгоритм <b>Min-Hash</b>:</p>
+<p>1. Достаём из текста все шинглы из N идущих подряд слов.</p>
+<p>2. Хэшируем шинглы!</p>
+<p>3. Выбираем M хэшей с мин. значениями и столько же с макс.</p>
+<p>4. Хэшируем хэши!</p>
+<p style="margin-right: -10em;">5. Тексты считаются дубликатами, если хотя бы один из двух хэшей совпал.</p>
+
+<p style="margin-top: 50px; font-size: 14pt; color: gray;">Разработчик &mdash; ucasFL. <span style="color: green;">Доступно с версии 21.1.</span></p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Статистические тесты</h2>
+<p>Тесты на то, что у распределений отличаются средние,<br/>
+полезно для A/B тестирования.</p>
+<p>&mdash; studentTTest;</p>
+<p>&mdash; welchTTest;</p>
+<p>&mdash; mannWitneyUTest;</p>
+<p><br/>Корреляция рангов:</p>
+<p>&mdash; rankCorr.</p>
+<p style="margin-top: 70px; font-size: 14pt; color: gray;">Разработчик &mdash; Никита Михайлов и другие. <span style="color: green;">Доступно с версии 21.1.</span></p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Весна/лето 2021</h2>
+<p>ClickHouse Roadmap публично доступен на GitHub:</p>
+<p><a href="https://github.com/ClickHouse/ClickHouse/issues/17623">https://github.com/ClickHouse/ClickHouse/issues/17623</a>
+<p>Там слишком много... я расскажу только чуть-чуть.</p>
+</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Основные задачи</h2>
+<p class="cloud">
+<span>Provide alternative for ZooKeeper</span>
+<span>Nested and semistructured data</span>
+<span>Limited support for transactions</span>
+<span>Backups</span>
+<span>Hedged requests</span>
+<span>Window functions</span>
+<span>Separation of storage and compute</span>
+<span>Short-circuit evaluation</span>
+<span>Projections</span>
+<span>Lightweight DELETE/UPDATE</span>
+<span>Workload management</span>
+<span>User Defined Functions</span>
+<span>Simplify replication</span>
+<span>JOIN improvements</span>
+<span>Embedded documentation</span>
+<span>Pluggable auth with tokens</span>
+</p>
+<p class="cloud"><a href="https://github.com/ClickHouse/ClickHouse/issues/17623">https://github.com/ClickHouse/ClickHouse/issues/17623</a>
+</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Window Functions</h2>
+
+<p>В разработке. <span style="color: green;">Начальная поддержка в версии 21.1.</span></p>
+
+<p><code>SET allow_experimental_window_functions = 1</code></p>
+
+<p>Уже в релизе:<br/>
+&mdash; OVER (PARTITION BY ... ORDER BY ...)<br/>
+&mdash; aggregate functions over windows;<br/>
+&mdash; WINDOW clause;
+&mdash; frame specifications;
+</p>
+
+<p>В разработке:<br/>
+&mdash; non-aggregate window functions (rank, etc...);<br/>
+</p>
+
+<p style="margin-top: 50px; font-size: 14pt; color: green;">Разработчик &mdash; Александр Кузьменков.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 28pt;">Вложенные и полуструктурированные данные</h2>
+<p>В разработке. <span style="color: green;">Начальная поддержка в версии 21.1.</span></p>
+
+<p>Множественная вложенность:</p>
+
+<pre>cart <b>Nested</b>(
+    item_id UInt64,
+    item_price Decimal(20, 5),
+    features <b>Nested</b>(
+        ...))</pre>
+
+<p><code>SELECT cart.item_id, cart.features.f1 FROM table</code></p>
+<p><code>SELECT cart.* FROM table</code></p>
+</p>
+
+<p>Поддержка для вложенного JSON и Protobuf.</p>
+
+<p style="margin-top: 25px; font-size: 14pt; color: green;">Разработчик &mdash; Антон Попов. Доступно с версии 21.1.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Проекции: <span style="color: green;">Разработчик &mdash; Amos Bird.</span></h2>
+
+<p>Множественные представления данных в одной таблице.</p>
+<p>
+&mdash; разные ключи сортировки;<br/>
+&mdash; подмножество столбцов;<br/>
+&mdash; подмножество строк;<br/>
+&mdash; предагрегации.
+</p>
+
+<p style="color: green;">В ревью.</p>
+
+<p>Отличия от материализованных представлений:
+<p>
+&mdash; данные в проекциях гарантированно консистентны;<br/>
+&mdash; обновляются атомарно с таблицей;<br/>
+&mdash; реплицируются так же, как таблица;<br/>
+&mdash; лучшие проекции автоматически выбираются для SELECT.
+</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Альтернатива для ZooKeeper</h2>
+
+<p style="color: green; margin-top: -1em;">В разработке.<br/>
+&mdash; реализован сетевой протокол ZooKeeper;<br/>
+&mdash; используется абстракция поверх ZooKeeper;<br/>
+&mdash; реализована модель данных ZooKeeper;<br/>
+&mdash; TestKeeperServer: сервер с моделью данных ZooKeeper для тестов;<br/>
+&mdash; NuKeeperServer: сервер с распределённым консенсусом на RAFT;<br/>
+&mdash; реализованы снапшоты, логи, восстановление после сбоя;<br/>
+</p>
+
+<p>Преимущества:<br/>
+<b>&mdash; более простая эксплуатация;</b><br/>
+&mdash; исправление "zxid overflow";<br/>
+&mdash; исправление проблем с max packet size;<br/>
+&mdash; исправление "session expired" из-за пауз GC;<br/>
+&mdash; уменьшение потребления памяти;<br/>
+&mdash; сжатые снапшоты и логи;<br/>
+&mdash; встраивание в clickhouse-server.
+</p>
+
+<p style="margin-top: 25px; font-size: 14pt; color: gray;">Разработчик &mdash; Александр Сапин.</p>
+</section>
+
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Short-circuit выполнение выражений</h2>
+
+<code style="font-size: 16pt;">SELECT IF(number = 0, 0, 123 % number) FROM numbers(10)</code>
+<p style="color: red;">&mdash; division by zero.</p>
+
+<code style="font-size: 16pt;">SELECT * FROM numbers(10) WHERE number > 0 AND 10 % number > 0</code>
+<p style="color: red;">&mdash; division by zero.</p>
+
+<p>&mdash; всегда выполняются обе ветки IF, AND и OR.</p>
+
+<pre style="font-size: 16pt;">SELECT * FROM
+(
+    SELECT * FROM numbers(10)
+    WHERE number > 0
+)
+WHERE 10 % number > 0</pre>
+<p style="color: red;">&mdash; division by zero.</p>
+
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">User Defined Functions</h2>
+
+<p>Рассматриваем 5 способов реализации UDF, из них два обязательны:</p>
+
+<p>1. UDF в виде SQL выражений.</p>
+
+<p><pre>CREATE FUNCTION f AS x -> x + 1</pre></p>
+
+<p>2. UDF как исполняемая программа.</p>
+
+<p>Взаимодействие через пайпы, данные сериализуются в любом формате.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Поддержка очень частых вставок</h2>
+
+<p>Что будет, если отправлять в ClickHouse INSERT-ы по одной строке?</p>
+
+<p><span style="color: red;">Было: ничего хорошего.</span><br/>
+&mdash; нужно было буферизировать данные самому, или пользоваться Kafka, или ставить clickhouse-bulk, kittenhouse, ...</p>
+
+<p><span style="color: green;">Будет: всё хорошо.</span><br/>
+&mdash; ClickHouse сам будет собирать данные в пачки и выполнять асинхронный INSERT.</p>
+</section>
+
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Новые версии ClickHouse</h2>
+<p style="color: gray">21.4 &mdash; testing.</p>
+<p style="color: gray">21.3 &mdash; prestable, LTS до 2022-03-01.</p>
+<p style="color: green">21.2 &mdash; stable.</p>
+<p style="color: green">21.1 &mdash; stable.</p>
+<p style="color: green">20.12 &mdash; stable.</p>
+<p style="color: gray">20.12 ... 20.9 &mdash; obsolete.</p>
+<p style="color: green">20.8 &mdash; LTS до 2021-09-30.</p>
+<p>...</p>
+<p style="color: gray">20.3 &mdash; obsolete.</p>
+</section>
+
+
+<section class="slide">
+<h2>?</h2>
+<p>Публичный roadmap 2021:</p>
+<p><a href="https://github.com/ClickHouse/ClickHouse/issues/17623">https://github.com/ClickHouse/ClickHouse/issues/17623</a>
+</p>
+</section>
+
+<section class="slide">
+    <h2>.</h2>
+</section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+</body>
+</html>
