@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 25.11 Call</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+         .slide table tr:not(:last-of-type)>* { background: none; }
+         .cell { font-family: Monospace; width: 1.5em; height: 1.5em; display: inline-block; border: 3px solid white; background-color: lightblue; text-align: center; line-height: 1.3em; }
+         .cell-num { font-family: Monospace; width: 1.5em; height: 1.5em; display: inline-block; border: 3px solid white; background-color: lightgreen; text-align: center; line-height: 1.3em; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 25.11 Call</h1>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/back1.jpg); background-size: cover;">
+        <h1 style="margin-top: 25px; line-height: 110%; font-size: 56pt; color: white; text-align: center;">ClickHouse Release 25.11</h1>
+    </section>
+
+<section class="slide">
+<h2>ClickHouse release 25.11</h2>
+<p>1. (55 min) What's new in ClickHouse 25.11.</p>
+<p>2. (5 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
+<h2><span class="hilite">Release 25.11</span></h2>
+<p><span class="hilite">ClickHouse Thanksgiving Release.</span></p>
+<p><span class="hilite">— 24 new features 🦃</span></p>
+<p><span class="hilite">— 27 performance optimizations ☕</span></p>
+<p><span class="hilite">— 97 bug fixes 🍄</span></p>
+</section>
+<!--
+
+Small
+
+system.unicode
+flipCoordinates
+cume_dist
+arrayRemove
+midpoint
+argAndMin, argAndMax
+_tags virtual column
+Preprocessors for text indices
+HTTP protocol returns the memory usage
+Download in the UI
+
+Performance
+
+Projections as indices
+Projections for DISTINCT
+- read in order with lazy materialization
+Task splitting by ranges in files
+- RIGHT and FULL JOIN speed up
+- Constants optimization
+Fixed hash map speed up
+Less memory usage for a huge number of parts
+
+Main
+
+Geometry
+ACME
+Fractional Limit and Offset
+Bayes Classifier
+EXECUTE AS
+
+Data Lakes
+
+OneLake
+
+Integrations
+
+Bonus
+
+chDB update
+House Party
+LibreChat
+StockHouse
+Velocity
+JapanCloud
+Alerts in ClickStack
+Weather from airplanes
+
+Reading
+
+chDB
+OneLake
+OTel
+AI-first DWH
+
+-->
+
+<section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
+<h2><span class="hilite">Small And Nice Features</span></h2>
+</section>
+
+<section class="slide">
+<h2>system.unicode</h2>
+
+<p>A new system table for introspection and searching for code points:</p>
+
+<p><code style="font-size: 16pt; line-height: 1.5;">:) SELECT block, general_category, groupConcat(code_point)
+   FROM <b style="color: green;">system.unicode</b>
+   WHERE name LIKE '%LEAF%'
+   GROUP BY ALL
+</code></p>
+
+<p>Demo 🍀🍁🍂🍃</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: wxybear.</p>
+</section>
+
+
+<section class="slide">
+<h2>flipCoordinates</h2>
+
+<p>A function for <b>Point</b>, <b>LineString</b>, <b>Ring</b>, <b>Polygon</b>, <b>MultiPolygon</b>...</p>
+<p>Similar to PostGIS's ST_FlipCoordinates.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">:) SELECT <b style="color: brown;">arrayMap(x -> arrayMap(y -> reverse(y), x), polygon)</b>; <span style="color: gray;">-- 25.10</span>
+:) SELECT <b style="color: green;">flipCoordinates</b>(polygon); <span style="color: gray;">-- 25.11</span>
+</code></p>
+
+<p>For easy integration of different GIS software:</p>
+<p>&mdash; most databases use the (lon, lat) order;
+<br/>&mdash; most web maps use the (lat, lon) order.
+</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Sachin Kumar Singh.</p>
+</section>
+
+
+<section class="slide">
+<h2>arrayRemove</h2>
+
+<p>A function for compatibility with Postgres:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.5;"><span style="color: gray;">-- 25.10, ClickHouse's higher-order function:</span>
+:) SELECT <b>arrayFilter</b>(x -> x != 1, [1, 2, 1]);
+
+<span style="color: gray;">-- 25.11, the new function:</span>
+:) SELECT <b>arrayRemove</b>([1, 2, 1], 1);
+
+<span style="color: gray;">-- 25.11, compatibility alias for Postgres:</span>
+:) SELECT <b>array_remove</b>([1, 2, 1], 1);
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Tiwary Saurav.</p>
+</section>
+
+
+<section class="slide">
+<h2>cume_dist</h2>
+
+<p>A window function, compatible with Spark, Databricks, Snowflake, Postgres.</p>
+
+<p>Calculates the value of a CDF (cumulative distribution function)
+<br/>&mdash; the ratio of the number of rows &lt;= current row in the specified order.</p>
+<p>Similar to <b>percent_rank</b> with a slightly different formula.</p>
+
+<p><a href="https://play.clickhouse.com/play?user=play#U0VMRUNUIGNvdW50eSwgbWVkaWFuRXhhY3QocHJpY2UpIEFTIHAsCiAgICByb3VuZChwIC8gbWF4KHApIE9WRVIgKCksIDIpLAogICAgcm91bmQoc3VtKHApIE9WRVIgKE9SREVSIEJZIHApIC8gc3VtKHApIE9WRVIgKCksIDIpLAogICAgcm91bmQocGVyY2VudF9yYW5rKHApIE9WRVIgKE9SREVSIEJZIHApLCAyKSwKICAgIHJvdW5kKGN1bWVfZGlzdChwKSBPVkVSIChPUkRFUiBCWSBwKSwgMikKRlJPTSB1a19wcmljZV9wYWlkIEdST1VQIEJZIGNvdW50eSBPUkRFUiBCWSBw">Demo</a></p>
+
+<!--
+
+SELECT county, medianExact(price) AS p,
+    round(p / max(p) OVER (), 2),
+    round(sum(p) OVER (ORDER BY p) / sum(p) OVER (), 2),
+    round(percent_rank(p) OVER (ORDER BY p), 2),
+    round(cume_dist(p) OVER (ORDER BY p), 2)
+FROM uk_price_paid GROUP BY county ORDER BY p
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Manuel.</p>
+</section>
+
+
+<section class="slide">
+<h2>midpoint</h2>
+
+<p>A non-aggregate function, similar to least/greatest (min2/max2),
+<br/>which returns the value of the same type as its arguments,
+<br/>closest to the average of the arguments.
+
+<p><code style="font-size: 14pt; line-height: 1.1;">:) SELECT least(1, 9), greatest(1, 9), <b style="color: green;">midpoint</b>(1, 9)
+
+┌─least(1, 9)─┬─greatest(1, 9)─┬─<b style="color: green;">midpoint</b>(1, 9)─┐
+│           1 │              9 │              5 │
+└─────────────┴────────────────┴────────────────┘
+
+:) SELECT <b style="color: green;">midpoint</b>('2025-11-25'::Date, '2026-01-01'::Date)
+
+┌─<b style="color: green;">midpoint</b>(CAS⋯', 'Date'))─┐
+│               2025-12-13 │
+└──────────────────────────┘
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Simon Michal.</p>
+</section>
+
+
+<section class="slide">
+<h2>argAndMin, argAndMax</h2>
+
+<p>New aggregate functions, similar to <b>argMin</b>, <b>argMax</b>.</p>
+
+<p><code style="font-size: 12pt; line-height: 1.5;"><span style="color: gray;">-- get the maximum price:</span>
+:) SELECT <b>max</b>(price) FROM uk_price_paid WHERE toYear(date) = 2025;
+
+<span style="color: gray;">-- get the town corresponding to the maximum price:</span>
+:) SELECT <b>argMax</b>(town, price) FROM uk_price_paid WHERE toYear(date) = 2025;
+
+<span style="color: gray;">-- get the (town, price) corresponding to the maximum price (25.10):</span>
+:) SELECT <b>argMax</b>((town, price), price) FROM uk_price_paid WHERE toYear(date) = 2025;
+
+<span style="color: gray;">-- get the (town, price) corresponding to the maximum price (25.11):</span>
+:) SELECT <b style="color: green;">argAndMax</b>(town, price) FROM uk_price_paid WHERE toYear(date) = 2025;
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: AbdAlRahman Gad.</p>
+</section>
+
+<section class="slide">
+<h2>Virtual Column _tags</h2>
+
+<p>For queries from S3-compatible object storages.</p>
+
+<p>When you read files from S3, in addition to the data, you can request the following virtual columns:
+<b>_path</b>, <b>_file</b>, <b>_size</b>, <b>_time</b>, <b>_etag</b>, <b style="color: green;">_tags</b>.</p>
+
+<p>Tags are a set of key-value pairs a user can attach to an object in S3.</p>
+<p>They can be changed without rewriting the object.</p>
+<p>ClickHouse represents tags as <b>Map(String, String)</b>.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Zicong Qu.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
+<h2><span style="color: black;"><span class="hilite">Performance Improvements</span></h2>
+</section>
+
+<section class="slide">
+<h2>Projections As Secondary Indices</h2>
+
+<p>You can already use projections to have different sort orders of a table:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.25;">CREATE TABLE pageviews (
+    CounterID UInt32,
+    UserID UInt64,
+    EventTime DateTime,
+    ...
+    <b>PROJECTION by_time (
+        SELECT * ORDER BY EventTime</b> <span style="color: gray;">-- projection's order</span>
+    <b>)</b>
+) ORDER BY (CounterID, UserID, EventTime) <span style="color: gray;">-- table's main order</span>
+</code></p>
+
+<p>And the projection with accelerate range queries or queries with ORDER BY.
+<br/>However, it requires <b>duplicating the storage</b> for the columns (or a subset).</p>
+
+<p>Can we make it work without duplication?</p>
+</section>
+
+
+<section class="slide">
+<h2>Projections As Secondary Indices</h2>
+
+<p>Since <b>25.11</b> you can create a projection with a single column, <b>_part_offset</b>:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.25;">CREATE TABLE pageviews (
+    CounterID UInt32,
+    UserID UInt64,
+    EventTime DateTime,
+    ...
+    <b>PROJECTION by_time (</b>
+        <span style="color: gray;">-- works as an index for the main table representation</span>
+        <b>SELECT <span style="color: green;">_part_offset</span> ORDER BY EventTime
+    )</b>
+) ORDER BY (CounterID, UserID, EventTime)
+</code></p>
+
+<p>This projection will accelerate queries using less extra storage<br/>
+with the cost of worse locality of reads: useful for point queries. Demo.</p>
+
+<!--
+
+Playground:
+
+chc
+
+SHOW TABLE hits
+SHOW TABLE hits_full_projection
+SHOW TABLE hits_index_projection
+
+SELECT table, formatReadableSize(total_bytes) FROM system.tables WHERE database = 'default' AND table LIKE 'hits%'
+
+clickhouse-benchmark --query "SELECT URL, Referer, Title FROM hits WHERE EventTime = '2013-07-15 01:02:03'" --use_query_condition_cache 0
+clickhouse-benchmark --query "SELECT URL, Referer, Title FROM hits_full_projection WHERE EventTime = '2013-07-15 01:02:03'" --use_query_condition_cache 0
+clickhouse-benchmark --query "SELECT URL, Referer, Title FROM hits_index_projection WHERE EventTime = '2013-07-15 01:02:03'" --use_query_condition_cache 0
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Amos Bird.</p>
+</section>
+
+<section class="slide">
+<h2>Speed Up DISTINCT With Projections</h2>
+
+<p style="margin-top: -1em;">A projection with GROUP BY:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.25;">CREATE TABLE pageviews (
+    CounterID UInt32,
+    UserID UInt64,
+    EventTime DateTime,
+    MobilePhoneModel String,
+    ...
+    <b>PROJECTION phones (
+        SELECT count() GROUP BY CounterID, MobilePhoneModel
+    )</b>
+) ORDER BY (CounterID, UserID, EventTime)
+</code></p>
+
+<p>will be used for queries with DISTINCT by any subset of the fields:</p>
+<p><code style="font-size: 12pt; line-height: 1.25;">SELECT DISTINCT <b>MobilePhoneModel</b> FROM pageviews</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Nihal Z. Miaji.</p>
+</section>
+
+
+<section class="slide">
+<h2>Parallel Merge For Small GROUP BY</h2>
+
+<p>The case when GROUP BY has a small number of distinct keys
+<br/>as they are small integers (8/16 bit), but the aggregation states are large:</p>
+
+<p><code style="font-size: 16pt; line-height: 1.25;">SELECT
+    number % 100 AS k, <span style="color: gray;">-- small integer as a key</span>
+    uniq(number) AS u  <span style="color: gray;">-- large aggregation state</span>
+FROM numbers_mt(1e8)
+GROUP BY k ORDER BY u DESC LIMIT 10
+</code></p>
+
+<p>Demo</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Jianfei Hu.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Lower Memory Usage For Table Metadata</h2>
+
+<p>By storing identical column descriptions for different data parts only once.</p>
+
+<p>Example: a "CI Logs" cluster with:
+<br/>&mdash; <b>2173</b> tables, each with <b>300</b> columns on average,
+<br/>&mdash; <b>27,517</b> data parts,
+<br/>&mdash; <b>21 trillion</b> rows,
+<br/>&mdash; <b>430 TB</b> of compressed data,
+<br/>&mdash; <b>1</b> shard (ClickHouse Cloud).
+</p>
+
+<p>The optimisation save <b style="color: green;">12 GB</b> out of 73 GB of memory!</p>
+
+<p>Especially useful for tables with a large number of columns.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Azat.</p>
+</section>
+
+
+<section class="slide">
+<h2>Distributed Processing For Large Files</h2>
+
+<p>ClickHouse runs distributed queries:
+<br/>&mdash; with <b>Distributed</b> tables;
+<br/>&mdash; with <b>Replicated</b> tables, using "parallel replicas";
+<br/>&mdash; on top of a bunch of external files, e.g., Parquet files on S3,
+<br/>&emsp; using the <b>s3Cluster</b> table function.
+</p>
+
+<p>But what if there is only a single (or a few) large files?</p>
+
+<p>Since <b style="color: green">25.11</b>, ClickHouse splits the work using ranges
+<br/>(row groups) inside single files!</p>
+
+<p>Many servers of the cluster will "eat" different portions of a file.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Konstantin Vedernikov.</p>
+</section>
+
+
+
+<section class="slide" style="background: url(pictures/back3.jpg); background-size: cover;">
+<h2 style="font-size: 32pt; margin-left: -1em;"><span class="hilite">Something Interesting</span></h2>
+</section>
+
+<section class="slide">
+<h2>Fractional LIMIT and OFFSET</h2>
+
+<p>Take a fraction of the resultset:</p>
+
+<p><code style="font-size: 16pt; line-height: 1.25;">:) SELECT county, avg(price) AS price
+   FROM uk_price_paid GROUP BY county ORDER BY price DESC
+   LIMIT <b style="color: green;">0.25</b>; <span style="color: gray;">-- take first 1/4 of the result</span>
+
+:) SELECT county, avg(price) AS price
+   FROM uk_price_paid GROUP BY county ORDER BY price DESC
+   LIMIT <b style="color: green;">100</b> OFFSET <b style="color: green;">0.5</b>; <span style="color: gray;">-- take 100 records from the middle</span>
+</code></p>
+
+<p>Use case: sampling a portion of the result without using window functions.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Ahmed Gouda.</p>
+</section>
+
+
+<section class="slide">
+<h2>EXECUTE AS user</h2>
+
+<p>Allow one user to run queries on behalf of another user:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">GRANT <b style="color: green;">IMPERSONATE</b> ON user1 TO user2;
+GRANT <b style="color: green;">IMPERSONATE</b> ON * TO user3;</code></p>
+
+<p>Run queries on behalf of another user:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;"><b style="color: green;">EXECUTE AS</b> target_user SELECT * FROM table;
+
+<b style="color: green;">EXECUTE AS</b> target_user; <span style="color: gray;">-- sets it for the session</span>
+SELECT * FROM table;
+</code></p>
+
+<p>Use-case: an app authenticates as one user, and does the work under other configured users for access rights, limits, settings, quotas, and audit.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Shankar.</p>
+</section>
+
+<section class="slide">
+<h2>Geometry Data Type</h2>
+
+<p>We already had all the data types for GIS:</p>
+<p><b>Point</b>, <b>LineString</b>, <b>MultiLineString</b>, <b>Ring</b>, <b>Polygon</b>, <b>MultiPolygon</b></p>
+
+<p>Since <b>25.11</b>, we also have one unified data type: <b style="color: green;">Geometry</b></p>
+<p>&mdash; it can contain any geometry!</p>
+
+<p>New functions, <b>readWkt</b>, <b>readWkb</b>,
+<br/>which read any type of geometry as a <b>Geometry</b> value.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">ClickHouse also supports H3 and S3 indexes, Geohashes, optimized spherical and geo distances,<br/>Polygonal dictionaries for reverse geocoding, SVG rendering...</p>
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Konstantin Vedernikov.</p>
+</section>
+
+<section class="slide">
+<h2>ACME (Let's Encrypt) Integration 🧪</h2>
+
+<p>Automatically provision TLS certificates on a distributed cluster:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.25;">$ cat /etc/clickhouse-server/config.d/ssl.yaml
+
+http_port: 80
+acme:
+  email: feedback@clickhouse.com
+  terms_of_service_agreed: true
+  <span style="color: gray;"># zookeeper_path: '/clickhouse/acme' # by default</span>
+  domains:
+    - domain: play.clickhouse.com
+</code></p>
+
+<p>Supports the HTTP-01 challenge.</p>
+<p>The certificates are shared across the cluster with ClickHouse Keeper.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Konstantin Bogdanov, Sergey Lokhmatikov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Bayesian Classifier For Texts 🧪</h2>
+
+<p style="margin-top: -1em;">Classifies texts based on the frequences of n-grams of bytes, code points,
+<br/> or words (tokens), according to configured models with reference frequences.</p>
+
+<p><code style="font-size: 12pt; line-height: 1.25;">nb_models:
+    model:
+        name: language
+        path: '/etc/clickhouse-server/config.d/language.bin'
+        n: 2            <span style="color: gray;"># n-gram size</span>
+        mode: codepoint <span style="color: gray;"># byte, codepoint, token</span>
+        alpha: 1.0      <span style="color: gray;"># optional, smoothing factor</span>
+        priors:         <span style="color: gray;"># optional</span>
+            - prior:
+                class: 0
+                value: 0.6
+            - prior:
+                class: 1
+                value: 0.4
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Nihal Z. Miaji.</p>
+</section>
+
+<section class="slide">
+<h2>Bayesian Classifier For Texts 🧪</h2>
+
+<p>A simple and fast model that can detect <b>charset</b>, <b>language</b>, <b>topic</b>, etc.,
+<br/>easily created (trained) on your corpus.</p>
+
+<p style="color: gray; font-size: 14pt;">Remains practical in the LLM era for routine tasks on massive volumes of data,
+<br/>but can't compete on precision.</p>
+
+<p><code style="font-size: 12pt; line-height: 1.5;">:) SELECT <b style="color: green;">naiveBayesClassifier</b>('language', text);
+<span style="color: gray;">-- takes the model name and return the class number, according to the model.</span>
+</code></p>
+
+<p>Demo</p>
+
+<!--
+
+WITH naiveBayesClassifier('lang_codepoint_3', text) AS class SELECT domain, substringUTF8(text, 1, 100) FROM minicrawl PREWHERE text != '' WHERE class = 1 LIMIT 10
+
+WITH naiveBayesClassifier('lang_codepoint_3', text) AS class SELECT domain, substringUTF8(text, 1, 100) FROM minicrawl PREWHERE text != '' WHERE class = 6 LIMIT 10
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Nihal Z. Miaji.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back4.jpg); background-size: cover;">
+<h2 style="font-size: 32pt; margin-left: -1em;"><span class="hilite">Data Lakes</span></h2>
+</section>
+
+
+<section class="slide">
+<h2>Fabric OneLake</h2>
+
+<p><b>OneLake</b> - Microsoft Fabric's unified data lake,<br/>powered by the OneLake Tables APIs and Apache Iceberg.</p>
+<p>Compatible with the Iceberg REST Catalog.</p>
+
+<p><code style="font-size: 12pt; line-height: 1.25; margin-right: -2em;">CREATE DATABASE onelake
+ENGINE = DataLakeCatalog('https://onelake.table.fabric.microsoft.com/iceberg')
+SETTINGS
+  catalog_type = <b style="color: green;">'onelake'</b>,
+  warehouse = 'warehouse_id/data_item_id',
+  onelake_tenant_id = '&lt;tenant_id>',
+  oauth_server_uri = 'https://login.microsoftonline.com/&lt;tenant_id>/oauth2/v2.0/token',
+  auth_scope = 'https://storage.azure.com/.default',
+  onelake_client_id = '&lt;client_id>',
+  onelake_client_secret = '&lt;client_secret>'
+</code></p>
+
+<!--
+
+SET allow_database_iceberg = 1;
+
+CREATE DATABASE OneLake_catalog
+ENGINE = DataLakeCatalog('https://onelake.table.fabric.microsoft.com/iceberg')
+SETTINGS catalog_type = 'onelake',
+warehouse = 'f6b7abeb-7eb7-4017-bcea-3742d792f7d4/bfcd71f9-ceb9-4aa1-81d8-2229e22e0a59',
+onelake_tenant_id = '3d7995a7-a475-466f-ab08-ed4bcfdca0f8',
+oauth_server_uri = 'https://login.microsoftonline.com/3d7995a7-a475-466f-ab08-ed4bcfdca0f8/oauth2/v2.0/token',
+auth_scope = 'https://storage.azure.com/.default',
+onelake_client_id = '7aca6968-ef4f-4add-8a1e-c426926ba217',
+onelake_client_secret = '...';
+
+USE OneLake_catalog;
+
+SELECT count(), avg(tip_amount) AS avg_tips, DOLocationID FROM `year_2017.green_tripdata_2017` GROUP BY DOLocationID ORDER BY avg_tips DESC;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Konstantin Vedernikov.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back2.jpg); background-size: cover;">
+<h2><span class="hilite">Integrations</span></h2>
+</section>
+
+<section class="slide">
+<h2>Integrations</h2>
+
+<p><b>ClickStack</b> now supports alerts.</p>
+<p><b>Python</b> driver supports SQLAlchemy 2.x, with <b>Pandas</b> 1 and 2,<br/>r/w support for <b>Arrow</b>, and <b>Polars</b> integration.</p>
+<p><b>Rust</b> driver: type safety for reads and writes, asynchronous inserts.</p>
+<p><b>ODBC</b> driver: proper handling of network errors.</p>
+<p><b>JavaScript</b> driver: handling exceptions in the middle of result stream.</p>
+<p>Updates for <b>dbt</b>, <b>Fivetran</b>, <b>Flink</b>, <b>Spark</b>, <b>Kafka</b> connectors.</p>
+<p>ClickPipes support <b>Azure Blob Storage</b> as GA.</p>
+
+</section>
+
+<section class="slide" style="background: url(pictures/back9.jpg); background-size: cover;">
+<h2><span class="hilite">Bonus</span></h2>
+</section>
+
+<section class="slide">
+<img src="pictures/chdb.png" style="float: right; height: 100%;">
+<h2>chDB Update</h2>
+<p style="color: gray;">chDB - a ClickHouse engine embedded in Python<br/>and other languages</p>
+<p>Version 3.7.1 is <b style="color: green;">1.9x faster</b> on ClickBench.</p>
+<p>Faster operations with ArrowTable.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/stockhouse.png); background-size: cover;">
+<h1 style="color: white; position: absolute; left: 0.5em; bottom: 0.54em; line-height: 1; text-shadow: 5px 5px 5px black;"><span style="background: black; display: inline-block; drop-shadow: 5px 5px 5px black;"><a style="color: white;" href="https://stockhouse.clickhouse.com/">stockhouse.clickhouse.com</a></span></h1>
+</section>
+
+<section class="slide" style="background: url(pictures/velocity.png); background-size: cover;">
+<h1 style="color: white; position: absolute; left: 0.5em; bottom: 0.54em; line-height: 1; text-shadow: 5px 5px 5px black;"><span style="background: black; display: inline-block; drop-shadow: 5px 5px 5px black;"><a style="color: white;" href="https://velocity.clickhouse.com/">velocity.clickhouse.com</a></span></h1>
+</section>
+
+<section class="slide" style="background: url(pictures/librechat.png); background-size: cover;">
+</section>
+
+<section class="slide" style="background: url(pictures/party.png); background-size: cover;">
+</section>
+
+<section class="slide" style="background: url(pictures/wing.jpg); background-size: cover;">
+<h2>Meetups</h2>
+<p style="line-height: 1.5">
+<br/><span class="hilite">&mdash; 🇺🇸 House Party, The SQL, Dec 2</span>
+<br/><span class="hilite">&mdash; 🇵🇱 Warsaw, Nov 26</span>
+<br/><span class="hilite">&mdash; 🇺🇸 New York, Dec 8</span>
+<br/><span class="hilite">&mdash; 🇺🇸 San Francisco, Dec 8</span>
+<br/><span class="hilite">&mdash; 🇮🇩 Jakarta, Dec 9</span>
+<br/><span class="hilite">&mdash; 🇯🇵 Tokyo, Dec 15</span>
+<br/><span class="hilite">&mdash; 🇮🇱 Tel Aviv, Dec 29</span>
+</p>
+</section>
+
+<section class="slide">
+<h2>Reading Corner 📖</h2>
+
+<img style="float: right; width: 30%; margin-right: -3em; image-rendering: pixelated; margin-top: -1em;" src="pictures/blog.png"/>
+<p><a href="https://clickhouse.com/blog/">https://clickhouse.com/blog/</a></p>
+
+<p style="line-height: 1.25;">
+&mdash; chDB Kernel Upgrade Journey
+<br/>&mdash; ClickHouse integrates with OneLake
+<br/>&mdash; Alerting arrives in ClickStack
+<br/>&mdash; ClickHouse welcomes LibreChat
+<br/>&mdash; Global weather data from flying airplanes
+<br/>&mdash; Merkle Science fights crypto crime at scale
+<br/>&mdash; How we made our internal data warehouse AI-first
+<br/>&mdash; Building StockHouse: Real-time market analytics
+<br/>&mdash; ClickHouse Partners with Japan Cloud
+<br/>&mdash; Team's productivity metrics
+</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back8.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
+<h2 style="color: white; margin-left: -1em;">Q&amp;A</a></h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+
