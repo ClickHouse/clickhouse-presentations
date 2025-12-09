@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: My Favorite Features 2025</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         table, tr, td { border: 0; }
+         .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: My Favorite Features 2025</h1>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/title.jpg); background-size: cover;">
+        <h1 style="line-height: 1.25">My Favorite<br/>ClickHouse Features 2025</h1>
+    </section>
+
+<section class="slide" style="background: url(https://presentations.clickhouse.com/2025-release-25.6/pictures/back1.jpg); background-size: cover;">
+<h2 style="margin-top: 2em; color: white;">My favorite features</h2>
+<h2 style="margin-top: -0.5em; color: white;">&mdash; 2025 edition</h2>
+</section>
+
+<!--
+
+Lightweight Updates
+Text index
+Vector search
+Data Lakes
+
+Performace
+
+Parquet Reader v3
+Query Condition Cache
+Lazy reading
+JOIN reordering, runtime filters
+Streaming indices
+Azure works ok
+
+Compatibility
+
+Correlated Subqueries
+Time
+Geometry, WKB
+Autoincrement
+
+Scheduler?
+
+Boring Security Features
+- grants for table functions
+- grants for read/write
+- grants on URL regexps
+- custom IAM with S3
+
+QBit
+ACME
+Better Merge tables
+
+Interfaces
+
+SSH interface
+Arrow Flight
+chdig
+
+Bonus
+
+ClickStack
+AgentHouse, Ask AI
+BYOC, Government
+MySQL CDC, MongoDB CDC
+Distributed Cache
+
+Usability in clickhouse-client:
+- matching identifiers;
+- trailing spaces;
+- shortening column names;
+- multi-line values;
+- fallback to vertical;
+- auto squashing;
+- colored brackets;
+- --copy, compression autodetection, implicit select
+
+Open House
+
+-->
+
+<section class="slide" style="background: url(https://presentations.clickhouse.com/2025-release-25.3/pictures/back5.jpg); background-size: cover;">
+<h2>My favorite features</h2>
+<p>We have <b>251</b> new features in the first 11 months of 2025.</p>
+<p>Which one is your favorite?</p>
+</section>
+
+
+
+<section class="slide">
+<h2>Lightweight Updates</h2>
+
+<p>Full-featured UPDATE statement:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">UPDATE my_table
+SET col1 = val1, col2 = val2, ...
+WHERE <i>condition</i>
+
+UPDATE hits SET Title = 'Updated Title'
+WHERE EventDate = today();
+
+UPDATE wikistat SET hits = hits + 1, time = now()
+WHERE path = 'ClickHouse';
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Anton Popov.</p>
+</section>
+
+<section class="slide">
+<h2>Lightweight Updates</h2>
+
+<p>Supported for <b>MergeTree</b>, <b>ReplacingMergeTree</b>, <b>CollapsingMergeTree</b>,
+<br>including <b>Replicated</b> tables.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">CREATE TABLE hits
+(...) ENGINE = MergeTree
+SETTINGS <b style="color: green;">enable_block_number_column</b> = 1,
+         <b style="color: green;">enable_block_offset_column</b> = 1;
+
+SET allow_experimental_lightweight_update = 1;
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Anton Popov.</p>
+</section>
+
+<section class="slide">
+<h2>Lightweight Updates</h2>
+
+<p>Performance of an UPDATE is similar to
+<br/>INSERT SELECT with the same columns and conditions.</p>
+
+<p>UPDATE creates a <i>patch part</i> referencing the modified records.
+<br/>Patch parts are applied on read and during background merges.</p>
+
+<p>SELECTs performance after an update:</p>
+<img style="width: 100%" src="pictures/lwu2.png"/>
+
+<p><b style="color: green;">Two times</b> faster than on-the-fly mutations.
+<br/>Only <b style="color: green;">20%</b> overhead compared to fully updated data.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Anton Popov.</p>
+</section>
+
+<section class="slide" style="background: black url(pictures/updates.png) center/contain no-repeat;">
+</section>
+
+<section class="slide">
+<h2>Lightweight Updates</h2>
+
+<p>Performance of UPDATEs:</p>
+<img style="width: 80%" src="pictures/lwu1.png"/>
+</section>
+
+<section class="slide">
+<h2>Lightweight Updates</h2>
+
+<p>Bonus:</p>
+<pre>SET <b>lightweight_delete_mode</b> = 'lightweight_update';</pre>
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Anton Popov.</p>
+</section>
+
+<section class="slide">
+<h2>Text Index 🧪</h2>
+
+<p>A full-text search index in ClickHouse!</p>
+<p style="line-height: 1.5">&mdash; In development since 2022
+<br/>&mdash; first prototype in 2023 <span style="color: gray;">(by Harry Lee and Larry Luo)</span>
+<br/>&mdash; <b>now rewritten to make it to production</b>
+<br/>&mdash; experimental in 25.9
+<br/>&mdash; beta in 25.12</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developers: Anton Popov, Elmi Ahmadov, Jimmy Aguilar Mena.</p>
+</section>
+
+<section class="slide">
+<h2>Text Index 🧪</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE text_log
+(
+    message String,
+    ...
+    INDEX inv_idx(message)
+        TYPE <b style="color: green;">text</b>(tokenizer = 'default')
+        GRANULARITY 128
+)
+ENGINE = SharedMergeTree ORDER BY id;
+
+SELECT ... WHERE <b style="color: green;">hasToken</b>(message, 'DDLWorker');
+SELECT ... WHERE <b style="color: green;">searchAll</b>(message, ['peak', 'memory']);
+SELECT ... WHERE <b style="color: green;">searchAny</b>(message, tokens('01442_merge_detach_attach'));
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developers: Anton Popov, Elmi Ahmadov, Jimmy Aguilar Mena.</p>
+</section>
+
+<section class="slide">
+<h2>Text Index (50 TB logs demo)</h2>
+
+<video style="width: 100%"><source src="pictures/o11y-fts.mp4" type="video/mp4"></video>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developers: Anton Popov, Elmi Ahmadov, Jimmy Aguilar Mena.</p>
+</section>
+
+<section class="slide" style="background: black url(pictures/fts.png); background-size: contain;">
+</section>
+
+<section class="slide">
+<h2>Vector Index</h2>
+
+<p>In development since 2021. Production-ready since <b style="color: green;">25.8</b>.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -1em;">ALTER TABLE dbpedia
+    ADD INDEX vector_index(vector)
+    TYPE <b style="color: green;">vector_similarity</b>(
+        'hnsw', 'cosineDistance', 1536, 'bf16', 64, 512);
+
+ALTER TABLE dbpedia MATERIALIZE INDEX vector_index;
+
+WITH ... AS reference_vector
+SELECT ... FROM table WHERE ...
+<b>ORDER BY cosineDistance(vector, reference_vector)
+LIMIT 10</b>;
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Shankar Iyer.</p>
+</section>
+
+<section class="slide">
+<h2>Vector Search</h2>
+
+<p><b>22.9</b> &mdash; experimental version</p>
+<p style="color: gray; font-size: 14pt; margin-top: -1em;">Introduced by Arthur Filatenkov, Vladimir Makarov, Danila Mishin,
+Nikita Vasilenko, Alexander Piachonkin, Nikita Evsiukov, Hakob Sagatelyan.</p>
+
+<p><b>23.8</b> &mdash; integration with the USearch library</p>
+<p style="color: gray; font-size: 14pt; margin-top: -1em;">Introduced by Davit Vardanyan.</p>
+
+<p><b>25.1</b> &mdash; faster vector indices</p>
+<p style="color: gray; font-size: 14pt; margin-top: -1em;">By Robert Schulze, Michael Kolupaev.</p>
+
+<p><b style="color: green;">25.5</b> &mdash; beta (prefiltering, postfiltering, rescoring)</p>
+<p style="color: gray; font-size: 14pt; margin-top: -1em;">Developer: Shankar Iyer, Robert Schulze.</p>
+
+<p><b style="color: green;">25.8</b> &mdash; GA (index-only reading, fetch multiplier, binary quantization)</p>
+<p style="color: gray; font-size: 14pt; margin-top: -1em;">Developer: Shankar Iyer.</p>
+</section>
+
+<section class="slide">
+<h2>Vector Index</h2>
+
+<p><b>HNSW</b> algorithm with quantization options (<b>bf16</b>, <b>i8</b>, <b>b1</b>).</p>
+<p>Supports different filtering modes:<br/><b>post-filtering</b> (run ANN search, then apply other filters)<br/>or <b>pre-filtering</b> (apply regular filters, then run ANN across filtered results).</p>
+<p>Supports filtering multiplier<br/>(e.g., find 100 nearest candidates to filter and return 10).</p>
+<p>Avoids reading the data column if not necessarily.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Shankar Iyer.</p>
+</section>
+
+<section class="slide">
+<h2>QBit Data Type 🧪</h2>
+
+<p>A data type for <b>vector embeddings</b>,
+<br/>that allows tuning the search precision at runtime.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -1em;">CREATE TABLE vectors (
+    id UInt64, name String, ...
+    vec <b style="color: green;">QBit(BFloat16, 1536)</b>
+) ORDER BY ();</code></p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -1em;">SELECT id, name FROM vectors
+ORDER BY <b style="color: green;">L2DistanceTransposed</b>(vector, target, <b style="color: green;">10</b>)
+LIMIT 10;
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Raufs Dunamalijevs.</p>
+</section>
+
+<section class="slide">
+<div style="float: right; width: 60%; height: 110%; margin-right: -100px; margin-top: -20px; background: #1a1a18;">
+<img style="width: 100%;" src="pictures/qbit.jpg"/>
+</div>
+<h2>QBit Data Type 🧪</h2>
+
+<p>It uses a <b>bit-sliced</b> data layout:
+<br/>every number is sliced by bits,
+<br/>e.g., for 1536-dim vector of Float32,
+<br/>we store <b style="color: green;">32 subcolumns</b> with Nth (0..31th) bits from all dimensions.</p>
+
+<p>At the query time, we specify, how many (most significant) bits to take.</p>
+
+<p>For example, we can ask to read
+<br/>only 10 out of 32 bits.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Raufs Dunamalijevs.</p>
+</section>
+
+
+
+<section class="slide" style="background: url(https://presentations.clickhouse.com/2025-release-25.5/pictures/back5.jpg); background-size: cover;">
+<h2>Data Lakes</h2>
+</section>
+
+<section class="slide" style="background: black;">
+<img style="width: 90%;" src="pictures/iceberg.jpg"/>
+</section>
+
+<section class="slide">
+<h2>Every Data Lake Catalog</h2>
+
+<p>ClickHouse supports database engines for:</p>
+<p>&mdash; Unity catalog (since 25.3);</p>
+<p>&mdash; REST, Polaris catalog (since 24.12);</p>
+<p>&mdash; Glue catalog (since 25.3);</p>
+<p>&mdash; Hive Metastore catalog (since 25.5);</p>
+<p>&mdash; Microsoft OneLake (since 25.11);</p>
+
+</section>
+
+<section class="slide">
+<h2>Every Data Lake Format</h2>
+
+<p>ClickHouse supports table engines for:</p>
+<p>&mdash; Iceberg;</p>
+<p>&mdash; Delta Lake;</p>
+<p>&mdash; Apache Paimon;</p>
+
+<p style="margin-top: 2em;">With every <b>compatibility</b> and <b>performance</b> features for Iceberg.</p>
+</section>
+
+
+
+<section class="slide" style="background: url(https://presentations.clickhouse.com/2025-release-25.9/pictures/back10.jpg); background-size: cover;">
+<h2 style="color: white;">Performance</h2>
+</section>
+
+<section class="slide">
+<h2>Parquet Reader v3</h2>
+
+<p>A new, faster implementation of Parquet from scratch!</p>
+
+<img style="width: 100%" src="pictures/parquet1.png" />
+<div style="float: right;">
+<p style="color: gray; font-size: 14pt;">Developer: Michael Kolupaev.</p>
+</div>
+<img style="height: 50%" src="pictures/parquet2.png" />
+
+<!--
+
+ch
+SELECT * FROM 'hits.parquet' WHERE URL LIKE '%google%' ORDER BY EventTime LIMIT 10;
+SET input_format_parquet_use_native_reader_v3 = 1;
+SELECT * FROM 'hits.parquet' WHERE URL LIKE '%google%' ORDER BY EventTime LIMIT 10;
+
+-->
+
+</section>
+
+<section class="slide">
+<h2>Query Condition Cache</h2>
+
+<p>With the Query Condition Cache, ClickHouse will remember,
+<br/>which <b style="color: green;">ranges of granules</b> in data parts satisfy the condition in WHERE,
+<br/>and reuse this information as an <b style="color: green;">ephemeral index</b> for subsequent queries.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.5; white-space: pre-wrap;">SET use_query_condition_cache = 1;
+</code></p>
+</section>
+
+<section class="slide">
+<h2>Lazy Reading</h2>
+
+<p>Instead of reading data for a column, track the information about what data should be read. Then read the data only when needed.</p>
+
+<p>The column values can be carried around, filtered, but not used in calculations before the latest stages of the query pipeline.</p>
+
+<!--
+
+1. Cloud service
+
+SET query_plan_optimize_lazy_materialization = 1, query_plan_max_limit_for_lazy_materialization = 100, compatibility = '25.5', read_through_distributed_cache = 0, use_page_cache_with_distributed_cache = 0, enable_filesystem_cache = 1;
+
+SET query_plan_optimize_lazy_materialization = 1;
+SELECT view_count, like_count, dislike_count, title FROM youtube ORDER BY view_count DESC LIMIT 10;
+
+SET query_plan_optimize_lazy_materialization = 0;
+SELECT view_count, like_count, dislike_count, title FROM youtube ORDER BY view_count DESC LIMIT 10;
+
+2. https://play.clickhouse.com/play?user=play#U0VMRUNUIGRvbWFpbiwgY29udGVudCBGUk9NIG1pbmljcmF3bCBPUkRFUiBCWSByYW5rIExJTUlUIDEw
+
+SELECT domain, content FROM minicrawl ORDER BY rank LIMIT 10
+SELECT domain, content FROM minicrawl ORDER BY rank LIMIT 10 SETTINGS query_plan_optimize_lazy_materialization = 0;
+
+SELECT * FROM system.text_log_0 ORDER BY event_time_microseconds DESC LIMIT 10 SETTINGS query_plan_optimize_lazy_materialization = 0;
+SELECT * FROM system.text_log_0 ORDER BY event_time_microseconds DESC LIMIT 10 SETTINGS query_plan_optimize_lazy_materialization = 1;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Xiaozhe Yu.</p>
+</section>
+
+
+<section class="slide">
+<h2>JOIN Reordering</h2>
+
+<p>Reordering of the JOIN graph, based on the amount of data to read
+<br/>and on the column-level statistics.</p>
+
+<p><code style="font-size: 18pt; line-height: 1.25;">:) SET query_plan_optimize_join_order_limit = 10;
+:) SET allow_statistics_optimize = 1;
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Vladimir Cherkasov.</p>
+</section>
+
+
+<section class="slide">
+<img style="float: left; height: 95%; margin-left: -30px; padding-right: 30px" src="pictures/tpch.png"/>
+<h2>JOIN Reordering</h2>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Vladimir Cherkasov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Speculative Retries For Azure</h2>
+
+<img style="width: 50%;" src="pictures/azure1.png" />
+<img style="width: 50%" src="pictures/azure2.png" />
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexander Sapin.</p>
+</section>
+
+<section class="slide">
+<h2>Speculative Retries For Azure</h2>
+
+<p>The problem: <span style="color: red;">rare spikes of latencies</span> up to 5 sec, 10 sec, 15 sec, ...</p>
+<p>The reason: AWS S3 and Azure are complex distributed systems with their own shenanigans.</p>
+
+<p>This problem was solved for AWS and GCP a few years ago with:
+<br/>&mdash; using multiple connections to multiple endpoints;
+<br/>&mdash; rotating endpoints for better distribution of the load;
+<br/>&mdash; running a second request as soon as there is a soft timeout;
+<br/>&mdash; do many retries aggressively;</p>
+</section>
+
+<section class="slide">
+<h2>Speculative Retries For Azure</h2>
+
+<p>The problem: <span style="color: red;">rare spikes of latencies</span> up to 5 sec, 10 sec, 15 sec, ...</p>
+
+<p>Problem solved:
+<ol><li>Replacing the HTTP client in Azure SDK to our implementation.
+</li><li>Reusing the same logic of aggressive retries as for AWS S3.</li></ol></p>
+
+<p>Results:</p>
+<p>&mdash; <span style="color: green;">no more latency spikes!</span></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexander Sapin.</p>
+</section>
+
+
+<section class="slide" style="background: url(https://presentations.clickhouse.com/2025-release-25.6/pictures/back4.jpg); background-size: cover;">
+<h2 style="color: white;">Boring Security Features</h2>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">READ and WRITE grants for external data</h2>
+
+<p>In 25.6 and before:</p>
+<p><code>GRANT S3 ON *.* TO user</code></p>
+
+<p>In 25.7:</p>
+<p><code style="font-size: 12pt; line-height: 1.5;"><span style="color: gray;">$ cat config.d/read_write_grants.yaml</span>
+access_control_improvements:
+    enable_read_write_grants: true
+</code></p>
+<p><code>GRANT READ, WRITE ON S3 TO user</code></p>
+
+<p>Allows for limiting reads or writes to external data sources<br/>such as S3, URL, File, etc.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Artem Brustovetskii.</p>
+</section>
+
+<section class="slide">
+<h2>Grants For Specific URLs in S3</h2>
+
+<p>In 25.6 and before:</p>
+<p><code>GRANT S3 ON *.* TO user</code></p>
+
+<p>In 25.7:</p>
+<p><code>GRANT READ, WRITE ON S3 TO user</code></p>
+
+<p>In 25.8:</p>
+<p><code>GRANT READ ON S3(<b style="color: green;">'s3://foo/.*'</b>) TO user</code></p>
+
+<p>Allows a limited usage of S3 buckets and prevents data exfiltration.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Artem Brustovetskii.</p>
+</section>
+
+<section class="slide">
+<h2>Using custom IAM roles with S3</h2>
+
+<p><code style="font-size: 16pt; line-height: 1.5;">SELECT * FROM s3('s3://mybucket/path.csv', CSVWithNames,
+    extra_credentials(<b style="color: green;">role_arn</b> =
+'arn:aws:iam::111111111111:role/ClickHouseAccessRole-001'))</code></p>
+
+<p>Until recently the feature was only available in <b>ClickHouse Cloud</b>.
+<br/>Since 25.8 it is available for all ClickHouse users.</p>
+
+<p>Bonus: GCP authentication with OAuth is also available in 25.8!</p>
+</section>
+
+<section class="slide">
+<h2>EXECUTE AS user</h2>
+
+<p>Allow one user to run queries on behalf of another user:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">GRANT <b style="color: green;">IMPERSONATE</b> ON user1 TO user2;
+GRANT <b style="color: green;">IMPERSONATE</b> ON * TO user3;</code></p>
+
+<p>Run queries on behalf of another user:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;"><b style="color: green;">EXECUTE AS</b> target_user SELECT * FROM table;
+
+<b style="color: green;">EXECUTE AS</b> target_user; <span style="color: gray;">-- sets it for the session</span>
+SELECT * FROM table;
+</code></p>
+
+<p>Use-case: an app authenticates as one user, and does the work under other configured users for access rights, limits, settings, quotas, and audit.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Shankar.</p>
+</section>
+
+<section class="slide">
+<h2>ACME (Let's Encrypt) Integration 🧪</h2>
+
+<p>Automatically provision TLS certificates on a distributed cluster:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.25;">$ cat /etc/clickhouse-server/config.d/ssl.yaml
+
+http_port: 80
+acme:
+  email: <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="e6808383828487858da6858a8f858d8e89939583c885898b">[email&#160;protected]</a>
+  terms_of_service_agreed: true
+  <span style="color: gray;"># zookeeper_path: '/clickhouse/acme' # by default</span>
+  domains:
+    - domain: play.clickhouse.com
+</code></p>
+
+<p>Supports the HTTP-01 challenge.</p>
+<p>The certificates are shared across the cluster with ClickHouse Keeper.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Konstantin Bogdanov, Sergey Lokhmatikov.</p>
+</section>
+
+
+<section class="slide" style="background: url(https://presentations.clickhouse.com/2025-release-25.1/pictures/back3.jpg); background-size: cover;">
+<h2>Compatibility</h2>
+</section>
+
+<section class="slide">
+<h2>Correlated Subqueries</h2>
+
+<p style="margin-top: -1em;">&mdash; are subqueries that depend on the columns from the outer scope.</p>
+<p><code style="font-size: 14pt; line-height: 1.25; white-space: pre-wrap;">SELECT * FROM users AS <b style="color: brown;">u1</b> WHERE EXISTS <span style="color: blue;">(
+    SELECT * FROM users2 AS u2 WHERE <b style="color: brown;">u1.age</b> = u2.age)</span>
+</code></p>
+
+<p>They can appear in many different contexts: EXISTS, IN, scalar...</p>
+<p>In <b>25.4</b> we supported correlated subqueries inside the <b>WHERE</b> clause with the <b>EXISTS</b> operator.</p>
+<p>In <b style="color: green;">25.5</b> we support <b style="color: green;">scalar correlated subqueries</b> inside the <b>WHERE</b> clause
+<br/>and correlated subqueries <b style="color: green;">inside SELECT</b>!</p>
+
+<p>Now it is enough to cover the <b>TPC-H</b> test suite without modifying queries.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Dmitry Novik.</p>
+</section>
+
+<section class="slide">
+<h2>Time Data Type</h2>
+
+<p>New data types, <b>Time</b> and <b>Time64</b>, representing relative time.</p>
+
+<p><code style="line-height: 1.5;">SELECT '123:45:07'::<b>Time</b>;
+SELECT '-123:45:07.123456'::<b>Time64(6)</b>;
+SELECT now()::<b>Time</b>;</code></p>
+
+<p>For compatibility with other SQL DBMS.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Yarik Briukhovetskyi.</p>
+</section>
+
+<section class="slide">
+<h2>Geometry Data Type</h2>
+
+<p>We already had all the data types for GIS:</p>
+<p><b>Point</b>, <b>LineString</b>, <b>MultiLineString</b>, <b>Ring</b>, <b>Polygon</b>, <b>MultiPolygon</b></p>
+
+<p>Since <b>25.11</b>, we also have one unified data type: <b style="color: green;">Geometry</b></p>
+<p>&mdash; it can contain any geometry!</p>
+
+<p>New functions, <b>readWkt</b>, <b>readWkb</b>,
+<br/>which read any type of geometry as a <b>Geometry</b> value.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">ClickHouse also supports H3 and S2 indexes, Geohashes, optimized spherical and geo distances,<br/>Polygonal dictionaries for reverse geocoding, SVG rendering...</p>
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Konstantin Vedernikov.</p>
+</section>
+
+<section class="slide">
+<h2>Auto Increment</h2>
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE test
+(
+    id UInt64 DEFAULT <b style="color: green;">generateSerialID('test')</b>,
+    data String
+)
+ORDER BY id;
+
+INSERT INTO test (data) VALUES VALUES ('Hello'), ('World');
+</code></p>
+
+<p>The new, <b>generateSerialID</b> function implements named distributed counters
+<br/>(stored in Keeper), which can be used for auto-increments in tables.</p>
+<p>It is fast (thanks to batching) and safe for parallel and distributed operation.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexey Milovidov.</p>
+</section>
+
+
+<section class="slide" style="background: url(https://presentations.clickhouse.com/2025-release-25.10/pictures/back6.jpg); background-size: cover;">
+<h2>Interfaces</h2>
+</section>
+
+<section class="slide">
+<h2>SSH Interface</h2>
+
+<p>ClickHouse server supports many interfaces:
+<br/>&mdash; native;
+<br/>&mdash; HTTP;
+<br/>&mdash; GRPC;
+<br/>&mdash; MySQL compatibility;
+<br/>&mdash; PostgreSQL compatibility;
+<br/>&mdash; ZooKeeper;
+</p>
+
+<p>Now it also implements the <b>SSH</b> protocol,
+<br/>so any SSH client can connect to it directly.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: George Gamezardashvili, Nikita Mikhailov.</p>
+</section>
+
+<section class="slide">
+<h2>SSH Interface</h2>
+
+<p>Try this:</p>
+<p><code style="font-size: 32pt; padding: 1em;"><b>ssh play@play.clickhouse.com</b></code></p>
+
+<p>Thanks to the <b>embedded SSH</b> server, the interactive ClickHouse experience
+is now available from any platform, including Windows, Android, iPad...</p>
+
+</section>
+
+<section class="slide">
+<h2>Integration With Arrow Flight 🧪</h2>
+
+<p><b>Arrow Flight</b> &mdash; a protocol for data exchange in the Apache Arrow<br/>format over GRPC.</p>
+<p>Good for column-oriented databases as it keeps the data in the column representation
+(similar to the ClickHouse native protocol).</p>
+
+<p>Now ClickHouse can query other Arrow Flight <b>data sources</b>
+<br/>with the <b>arrowflight</b> table function.</p>
+
+<p>And ClickHouse can work as an Arrow Flight <b>server</b> by itself.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: zakr600, Vitaly Baranov.</p>
+</section>
+
+<section class="slide">
+<h2>Integration With Arrow Flight 🧪</h2>
+
+<p>Arrow Flight <b>server</b> in ClickHouse.</p>
+<p><code style="font-size: 14pt; line-height: 1.5;"><span style="color: gray;">$ cat config.d/flight.yaml</span>
+
+arrowflight_port: 6379
+arrowflight:
+    enable_ssl: true
+    ssl_cert_file: '/etc/clickhouse-server/cert.pem'
+    ssl_key_file: '/etc/clickhouse-server/key.pem'
+</code></p>
+
+<p>Supports both <b>put</b> and <b>get</b> commands.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: zakr600, Vitaly Baranov.</p>
+</section>
+
+<section class="slide">
+<h2>Integration With Arrow Flight 🧪</h2>
+
+<p>Arrow Flight <b>client</b> in ClickHouse.</p>
+<p><code style="font-size: 14pt; line-height: 1.5;">SELECT * FROM <b style="color: green;">arrowflight</b>('localhost:6379', 'dataset');
+</code></p>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">CREATE TABLE table_name
+ENGINE = <b style="color: green;">ArrowFlight</b>('localhost:6379', 'dataset');
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: zakr600, Vitaly Baranov.</p>
+</section>
+
+
+<section class="slide" style="background: url(https://presentations.clickhouse.com/2025-release-25.9/pictures/back7.jpg); background-size: cover;">
+<h2>Bonus</h2>
+</section>
+
+<section class="slide" style="background: black;">
+<h2 style="color: white;">ClickStack in ClickHouse Cloud</h2>
+<img style="width: 100%;" src="pictures/clickstack.png"/>
+</section>
+
+<section class="slide" style="background: url(pictures/hyperdx.gif); background-size: cover;">
+</section>
+
+<section class="slide">
+<h2>AgentHouse</h2>
+
+<p>A chat agent for ClickHouse databases,
+<br/>uses the ClickHouse MCP server.</p>
+
+<p><a href="https://llm.clickhouse.com/">https://llm.clickhouse.com/</a></p>
+<p>&mdash; a public instance connected to ClickHouse demo datasets.</p>
+
+<p>Now built-in your ClickHouse Cloud services!</p>
+
+<!-- How has the ClickHouse popularity grown in 2025? -->
+</section>
+
+<section class="slide" style="background: url(https://clickhouse.com/uploads/ask_ai_d57107b308.gif); background-size: cover;">
+</section>
+
+<section class="slide">
+<h2>ClickPipes</h2>
+
+<p>&mdash; a service for data transfer into ClickHouse Cloud,
+<br/>&emsp; synchronization and change data capture from external databases.</p>
+
+<p>You can replicate your <b>PostgreSQL</b> database
+<br/>into ClickHouse for fast queries.</p>
+<p>Now also works for <b>MySQL</b> and <b>MongoDB</b>!</p>
+
+</section>
+
+<section class="slide" style="background: url(pictures/final.jpg); background-size: cover;">
+<h2>Q&amp;A</h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+
