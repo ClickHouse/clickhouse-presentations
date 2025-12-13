@@ -192,14 +192,14 @@ SET allow_experimental_lightweight_update = 1;
     message String,
     ...
     INDEX inv_idx(message)
-        TYPE <b style="color: green;">text</b>(tokenizer = 'default')
+        TYPE <b style="color: green;">text</b>(tokenizer = 'splitByNonAlpha')
         GRANULARITY 128
 )
 ENGINE = SharedMergeTree ORDER BY id;
 
 SELECT ... WHERE <b style="color: green;">hasToken</b>(message, 'DDLWorker');
-SELECT ... WHERE <b style="color: green;">searchAll</b>(message, ['peak', 'memory']);
-SELECT ... WHERE <b style="color: green;">searchAny</b>(message, tokens('01442_merge_detach_attach'));
+SELECT ... WHERE <b style="color: green;">hasAllTokens</b>(message, ['peak', 'memory']);
+SELECT ... WHERE <b style="color: green;">hasAnyTokens</b>(message, tokens('01442_merge_detach_attach'));
 </code></p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 3em;">Developers: Anton Popov, Elmi Ahmadov, Jimmy Aguilar Mena.</p>
