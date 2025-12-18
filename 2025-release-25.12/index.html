@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 25.12 Call</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+         code { display: block; white-space: pre; background-color: #EEE; }
+         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+         .slide table tr:not(:last-of-type)>* { background: none; }
+         .cell { font-family: Monospace; width: 1.5em; height: 1.5em; display: inline-block; border: 3px solid white; background-color: lightblue; text-align: center; line-height: 1.3em; }
+         .cell-num { font-family: Monospace; width: 1.5em; height: 1.5em; display: inline-block; border: 3px solid white; background-color: lightgreen; text-align: center; line-height: 1.3em; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 25.12 Call</h1>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/back1.jpg); background-size: cover;">
+        <h1 style="margin-top: 25px; line-height: 110%; font-size: 56pt; color: black; text-align: center;">ClickHouse Release 25.12</h1>
+    </section>
+
+<section class="slide">
+<h2>ClickHouse release 25.12</h2>
+<p>1. 🎄 (45 min) What's new in ClickHouse 25.12.</p>
+<p>2. 🎅 (10 min) Guest Talk (from Santa).</p>
+<p>3. 🎊 (5 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
+<h2><span class="hilite">Release 25.12</span></h2>
+<p><span class="hilite">ClickHouse Christmas Release.</span></p>
+<p><span class="hilite">— 26 new features 🎄</span></p>
+<p><span class="hilite">— 31 performance optimizations ⛸️</span></p>
+<p><span class="hilite">— 129 bug fixes ☃️</span></p>
+</section>
+<!--
+
+Small
+
+HMAC
+dictGetKeys
+Non-constant IN
+INSERT INTO ALIAS columns
+Settings for projections
+Recreating secondary indices on alters
+S3Queue/AzureQueue supports tag and move, non-consuming SELECTs
+- Input format for aggregate function states
+Buffers format
+Download in the UI
+
+Performance
+
+Automatic parallel replicas, Parallel replicas GA
+Faster ORDER BY LIMIT N
+Skip indices with mixed AND/OR
+Reading in order through JOINs
+Faster lazy reading
+Faster minmax indices
+Inplace filtering
+Unused columns in JOINs
+
+Main
+
+Text Index v3, Beta, Preprocessors for text indices
+XRay
+DPSize, Greedy join reordering algorithms
+
+Data Lakes
+
+ORDER BY for Iceberg tables
+CDF for Delta
+
+Bonus
+
+pg_clickhouse
+clickhouse.build
+Cost2Bench
+
+Reading
+
+Parallelizing hash map
+pg_clickhouse
+NYC AI Agents Hackathon
+Postgres CDC in ClickHouse, A year in review
+
+
+-->
+
+<section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
+<h2><span>Small And Nice Features</span></h2>
+</section>
+
+<section class="slide">
+<h2>HMAC 🍬</h2>
+
+<p>A function for message authentication using a (shared) secret key:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">:) SELECT <b style="color: green;">HMAC</b>('SHA256', 'ClickHouse is good', key)
+</code></p>
+
+<p><b>HMAC</b> is used in many APIs, especially web hooks.</p>
+<p>Now you can use ClickHouse server as a web hook and validate
+<br/>the message authenticity on INSERT:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">INSERT INTO logs SELECT raw_blob::JSON FROM input()
+WHERE getClientHTTPHeader('X-Hub-Signature-256')
+   = 'sha256=' || hex(<b style="color: green;">HMAC</b>('SHA256', raw_blob, 'key'))
+FORMAT RawBLOB;
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Mikhail f. Shiryaev.</p>
+</section>
+
+
+<section class="slide">
+<h2>A New Function For Dictionaries 🍭</h2>
+
+<p style="margin-top: -1em;">ClickHouse has a unique feature, <b>dictionaries</b>
+<br/>&mdash; tables for <i style="color: green;">fast key-value lookups</i> using specialized data structures
+<br/><span style="color: gray;">(from hash tables to IP ranges, regexp trees, and reverse geocoding)</span>,
+<br/>and custom data sources <span style="color: gray;">(regular tables or external databases,
+<br/>like Redis, Cassandra, MySQL, PostgreSQL...)</span>.</p>
+
+<p><code style="font-size: 12pt; line-height: 1.25; overflow-x: hidden;">CREATE DICTIONARY taxi_zone_dictionary
+(
+  LocationID UInt16 DEFAULT 0, <span style="color: gray;">-- key</span>
+  Borough String,              <span style="color: gray;">-- attributes</span>
+  Zone String,
+  service_zone String
+)
+PRIMARY KEY LocationID
+SOURCE(HTTP(URL 'https://datasets-documentation.s3.eu-west-3.amazonaws.com/nyc-taxi/taxi_zone_lookup.csv' FORMAT 'CSVWithNames'))
+LIFETIME(MIN 0 MAX 0) LAYOUT(HASHED_ARRAY());
+
+SELECT dictGet('taxi_zone_dictionary', 'Borough', 2) <span style="color: gray;">== 'Brooklyn'; -- lookup by key</span>
+</code></p>
+</section>
+
+<section class="slide">
+<h2>dictGetKeys 🍭</h2>
+
+<p>A new function in <b>25.12</b>, <b style="color: green;">dictGetKeys</b>
+<br/>does a reverse lookup from a value to a set of keys.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">:) SELECT dictGetKeys('taxi_zone_dictionary', 'Borough', 'Brooklyn');
+
+[2] <span style="color: gray;">-- there is only one Brooklyn, and it has id 2 in the dictionary</span></code></p>
+
+<p>Automatically creates a per-query cache, so that bulk lookups will be fast.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Nihal Z. Miaji</p>
+</section>
+
+
+<section class="slide">
+<h2>Non-constant IN 🍫</h2>
+
+<p style="margin-top: -1em;"><code style="font-size: 12pt; line-height: 1.5; white-space: pre-wrap;"><span style="color: gray;">-- constant list: works</span>
+:) SELECT count() FROM hits WHERE SearchPhrase IN ('смотреть', 'купить');
+<span style="color: gray;">-- table: works</span>
+:) SELECT count() FROM hits WHERE SearchPhrase IN phrases;
+<span style="color: gray;">-- subquery: works</span>
+:) SELECT count() FROM hits WHERE SearchPhrase IN (SELECT phrase FROM phrases);
+
+<span style="color: gray;">-- non-constant list, before 25.12:</span>
+:) SELECT count() FROM hits WHERE SearchPhrase IN (
+    'смотреть', 'купить', topLevelDomain(URL) = 'com' ? 'sell' : 'buy')
+
+<span style="color: brown;">Code: 1. DB::Exception: Function 'in' is supported only if second argument is constant or a table expression. (UNSUPPORTED_METHOD)</span>
+</code></p>
+
+<p><b>25.12</b>: <b style="color: green;">everything works!</b></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Yarik Briukhovetskyi.</p>
+</section>
+
+
+<section class="slide">
+<h2>INSERT Into ALIAS Columns 🍰</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">CREATE TABLE logs
+(
+    URL String,
+    URLDomain <b>ALIAS</b> domain(URL),
+    Referer String,
+    <b style="color: green;">Referrer</b> <b>ALIAS</b> Referer
+)</span></code></p>
+
+<p>Now when an ALIAS column is a trivial expression, you can use it in INSERTs:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">INSERT INTO logs (URL, <b style="color: green;">Referrer</b>) VALUES
+('https://clickhouse.com/', 'https://www.google.com/');</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Shaurya Mohan.</p>
+</section>
+
+
+<section class="slide">
+<h2>Settings For Projections 🧁</h2>
+
+<p>You can use projections to have different sort orders of a table
+<br/>or maintain preaggregated data to accelerate queries:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.25;">CREATE TABLE pageviews (
+    CounterID UInt32,
+    UserID UInt64,
+    EventTime DateTime,
+    ...
+    <b>PROJECTION by_counters (
+        SELECT CounterID, count(), uniq(UserID)
+        GROUP BY CounterID</b> <span style="color: gray;">-- aggregating projection</span>
+    <b>)</b> <b style="color: green;">(WITH SETTINGS index_granularity = 128)</b>
+) ORDER BY (CounterID, UserID, EventTime)
+</code></p>
+
+<p>New in <b>25.12</b>: an option to specify custom SETTINGS for projections.
+<br/>&mdash; works in CREATE and ALTER statements.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: -0.5em;">Developer: Amos Bird.</p>
+</section>
+
+
+<section class="slide">
+<h2>Index Behavior On ALTER 🍩</h2>
+
+<p>Before 25.12 you could not ALTER a column used in secondary indices:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.5;">:) CREATE TABLE test (s String, x UInt64, <b style="color: blue;">INDEX idx (x) TYPE minmax</b>) ORDER BY s;
+:) ALTER TABLE test MODIFY COLUMN x Nullable(UInt64);
+
+<span style="color: brown;">Exception: Trying to ALTER `x` column which is a part of the index `idx`.</span>
+</code></p>
+
+<p>In 25.12, it works!</p>
+<p>Controlled by a new setting, <b>alter_column_secondary_index_mode</b> =
+<br/>'throw' | 'drop' | 'rebuild' | 'compatibility'
+</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Raúl Marín.</p>
+</section>
+
+
+<section class="slide">
+<h2>S3Queue: Tag and Move Actions 🎈</h2>
+
+<p>The <b>S3Queue</b> table engine allows continuous consumption of files from S3.
+<br/><span style="color: gray; font-size: 14pt;">Also has a sister, <b>AzureQueue</b>.</span></p>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">CREATE TABLE queue (name String, value UInt32)
+ENGINE = S3Queue('s3://clickhouse-public-datasets/path/*.csv.gz')
+SETTINGS mode = 'unordered', <b>after_processing = 'keep'</b>;
+</code></p>
+
+<p><b>after_processing</b> actions:
+<br/>&mdash; <span style="color: gray;">keep</span>
+<br/>&mdash; <span style="color: gray;">delete</span>
+<br/>&mdash; <b style="color: green;">move (25.12)</b>: move a file to a different path or bucket
+<br/>&mdash; <b style="color: green;">tag (25.12)</b>: attach a tag to a file (after_processing_tag_key/_value)
+</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Murat Khairulin.</p>
+</section>
+
+
+<section class="slide">
+<h2>A New Format, Buffers 🪅</h2>
+
+<p style="margin-top: -1em;">A new format, <b>Buffers</b>, designed for interop with WebAssembly.</p>
+<p>Similar to Native and Arrow, but witout headers.</p>
+<p>Usable for in-memory data exchange when the types and serialization formats are pre-negotiated.</p>
+
+<p><code style="font-size: 12pt; line-height: 1;">$ ch -q "SELECT number, toString(number) FROM numbers(5) FORMAT Buffers" | xxd -c8
+00000000: 0200 0000 0000 0000  ........ - number of columns
+00000008: 0500 0000 0000 0000  ........ - number of rows
+00000010: 2800 0000 0000 0000  (....... - buffer size of the column 1 (40 bytes)
+00000018: 0000 0000 0000 0000  ........ - elements of the column 1
+00000020: 0100 0000 0000 0000  ........
+00000028: 0200 0000 0000 0000  ........
+00000030: 0300 0000 0000 0000  ........
+00000038: 0400 0000 0000 0000  ........
+00000040: 0a00 0000 0000 0000  ........ - buffer size of the column 2 (10 bytes)
+00000048: 0130 0131 0132 0133  .0.1.2.3 - elements of the column 2
+00000050: 0134                 .4
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Nihal Z. Miaji.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
+<h2><span style="color: black;"><span class="hilite">Performance Improvements</span></h2>
+</section>
+
+<section class="slide" style="overflow-y: scroll; outline: none;">
+<h2>Automatic Parallel Replicas 🛷</h2>
+
+<p>25.12 introduces <b>automatic_parallel_replicas_mode</b>,
+<br/>which collects statistics in the runtime and decides when
+<br/>&mdash; a query is heavy enough and has to be run distributed;
+<br/>&mdash; a query is quick or has a lot of network transfer;
+</p>
+
+<img src="pictures/pr.png" style="width: 100%">
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Nikita Taranov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Data Skipping During Sorting 🍾</h2>
+
+<p>Let's suppose we have the following query:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT * FROM table ORDER BY something LIMIT 100</code></p>
+
+<p>It reads the data in a streaming way and maintans top 100 in memory,
+<br/><span style="color: gray;">we already have many more optimizations for it: lazy reading, read in order...</span></p>
+
+<p style="margin-right: -3em;">New in <b>25.12</b>: it also uses the lower boundary value of the accumulated top
+<br/>for <b style="color: green;">filtering during reading</b> of subsequent granules, and quickly skipping them.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">SET use_skip_indexes_for_top_k = 1,
+    use_top_k_dynamic_filtering = 1;
+</code></p>
+
+<!--
+
+Playground:
+
+chc
+
+SELECT URL, EventTime FROM hits WHERE URL LIKE '%google%' ORDER BY EventTime LIMIT 10;
+
+SET use_top_k_dynamic_filtering = 1;
+
+SELECT URL, EventTime FROM hits WHERE URL LIKE '%google%' ORDER BY EventTime LIMIT 10;
+
+ALTER TABLE hits ADD INDEX idx_time (EventTime) TYPE minmax;
+ALTER TABLE hits MATERIALIZE INDEX idx_time;
+
+SELECT parts_to_do, is_done FROM system.mutations WHERE database = 'default' AND table = 'hits';
+
+SET use_skip_indexes_for_top_k = 1, use_skip_indexes_on_data_read = 1;
+
+SELECT parts_to_do, is_done FROM system.mutations WHERE database = 'default' AND table = 'hits';
+
+-->
+
+<p style="float: right;">Demo.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Shankar Iyer.</p>
+</section>
+
+
+<section class="slide">
+<h2>Faster "Lazy Reading" 🧦</h2>
+
+<p>Starting from <b>25.12</b> even queries with a large LIMIT
+<br/>will benefit from lazy reading.</p>
+
+<p>Demo</p>
+
+<!--
+
+./clickhouse-25.10 server
+
+select * from hits ORDER BY EventTime limit 100000 format Hash settings query_plan_max_limit_for_lazy_materialization = 0;
+
+./clickhouse-server
+
+select * from hits ORDER BY EventTime limit 100000 format Hash settings query_plan_max_limit_for_lazy_materialization = 0;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Nikolai Kochetov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Better Application Of Skip Indices 🥧</h2>
+
+<p>Can indices use complex conditions with a mix of AND/OR?</p>
+
+<p><code style="font-size: 12pt; line-height: 1.25;">SELECT id FROM tab WHERE
+    (v1 BETWEEN 10 AND 20 AND v2 BETWEEN 10 AND 20)
+ OR (v1 BETWEEN 100 AND 2000 AND v2 BETWEEN 100 AND 2000)
+ OR (v1 > 9000 AND v2 > 9000)
+</code></p>
+
+<p>Before <b>25.12</b>: <span style="color: red;">only primary key</span> can use complex conditions.</p>
+<p>Since <b>25.12</b>: <span style="color: green;">all types of skip indices</span> can use complex conditions.</p>
+
+<p><b>25.12</b> also sped up the analysis of huge minmax indices!</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Shankar Iyer.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">In-Place Filtering 🍪</h2>
+
+<p>A low-level optimization by avoiding memory allocation for columns and improving cache locality when the original column is not referenced after filtering (WHERE/PREWHERE).</p>
+
+<p>Demo</p>
+
+<!--
+
+./clickhouse-25.11 server
+
+clickhouse-benchmark --query "SELECT sum(cityHash64(SearchPhrase)) FROM hits PREWHERE SearchPhrase != ''"
+
+./clickhouse-server
+
+clickhouse-benchmark --query "SELECT sum(cityHash64(SearchPhrase)) FROM hits PREWHERE SearchPhrase != ''"
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Xiaozhe Yu.</p>
+</section>
+
+
+<section class="slide">
+<h2>Faster JOINs 🎀</h2>
+
+<p><code style="font-size: 12pt; line-height: 1.25;">SELECT <b style="color: green;">a</b> FROM (SELECT <b style="color: green;">a</b>, <b style="color: brown;">b</b> FROM table1) AS t1
+   INNER JOIN (SELECT <b style="color: green;">a</b>, <b style="color: red;">b</b> FROM table2) AS t2 ON <b style="color: green;">t1.a</b> = <b style="color: green;">t2.a</b>
+WHERE <b style="color: brown;">t1.b</b> != 'wtf' AND <b style="color: red;">t2.b</b> != 'xyz'</code></p>
+
+<p>Both conditions are pushed down as filters into subqueries...
+<br/>But since <b>25.12</b>, the column <b style="color: red;">t2.b</b> is eagerly removed from the blocks before joining.</p>
+
+<p>Demo</p>
+
+<!--
+
+ch
+
+WITH 100000. AS cnt
+SELECT count()
+FROM
+(
+    SELECT
+        number AS k,
+        sipHash64(arrayStringConcat(arrayMap(x -> number, range(number % 1000)), ';')) AS v
+    FROM numbers(cnt)
+) AS l
+INNER JOIN
+(
+    SELECT
+        number AS k,
+        sipHash64(arrayStringConcat(arrayMap(x -> number, range(number % 1000)), ';')) AS v
+    FROM numbers(cnt)
+) AS r ON l.k = r.k
+WHERE (l.v != 12094310375782415882) AND (r.v != 12094310375782415882)
+SETTINGS query_plan_use_logical_join_step = 0;
+
+WITH 100000. AS cnt
+SELECT count()
+FROM
+(
+    SELECT
+        number AS k,
+        sipHash64(arrayStringConcat(arrayMap(x -> number, range(number % 1000)), ';')) AS v
+    FROM numbers(cnt)
+) AS l
+INNER JOIN
+(
+    SELECT
+        number AS k,
+        sipHash64(arrayStringConcat(arrayMap(x -> number, range(number % 1000)), ';')) AS v
+    FROM numbers(cnt)
+) AS r ON l.k = r.k
+WHERE (l.v != 12094310375782415882) AND (r.v != 12094310375782415882)
+SETTINGS query_plan_use_logical_join_step = 1;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Nikolai Kochetov.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back3.jpg); background-size: cover;">
+<h2 style="font-size: 32pt; margin-left: -1em;"><span class="hilite">Something Interesting</span></h2>
+</section>
+
+<section class="slide">
+<h2>Text Index 🎁</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -2em;">CREATE TABLE text_log
+(
+    message String,
+    ...
+    INDEX inv_idx(message)
+        TYPE <b style="color: green;">text</b>(
+            tokenizer = 'splitByNonAlpha',
+            preprocessor = lowerUTF8(normalizeUTF8NFKC(message)))
+        GRANULARITY 64
+) ORDER BY id;
+
+SELECT ... WHERE <b style="color: green;">hasToken</b>(message, 'DDLWorker');
+SELECT ... WHERE <b style="color: green;">hasAllTokens</b>(message, ['peak', 'memory']);
+SELECT ... WHERE <b style="color: green;">hasAnyTokens</b>(message, tokens('01442_merge_detach_attach'));
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Anton Popov, Elmi Ahmadov, Jimmy Aguilar Mena.</p>
+</section>
+
+<section class="slide">
+<h2>Text Index v3 🎁</h2>
+
+<p>A new storage format, optimized for object storage.</p>
+
+<p>Demo</p>
+
+<!--
+
+chc --connection v2
+chc --connection v3
+
+SELECT formatReadableQuantity(total_rows), formatReadableSize(total_bytes), formatReadableSize(total_bytes_uncompressed) FROM system.tables WHERE database = 'default' AND table = 'text_log_inverted_index';
+
+SET enable_filesystem_cache = 0;
+
+SELECT
+    instance_type,
+    count()
+FROM text_log_inverted_index
+WHERE hasAllTokens(message, 'total memory limit exceeded')
+GROUP BY instance_type
+ORDER BY count() DESC
+LIMIT 10;
+
+SELECT count()
+FROM text_log_inverted_index
+WHERE hasAllTokens(message, 'Committing part')
+SETTINGS enable_filesystem_cache = 1;
+
+SET enable_filesystem_cache = 1;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Anton Popov.</p>
+</section>
+
+<section class="slide">
+<h2>Text Index Is Beta 🎁</h2>
+
+<p>SET <b>enable_full_text_index</b>;</p>
+
+<p>Before 25.12 the text index was experimental, and there were no compatibility guarantees.</p>
+<p>The current v3 format will be <b style="color: green;">backward-compatible</b>
+<br/>with the path to GA in the next two releases.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developers: Anton Popov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Profiling And Tracing With X-Ray 🎇</h2>
+
+<p>Now you can <b>instrument</b>, <b>trace</b>, and <b>profile</b> almost any function in the ClickHouse codebase,
+and it works with unmodified, production build.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SYSTEM INSTRUMENT ADD `FunctionFactory::tryGet` LOG ENTRY 'Hi!';
+SYSTEM INSTRUMENT ADD `QueryMetricLog::startQuery` SLEEP EXIT 0.5;
+SYSTEM INSTRUMENT ADD `QueryMetricLog::startQuery` PROFILE;</code></p>
+
+<p>This is an advanced feature for ClickHouse engineers.</p>
+<p>But if you are curious, welcome to <b>FOSDEM 2026</b>, LLVM dev room, Jan 31th.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Pablo Marcos.</p>
+</section>
+
+
+<section class="slide">
+<h2>A New JOIN Reordering 🕛</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">SET query_plan_optimize_join_order_algorithm = '<b style="color: green;">dpsize</b>,greedy';</code></p>
+
+<p>A new, DPSize algorithm allows more exhaustive search
+<br/>for the optimal JOIN order.</p>
+<p>The same algorithm is used in Postgres.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Alexander Gololobov.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back2.jpg); background-size: cover;">
+<h2 style="font-size: 32pt; margin-left: -1em;"><span class="hilite">Data Lakes</span></h2>
+</section>
+
+
+<section class="slide">
+<h2>ORDER BY in Iceberg Tables ❄️</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -2em;">CREATE TABLE hits (
+    CounterID UInt32,
+    EventTime DateTime,
+    ...
+) ENGINE = IcebergS3(...)
+ORDER BY (CounterID, EventTime DESC)
+</code></p>
+
+<p style="margin-right: -1em;">Data parts are sorted on INSERT, and SELECTs use the order for optimal reads.</p>
+
+<p><b style="color: green;">Much like MergeTree!</b></p>
+
+<p style="color: gray; font-size: 14pt;">ClickHouse and Spark are the only engines that utilize part-level sorting in Iceberg.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Konstantin Vedernikov.</p>
+</section>
+
+<section class="slide">
+<h2>Change Data Feed For Delta Lake 🥂</h2>
+
+<p>&mdash; a feature that lets you automatically capture and query row-level data changes, such as inserts, updates, and deletes between versions of a DeltaLake.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -2em;">SELECT *, _change_type, _commit_version, _commit_timestamp
+FROM deltaLake(...)
+SETTINGS
+    delta_lake_snapshot_start_version = 123,
+    delta_lake_snapshot_end_version = 456;
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developers: Kseniia Sumarokova.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back10.jpg); background-size: cover;">
+<h2><span class="hilite">Guest Talk</span></h2>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back9.jpg); background-size: cover;">
+<h2><span class="hilite">Bonus</span></h2>
+</section>
+
+<section class="slide" style="background: black url(https://clickhouse.com/uploads/chbuild_8f68f3f55e.png) center no-repeat; background-size: contain;">
+<h2 style="display: block; position: absolute; bottom: 0; left: 25%;"><a href="https://clickhouse.build/">https://clickhouse.build/</a></h2>
+</section>
+
+<section class="slide" style="background: black url(pictures/bench2cost.png); background-size: cover;">
+</section>
+
+<section class="slide" style="background: black url(https://clickhouse.com/uploads/Blog_Costs_animation01_small_de9ac301cc.gif) center no-repeat; background-size: contain;">
+</section>
+
+<section class="slide" style="background: url(pictures/wing.jpg); background-size: cover;">
+<h2>Meetups</h2>
+<p style="line-height: 1.5">
+<span class="hilite">&mdash; 🇮🇱 Tel Aviv, Dec 29</span>
+<br/><span class="hilite">&mdash; 🇺🇸 Iceberg Meetup, Menlo Park, CA, Jan 21</span>
+<br/><span class="hilite">&mdash; 🇫🇷 Data &amp; AI Paris, Jan 22</span>
+<br/><span class="hilite">&mdash; 🇺🇸 Iceberg Meetup, New York, Jan 23</span>
+<br/><span class="hilite">&mdash; 🇫🇷 Paris, Jan 28</span>
+<br/><span class="hilite">&mdash; 🇧🇪 Iceberg Meetup, Brussels, Jan 30</span>
+<br/><span class="hilite">&mdash; 🇧🇪 FOSDEM 2026, Brussels, Jan 31..Feb 1</span>
+</p>
+</section>
+
+<section class="slide">
+<h2>Reading Corner 📖</h2>
+
+<img style="float: right; width: 30%; margin-right: -3em; image-rendering: pixelated; margin-top: -1em;" src="pictures/blog.png"/>
+<p><a href="https://clickhouse.com/blog/">https://clickhouse.com/blog/</a></p>
+
+<p style="line-height: 1.25;">
+&mdash; How the 5 major cloud data warehouses really bill you
+<br/>&mdash; How the 5 major cloud data warehouses compare on cost-performance
+<br/>&mdash; Introducing pg_clickhouse
+<br/>&mdash; Introducing clickhouse.build
+<br/>&mdash; How to use Rust in ClickHouse: avoiding a full rewrite
+<br/>&mdash; Parallelizing ClickHouse aggregation
+<br/>&mdash; Observability at Canva with ClickHouse
+<br/>&mdash; AI agents hackathon
+</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back8.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
+<h2 style="color: white; margin-left: -1em;">Q&amp;A</a></h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>
+
