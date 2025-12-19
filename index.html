@@ -1,139 +1,959 @@
 <!DOCTYPE html>
-
+<html lang="en">
 <head>
-  <title>clickhouse-presentations</title>
-  <meta http-equiv="Content-Security-Policy"
-    content="default-src data: 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self' api.github.com ; img-src 'self' data:; style-src 'self' 'unsafe-inline';base-uri 'self';form-action 'self';">
-  <meta name="google-site-verification" content="av5f5NWK2LviDFxJAo3cy0v4ZU5OOi8i98ntGKF25SI" />
-  <link href="favicon.ico" rel="icon" type="image/x-icon">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>ClickHouse Theater</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+            background: #222;
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        .header {
+            text-align: center;
+            padding: 40px 20px 30px 20px;
+            backdrop-filter: blur(10px) brightness(0.5);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #ff0, #fff, #ff0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .links {
+            color: gray;
+            font-size: 1.2rem;
+            margin-top: 20px;
+        }
+
+        .links a {
+            color: #887;
+            text-decoration: none;
+            padding: 1em;
+        }
+
+        .links a:hover {
+            color: #FFD;
+        }
+
+        .search-container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        #search {
+            width: 100%;
+            padding: 15px 20px;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        #search::placeholder {
+            color: #888;
+        }
+
+        #search:focus {
+            background: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 0 20px rgba(249, 199, 79, 0.3);
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+
+        .grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 25px;
+            justify-content: center;
+        }
+
+        .card {
+            width: 320px;
+            background: black;
+            overflow: hidden;
+            text-decoration: none;
+            color: #fff;
+            transition: all 0.1s ease;
+            box-shadow: 0px 0px 30px black;
+        }
+
+        .card:hover {
+            transform: translateY(-10px) scale(1.03);
+            box-shadow: 0 20px 40px black;
+        }
+
+        .card img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .no-preview {
+            width: 100%;
+            height: 180px;
+            background: linear-gradient(135deg, #2d2d44 0%, #1a1a2e 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #555;
+            font-size: 0.9em;
+        }
+
+        .card-title {
+            color: gray;
+            padding: 0.5rem 1rem;
+            font-size: 0.95em;
+            line-height: 1.4;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .card.hidden {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2em;
+            }
+
+            .card {
+                width: 280px;
+            }
+
+            .header {
+                padding: 20px 15px;
+            }
+        }
+    </style>
 </head>
-
 <body>
-  <div id="container">
-    <h1>
-      <a href="https://presentations.clickhouse.com/">clickhouse-presentations</a>
-    </h1>
-    <hr />
-    <p>
-      Presentations about ClickHouse, an open-source real-time analytics database management system.
-    </p>
-    <p>
-      <a href="https://github.com/ClickHouse/ClickHouse">Main repository</a>
-    </p>
-    <p><a href="https://clickhouse.com/">Official website</a></p>
-    <p><a href="https://www.youtube.com/c/ClickHouseDB">YouTube channel</a></p>
-    <p><a href="https://clickhouse.com/docs/en/">Documentation</a></p>
-    <p>
-      This site is open source.
-      <a href="https://github.com/ClickHouse/clickhouse-presentations/edit/master/index.html">Improve this page</a>.
-    </p>
-    <hr />
-    <div id="listing">
-      <h2>Loading...</h2>
+    <div class="header">
+        <h1>ClickHouse Theater</h1>
+        <div class="search-container">
+            <input type="text" id="search" placeholder="Search presentations..." autocomplete="off">
+        </div>
+        <div class="links">
+            <a href="https://github.com/ClickHouse/ClickHouse">Source code</a>
+            <a href="https://github.com/ClickHouse/clickhouse-presentations">All presentations</a>
+        </div>
     </div>
-  </div>
+
+    <div class="container">
+        <div class="grid" id="grid">
+            <a href="2025-release-25.12/" class="card" data-title="clickhouse: release 25.12 call">
+    <img src="2025-release-25.12/pictures/preview.jpg" alt="ClickHouse: Release 25.12 Call" loading="lazy">
+    <div class="card-title">ClickHouse: Release 25.12 Call</div>
+</a>
+<a href="2025-release-25.11/" class="card" data-title="clickhouse: release 25.11 call">
+    <img src="2025-release-25.11/pictures/preview.jpg" alt="ClickHouse: Release 25.11 Call" loading="lazy">
+    <div class="card-title">ClickHouse: Release 25.11 Call</div>
+</a>
+<a href="2025-release-25.10/" class="card" data-title="clickhouse: release 25.10 call">
+    <img src="2025-release-25.10/pictures/preview.jpg" alt="ClickHouse: Release 25.10 Call" loading="lazy">
+    <div class="card-title">ClickHouse: Release 25.10 Call</div>
+</a>
+<a href="2025-release-25.9/" class="card" data-title="clickhouse: release 25.9 call">
+    <img src="2025-release-25.9/pictures/preview.jpg" alt="ClickHouse: Release 25.9 Call" loading="lazy">
+    <div class="card-title">ClickHouse: Release 25.9 Call</div>
+</a>
+<a href="2025-release-25.8/" class="card" data-title="clickhouse: release 25.8 call">
+    <img src="2025-release-25.8/pictures/preview.jpg" alt="ClickHouse: Release 25.8 Call" loading="lazy">
+    <div class="card-title">ClickHouse: Release 25.8 Call</div>
+</a>
+<a href="2025-release-25.7/" class="card" data-title="clickhouse: release 25.7 call">
+    <img src="2025-release-25.7/pictures/preview.jpg" alt="ClickHouse: Release 25.7 Call" loading="lazy">
+    <div class="card-title">ClickHouse: Release 25.7 Call</div>
+</a>
+<a href="2025-release-25.6/" class="card" data-title="clickhouse: release 25.6 call">
+    <img src="2025-release-25.6/pictures/preview.jpg" alt="ClickHouse: Release 25.6 Call" loading="lazy">
+    <div class="card-title">ClickHouse: Release 25.6 Call</div>
+</a>
+<a href="2025-release-25.5/" class="card" data-title="clickhouse: release 25.5 call">
+    <img src="2025-release-25.5/pictures/preview.jpg" alt="ClickHouse: Release 25.5 Call" loading="lazy">
+    <div class="card-title">ClickHouse: Release 25.5 Call</div>
+</a>
+<a href="2025-release-25.4/" class="card" data-title="clickhouse: release 25.4 call">
+    <img src="2025-release-25.4/pictures/preview.jpg" alt="ClickHouse: Release 25.4 Call" loading="lazy">
+    <div class="card-title">ClickHouse: Release 25.4 Call</div>
+</a>
+<a href="2025-release-25.3/" class="card" data-title="clickhouse: release 25.3 call">
+    <img src="2025-release-25.3/pictures/preview.jpg" alt="ClickHouse: Release 25.3 Call" loading="lazy">
+    <div class="card-title">ClickHouse: Release 25.3 Call</div>
+</a>
+<a href="2025-release-25.2/" class="card" data-title="clickhouse: release 25.2 call">
+    <img src="2025-release-25.2/pictures/preview.jpg" alt="ClickHouse: Release 25.2 Call" loading="lazy">
+    <div class="card-title">ClickHouse: Release 25.2 Call</div>
+</a>
+<a href="2025-release-25.1/" class="card" data-title="clickhouse: release 25.1 webinar">
+    <img src="2025-release-25.1/pictures/preview.jpg" alt="ClickHouse: Release 25.1 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 25.1 Webinar</div>
+</a>
+<a href="2025-p99/" class="card" data-title="rust in clickhouse">
+    <img src="2025-p99/pictures/preview.jpg" alt="Rust In ClickHouse" loading="lazy">
+    <div class="card-title">Rust In ClickHouse</div>
+</a>
+<a href="2025-meetupsf-3/top_features/" class="card" data-title="clickhouse: my favorite features 2025">
+    <img src="2025-meetupsf-3/top_features/pictures/preview.jpg" alt="ClickHouse: My Favorite Features 2025" loading="lazy">
+    <div class="card-title">ClickHouse: My Favorite Features 2025</div>
+</a>
+<a href="2025-meetup-zagreb/new_features/" class="card" data-title="clickhouse: my favorite features of 2024">
+    <img src="2025-meetup-zagreb/new_features/pictures/preview.jpg" alt="ClickHouse: My Favorite Features of 2024" loading="lazy">
+    <div class="card-title">ClickHouse: My Favorite Features of 2024</div>
+</a>
+<a href="2025-meetup-seattle-2/new_features/" class="card" data-title="clickhouse: top highlights 2024/2025">
+    <img src="2025-meetup-seattle-2/new_features/pictures/preview.jpg" alt="ClickHouse: Top Highlights 2024/2025" loading="lazy">
+    <div class="card-title">ClickHouse: Top Highlights 2024/2025</div>
+</a>
+<a href="2025-meetup-seattle/" class="card" data-title="building an analytic application with clickhouse">
+    <img src="2025-meetup-seattle/pictures/preview.jpg" alt="Building an Analytic Application With ClickHouse" loading="lazy">
+    <div class="card-title">Building an Analytic Application With ClickHouse</div>
+</a>
+<a href="2025-fosdem/dns/" class="card" data-title="rdns map in your hands">
+    <img src="2025-fosdem/dns/pictures/preview.jpg" alt="rDNS Map In Your Hands" loading="lazy">
+    <div class="card-title">rDNS Map In Your Hands</div>
+</a>
+<a href="2024-release-24.12/" class="card" data-title="clickhouse: release 24.12 webinar">
+    <img src="2024-release-24.12/pictures/preview.jpg" alt="ClickHouse: Release 24.12 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 24.12 Webinar</div>
+</a>
+<a href="2024-release-24.11/" class="card" data-title="clickhouse: release 24.11 webinar">
+    <img src="2024-release-24.11/pictures/preview.jpg" alt="ClickHouse: Release 24.11 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 24.11 Webinar</div>
+</a>
+<a href="2024-release-24.10/" class="card" data-title="clickhouse: release 24.10 webinar">
+    <img src="2024-release-24.10/pictures/preview.jpg" alt="ClickHouse: Release 24.10 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 24.10 Webinar</div>
+</a>
+<a href="2024-release-24.9/" class="card" data-title="clickhouse: release 24.9 webinar">
+    <img src="2024-release-24.9/pictures/preview.jpg" alt="ClickHouse: Release 24.9 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 24.9 Webinar</div>
+</a>
+<a href="2024-release-24.8/" class="card" data-title="clickhouse: release 24.8 webinar">
+    <img src="2024-release-24.8/pictures/preview.jpg" alt="ClickHouse: Release 24.8 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 24.8 Webinar</div>
+</a>
+<a href="2024-release-24.7/" class="card" data-title="clickhouse: release 24.7 webinar">
+    <img src="2024-release-24.7/pictures/preview.jpg" alt="ClickHouse: Release 24.7 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 24.7 Webinar</div>
+</a>
+<a href="2024-release-24.6/" class="card" data-title="clickhouse: release 24.6 webinar">
+    <img src="2024-release-24.6/pictures/preview.jpg" alt="ClickHouse: Release 24.6 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 24.6 Webinar</div>
+</a>
+<a href="2024-release-24.5/" class="card" data-title="clickhouse: release 24.5 webinar">
+    <img src="2024-release-24.5/pictures/preview.jpg" alt="ClickHouse: Release 24.5 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 24.5 Webinar</div>
+</a>
+<a href="2024-release-24.4/" class="card" data-title="clickhouse: release 24.4 webinar">
+    <img src="2024-release-24.4/pictures/preview.jpg" alt="ClickHouse: Release 24.4 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 24.4 Webinar</div>
+</a>
+<a href="2024-release-24.3/" class="card" data-title="clickhouse: release 24.3 webinar">
+    <img src="2024-release-24.3/pictures/preview.jpg" alt="ClickHouse: Release 24.3 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 24.3 Webinar</div>
+</a>
+<a href="2024-release-24.2/" class="card" data-title="clickhouse: release 24.2 webinar">
+    <img src="2024-release-24.2/pictures/preview.jpg" alt="ClickHouse: Release 24.2 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 24.2 Webinar</div>
+</a>
+<a href="2024-release-24.1/" class="card" data-title="clickhouse: release 24.1 webinar">
+    <img src="2024-release-24.1/pictures/preview.jpg" alt="ClickHouse: Release 24.1 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 24.1 Webinar</div>
+</a>
+<a href="2024-meetup-san-francisco-3/new_features/" class="card" data-title="clickhouse: my favorite features of 2024">
+    <img src="2024-meetup-san-francisco-3/new_features/pictures/preview.jpg" alt="ClickHouse: My Favorite Features of 2024" loading="lazy">
+    <div class="card-title">ClickHouse: My Favorite Features of 2024</div>
+</a>
+<a href="2024-meetup-raleigh/ai/" class="card" data-title="clickhouse for ai">
+    <img src="2024-meetup-raleigh/ai/pictures/preview.jpg" alt="ClickHouse For AI" loading="lazy">
+    <div class="card-title">ClickHouse For AI</div>
+</a>
+<a href="2024-meetup-new-york-2/meetup128/new_features/" class="card" data-title="clickhouse: my favorite features of 2024">
+    <img src="2024-meetup-new-york-2/meetup128/new_features/pictures/preview.jpg" alt="ClickHouse: My Favorite Features of 2024" loading="lazy">
+    <div class="card-title">ClickHouse: My Favorite Features of 2024</div>
+</a>
+<a href="2024-meetup-guangzhou/new_features/" class="card" data-title="clickhouse: my favorite features of 2024">
+    <img src="2024-meetup-guangzhou/new_features/pictures/preview.jpg" alt="ClickHouse: My Favorite Features of 2024" loading="lazy">
+    <div class="card-title">ClickHouse: My Favorite Features of 2024</div>
+</a>
+<a href="2024-meetup-dubai/app/" class="card" data-title="building an analytic application with clickhouse">
+    <img src="2024-meetup-dubai/app/pictures/preview.jpg" alt="Building an Analytic Application With ClickHouse" loading="lazy">
+    <div class="card-title">Building an Analytic Application With ClickHouse</div>
+</a>
+<a href="2024-meetup-copenhagen/app/" class="card" data-title="building an analytic application with clickhouse">
+    <img src="2024-meetup-copenhagen/app/pictures/preview.jpg" alt="Building an Analytic Application With ClickHouse" loading="lazy">
+    <div class="card-title">Building an Analytic Application With ClickHouse</div>
+</a>
+<a href="2024-meetup-amsterdam/new_features/" class="card" data-title="clickhouse: my favorite features of 2024">
+    <img src="2024-meetup-amsterdam/new_features/pictures/preview.jpg" alt="ClickHouse: My Favorite Features of 2024" loading="lazy">
+    <div class="card-title">ClickHouse: My Favorite Features of 2024</div>
+</a>
+<a href="2024-cwi/" class="card" data-title="my database can do this!">
+    <img src="2024-cwi/pictures/preview.jpg" alt="My Database Can Do This!" loading="lazy">
+    <div class="card-title">My Database Can Do This!</div>
+</a>
+<a href="2024-aws-dubai/" class="card" data-title="building an analytic application with clickhouse">
+    <img src="2024-aws-dubai/pictures/preview.jpg" alt="Building an Analytic Application With ClickHouse" loading="lazy">
+    <div class="card-title">Building an Analytic Application With ClickHouse</div>
+</a>
+<a href="2024-aws/" class="card" data-title="uncovering the real-world performance of aws graviton4 with clickhouse">
+    <img src="2024-aws/pictures/preview.jpg" alt="Uncovering the Real-World Performance of AWS Graviton4 with ClickHouse" loading="lazy">
+    <div class="card-title">Uncovering the Real-World Performance of AWS Graviton4 with ClickHouse</div>
+</a>
+<a href="2023-release-23.12/" class="card" data-title="clickhouse: release 23.12 webinar">
+    <img src="2023-release-23.12/pictures/preview.jpg" alt="ClickHouse: Release 23.12 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 23.12 Webinar</div>
+</a>
+<a href="2023-release-23.11/" class="card" data-title="clickhouse: release 23.11 webinar">
+    <img src="2023-release-23.11/pictures/preview.jpg" alt="ClickHouse: Release 23.11 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 23.11 Webinar</div>
+</a>
+<a href="2023-release-23.10/" class="card" data-title="clickhouse: release 23.10 webinar">
+    <img src="2023-release-23.10/pictures/preview.jpg" alt="ClickHouse: Release 23.10 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 23.10 Webinar</div>
+</a>
+<a href="2023-release-23.9/" class="card" data-title="clickhouse: release 23.9 webinar">
+    <img src="2023-release-23.9/pictures/preview.jpg" alt="ClickHouse: Release 23.9 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 23.9 Webinar</div>
+</a>
+<a href="2023-release-23.8/" class="card" data-title="clickhouse: release 23.8 webinar">
+    <img src="2023-release-23.8/pictures/preview.jpg" alt="ClickHouse: Release 23.8 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 23.8 Webinar</div>
+</a>
+<a href="2023-release-23.7/" class="card" data-title="clickhouse: release 23.7 webinar">
+    <img src="2023-release-23.7/pictures/preview.jpg" alt="ClickHouse: Release 23.7 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 23.7 Webinar</div>
+</a>
+<a href="2023-release-23.6/" class="card" data-title="clickhouse: release 23.6 webinar">
+    <img src="2023-release-23.6/pictures/preview.jpg" alt="ClickHouse: Release 23.6 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 23.6 Webinar</div>
+</a>
+<a href="2023-release-23.5/" class="card" data-title="clickhouse: release 23.5 webinar">
+    <img src="2023-release-23.5/pictures/preview.jpg" alt="ClickHouse: Release 23.5 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 23.5 Webinar</div>
+</a>
+<a href="2023-release-23.4/" class="card" data-title="clickhouse: release 23.4 webinar">
+    <img src="2023-release-23.4/pictures/preview.jpg" alt="ClickHouse: Release 23.4 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 23.4 Webinar</div>
+</a>
+<a href="2023-release-23.3/" class="card" data-title="clickhouse: release 23.3 webinar">
+    <img src="2023-release-23.3/pictures/preview.jpg" alt="ClickHouse: Release 23.3 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 23.3 Webinar</div>
+</a>
+<a href="2023-release-23.2/" class="card" data-title="clickhouse: release 23.2 webinar">
+    <img src="2023-release-23.2/pictures/preview.jpg" alt="ClickHouse: Release 23.2 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 23.2 Webinar</div>
+</a>
+<a href="2023-release-23.1/" class="card" data-title="clickhouse: release 23.1 webinar">
+    <img src="2023-release-23.1/pictures/preview.jpg" alt="ClickHouse: Release 23.1 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 23.1 Webinar</div>
+</a>
+<a href="2023-meetup-amsterdam/app/" class="card" data-title="building a toy with clickhouse">
+    <img src="2023-meetup-amsterdam/app/pictures/preview.jpg" alt="Building a Toy With ClickHouse" loading="lazy">
+    <div class="card-title">Building a Toy With ClickHouse</div>
+</a>
+<a href="2023-fosdem/" class="card" data-title="clickhouse at fosdem 2023">
+    <img src="2023-fosdem/pictures/preview.jpg" alt="ClickHouse at FOSDEM 2023" loading="lazy">
+    <div class="card-title">ClickHouse at FOSDEM 2023</div>
+</a>
+<a href="2023-cpp-russia/clickhouse_performance_optimization_techniques/" class="card" data-title="clickhouse performance optimization techniques">
+    <img src="2023-cpp-russia/clickhouse_performance_optimization_techniques/pictures/preview.jpg" alt="ClickHouse performance optimization techniques" loading="lazy">
+    <div class="card-title">ClickHouse performance optimization techniques</div>
+</a>
+<a href="2022-release-22.12/" class="card" data-title="clickhouse: release 22.12 webinar">
+    <img src="2022-release-22.12/pictures/preview.jpg" alt="ClickHouse: Release 22.12 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 22.12 Webinar</div>
+</a>
+<a href="2022-release-22.11/" class="card" data-title="clickhouse: release 22.11 webinar">
+    <img src="2022-release-22.11/pictures/preview.jpg" alt="ClickHouse: Release 22.11 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 22.11 Webinar</div>
+</a>
+<a href="2022-release-22.10/" class="card" data-title="clickhouse: release 22.10 webinar">
+    <img src="2022-release-22.10/pictures/preview.jpg" alt="ClickHouse: Release 22.10 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 22.10 Webinar</div>
+</a>
+<a href="2022-release-22.9/" class="card" data-title="clickhouse: release 22.9 webinar">
+    <img src="2022-release-22.9/pictures/preview.jpg" alt="ClickHouse: Release 22.9 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 22.9 Webinar</div>
+</a>
+<a href="2022-release-22.8/" class="card" data-title="clickhouse: release 22.8 webinar">
+    <img src="2022-release-22.8/pictures/preview.jpg" alt="ClickHouse: Release 22.8 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 22.8 Webinar</div>
+</a>
+<a href="2022-release-22.7/" class="card" data-title="clickhouse: release 22.7 webinar">
+    <img src="2022-release-22.7/pictures/preview.jpg" alt="ClickHouse: Release 22.7 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 22.7 Webinar</div>
+</a>
+<a href="2022-release-22.6/" class="card" data-title="clickhouse: release 22.6 webinar">
+    <img src="2022-release-22.6/pictures/preview.jpg" alt="ClickHouse: Release 22.6 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 22.6 Webinar</div>
+</a>
+<a href="2022-release-22.5/" class="card" data-title="clickhouse: release 22.5 webinar">
+    <img src="2022-release-22.5/pictures/preview.jpg" alt="ClickHouse: Release 22.5 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 22.5 Webinar</div>
+</a>
+<a href="2022-release-22.4/" class="card" data-title="clickhouse: release 22.4 webinar">
+    <img src="2022-release-22.4/pictures/preview.jpg" alt="ClickHouse: Release 22.4 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 22.4 Webinar</div>
+</a>
+<a href="2022-release-22.3/" class="card" data-title="clickhouse: release 22.3 webinar">
+    <img src="2022-release-22.3/pictures/preview.jpg" alt="ClickHouse: Release 22.3 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 22.3 Webinar</div>
+</a>
+<a href="2022-release-22.1/" class="card" data-title="clickhouse: release 22.1 webinar">
+    <img src="2022-release-22.1/pictures/preview.jpg" alt="ClickHouse: Release 22.1 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 22.1 Webinar</div>
+</a>
+<a href="2022-mipt-project/" class="card" data-title="vector search in clickhouse">
+    <img src="2022-mipt-project/pictures/preview.jpg" alt="Vector Search in ClickHouse" loading="lazy">
+    <div class="card-title">Vector Search in ClickHouse</div>
+</a>
+<a href="2022-highload-spb/clickhouse_performance_optimization_practices/" class="card" data-title="clickhouse performance optimization practices">
+    <img src="2022-highload-spb/clickhouse_performance_optimization_practices/pictures/preview.jpg" alt="ClickHouse performance optimization practices" loading="lazy">
+    <div class="card-title">ClickHouse performance optimization practices</div>
+</a>
+<a href="2022-highload/jit_compilation_in_clickhouse/" class="card" data-title="jit compilation of queries in clickhouse">
+    <img src="2022-highload/jit_compilation_in_clickhouse/pictures/preview.jpg" alt="JIT compilation of queries in ClickHouse" loading="lazy">
+    <div class="card-title">JIT compilation of queries in ClickHouse</div>
+</a>
+<a href="2022-cpp-russia/clickhouse_performance_optimization_practices/" class="card" data-title="clickhouse performance optimization practices">
+    <img src="2022-cpp-russia/clickhouse_performance_optimization_practices/pictures/preview.jpg" alt="ClickHouse performance optimization practices" loading="lazy">
+    <div class="card-title">ClickHouse performance optimization practices</div>
+</a>
+<a href="2021-release-21.12/" class="card" data-title="clickhouse: release 21.12 webinar">
+    <img src="2021-release-21.12/pictures/preview.jpg" alt="ClickHouse: Release 21.12 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 21.12 Webinar</div>
+</a>
+<a href="2021-release-21.11/" class="card" data-title="clickhouse: release 21.11 webinar">
+    <img src="2021-release-21.11/pictures/preview.jpg" alt="ClickHouse: Release 21.11 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 21.11 Webinar</div>
+</a>
+<a href="2021-release-21.10/" class="card" data-title="clickhouse: release 21.10 webinar">
+    <img src="2021-release-21.10/pictures/preview.jpg" alt="ClickHouse: Release 21.10 Webinar" loading="lazy">
+    <div class="card-title">ClickHouse: Release 21.10 Webinar</div>
+</a>
+<a href="2021-yatalks/" class="card" data-title="clickhouse: present and future">
+    <img src="2021-yatalks/pictures/preview.jpg" alt="ClickHouse: Present and Future" loading="lazy">
+    <div class="card-title">ClickHouse: Present and Future</div>
+</a>
+<a href="2021-stw/" class="card" data-title="clickhouse: new horizons">
+    <img src="2021-stw/pictures/preview.jpg" alt="ClickHouse: New Horizons" loading="lazy">
+    <div class="card-title">ClickHouse: New Horizons</div>
+</a>
+<a href="2021-ross/" class="card" data-title="clickhouse">
+    <img src="2021-ross/pictures/preview.jpg" alt="ClickHouse" loading="lazy">
+    <div class="card-title">ClickHouse</div>
+</a>
+<a href="2021-rndconf/" class="card" data-title="colorizing logs">
+    <img src="2021-rndconf/pictures/preview.jpg" alt="Colorizing Logs" loading="lazy">
+    <div class="card-title">Colorizing Logs</div>
+</a>
+<a href="2021-percona/" class="card" data-title="clickhouse 2021: new features and roadmap">
+    <img src="2021-percona/pictures/preview.jpg" alt="ClickHouse 2021: New Features and Roadmap" loading="lazy">
+    <div class="card-title">ClickHouse 2021: New Features and Roadmap</div>
+</a>
+<a href="2021-highload/" class="card" data-title="unusual cases of performance optimization using clickhouse as an example">
+    <img src="2021-highload/pictures/preview.jpg" alt="Unusual Cases of Performance Optimization Using ClickHouse as an Example" loading="lazy">
+    <div class="card-title">Unusual Cases of Performance Optimization Using ClickHouse as an Example</div>
+</a>
+<a href="2021-highload/hash_tables/" class="card" data-title="zero-cost abstractions using hash tables in clickhouse as an example">
+    <img src="2021-highload/hash_tables/pictures/preview.jpg" alt="Zero-Cost Abstractions Using Hash Tables in ClickHouse as an Example" loading="lazy">
+    <div class="card-title">Zero-Cost Abstractions Using Hash Tables in ClickHouse as an Example</div>
+</a>
+<a href="2021-github-planet/" class="card" data-title="github planet 2021">
+    <img src="2021-github-planet/pictures/preview.jpg" alt="GitHub Planet 2021" loading="lazy">
+    <div class="card-title">GitHub Planet 2021</div>
+</a>
+<a href="2021-cpp-siberia/" class="card" data-title="fuzzing: practical approaches in clickhouse">
+    <img src="2021-cpp-siberia/pictures/preview.jpg" alt="Fuzzing: Practical approaches in ClickHouse" loading="lazy">
+    <div class="card-title">Fuzzing: Practical approaches in ClickHouse</div>
+</a>
+<a href="2021-cpp-russia/jit_in_clickhouse/" class="card" data-title="jit in clickhouse">
+    <img src="2021-cpp-russia/jit_in_clickhouse/pictures/preview.jpg" alt="JIT in ClickHouse" loading="lazy">
+    <div class="card-title">JIT in ClickHouse</div>
+</a>
+<a href="meetup74/ai/" class="card" data-title="clickhouse for ai">
+    <img src="meetup74/ai/pictures/preview.jpg" alt="ClickHouse For AI" loading="lazy">
+    <div class="card-title">ClickHouse For AI</div>
+</a>
+<a href="meetup73/new_features/" class="card" data-title="clickhouse: my favorite features of 2023">
+    <img src="meetup73/new_features/pictures/preview.jpg" alt="ClickHouse: My Favorite Features of 2023" loading="lazy">
+    <div class="card-title">ClickHouse: My Favorite Features of 2023</div>
+</a>
+<a href="meetup71/new_features/" class="card" data-title="clickhouse: features that i like">
+    <img src="meetup71/new_features/pictures/preview.jpg" alt="ClickHouse: Features That I Like" loading="lazy">
+    <div class="card-title">ClickHouse: Features That I Like</div>
+</a>
+<a href="meetup70/modern_sql/" class="card" data-title="modern sql">
+    <img src="meetup70/modern_sql/pictures/preview.jpg" alt="Modern SQL" loading="lazy">
+    <div class="card-title">Modern SQL</div>
+</a>
+<a href="meetup70/building_applications/" class="card" data-title="clickhouse meetup in amsterdam">
+    <img src="meetup70/building_applications/pictures/preview.jpg" alt="ClickHouse Meetup in Amsterdam" loading="lazy">
+    <div class="card-title">ClickHouse Meetup in Amsterdam</div>
+</a>
+<a href="meetup68/update/" class="card" data-title="clickhouse: 2022/2023">
+    <img src="meetup68/update/pictures/preview.jpg" alt="ClickHouse: 2022/2023" loading="lazy">
+    <div class="card-title">ClickHouse: 2022/2023</div>
+</a>
+<a href="meetup66/highlights/" class="card" data-title="clickhouse: top highlights h2 2022">
+    <img src="meetup66/highlights/pictures/preview.jpg" alt="ClickHouse: Top Highlights H2 2022" loading="lazy">
+    <div class="card-title">ClickHouse: Top Highlights H2 2022</div>
+</a>
+<a href="meetup65/highlights/" class="card" data-title="clickhouse: top highlights h2 2022">
+    <img src="meetup65/highlights/pictures/preview.jpg" alt="ClickHouse: Top Highlights H2 2022" loading="lazy">
+    <div class="card-title">ClickHouse: Top Highlights H2 2022</div>
+</a>
+<a href="meetup63/clickhouse_performance_optimizations/" class="card" data-title="clickhouse performance optimizations">
+    <img src="meetup63/clickhouse_performance_optimizations/pictures/preview.jpg" alt="ClickHouse performance optimizations" loading="lazy">
+    <div class="card-title">ClickHouse performance optimizations</div>
+</a>
+<a href="meetup63/new_features/" class="card" data-title="clickhouse: my favorite features">
+    <img src="meetup63/new_features/pictures/preview.jpg" alt="ClickHouse: My Favorite Features" loading="lazy">
+    <div class="card-title">ClickHouse: My Favorite Features</div>
+</a>
+<a href="meetup60/new_features/" class="card" data-title="clickhouse: my favorite features">
+    <img src="meetup60/new_features/pictures/preview.jpg" alt="ClickHouse: My Favorite Features" loading="lazy">
+    <div class="card-title">ClickHouse: My Favorite Features</div>
+</a>
+<a href="meetup58/building_for_fast/" class="card" data-title="clickhouse: building for fast">
+    <img src="meetup58/building_for_fast/pictures/preview.jpg" alt="ClickHouse: Building For Fast" loading="lazy">
+    <div class="card-title">ClickHouse: Building For Fast</div>
+</a>
+<a href="meetup57/top_features/" class="card" data-title="clickhouse: top features 2021 vs 2022">
+    <img src="meetup57/top_features/pictures/preview.jpg" alt="ClickHouse: Top Features 2021 vs 2022" loading="lazy">
+    <div class="card-title">ClickHouse: Top Features 2021 vs 2022</div>
+</a>
+<a href="meetup56/new_features/" class="card" data-title="clickhouse: new and upcoming features">
+    <img src="meetup56/new_features/pictures/preview.jpg" alt="ClickHouse: New And Upcoming Features" loading="lazy">
+    <div class="card-title">ClickHouse: New And Upcoming Features</div>
+</a>
+<a href="meetup55/intro/" class="card" data-title="clickhouse meetup">
+    <img src="meetup55/intro/pictures/preview.jpg" alt="ClickHouse Meetup" loading="lazy">
+    <div class="card-title">ClickHouse Meetup</div>
+</a>
+<a href="meetup55/udf_in_clickhouse/" class="card" data-title="udf in clickhouse">
+    <img src="meetup55/udf_in_clickhouse/pictures/preview.jpg" alt="UDF in ClickHouse" loading="lazy">
+    <div class="card-title">UDF in ClickHouse</div>
+</a>
+<a href="meetup55/new_features/" class="card" data-title="amazing features of clickhouse">
+    <img src="meetup55/new_features/pictures/preview.jpg" alt="Amazing Features of ClickHouse" loading="lazy">
+    <div class="card-title">Amazing Features of ClickHouse</div>
+</a>
+<a href="meetup53/jit_in_clickhouse/" class="card" data-title="jit in clickhouse">
+    <img src="meetup53/jit_in_clickhouse/pictures/preview.jpg" alt="JIT in ClickHouse" loading="lazy">
+    <div class="card-title">JIT in ClickHouse</div>
+</a>
+<a href="meetup53/optimizations/" class="card" data-title="tales about performance optimizations in clickhouse">
+    <img src="meetup53/optimizations/pictures/preview.jpg" alt="Tales About Performance Optimizations in ClickHouse" loading="lazy">
+    <div class="card-title">Tales About Performance Optimizations in ClickHouse</div>
+</a>
+<a href="meetup52/features/" class="card" data-title="clickhouse 2021: new features and roadmap">
+    <img src="meetup52/features/pictures/preview.jpg" alt="ClickHouse 2021: New Features and Roadmap" loading="lazy">
+    <div class="card-title">ClickHouse 2021: New Features and Roadmap</div>
+</a>
+<a href="meetup51/dictionaries/" class="card" data-title="new features of external dictionaries">
+    <img src="meetup51/dictionaries/pictures/preview.jpg" alt="New features of external dictionaries" loading="lazy">
+    <div class="card-title">New features of external dictionaries</div>
+</a>
+<a href="meetup51/new_features/" class="card" data-title="clickhouse, spring 2021">
+    <img src="meetup51/new_features/pictures/preview.jpg" alt="ClickHouse, Spring 2021" loading="lazy">
+    <div class="card-title">ClickHouse, Spring 2021</div>
+</a>
+<a href="meetup50/new_features/" class="card" data-title="clickhouse features 2021">
+    <img src="meetup50/new_features/pictures/preview.jpg" alt="ClickHouse Features 2021" loading="lazy">
+    <div class="card-title">ClickHouse Features 2021</div>
+</a>
+<a href="meetup49/roadmap/" class="card" data-title="clickhouse roadmap 2021">
+    <img src="meetup49/roadmap/pictures/preview.jpg" alt="ClickHouse Roadmap 2021" loading="lazy">
+    <div class="card-title">ClickHouse Roadmap 2021</div>
+</a>
+<a href="meetup48/new_features/" class="card" data-title="even more new features of clickhouse">
+    <img src="meetup48/new_features/pictures/preview.jpg" alt="Even More New Features of ClickHouse" loading="lazy">
+    <div class="card-title">Even More New Features of ClickHouse</div>
+</a>
+<a href="meetup47/new_features/" class="card" data-title="outstandingly fresh clickhouse features">
+    <img src="meetup47/new_features/pictures/preview.jpg" alt="Outstandingly Fresh ClickHouse Features" loading="lazy">
+    <div class="card-title">Outstandingly Fresh ClickHouse Features</div>
+</a>
+<a href="meetup46/new_features/" class="card" data-title="even newer clickhouse features">
+    <img src="meetup46/new_features/pictures/preview.jpg" alt="Even Newer ClickHouse Features" loading="lazy">
+    <div class="card-title">Even Newer ClickHouse Features</div>
+</a>
+<a href="meetup44/new_features/" class="card" data-title="amazing clickhouse features">
+    <img src="meetup44/new_features/pictures/preview.jpg" alt="Amazing ClickHouse Features" loading="lazy">
+    <div class="card-title">Amazing ClickHouse Features</div>
+</a>
+<a href="meetup43/" class="card" data-title="new features of clickhouse: winter/spring 2020">
+    <img src="meetup43/pictures/preview.jpg" alt="New Features of ClickHouse: winter/spring 2020" loading="lazy">
+    <div class="card-title">New Features of ClickHouse: winter/spring 2020</div>
+</a>
+<a href="meetup42/" class="card" data-title="clickhouse features: winter/spring 2020">
+    <img src="meetup42/pictures/preview.jpg" alt="ClickHouse Features: Winter/Spring 2020" loading="lazy">
+    <div class="card-title">ClickHouse Features: Winter/Spring 2020</div>
+</a>
+<a href="meetup40/introduction/" class="card" data-title="clickhouse meetup: introduction">
+    <img src="meetup40/introduction/pictures/preview.jpg" alt="ClickHouse Meetup: Introduction" loading="lazy">
+    <div class="card-title">ClickHouse Meetup: Introduction</div>
+</a>
+<a href="meetup39/new_features/" class="card" data-title="the most fresh clickhouse features">
+    <img src="meetup39/new_features/pictures/preview.jpg" alt="The Most Fresh ClickHouse Features" loading="lazy">
+    <div class="card-title">The Most Fresh ClickHouse Features</div>
+</a>
+<a href="meetup38/new_features/" class="card" data-title="the most fresh clickhouse features">
+    <img src="meetup38/new_features/pictures/preview.jpg" alt="The Most Fresh ClickHouse Features" loading="lazy">
+    <div class="card-title">The Most Fresh ClickHouse Features</div>
+</a>
+<a href="meetup36/new_features/" class="card" data-title="new features of clickhouse">
+    <img src="meetup36/new_features/pictures/preview.jpg" alt="New features of ClickHouse" loading="lazy">
+    <div class="card-title">New features of ClickHouse</div>
+</a>
+<a href="meetup35/new_features/" class="card" data-title="new features of clickhouse">
+    <img src="meetup35/new_features/pictures/preview.jpg" alt="New features of ClickHouse" loading="lazy">
+    <div class="card-title">New features of ClickHouse</div>
+</a>
+<a href="meetup33/introduction/" class="card" data-title="clickhouse meetup: introduction">
+    <img src="meetup33/introduction/pictures/preview.jpg" alt="ClickHouse Meetup: Introduction" loading="lazy">
+    <div class="card-title">ClickHouse Meetup: Introduction</div>
+</a>
+<a href="meetup33/new_features/" class="card" data-title="new features of clickhouse">
+    <img src="meetup33/new_features/pictures/preview.jpg" alt="New features of ClickHouse" loading="lazy">
+    <div class="card-title">New features of ClickHouse</div>
+</a>
+<a href="meetup32/ttl/" class="card" data-title="shower presentation engine">
+    <img src="meetup32/ttl/pictures/preview.jpg" alt="Shower Presentation Engine" loading="lazy">
+    <div class="card-title">Shower Presentation Engine</div>
+</a>
+<a href="meetup32/introduction/" class="card" data-title="clickhouse meetup: introduction">
+    <img src="meetup32/introduction/pictures/preview.jpg" alt="ClickHouse Meetup: Introduction" loading="lazy">
+    <div class="card-title">ClickHouse Meetup: Introduction</div>
+</a>
+<a href="meetup32/new_features/" class="card" data-title="new features of clickhouse">
+    <img src="meetup32/new_features/pictures/preview.jpg" alt="New features of ClickHouse" loading="lazy">
+    <div class="card-title">New features of ClickHouse</div>
+</a>
+<a href="meetup31/introduction/" class="card" data-title="clickhouse meetup in hong kong">
+    <img src="meetup31/introduction/pictures/preview.jpg" alt="ClickHouse Meetup in Hong Kong" loading="lazy">
+    <div class="card-title">ClickHouse Meetup in Hong Kong</div>
+</a>
+<a href="meetup30/new_features/" class="card" data-title="new features of clickhouse">
+    <img src="meetup30/new_features/pictures/preview.jpg" alt="New features of ClickHouse" loading="lazy">
+    <div class="card-title">New features of ClickHouse</div>
+</a>
+<a href="meetup29/new_features/" class="card" data-title="new features of clickhouse">
+    <img src="meetup29/new_features/pictures/preview.jpg" alt="New features of ClickHouse" loading="lazy">
+    <div class="card-title">New features of ClickHouse</div>
+</a>
+<a href="meetup28/new_features/" class="card" data-title="superb new features of clickhouse">
+    <img src="meetup28/new_features/pictures/preview.jpg" alt="Superb New Features of ClickHouse" loading="lazy">
+    <div class="card-title">Superb New Features of ClickHouse</div>
+</a>
+<a href="meetup22/new_features/" class="card" data-title="clickhouse meetup in cyprus">
+    <img src="meetup22/new_features/pictures/preview.jpg" alt="ClickHouse Meetup in Cyprus" loading="lazy">
+    <div class="card-title">ClickHouse Meetup in Cyprus</div>
+</a>
+<a href="meetup21/new_features/" class="card" data-title="clickhouse meetup in madrid">
+    <img src="meetup21/new_features/pictures/preview.jpg" alt="ClickHouse Meetup in Madrid" loading="lazy">
+    <div class="card-title">ClickHouse Meetup in Madrid</div>
+</a>
+<a href="meetup20/performance_analysis/" class="card" data-title="performance analysis of clickhouse queries">
+    <img src="meetup20/performance_analysis/pictures/preview.jpg" alt="Performance Analysis of ClickHouse Queries" loading="lazy">
+    <div class="card-title">Performance Analysis of ClickHouse Queries</div>
+</a>
+<a href="meetup19/awards/" class="card" data-title="clickhouse meetup in beijing: awards ceremony">
+    <img src="meetup19/awards/pictures/preview.jpg" alt="ClickHouse Meetup in Beijing: Awards Ceremony" loading="lazy">
+    <div class="card-title">ClickHouse Meetup in Beijing: Awards Ceremony</div>
+</a>
+<a href="meetup19/introduction/" class="card" data-title="clickhouse meetup: introduction">
+    <img src="meetup19/introduction/pictures/preview.jpg" alt="ClickHouse Meetup: Introduction" loading="lazy">
+    <div class="card-title">ClickHouse Meetup: Introduction</div>
+</a>
+<a href="meetup19/new_features/" class="card" data-title="clickhouse meetup in beijing">
+    <img src="meetup19/new_features/pictures/preview.jpg" alt="ClickHouse Meetup in Beijing" loading="lazy">
+    <div class="card-title">ClickHouse Meetup in Beijing</div>
+</a>
+<a href="meetup18/5_new_features/" class="card" data-title="clickhouse meetup in paris">
+    <img src="meetup18/5_new_features/pictures/preview.jpg" alt="ClickHouse Meetup in Paris" loading="lazy">
+    <div class="card-title">ClickHouse Meetup in Paris</div>
+</a>
+<a href="meetup17/7_new_features_the_rest/" class="card" data-title="clickhouse meetup in saint petersburg">
+    <img src="meetup17/7_new_features_the_rest/pictures/preview.jpg" alt="ClickHouse Meetup in Saint Petersburg" loading="lazy">
+    <div class="card-title">ClickHouse Meetup in Saint Petersburg</div>
+</a>
+<a href="meetup15/architecture/" class="card" data-title="clickhouse c++ meetup">
+    <img src="meetup15/architecture/pictures/preview.jpg" alt="ClickHouse C++ Meetup" loading="lazy">
+    <div class="card-title">ClickHouse C++ Meetup</div>
+</a>
+<a href="meetup14/pro_tips/" class="card" data-title="clickhouse meetup in san francisco">
+    <img src="meetup14/pro_tips/pictures/preview.jpg" alt="ClickHouse Meetup in San Francisco" loading="lazy">
+    <div class="card-title">ClickHouse Meetup in San Francisco</div>
+</a>
+<a href="meetup13/news_and_plans/" class="card" data-title="clickhouse meetup in sunnyvale">
+    <img src="meetup13/news_and_plans/pictures/preview.jpg" alt="ClickHouse Meetup in Sunnyvale" loading="lazy">
+    <div class="card-title">ClickHouse Meetup in Sunnyvale</div>
+</a>
+<a href="meetup12/news_and_plans/" class="card" data-title="clickhouse meetup in beijing">
+    <img src="meetup12/news_and_plans/pictures/preview.jpg" alt="ClickHouse Meetup in Beijing" loading="lazy">
+    <div class="card-title">ClickHouse Meetup in Beijing</div>
+</a>
+<a href="meetup12/introduction/" class="card" data-title="12th clickhouse meetup in beijing">
+    <img src="meetup12/introduction/pictures/preview.jpg" alt="12th ClickHouse Meetup in Beijing" loading="lazy">
+    <div class="card-title">12th ClickHouse Meetup in Beijing</div>
+</a>
+<a href="meetup11/news_and_plans/" class="card" data-title="clickhouse meetup in moscow">
+    <img src="meetup11/news_and_plans/pictures/preview.jpg" alt="ClickHouse Meetup in Moscow" loading="lazy">
+    <div class="card-title">ClickHouse Meetup in Moscow</div>
+</a>
+<a href="meetup10/intro/" class="card" data-title="clickhouse meetup in nizhny novgorod">
+    <img src="meetup10/intro/pictures/preview.jpg" alt="ClickHouse Meetup in Nizhny Novgorod" loading="lazy">
+    <div class="card-title">ClickHouse Meetup in Nizhny Novgorod</div>
+</a>
+<a href="meetup10/efficient/" class="card" data-title="effective use of clickhouse">
+    <img src="meetup10/efficient/pictures/preview.jpg" alt="Effective Use of ClickHouse" loading="lazy">
+    <div class="card-title">Effective Use of ClickHouse</div>
+</a>
+<a href="meetup9/" class="card" data-title="clickhouse meetup in berlin">
+    <img src="meetup9/pictures/preview.jpg" alt="ClickHouse Meetup in Berlin" loading="lazy">
+    <div class="card-title">ClickHouse Meetup in Berlin</div>
+</a>
+<a href="meetup7/" class="card" data-title="clickhouse meetup in minsk">
+    <img src="meetup7/pictures/preview.jpg" alt="ClickHouse meetup in Minsk" loading="lazy">
+    <div class="card-title">ClickHouse meetup in Minsk</div>
+</a>
+<a href="meetup6/" class="card" data-title="clickhouse meetup in ekaterinburg">
+    <img src="meetup6/pictures/preview.jpg" alt="ClickHouse meetup in Ekaterinburg" loading="lazy">
+    <div class="card-title">ClickHouse meetup in Ekaterinburg</div>
+</a>
+<a href="meetup5/" class="card" data-title="group by and memory limit exceeded">
+    <img src="meetup5/pictures/preview.jpg" alt="GROUP BY and Memory limit exceeded" loading="lazy">
+    <div class="card-title">GROUP BY and Memory limit exceeded</div>
+</a>
+<a href="meetup4/" class="card" data-title="clickhouse meetup in novosibirsk">
+    <img src="meetup4/pictures/preview.jpg" alt="ClickHouse meetup in Novosibirsk" loading="lazy">
+    <div class="card-title">ClickHouse meetup in Novosibirsk</div>
+</a>
+<a href="meetup3/" class="card" data-title="clickhouse meetup in saint petersburg">
+    <img src="meetup3/pictures/preview.jpg" alt="ClickHouse meetup in Saint Petersburg" loading="lazy">
+    <div class="card-title">ClickHouse meetup in Saint Petersburg</div>
+</a>
+<a href="2020-percona/" class="card" data-title="clickhouse features you&#x27;ve never heard of">
+    <img src="2020-percona/pictures/preview.jpg" alt="ClickHouse Features You&#x27;ve Never Heard Of" loading="lazy">
+    <div class="card-title">ClickHouse Features You&#x27;ve Never Heard Of</div>
+</a>
+<a href="2020-matemarketing/" class="card" data-title="typical pitfalls of analytics using git data as an example">
+    <img src="2020-matemarketing/pictures/preview.jpg" alt="Typical Pitfalls of Analytics Using Git Data as an Example" loading="lazy">
+    <div class="card-title">Typical Pitfalls of Analytics Using Git Data as an Example</div>
+</a>
+<a href="2020-highload-spb/" class="card" data-title="extraordinary capabilities of clickhouse">
+    <img src="2020-highload-spb/pictures/preview.jpg" alt="Extraordinary Capabilities of ClickHouse" loading="lazy">
+    <div class="card-title">Extraordinary Capabilities of ClickHouse</div>
+</a>
+<a href="2020-highload-fwdays/" class="card" data-title="how i optimized one aggregate function in clickhouse">
+    <img src="2020-highload-fwdays/pictures/preview.jpg" alt="How I Optimized One Aggregate Function in ClickHouse" loading="lazy">
+    <div class="card-title">How I Optimized One Aggregate Function in ClickHouse</div>
+</a>
+<a href="2020-database-saturday/" class="card" data-title="backend saturday">
+    <img src="2020-database-saturday/pictures/preview.jpg" alt="Backend Saturday" loading="lazy">
+    <div class="card-title">Backend Saturday</div>
+</a>
+<a href="2020-cpp-user-group/" class="card" data-title="how i optimized one aggregate function in clickhouse">
+    <img src="2020-cpp-user-group/pictures/preview.jpg" alt="How I Optimized One Aggregate Function in ClickHouse" loading="lazy">
+    <div class="card-title">How I Optimized One Aggregate Function in ClickHouse</div>
+</a>
+<a href="2020-cpp-russia/" class="card" data-title="how to build portable binaries for linux">
+    <img src="2020-cpp-russia/pictures/preview.jpg" alt="How to Build Portable Binaries for Linux" loading="lazy">
+    <div class="card-title">How to Build Portable Binaries for Linux</div>
+</a>
+<a href="2019-yatalks-moscow/" class="card" data-title="query profiler: the hard way">
+    <img src="2019-yatalks-moscow/pictures/preview.jpg" alt="Query Profiler: The Hard Way" loading="lazy">
+    <div class="card-title">Query Profiler: The Hard Way</div>
+</a>
+<a href="2019-yatalks/" class="card" data-title="clickhouse performance optimization secrets">
+    <img src="2019-yatalks/pictures/preview.jpg" alt="ClickHouse Performance Optimization Secrets" loading="lazy">
+    <div class="card-title">ClickHouse Performance Optimization Secrets</div>
+</a>
+<a href="2019-percona-europe/" class="card" data-title="clickhouse features to blow your mind">
+    <img src="2019-percona-europe/pictures/preview.jpg" alt="Clickhouse Features to Blow your Mind" loading="lazy">
+    <div class="card-title">Clickhouse Features to Blow your Mind</div>
+</a>
+<a href="2019-percona/" class="card" data-title="clickhouse features to blow your mind">
+    <img src="2019-percona/pictures/preview.jpg" alt="Clickhouse Features to Blow your Mind" loading="lazy">
+    <div class="card-title">Clickhouse Features to Blow your Mind</div>
+</a>
+<a href="2019-highload-spb/" class="card" data-title="database obfuscation">
+    <img src="2019-highload-spb/pictures/preview.jpg" alt="Database Obfuscation" loading="lazy">
+    <div class="card-title">Database Obfuscation</div>
+</a>
+<a href="2019-highload/" class="card" data-title="notorious bugs and how to avoid them using clickhouse as an example">
+    <img src="2019-highload/pictures/preview.jpg" alt="Notorious Bugs and How to Avoid Them Using ClickHouse as an Example" loading="lazy">
+    <div class="card-title">Notorious Bugs and How to Avoid Them Using ClickHouse as an Example</div>
+</a>
+<a href="2019-dataops/" class="card" data-title="performance analysis of clickhouse queries">
+    <img src="2019-dataops/pictures/preview.jpg" alt="Performance Analysis of ClickHouse Queries" loading="lazy">
+    <div class="card-title">Performance Analysis of ClickHouse Queries</div>
+</a>
+<a href="2019-database-saturday/" class="card" data-title="database saturday">
+    <img src="2019-database-saturday/pictures/preview.jpg" alt="Database Saturday" loading="lazy">
+    <div class="card-title">Database Saturday</div>
+</a>
+<a href="2019-cpp-sprint/" class="card" data-title="how to become a clickhouse developer">
+    <img src="2019-cpp-sprint/pictures/preview.jpg" alt="How to Become a ClickHouse Developer" loading="lazy">
+    <div class="card-title">How to Become a ClickHouse Developer</div>
+</a>
+<a href="2019-cpp-russia/" class="card" data-title="not-so-dumb pointers in clickhouse">
+    <img src="2019-cpp-russia/pictures/preview.jpg" alt="Not-So-Dumb Pointers in ClickHouse" loading="lazy">
+    <div class="card-title">Not-So-Dumb Pointers in ClickHouse</div>
+</a>
+<a href="2019-bdtc/" class="card" data-title="the secrets of clickhouse performance optimizations">
+    <img src="2019-bdtc/pictures/preview.jpg" alt="The Secrets of ClickHouse Performance Optimizations" loading="lazy">
+    <div class="card-title">The Secrets of ClickHouse Performance Optimizations</div>
+</a>
+<a href="2018-roadmap/" class="card" data-title="clickhouse roadmap 2018..2019">
+    <img src="2018-roadmap/pictures/preview.jpg" alt="ClickHouse Roadmap 2018..2019" loading="lazy">
+    <div class="card-title">ClickHouse Roadmap 2018..2019</div>
+</a>
+<a href="2018-rit/" class="card" data-title="clickhouse features for advanced developers">
+    <img src="2018-rit/pictures/preview.jpg" alt="ClickHouse Features for Advanced Developers" loading="lazy">
+    <div class="card-title">ClickHouse Features for Advanced Developers</div>
+</a>
+<a href="2018-percona-europe/" class="card" data-title="clickhouse features for advanced users">
+    <img src="2018-percona-europe/pictures/preview.jpg" alt="ClickHouse Features For Advanced Users" loading="lazy">
+    <div class="card-title">ClickHouse Features For Advanced Users</div>
+</a>
+<a href="2018-highload-siberia/" class="card" data-title="how to speed up lz4 decompression">
+    <img src="2018-highload-siberia/pictures/preview.jpg" alt="How to Speed Up LZ4 Decompression" loading="lazy">
+    <div class="card-title">How to Speed Up LZ4 Decompression</div>
+</a>
+<a href="2018-highload/" class="card" data-title="query performance analysis in clickhouse">
+    <img src="2018-highload/pictures/preview.jpg" alt="Query Performance Analysis in ClickHouse" loading="lazy">
+    <div class="card-title">Query Performance Analysis in ClickHouse</div>
+</a>
+<a href="2018-database-saturday-2/pipeline/" class="card" data-title="clickhouse query execution pipeline">
+    <img src="2018-database-saturday-2/pipeline/pictures/preview.jpg" alt="ClickHouse Query Execution Pipeline" loading="lazy">
+    <div class="card-title">ClickHouse Query Execution Pipeline</div>
+</a>
+<a href="2018-database-saturday/" class="card" data-title="database saturday">
+    <img src="2018-database-saturday/pictures/preview.jpg" alt="Database Saturday" loading="lazy">
+    <div class="card-title">Database Saturday</div>
+</a>
+<a href="2017-shad/" class="card" data-title="secrets of clickhouse performance">
+    <img src="2017-shad/pictures/preview.jpg" alt="Secrets of ClickHouse Performance" loading="lazy">
+    <div class="card-title">Secrets of ClickHouse Performance</div>
+</a>
+<a href="2017-pgday/" class="card" data-title="a bit about clickhouse">
+    <img src="2017-pgday/pictures/preview.jpg" alt="A Bit About ClickHouse" loading="lazy">
+    <div class="card-title">A Bit About ClickHouse</div>
+</a>
+<a href="2017-highload/" class="card" data-title="efficient use of clickhouse">
+    <img src="2017-highload/pictures/preview.jpg" alt="Efficient Use of ClickHouse" loading="lazy">
+    <div class="card-title">Efficient Use of ClickHouse</div>
+</a>
+<a href="zero_cost_conf/memcpy/" class="card" data-title="how to move bytes">
+    <img src="zero_cost_conf/memcpy/pictures/preview.jpg" alt="How to Move Bytes" loading="lazy">
+    <div class="card-title">How to Move Bytes</div>
+</a>
+<a href="uwdc/" class="card" data-title="a bit about clickhouse">
+    <img src="uwdc/pictures/preview.jpg" alt="A Bit About ClickHouse" loading="lazy">
+    <div class="card-title">A Bit About ClickHouse</div>
+</a>
+<a href="unknown_developers_reissue/" class="card" data-title="developers remained unknown">
+    <img src="unknown_developers_reissue/pictures/preview.jpg" alt="Developers Remained Unknown" loading="lazy">
+    <div class="card-title">Developers Remained Unknown</div>
+</a>
+<a href="tbd/" class="card" data-title="briefly about clickhouse">
+    <img src="tbd/pictures/preview.jpg" alt="Briefly about ClickHouse" loading="lazy">
+    <div class="card-title">Briefly about ClickHouse</div>
+</a>
+<a href="mail_ru_opensource_meetup/" class="card" data-title="clickhouse opensource community">
+    <img src="mail_ru_opensource_meetup/pictures/preview.jpg" alt="ClickHouse OpenSource community" loading="lazy">
+    <div class="card-title">ClickHouse OpenSource community</div>
+</a>
+<a href="hash_tables/" class="card" data-title="how hash tables are structured in clickhouse">
+    <img src="hash_tables/pictures/preview.jpg" alt="How Hash Tables are Structured in ClickHouse" loading="lazy">
+    <div class="card-title">How Hash Tables are Structured in ClickHouse</div>
+</a>
+<a href="group_by/" class="card" data-title="parallel and distributed group by">
+    <img src="group_by/pictures/preview.jpg" alt="Parallel and Distributed GROUP BY" loading="lazy">
+    <div class="card-title">Parallel and Distributed GROUP BY</div>
+</a>
+<a href="data_at_scale/" class="card" data-title="evolution of data structures in yandex.metrica">
+    <img src="data_at_scale/pictures/preview.jpg" alt="Evolution of data structures in Yandex.Metrica" loading="lazy">
+    <div class="card-title">Evolution of data structures in Yandex.Metrica</div>
+</a>
+<a href="crazy_clickhouse/" class="card" data-title="doing crazy stuff with clickhouse">
+    <img src="crazy_clickhouse/pictures/preview.jpg" alt="Doing Crazy Stuff With ClickHouse" loading="lazy">
+    <div class="card-title">Doing Crazy Stuff With ClickHouse</div>
+</a>
+<a href="cern/" class="card" data-title="clickhouse &mdash; realtime analytical dbms">
+    <img src="cern/pictures/preview.jpg" alt="ClickHouse &mdash; realtime analytical DBMS" loading="lazy">
+    <div class="card-title">ClickHouse &mdash; realtime analytical DBMS</div>
+</a>
+        </div>
+    </div>
+
+    <script>
+        const searchInput = document.getElementById('search');
+        const cards = document.querySelectorAll('.card');
+        const countEl = document.getElementById('count');
+        const total = cards.length;
+
+        searchInput.addEventListener('input', function() {
+            const query = this.value.toLowerCase().trim();
+            let visible = 0;
+
+            cards.forEach(card => {
+                const title = card.getAttribute('data-title');
+                const matches = !query || title.includes(query);
+                card.classList.toggle('hidden', !matches);
+                if (matches) visible++;
+            });
+
+            if (query) {
+                countEl.textContent = `Showing ${visible} of ${total} presentations`;
+            } else {
+                countEl.textContent = `Showing all ${total} presentations`;
+            }
+        });
+
+        // Focus search on key press
+        document.addEventListener('keydown', function(e) {
+            if (e.key === '/' && document.activeElement !== searchInput) {
+                e.preventDefault();
+                searchInput.focus();
+            }
+            if (e.key === 'Escape') {
+                searchInput.value = '';
+                searchInput.dispatchEvent(new Event('input'));
+                searchInput.blur();
+            }
+        });
+    </script>
 </body>
-<style>
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial,
-      sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-    font-size: 16px;
-    line-height: 1.5;
-    word-wrap: break-word;
-  }
-
-  #container {
-    max-width: 1012px;
-    margin: 0 auto;
-    padding: 0 1rem;
-  }
-
-  hr {
-    border: none;
-    border-bottom: 1px solid #eaecef;
-  }
-
-  ul {
-    padding-left: 1em;
-  }
-
-  li {
-    margin-bottom: 0.5em;
-  }
-
-  a {
-    text-decoration: none;
-    color: #0366d6;
-  }
-
-  a:hover {
-    text-decoration: underline;
-  }
-
-  code {
-    font-weight: normal;
-  }
-</style>
-<script>
-  (async () => {
-    const params = new Proxy(new URLSearchParams(window.location.search), {
-      get: (searchParams, prop) => searchParams.get(prop),
-    });
-
-    const listingNode = document.querySelector("#listing");
-
-    try {
-      const response = await fetch(
-        "https://api.github.com/repos/ClickHouse/clickhouse-presentations/contents/" +
-        (params.path || "/")
-      );
-      const data = await response.json();
-      if (response.status !== 200) {
-        throw new Error(data.message);
-      }
-
-      const indexHtml = data.find((el) => el.name === "index.html");
-      const rootIndexHtml = indexHtml && indexHtml.path === "index.html";
-      if (indexHtml && !rootIndexHtml) {
-        window.location.replace(indexHtml.path);
-        return;
-      }
-
-      const list = document.createElement("ul");
-      data.forEach((el) => {
-        const listItem = document.createElement("li");
-        const anchor = document.createElement("a");
-
-        if (el.type === "file") {
-          anchor.setAttribute("href", el.download_url);
-        } else if (el.type === "dir") {
-          anchor.setAttribute("href", "?path=" + encodeURIComponent(el.path));
-        }
-
-        // The folder naming schema was changed in the meantime. New folders
-        // start with a year number, e.g. 2020-meetup-paris.
-        // The renamed-from folders are retained to keep outside links alive but
-        // they only contain a HTML forward to // their renamed-to folder. We
-        // also grey out old links so it becomes more clear. Do this only for
-        // the top-level index.html (!params.path).
-        if (!params.path && !(/^\d/.test(el.name))) {
-            anchor.setAttribute("style", "color:grey")
-        }
-
-        anchor.textContent = el.name;
-        listItem.replaceChildren(anchor);
-        list.appendChild(listItem);
-      });
-      const heading = document.createElement("h2");
-      const pathEl = document.createElement("code");
-      pathEl.textContent = params.path || "/";
-      heading.textContent = "Contents of ";
-      heading.appendChild(pathEl);
-      listingNode.replaceChildren(heading, list);
-    } catch (e) {
-      const heading = document.createElement("h2");
-      heading.textContent = e;
-      listingNode.replaceChildren(heading);
-    }
-  })();
-</script>
+</html>
