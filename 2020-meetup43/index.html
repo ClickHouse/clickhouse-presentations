@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>New Features of ClickHouse: winter/spring 2020</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta property="og:image" content="pictures/preview.jpg">
+    <meta property="og:title" content="New Features of ClickHouse: winter/spring 2020">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="pictures/preview.jpg">
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/themes/clickhouse/styles/styles.css">
+
+    <style>
+        code { display: block; white-space: pre; background-color: #EEE; }
+        p.cloud { text-align: center; line-height: 1.7; }
+        p.cloud span { font-size: 14pt; color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+        p.cloud_big { text-align: center; line-height: 1.7; }
+        p.cloud_big span { font-size: 24pt; color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+        .shower { --slide-ratio: calc(16 / 10); }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: winter/spring 2020</h1>
+    </header>
+
+    <section class="slide">
+        <h1>ClickHouse: winter/spring 2020</h1>
+        <p style="margin-top: 100px;">Zoom: <a href="https://yandex.zoom.us/j/91554601465">https://yandex.zoom.us/j/91554601465</a></p>
+        <p>YouTube: <a href="https://www.youtube.com/c/ClickHouseDB">https://www.youtube.com/c/ClickHouseDB</a></p>
+        <p>Telegram chat: <a href="https://telegram.me/clickhouse_en">clickhouse_en</a></p>
+    </section>
+
+    <section class="slide" id="cover">
+        <h1 style="margin-top: 180px; font-size: 48pt;"><span>New Features of ClickHouse:<br/>winter/spring 2020</span></h1>
+    </section>
+
+    <section class="slide">
+        <h2>Previous Episodes:</h2>
+        <p class="cloud">
+            <span>Tiered Storage</span>
+            <span>DDL queries for dictionaries</span>
+            <span>CONSTRAINTs</span>
+            <span>Prepared Statements</span>
+            <span>Format ORC</span>
+            <span>Format Template</span>
+            <span>ORDER BY optimization</span>
+            <span>WITH FILL</span>
+            <span>text_log</span>
+            <span>metric_log</span>
+            <span>Query Profiler</span>
+            <span>Globs for File/URL/HDFS</span>
+            <span>RPM packages</span>
+            <span>neighbor</span>
+            <span>os_schedule_priority</span>
+            <span>ALTER MODIFY SETTING</span>
+            <span>SELECT FROM VALUES</span>
+            <span>COLUMNS matcher</span>
+            <span>LIVE VIEW</span>
+            <span>Settings constraints</span>
+            <span>Row Level Security</span>
+            <span>Secondary Indices</span>
+            <span>TTL expressions</span>
+            <span>MySQL protocol</span>
+            <span>Adaptive index granularity</span>
+            <span>Advanced text search</span>
+            <span>JSON functions</span>
+            <span>Cascade MATERIALIZED VIEWs</span>
+            <span>WITH ROLLUP/CUBE</span>
+            <span>ASOF JOIN</span>
+            <span>Redis dictionary source</span>
+            <span>Parallel parsing</span>
+            <span>Template format</span>
+            <span>CustomSeparated format</span>
+            <span>VALUES optimization</span>
+            <span>s3 import/export</span>
+            <span>gzip/brotli import/export</span>
+            <span>geoDistance</span>
+        </p>
+    </section>
+
+<section class="slide">
+<h2>Role Based Access Control</h2>
+<p>Managing users, roles<br/>and access with SQL queries.</p>
+<p>CREATE USER / DROP USER</p>
+<p>CREATE ROLE / DROP ROLE</p>
+<p>GRANT / REVOKE role TO user</p>
+<p>GRANT / REVOKE SELECT columns ON db.table TO role/user</p>
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Available from version 20.4. Developer &mdash; Vitaly Baranov.</p>
+</section>
+
+<section class="slide">
+<h2>Role Based Access Control</h2>
+<p>demo?</p>
+<!--
+CREATE USER test IDENTIFIED WITH sha256_password BY 'hello'
+
+clickhouse-client --user test --password hello
+SELECT count() FROM test.hits
+
+clickhouse-client
+GRANT SELECT ON test.hits TO test
+clickhouse-client --user test --password hello
+SELECT count() FROM test.hits
+-->
+</section>
+
+<section class="slide">
+<h2>Non-blocking ALTER queries</h2>
+<p>... and ALTER RENAME COLUMN</p>
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Available from version 20.4. Developer &mdash; Alexander Sapin.</p>
+</section>
+
+<section class="slide">
+<h2>And more for ALTER</h2>
+<p>ALTER MATERIALIZE TTL</p>
+<p>ALTER MOVE PARTITION</p>
+</section>
+
+<section class="slide">
+<h2>Adaptive JOIN algorithm</h2>
+<p>SET join_algorithm = 'auto'</p>
+<p>Automatically switch between Hash Join and Merge Join<br/>depending on memory usage.</p>
+<p style="margin-top: 100px; font-size: 14pt; color: green;">Available since 20.3. Developer &mdash; Artem Zuikov.</p>
+</section>
+
+<section class="slide">
+<h2>Adaptive JOIN algorithm</h2>
+<p>demo?</p>
+<!--
+SELECT uniq(a.URL), uniq(b.URL) FROM hits_100m_obfuscated a INNER JOIN hits_100m_obfuscated b ON a.WatchID = b.WatchID;
+SET join_algorithm = 'auto'
+SET send_logs_level = 'trace'
+-->
+</section>
+
+<section class="slide">
+<h2>DateTime64</h2>
+<p>Date and Time with subsecond resolution.</p>
+<p>DateTime64(3) &mdash; milliseconds.</p>
+<p>DateTime64(6) &mdash; microseconds.</p>
+<p>...</p>
+<p style="margin-top: 100px; font-size: 14pt; color: green;">Available since 20.1. Developer &mdash; Vasily Nemkov, Altinity.</p>
+</section>
+
+<section class="slide">
+<h2>DateTime64</h2>
+<p>В разработке &mdash; расширенный диапазон.</p>
+<p>Сейчас 1970&ndash;2106.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Write-Optimized Data Format</h2>
+<p>For data parts of MergeTree tables.</p>
+<code>CREATE TABLE test.hits_compact AS test.hits
+    ENGINE = MergeTree ORDER BY ...
+    SETTINGS min_bytes_for_wide_part = '10M'</code>
+<p style="margin-top: 1em;">Ускоряет мелкие вставки.</p>
+<p style="margin-top: 100px; font-size: 14pt; color: red;">Experimental feature.</p>
+<p style="font-size: 14pt; color: green;">Available since 20.3. Developer &mdash; Anton Popov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Write-Optimized Data Format</h2>
+<p>demo?</p>
+<!--
+time clickhouse benchmark <<< "INSERT INTO test.hits_wide (UserID) VALUES (rand())" -i 1000
+time clickhouse benchmark <<< "INSERT INTO test.hits_compact (UserID) VALUES (rand())" -i 1000
+-->
+</section>
+
+<section class="slide">
+<h2>More Features</h2>
+<p>FORMAT Avro</p>
+<p>FORMAT Regexp</p>
+<p>Handler for Prometheus</p>
+<p>Asynchronous update mode for cache dictionaries</p>
+<p>Memory Profiler</p>
+<p>system.stack_trace</p>
+<p>Limiting network connections for hosts</p>
+<p>Full support for h3</p>
+</section>
+
+<section class="slide">
+<h2>LTS releases</h2>
+<p>Version 20.3 (March 2020) is a new LTS</p>
+</section>
+
+<section class="slide">
+<h2>ClickHouse Playground</h2>
+<p>(beta version)</p>
+<p><a href="https://play.clickhouse.com/">https://play.clickhouse.com/</a></p>
+<p>Works on the cheapest VM in Yandex.Cloud.</p>
+</section>
+
+<section class="slide">
+<h2>What's Next</h2>
+<p>LDAP for authentication</p>
+<p>Kerberos for authentication</p>
+<p>LDAP as a storage for access rights and roles</p>
+</section>
+
+<section class="slide">
+<h2>What's Next</h2>
+<p style="color: green">ALTER RENAME COLUMN</p>
+<p style="color: green">Non-blocking CREATE/DROP/RENAME</p>
+<p>In-memory data parts and WAL for MergeTree</p>
+<p>Cold storage over S3 and HDFS.</p>
+<p>FreeBSD x86_64 and Linux ppc64le builds in CI.</p>
+</section>
+
+<section class="slide">
+<h2>What's Next</h2>
+<p>Cache for subquery results</p>
+<p>Custom HTTP handlers</p>
+<p>On-disk data encryption</p>
+<p>Geographical dictionaries</p>
+</section>
+
+<section class="slide">
+    <h2>Public roadmap 2020!</h2>
+    <p><a href="https://clickhouse.com/docs/ru/extended_roadmap/">https://clickhouse.com/docs/ru/extended_roadmap/</a></p>
+    <p>~ 500 tasks with detailed descriptions &mdash; dependencies, assignies...</p>
+    <p>and ~ 70 are already done :)</p>
+</section>
+
+
+<section class="slide">
+    <h2>.</h2>
+</section>
+
+    <div class="progress"></div>
+    <script src="https://presentations.clickhouse.com/shower/shower.js"></script>
+<footer class="badge">
+    <a href="https://presentations.clickhouse.com/">ClickHouse Theater</a>
+</footer>
+</body>
+</html>

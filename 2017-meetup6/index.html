@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en" style="background-color: #FFF;">
+<head>
+    <title>ClickHouse meetup in Ekaterinburg</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta property="og:image" content="pictures/preview.jpg">
+    <meta property="og:title" content="ClickHouse meetup in Ekaterinburg">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="pictures/preview.jpg">
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/themes/clickhouse/styles/styles.css">
+
+    <style>
+         span { padding: 1px 10px; background: rgba(255, 255, 255, 0.75); }
+         .shower { --slide-ratio: calc(16 / 10); }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse meetup in Ekaterinburg</h1>
+    </header>
+
+    <section class="slide" id="cover" style="background: url('pictures/IMG_8028.JPG') no-repeat center center; background-size: 100%">
+        <h1 style="margin-top: 100px; font-size: 36pt"><span>ClickHouse meetup in Ekaterinburg</span></h1>
+    </section>
+
+    <section class="slide" style="background: url('pictures/IMG_0278.JPG') no-repeat center center; background-size: 100%">
+        <h2><span>ClickHouse: Present and Future</span></h2>
+    </section>
+
+    <section class="slide">
+        <h2>What is ClickHouse?</h2>
+        <p>ClickHouse - distributed analytical column-oriented DBMS</p>
+    </section>
+
+    <section class="slide">
+        <h2>Why column-oriented?</h2>
+        <p>How row-oriented systems work:</p>
+        <p><img src="pictures/row_oriented.gif"/></p>
+    </section>
+    <section class="slide">
+        <h2>Why column-oriented?</h2>
+        <p>How column-oriented systems work:</p>
+        <p><img src="pictures/column_oriented.gif"/></p>
+    </section>
+    <section class="slide">
+        <h2>Why ClickHouse?</h2>
+        <p>Nothing ready-made was suitable.</p>
+        <p>So we made ClickHouse.</p>
+        <p>&laquo;Evolution of Data Structures in Yandex.Metrica&raquo;</p>
+        <p><a href="https://habrahabr.ru/company/yandex/blog/273305/">https://habrahabr.ru/company/yandex/blog/273305/</a></p>
+    </section>
+    <section class="slide">
+        <h2>Metrica 2.0</h2>
+        <img src="pictures/metrika2.png" style="height:70%"/>
+    </section>
+    <section class="slide">
+        <h2>In Brief</h2>
+        <ul>
+            <li>column-oriented</li>
+            <li>linear scalability</li>
+            <li>fault tolerance</li>
+            <li>real-time data loading</li>
+            <li>online (sub-second) queries</li>
+            <li>SQL dialect support + extensions<br/>(arrays, nested data structures, domain-specific functions, sampling)</li>
+        </ul>
+    </section>
+    <section class="slide">
+        <h2>Main Metrica Cluster</h2>
+        <ul style="font-size:30px;">
+            <li>>22 trillion rows</li>
+            <li>472 servers</li>
+            <li>data processing speed up to two terabytes per second</li>
+        </ul>
+        <p style="font-size:60%; margin-top:2em">* If you want to try ClickHouse, one server is enough.</p>
+    </section>
+    <section class="slide">
+        <h2>ClickHouse at Yandex</h2>
+        <p>We managed to make the system relatively user-friendly.</p>
+        <p>From the very beginning we had detailed documentation.</p>
+        <p>Within a couple of years, ClickHouse spread to other Yandex departments.</p>
+        <p>Mail, Market, Direct, Webmaster, AdFox, Infrastructure, Business Analytics...</p>
+        <p>There are cases when analysts independently installed ClickHouse on virtual machines and successfully used it without any questions.</p>
+    </section>
+    <section class="slide" style="background: url('pictures/IMG_8192.JPG') no-repeat center center; background-size: 100%">
+        <h2><span>Open-source</span></h2>
+        <p><span>Then we decided — ClickHouse is too good a system for us to keep it to ourselves.</span></p>
+        <p><span>To make it more fun, we need to get people outside hooked on ClickHouse, let them enjoy it. We decided to go open-source.</span></p>
+    </section>
+    <section class="slide">
+        <h2>Open-source</h2>
+        <p>Apache 2.0 license — minimum restrictions.</p>
+        <p>Goal — maximum product distribution.</p>
+        <p>We want Yandex's product to be used worldwide.</p>
+        <p>See "Yandex Opens ClickHouse"</p>
+        <p><a href="https://habrahabr.ru/company/yandex/blog/303282/">https://habrahabr.ru/company/yandex/blog/303282/</a></p>
+    </section>
+    <section class="slide">
+        <h2>When to Use ClickHouse</h2>
+        <p>Well-structured, cleaned, immutable events.</p>
+        <p>&nbsp;</p>
+        <p>Click stream. Web analytics. Ad&nbsp;networks. RTB. E-commerce.</p>
+        <p>Online game analytics. Sensor and monitoring data. Telecom&nbsp;data.</p>
+        <p>Financial transactions. Stock market analytics.</p>
+    </section>
+    <section class="slide">
+        <h2 style="font-size: 40px;"><span>When <span style="color:red;">NOT to</span> Use ClickHouse</span></h2>
+        <p><span style="font-size: 30px;color: #888;">OLTP</span><br/><span>ClickHouse has no UPDATE and full-fledged transactions.</span></p>
+        <p><span style="font-size: 30px;color: #888;">Key-Value</span><br/><span>If you need frequent update queries by key, use another solution.</p>
+        <p><span style="font-size: 30px;color: #888;">Blob-store, document oriented</span><br/><span>ClickHouse is designed for a large number of fine-grained data.</span></p>
+        <p><span style="font-size: 30px;color: #888;">Over-normalized data</span><br/><span>Better to make a wide fact table.</span></p>
+    </section>
+    <section class="slide">
+        <h2>Why is ClickHouse so Fast?</h2>
+        <p>&nbsp;</p>
+        <p style="font-size: 40px;">&mdash; out of desperation.</p>
+        <p style="font-size: 40px;">Yandex.Metrica must work.</p>
+    </section>
+    <section class="slide">
+        <h2>Why is ClickHouse so Fast?</h2>
+        <p><b>Algorithmic optimization.</b></p>
+        <p>MergeTree, data locality on disk<br/>— fast range queries.</p>
+        <p>Example: the uniqCombined function consists of a combination of three different data structures suitable for different cardinality ranges.</p>
+        <p><b>Low-level optimization.</b></p>
+        <p>Example: vectorized query execution.</p>
+        <p><b>Specialization and attention to detail.</b></p>
+        <p>Example: we have 17 different GROUP BY algorithms. The best one is chosen for your query.</p>
+    </section>
+
+<section class="slide">
+<h2>ClickHouse Adoption</h2>
+
+<p>Hundreds of companies in Russia and nearby<br/>Yandex, Mail.ru, Rambler, SKB Kontur&hellip;</p>
+<p>Dozens of companies in Europe, USA, China<br/>Cloudflare, Wikimedia, Lifestreet&hellip;</p>
+
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Unusual ClickHouse Use Cases</h2>
+
+<p>Search engine and analytics for Bitcoin transactions:
+<br/><a href="https://blockchair.com/">https://blockchair.com/</a></p>
+
+<p>"Pretty large tables are running, only one server is used and everything works very quickly — with any filters and sorting, everything is almost instantaneous."</p>
+
+<p>Bioinformatics - evolutionary genetics:
+<br/><a href="https://github.com/msestak/FindOrigin">https://github.com/msestak/FindOrigin</a></p>
+
+<p>"We are exploring evolution of novel genes in genomes because if seems that genomes are far from being static as previously believed and what actually happens is that new genes are constantly being added and old genes are lost."</p>
+
+<p>LHCb experiment at LHC:
+<br/><a href="https://www.yandex.com/company/press_center/press_releases/2012/2012-04-10/">https://www.yandex.com/company/press_center/press_releases/2012/2012-04-10/</a></p>
+
+</section>
+
+    <section class="slide" style="background: url('pictures/IMG_8128.JPG') no-repeat center center; background-size: 100%">
+        <h2><span>What's New in ClickHouse</span></h2>
+    </section>
+
+
+<section class="slide" style="background: url('pictures/IMG_8241.JPG') no-repeat center center; background-size: 100%">
+<h2><span>Usability Improvements</span></h2>
+
+<p><span>Type casting for Merge-type tables</span></p>
+<p><span>input_format_allow_errors_* settings</span></p>
+<p><span>Ability to create more than 16 dictionaries with ODBC source</span></p>
+<p><span>Loading part of configuration from ZK</span></p>
+<p><span>OPTIMIZE DEDUPLICATE</span></p>
+<p><span>ALTER of primary key: Enum, Date &lt;-> UInt16, DateTime &lt;-> UInt32</span></p>
+<p><span>clickhouse --extract-from-config</span></p>
+</section>
+
+<section class="slide">
+<h2>Distributed Queries</h2>
+
+<p>Disabling lagging replicas</p>
+<p>Disabling replicas without the table</p>
+<p>Original query source in system.processes, system.query_log</p>
+</section>
+
+<section class="slide">
+<h2>INSERT SELECT Convenience</h2>
+
+<p>Type casting in INSERT SELECT</p>
+<p>INSERT SELECT: by positions instead of names</p>
+</section>
+
+<section class="slide" style="background: url('pictures/map.png') no-repeat center center; background-size: 105%">
+<h2><span>GIS Functions</span></h2>
+
+<p><span>pointInEllipses</span></p>
+<p><span>greatCircleDistance</span></p>
+</section>
+
+<section class="slide">
+<h2>Aggregate Functions</h2>
+
+<p>-ForEach combinator</p>
+<p>groupArrayInsertAt</p>
+<p>topK (beta)</p>
+</section>
+
+<section class="slide">
+<h2>Interfaces</h2>
+
+<p>ODBC driver - build and functionality on Windows</p>
+<p>HTTPS server</p>
+</section>
+
+<section class="slide">
+<h2>Introspection</h2>
+
+<p>system.parts - exact row count</p>
+<p>system.columns - uncompressed size</p>
+<p>system.part_log</p>
+</section>
+
+<section class="slide">
+<h2>NULLs (beta)</h2>
+
+<p>NULL for JOIN: join_use_nulls setting</p>
+<p>NULLS FIRST, LAST for ORDER BY</p>
+<p>NULL support in IN</p>
+<p>NULL support in higher-order functions</p>
+<p>if, multiIf, ifNull, nullIf, coalesce</p>
+<p>toNullable, assumeNotNull</p>
+<p>Nullable type support in aggregate functions</p>
+<p>NULL as result of subquery returning empty set</p>
+</section>
+
+<section class="slide">
+<h2>And More</h2>
+
+<p>ALTER ... DROP COLUMN ... FROM PARTITION</p>
+<p>preferred_block_size_bytes setting</p>
+<p>Ability to enable result buffering in HTTP interface</p>
+</section>
+
+<section class="slide" style="font-size: 80%;">
+<h2>But That's Not All</h2>
+
+<p style="margin-top: -30px;">KILL QUERY
+<br/>LIMIT BY
+<br/>SELECT INTO OUTFILE
+<br/>clickhouse-local
+<br/>cross-replication
+<br/>UUID and MAC encoding functions
+<br/>Proper HTTP response codes
+<br/>Proper comparison operation logic
+<br/>Progress in HTTP headers
+<br/>Cache stampede fix
+<br/>system.build_options, system.graphite
+<br/>Distributed query tracing in system.processes, system.query_log
+<br/>Ability to skip errors in text formats
+<br/>fsync_metadata setting
+<br/>timezone config parameter, timezone() function
+<br/>decodeURLComponent
+<br/>Faster gzip in HTTP interface
+<br/>max_table_size_to_drop
+<br/>proper build and packages
+<br/>DISTINCT speedup
+<br/>Buffer table optimization
+<br/>FixedString optimization
+<br/>RIGHT/FULL JOIN improvements</p>
+</section>
+
+<section class="slide" style="background: url('pictures/IMG_8056.JPG') no-repeat center center; background-size: 100%">
+<h2><span>Roadmap</span></h2>
+</section>
+
+<section class="slide">
+<h2>End of May &mdash; Beginning of June 2017</h2>
+
+<p>Distributed DDL queries</p>
+<p>Dictionary table engine, Dictionary database engine</p>
+<p>Reloading dictionaries using user-defined state query</p>
+</section>
+
+<section class="slide">
+<h2>June&ndash;July 2017</h2>
+
+<p>SYSTEM queries</p>
+<p>Session concept in HTTP interface</p>
+<p>Limit on concurrent replica downloads</p>
+<p>NULLs: fix almost all remaining issues</p>
+</section>
+
+<section class="slide">
+<h2>July 2017</h2>
+
+<p>SELECT `db`.`table`.`column`</p>
+</section>
+
+<section class="slide">
+<h2>Q3-Q4 2017</h2>
+
+<p>Custom partitioning key for MergeTree</p>
+<p>Ability to write JOIN as in regular SQL</p>
+<p>Resource pools (CPU, disk IO, network bandwidth) for queries</p>
+</section>
+
+<section class="slide" style="background: url('pictures/IMG_8035.JPG') no-repeat center center; background-size: 100%">
+<h2><span>Q4-Q5 2017</span></h2>
+
+<p><span>Initial UPDATE/DELETE support</span></p>
+</section>
+
+
+<section class="slide" style="background: url('pictures/IMG_8088.JPG') no-repeat center center; background-size: 100%">
+    <h2><span>Community</span></h2>
+    <p><span>Website: <a href="https://clickhouse.com/">https://clickhouse.com/</a></span></p>
+    <p><span>Google groups: <a href="https://groups.google.com/forum/#!forum/clickhouse">https://groups.google.com/forum/#!forum/clickhouse</a></span></p>
+    <p><span>Mailing list: clickhouse-feedback@yandex-team.com</span></p>
+    <p><span>Telegram chat: <a href="https://telegram.me/clickhouse_en">https://telegram.me/clickhouse_en</a> and <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_ru</a> (already 668 participants)</span></p>
+    <p><span>GitHub: <a href="https://github.com/ClickHouse/ClickHouse/">https://github.com/ClickHouse/ClickHouse/</a></span></p>
+    <p>&nbsp;</p>
+    <p><span>+ meetings. Moscow, Saint Petersburg, Novosibirsk,<br/>Ekaterinburg, San Francisco... Next: Kiev, Minsk...</span></p>
+</section>
+
+    <section class="slide" style="background: url('pictures/IMG_8127.JPG') no-repeat center center; background-size: 100%">
+        <h2>That's All for Now</h2>
+    </section>
+
+    <div class="progress"></div>
+    <script src="https://presentations.clickhouse.com/shower/shower.js"></script>
+<footer class="badge">
+    <a href="https://presentations.clickhouse.com/">ClickHouse Theater</a>
+</footer>
+</body>
+</html>

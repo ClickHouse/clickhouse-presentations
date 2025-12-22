@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Doing Crazy Stuff With ClickHouse</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta property="og:image" content="pictures/preview.jpg">
+    <meta property="og:title" content="Doing Crazy Stuff With ClickHouse">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="pictures/preview.jpg">
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/themes/clickhouse/styles/styles.css">
+
+    <style>
+        code { display: block; white-space: pre; background-color: #EEE; }
+        p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+        p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         table, tr, td { border: 0; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>Doing Crazy Stuff With ClickHouse</h1>
+    </header>
+    <section class="slide" id="cover">
+        <img src="https://presentations.clickhouse.com/original_website/logo.svg" style="width: 15%; position: absolute; right: 20px; bottom: 20px;" />
+        <h1 style="margin-top: 80px; line-height: 150%; color: black; font-size: 64pt">Doing Crazy Stuff With ClickHouse</h1>
+    </section>
+
+<section class="slide">
+<h2>Doing Crazy Stuff With ClickHouse</h2>
+<p>Less known ClickHouse features.</p>
+<p>Hidden gems in ClickHouse.</p>
+<p>Using ClickHouse like you have never imagine.</p>
+</section>
+
+<section class="slide">
+<h2>Download ClickHouse</h2>
+<p>Install it on any system with a single binary:</p>
+<p><code>curl https://clickhouse.com/ | sh</code></p>
+
+<p>Single binary (480 MB), no dependencies!</p>
+
+<p>Works on every platform:
+<br/>&mdash; Linux, macOS, FreeBSD, Windows (WSL2)
+<br/>&mdash; x86_64, ARM 64, PowerPC 64LE</p>
+
+<p>Works with or without installation.</p>
+<p style="margin-top: 1em; color: gray; font-size: 14pt;">How it is implemented? Read curl https://clickhouse.com/</p>
+</section>
+
+<section class="slide">
+<h2>What's inside ClickHouse?</h2>
+<p style="margin-top: -1em; margin-right: -20px; margin-left: -20px;"><code style="font-size: 14pt; line-height: 1.2;">Successfully downloaded the ClickHouse binary, you can run it as:
+    ./clickhouse
+
+You can also install it:
+    sudo ./clickhouse install
+
+$ ./clickhouse
+Use one of the following commands:
+clickhouse local [args]                clickhouse keeper [args]
+clickhouse <b style="color: green;">client</b> [args]               clickhouse keeper-converter [args]
+clickhouse benchmark [args]            clickhouse install [args]
+clickhouse <b style="color: green;">server</b> [args]               clickhouse start [args]
+clickhouse extract-from-config [args]  clickhouse stop [args]
+clickhouse compressor [args]           clickhouse status [args]
+clickhouse format [args]               clickhouse restart [args]
+clickhouse copier [args]               clickhouse static-files-disk-uploader
+clickhouse obfuscator [args]           clickhouse su [args]
+clickhouse git-import [args]           clickhouse hash-binary [args]
+clickhouse disks [args]
+</code></p>
+</section>
+
+<section class="slide">
+<h2>ClickHouse Obfuscator</h2>
+<p>Anonymize datasets.</p>
+<p>Generate and multiply datasets.</p>
+<p>Keeping structure and values distribution.</p>
+<p>Example 1: generating obfuscated dataset of the same size:</p>
+<p><code>clickhouse-obfuscator \
+    --structure "c1 String, c2 UInt64, ..." \
+    --input-format CSV \
+    --output-format CSV \
+    --seed "$SEED" \
+&lt; source.csv > result.csv
+</code></p>
+</section>
+
+<section class="slide">
+<h2>ClickHouse Obfuscator</h2>
+<p>This dataset does not exist:</p>
+<p><code style="font-size: 16pt;">┌─SearchPhrase──────────────┬─count()─┐
+│ nazarbeko cn32            │ 1035903 │
+│ ozzy 4                    │  849431 │
+│ mira party"               │  798410 │
+│ limp bizkiy               │  436204 │
+│ galaxy table              │  237734 │
+│ sea party"                │  226540 │
+│ kawasaki bios             │  190022 │
+│ kawasaki - psy            │  185437 │
+│ my love_r                 │  179403 │
+│ minecraftbuk-40           │  165758 │
+│ asrock antasy xv          │  158144 │
+│ galaxy s4 minecraftbuk-40 │  134530 │
+│ kawasaki bioshop          │  127379 │
+│ vintage club.su           │  127129 │
+└───────────────────────────┴─────────┘
+</code></p>
+</section>
+
+<section class="slide">
+<h2>ClickHouse Obfuscator</h2>
+<p>For performance and load testing.</p>
+<p>Keeps the distribution of string lengths, numbers magnitude,
+<br/>cardinality, correlations, substrings distribution, compression rate...</p>
+<p>Example 2: generating obfuscated dataset of smaller or larger size:</p>
+<p><code>clickhouse-obfuscator \
+    --structure "c1 String, c2 UInt64, ..." \
+    --input-format CSV \
+    --output-format CSV \
+    --seed "$SEED" \
+    <b style="color: green;">--limit 100</b> \
+&lt; source.csv > result.csv
+</code></p>
+</section>
+
+<section class="slide">
+<h2>ClickHouse Obfuscator</h2>
+<p style="margin-top: -1em;">Example 3: saving models for parallel generation:</p>
+<p><code>clickhouse-obfuscator \
+    --structure "c1 String, c2 UInt64, ..." \
+    --input-format CSV \
+    --output-format CSV \
+    --seed "$SEED" \
+    <b style="color: green;">--limit 0 --save model.bin</b> \
+&lt; source.csv
+
+clickhouse-obfuscator \
+    --structure "c1 String, c2 UInt64, ..." \
+    --input-format CSV \
+    --output-format CSV \
+    --seed "$SEED" \
+    <b style="color: green;">--load model.bin</b> \
+&lt; source.csv > result.csv
+</code></p>
+</section>
+
+<section class="slide">
+<h2>ClickHouse Obfuscator</h2>
+<p>For performance and load testing.</p>
+<p>Having only <b>1 million</b> records of data,<br/>
+generate <b>1 trillion records</b> to check how ClickHouse will scale.</p>
+
+<p style="color: gray;">TLDR: It will scale well :)</p>
+</section>
+
+<section class="slide">
+<h2>ClickHouse Format</h2>
+<p>Uninteresting part: pretty-print your query.</p>
+<p><code>$ clickhouse-format --query "create table business_secrets(customer_name String, customer_phone_number String, company_id UInt64, description String) ENGINE = MergeTree ORDER BY company_id"
+
+CREATE TABLE business_secrets
+(
+    `customer_name` String,
+    `customer_phone_number` String,
+    `company_id` UInt64,
+    `description` String
+)
+ENGINE = MergeTree
+ORDER BY company_id</code></p>
+<p>Uninteresting options: --hilite, --oneline.</p>
+</section>
+
+<section class="slide">
+<h2>ClickHouse Format</h2>
+<p>It can obfuscate your queries!</p>
+<p><code style="overflow: hidden;">$ clickhouse-format --obfuscate --query "CREATE TABLE business_secrets ..."
+
+CREATE TABLE scimitar_joy
+(
+    isolation_name String,
+    isolation_geography_lane String,
+    compress_id UInt64,
+    damage String
+)
+ENGINE = MergeTree
+ORDER BY compress_id
+</code></p>
+<p>Now the query looks much more interesting :)</p>
+</section>
+
+<section class="slide">
+<h2>ClickHouse Format</h2>
+<p>It can obfuscate your queries!</p>
+<p><code style="overflow: hidden;">$ clickhouse-format <b style="color: green;">--seed 1</b> --obfuscate --query "CREATE TABLE business_secrets ..."
+
+CREATE TABLE gun_science
+(
+    touch_name String,
+    touch_grenade_inclusion String,
+    chord_id UInt64,
+    traditionalism String
+)
+ENGINE = MergeTree
+ORDER BY chord_id
+</code></p>
+<p>Now the query looks much more interesting :)</p>
+</section>
+
+<section class="slide">
+<h2>ClickHouse Format</h2>
+<p>It can obfuscate your queries!</p>
+<p><code style="overflow: hidden;">$ clickhouse-format --obfuscate &lt; queries.sql</code></p>
+<p>Can process multiple queries at once
+<br/>for consistent transformation.</p>
+<p>String literals, numbers and data are transformed by a deterministic PRF.</p>
+<p>Use case: sharing the queries for testing.</p>
+</section>
+
+<section class="slide">
+<h2>ClickHouse Git Import</h2>
+<pre><b>clickhouse-git-import --help</b></pre>
+<p>Analyze your code with ClickHouse!</p>
+
+<p>Usage:</p>
+<pre><b>clickhouse-git-import</b></pre>
+<p style="color: gray;">^ run this command inside your Git repository.</p>
+</section>
+
+<section class="slide">
+<h2>ClickHouse Git Import</h2>
+<p>What is Git?</p>
+
+<p>A distributed version control system?</p>
+<p>A content-addressable blockchain graph database?</p>
+
+<p>git &mdash; the stupid content tracker<br/>
+&mdash; Linus Torvalds.</p>
+
+<p><b>Whatever it is... let's load everything to ClickHouse!</b></p>
+</section>
+
+<section class="slide">
+<h2>ClickHouse Git Import</h2>
+<pre><b>clickhouse-git-import</b></pre>
+<p style="color: gray;">^ run this command inside your Git repository.</p>
+
+<p><code style="line-height: 1.5;">$ wc -lc line_changes.tsv file_changes.tsv commits.tsv
+
+   7528665 2920411878 line_changes.tsv
+    265724   55133300 file_changes.tsv
+     62665    8182510 commits.tsv</code></p>
+</section>
+
+<section class="slide">
+<h2>ClickHouse Git Import</h2>
+<p style="margin-top: -1em;">Allows to answer questions like:
+<br/>&mdash; list files with maximum number of authors;
+<br/>&mdash; show me the oldest lines of code in the repository;
+<br/>&mdash; show me the files with longest history;
+<br/>&mdash; list favorite files for author;
+<br/>&mdash; list largest files with lowest number of authors;
+<br/>&mdash; at what weekday the code has highest chance to stay in repository;
+<br/>&mdash; the distribution of code age across repository;
+<br/>&mdash; files sorted by average code age;
+<br/>&mdash; quickly show file with blame info (rough);
+<br/>&mdash; commits and lines of code distribution by time;
+<br/>&mdash; show history for every subdirectory, file, line of file, changes across time;
+<br/>&mdash; how the number of contributors was changed across time;
+<br/>&mdash; list files with most modifications;
+<br/>&mdash; list files that were rewritten most number of time or by most of authors;
+<br/>&mdash; what is percentage of code removal by other authors, across authors;
+<br/>&mdash; the matrix of authors that shows what authors tends to rewrite another authors code;
+<br/>&mdash; the average time before code will be rewritten and the median (half-life of code decay);
+<br/>&mdash; comments/code percentage change in time / by author / by location;
+<br/>&mdash; who tend to write more tests / cpp code / comments.</p>
+</section>
+
+<section class="slide">
+<h2>ClickHouse Git Import</h2>
+<p style="margin-top: -1em;">The matrix of authors: who rewrites another author's code.</p>
+<p><code style="font-size: 14pt; overflow-y: scroll; height: 20em;">SELECT prev_author, author AS new_author, count() AS c
+FROM line_changes WHERE sign = -1 AND file_extension IN ('h', 'cpp')
+  AND line_type NOT IN ('Punct', 'Empty')
+  AND author != prev_author AND prev_author != ''
+GROUP BY prev_author, author ORDER BY c DESC
+LIMIT 1 BY prev_author LIMIT 100
+
+┌─prev_author──────────┬─new_author───────┬─────c─┐
+│ Ivan Lezhankin       │ Alexey Milovidov │ 18554 │
+│ Alexey Arno          │ Alexey Milovidov │ 18475 │
+│ Michael Kolupaev     │ Alexey Milovidov │ 14135 │
+│ Alexey Milovidov     │ Nikolai Kochetov │ 13435 │
+│ Andrey Mironov       │ Alexey Milovidov │ 10418 │
+│ proller              │ Alexey Milovidov │  7280 │
+│ Nikolai Kochetov     │ Alexey Milovidov │  6806 │
+│ alexey-milovidov     │ Alexey Milovidov │  5027 │
+│ Vitaliy Lyudvichenko │ Alexey Milovidov │  4390 │
+│ Amos Bird            │ Ivan Lezhankin   │  3125 │
+│ f1yegor              │ Alexey Milovidov │  3119 │
+│ Pavel Kartavyy       │ Alexey Milovidov │  3087 │
+│ Alexey Zatelepin     │ Alexey Milovidov │  2978 │
+│ alesapin             │ Alexey Milovidov │  2949 │
+│ Sergey Fedorov       │ Alexey Milovidov │  2727 │
+│ Ivan Lezhankin       │ Alexey Milovidov │  2618 │
+│ Vasily Nemkov        │ Alexey Milovidov │  2547 │
+│ Alexander Tokmakov   │ Alexey Milovidov │  2493 │
+│ Nikita Vasilev       │ Maksim Kita      │  2420 │
+│ Anton Popov          │ Amos Bird        │  2127 │
+└──────────────────────┴──────────────────┴───────┘</code></p>
+</section>
+
+<section class="slide">
+<h2>ClickHouse Git Import</h2>
+<p style="margin-top: -1em;">The matrix of authors: who rewrites another author's code (LLVM).</p>
+<p><code style="font-size: 14pt; overflow-y: scroll; height: 20em;">┌─prev_author──────────┬─new_author────────────┬─────c─┐
+│ Giorgis Georgakoudis │ Johannes Doerfert     │ 31766 │
+│ Reid Spencer         │ Chris Lattner         │ 30941 │
+│ Ted Kremenek         │ Argyrios Kyrtzidis    │ 27294 │
+│ David Salinas        │ Nico Weber            │ 23607 │
+│ Deepak Panickal      │ Zachary Turner        │ 22455 │
+│ Chris Lattner        │ Reid Spencer          │ 21297 │
+│ Vikram S. Adve       │ Chris Lattner         │ 20491 │
+│ Greg Clayton         │ Pavel Labath          │ 20181 │
+│ Zachary Turner       │ Jonas Devlieghere     │ 19232 │
+│ Douglas Gregor       │ John McCall           │ 17809 │
+│ Howard Hinnant       │ Eric Fiselier         │ 16951 │
+│ hyeongyu kim         │ Florian Hahn          │ 15966 │
+│ Eric Fiselier        │ Louis Dionne          │ 15562 │
+│ Joseph Huber         │ Johannes Doerfert     │ 15372 │
+│ Tobias Grosser       │ Michael Kruse         │ 13678 │
+│ Misha Brukman        │ Chris Lattner         │ 12823 │
+│ Roman Lebedev        │ hyeongyu kim          │ 12816 │
+│ Rui Ueyama           │ Rafael Espindola      │ 11934 │
+│ Evan Cheng           │ Chris Lattner         │ 11609 │
+│ Christopher Di Bella │ Louis Dionne          │ 11184 │
+│ John Criswell        │ Chris Lattner         │ 11064 │
+│ Brian Gaeke          │ Chris Lattner         │ 10814 │
+│ Sirish Pande         │ Chandler Carruth      │ 10536 │
+│ Nick Kledzik         │ Keith Smiley          │  9990 │
+│ Jim Ingham           │ Greg Clayton          │  9188 │
+│ Nicolas Vasilache    │ River Riddle          │  9142 │
+│ Rafael Espindola     │ Rui Ueyama            │  9089 │
+│ Dan Gohman           │ Chris Lattner         │  9058 │
+│ Anton Korobeynikov   │ Chris Lattner         │  9004 │
+│ Owen Anderson        │ Chris Lattner         │  8780 │
+│ Mark de Wever        │ Petr Hosek            │  8748 │
+│ Todd Fiala           │ Pavel Labath          │  8507 │
+│ Michael J. Spencer   │ Rafael Espindola      │  8305 │
+│ Nate Begeman         │ Chris Lattner         │  8299 │
+│ Chandler Carruth     │ Benjamin Kramer       │  8254 │
+│ Jim Cownie           │ Jonathan Peyton       │  8142 │
+│ Michael Zuckerman    │ Craig Topper          │  8035 │
+│ Zhongxing Xu         │ Ted Kremenek          │  7872 │
+│ Erik Pilkington      │ Richard Smith         │  7861 │
+│ Shankar Easwaran     │ Rui Ueyama            │  7749 │
+│ Johnny Chen          │ Jason Molenda         │  7746 │
+│ Alex Zinenko         │ River Riddle          │  7476 │
+│ Marshall Clow        │ Artem Dergachev       │  7376 │
+│ Caroline Tice        │ Greg Clayton          │  7181 │
+│ Sean Callanan        │ Greg Clayton          │  7098 │
+│ Argyrios Kyrtzidis   │ Douglas Gregor        │  7025 │
+│ Daniel Dunbar        │ Chris Lattner         │  6940 │
+│ Steve Naroff         │ Chris Lattner         │  6853 │
+│ Tom Stellard         │ Matt Arsenault        │  6679 │
+│ Jim Grosbach         │ Tanya Lattner         │  6562 │
+│ Alexey Bataev        │ Joseph Huber          │  6521 │
+│ Edwin Vane           │ Alexander Kornienko   │  6503 │
+│ Enrico Granata       │ Greg Clayton          │  6501 │
+│ John McCall          │ Douglas Gregor        │  6454 │
+│ Ilya Biryukov        │ Sam McCall            │  6395 │
+│ Nandor Licker        │ Roman Lebedev         │  6305 │
+│ Ryan Brown           │ Jonas Devlieghere     │  6033 │
+│ George Rimar         │ Rui Ueyama            │  6033 │
+│ Mehdi Amini          │ River Riddle          │  5820 │
+│ Sanjiv Gupta         │ Chris Lattner         │  5672 │
+│ Yaxun Liu            │ Sven van Haastregt    │  5539 │
+│ Simon Atanasyan      │ Rafael Espindola      │  5476 │
+│ Eric Schweitz        │ Valentin Clement      │  5396 │
+│ Tanya Lattner        │ Chris Lattner         │  5343 │
+│ Pavel Labath         │ Greg Clayton          │  5314 │
+│ Bill Nell            │ Maksim Panchenko      │  5311 │
+│ Rafael Auler         │ Maksim Panchenko      │  5278 │
+│ Elena Demikhovsky    │ Craig Topper          │  5270 │
+│ Bill Wendling        │ Chris Lattner         │  5266 │
+│ Craig Topper         │ Simon Pilgrim         │  5215 │
+│ zoecarver            │ Petr Hosek            │  5180 │
+│ Sebastian Redl       │ Douglas Gregor        │  5172 │
+│ Nick Lewycky         │ Chris Lattner         │  5161 │
+│ Jason Molenda        │ Pavel Labath          │  4842 │
+│ Simon Pilgrim        │ Craig Topper          │  4828 │
+│ Fariborz Jahanian    │ John McCall           │  4744 │
+│ Kostya Serebryany    │ Vitaly Buka           │  4713 │
+│ Lang Hames           │ Jakob Stoklund Olesen │  4665 │
+│ Anders Carlsson      │ John McCall           │  4547 │
+│ Matheus Izvekov      │ Jonas Devlieghere     │  4540 │
+│ Devang Patel         │ Chris Lattner         │  4532 │
+│ Maksim Panchenko     │ Amir Ayupov           │  4521 │
+│ Mike Stump           │ Anders Carlsson       │  4443 │
+│ Wesley Peck          │ Rafael Espindola      │  4440 │
+│ JF Bastien           │ Louis Dionne          │  4414 │
+│ Jim Laskey           │ Chris Lattner         │  4402 │
+│ peter klausler       │ Peter Klausler        │  4380 │
+│ Hal Finkel           │ Chandler Carruth      │  4151 │
+│ Jeff Cohen           │ Chris Lattner         │  4128 │
+│ Jonas Devlieghere    │ Matheus Izvekov       │  4123 │
+│ Sergey Dmitrouk      │ Daniel Jasper         │  4095 │
+│ Reid Kleckner        │ Zachary Turner        │  4058 │
+│ Colin LeMahieu       │ Krzysztof Parzyszek   │  3948 │
+│ Kelvin Li            │ Diana Picus           │  3913 │
+│ Asaf Badouh          │ Craig Topper          │  3884 │
+│ Tamas Berghammer     │ Jonas Devlieghere     │  3803 │
+│ Chaoren Lin          │ Ying Chen             │  3762 │
+│ Ruchira Sasanka      │ Chris Lattner         │  3737 │
+│ Alkis Evlogimenos    │ Chris Lattner         │  3707 │
+│ Ying Chen            │ Chaoren Lin           │  3668 │
+└──────────────────────┴───────────────────────┴───────┘</code></p>
+</section>
+
+<section class="slide">
+<h2>ClickHouse Local</h2>
+<p>ClickHouse engine without a server!</p>
+<p>Uninteresting use-cases:</p>
+<p>&mdash; queries on text, JSON and binary files;
+<br/>&mdash; format conversion;
+<br/>&mdash; data preparation;
+<br/>&mdash; interactive analysis of local files;
+</p>
+<p><code style="line-height: 1.25;">clickhouse-local --query "
+  SELECT reviewText FROM file('books.ndjson')
+  ORDER BY overall DESC LIMIT 100"</code></p>
+</section>
+
+<section class="slide">
+<h2>ClickHouse Local</h2>
+<p>Unusual usages: replacement for every Unix tool.</p>
+<p><b>grep</b>, <b>sed</b>, <b>pv</b>, <b>wc</b>, <b>yes</b>, <b>cat</b>, <b>nl</b>...</p>
+<p>Example: replacement for <b>pv</b>:</p>
+<p><code>input | pv | output</code></p>
+<p><code>input | clickhouse-local --progress \
+  --input-format LineAsString \
+  --output-format LineAsString \
+  --query "SELECT * FROM table" \
+| output</code></p>
+<p style="color: gray;">But this is not the most weird usage of clickhouse-local.</p>
+</section>
+
+<section class="slide">
+<h2>ClickHouse Local</h2>
+<p style="margin-top: -1em;">Example: replacement for <b>grep</b>:</p>
+<p><code style="font-size: 14pt; line-height: 1.25;">$ time <b>grep</b> -c --text Warning server.log  <span style="color: gray;"># 2.6 GB file</span>
+0.811s
+$ time <b>rg</b> -c --text Warning server.log
+0.289s
+$ time <b>clickhouse-local</b> --progress --input-format LineAsString --query "
+  SELECT count() FROM table WHERE line LIKE '%Warning%'" &lt; server.log
+1.234s :(
+
+$ clickhouse-client --query "
+  CREATE TABLE grep (s String) ENGINE = MergeTree ORDER BY ();"
+$ clickhouse-client --time --query "
+  INSERT INTO grep FORMAT LineAsString" &lt; server.log
+
+$ clickhouse-client --time --query "
+  SELECT count() FROM grep WHERE s LIKE '%Warning%'"
+<b style="color: green;">0.107s</b> :)
+</code></p>
+</section>
+
+<section class="slide">
+<h2>ClickHouse Local</h2>
+<p>Analyze ClickHouse with itself.</p>
+<p>Demo</p>
+
+<!--
+SELECT * FROM file('/usr/bin/clickhouse', RowBinary, 'v UInt8') LIMIT 10;
+SELECT avg(byte) FROM file('/usr/bin/clickhouse', RowBinary, 'v UInt8');
+
+(echo "P5"; echo "16384 16384 255"; clickhouse-local --progress --format RowBinary --query "SELECT * FROM (SELECT * FROM file('/usr/bin/clickhouse', RowBinary, 'v UInt8') LIMIT 16384*16384) ORDER BY mortonDecode(2, rowNumberInAllBlocks())") | pnmtopng | pv > binary.png
+-->
+
+</section>
+
+<section class="slide" style="background: url(pictures/binary.png) center no-repeat; background-size: auto 95%;">
+</section>
+
+<section class="slide">
+<h2>ClickHouse Local</h2>
+<p>Can ClickHouse draw pictures?</p>
+<p>&mdash; Yes:</p>
+<p><code style="font-size: 14pt; line-height: 1.25;">(echo "P5"; echo "16384 16384 255";
+clickhouse-local --progress --format RowBinary --query "
+  SELECT * FROM (
+    SELECT * FROM file('/usr/bin/clickhouse', RowBinary, 'v UInt8')
+    LIMIT 16384*16384)
+  ORDER BY mortonDecode(2, rowNumberInAllBlocks())") |
+pnmtopng | pv > binary.png</code></p>
+</section>
+
+
+<section class="slide">
+<h2>ClickHouse Local</h2>
+<p>Can ClickHouse play music?</p>
+<p>&mdash; Maybe:</p>
+<p><code style="font-size: 14pt; line-height: 1.25;">clickhouse-local --query "
+  SELECT (sin(number / 100 * log(
+    cityHash64(number % 2
+        ? number DIV (20000 + number % 101)
+        : number DIV (30000 + number % 107))
+      % 50 + 2) + 1) * 4096)::Int16
+  FROM system.numbers" --format RowBinary | aplay -f cd</code></p>
+
+<p style="color: gray;">Linux only. Not recommended to listen!</p>
+<!--
+
+-->
+</section>
+
+
+<section class="slide">
+<h2>ClickHouse Local</h2>
+<p>Serverless build for Cloud Functions</p>
+<p>A minimal build of clickhouse-local is <span style="color: green;">less than 50 MB</span>.</p>
+<p>Let's wrap it into lambda function and publish at <a href="https://glitch.com/">glitch.com</a>!</p>
+<p>... using their free plan :)</p>
+<p><a href="https://clickhouse.glitch.me/play">https://clickhouse.glitch.me/play</a></p>
+<!-- SELECT * FROM url('https://datasets.clickhouse.com/hackernews.native.zst') LIMIT 10 -->
+<p style="color: gray; font-size: 12pt;">This demo has been made by Lorenzo Mangani.</p>
+<p style="color: gray; font-size: 12pt;">"Please make sure you say this is an experiment in running clickhouse
+<br/>on the SMALLEST free instance on the internet, 1 shared CPU and 512MB of slow RAM" &mdash; Lorenzo.</p>
+</section>
+
+
+<section class="slide">
+<h2>ClickHouse as a Monitoring Agent</h2>
+<p>Every ClickHouse instance collects the metrics about ClickHouse
+<br/>and about the system as a whole.</p>
+<p>Launch empty ClickHouse on your server, <br/>
+and it will collect the metrics and store them inside <br/>
+the <b>system.asynchronous_metric_log</b> table.</p>
+<p>Bonus: <a href="http://localhost:8123/dashboard">http://localhost:8123/<b>dashboard</b></a></p>
+</section>
+
+
+<section class="slide">
+<h2>ClickHouse For Web Crawl Data</h2>
+<p><a href="https://tranco-list.eu/">https://tranco-list.eu/</a></p>
+<p>Download 7.5 million web pages (~1 TB):</p>
+<p><code style="font-size: 14pt;">cut -d, -f2 ~/tranco_*.csv | dos2unix | xargs -P100 -I{} bash -c "
+[ ! -f '{}.out' ] &amp;&amp; touch '{}.out' &amp;&amp;
+curl -v -s -S --max-redirs 10 --max-time 10 \
+    -L '{}' -o '{}.out' 2> '{}.log'"</code></p>
+
+<p>Insert into ClickHouse:</p>
+<p><code style="font-size: 14pt;">CREATE TABLE minicrawl (
+    rank UInt32, domain String,
+    log String CODEC(ZSTD(6)),
+    content String CODEC(ZSTD(6)))
+ENGINE = MergeTree
+ORDER BY domain;
+</code></p>
+</section>
+
+
+<section class="slide">
+<h2>ClickHouse For Web Crawl Data</h2>
+<p>Insert into ClickHouse:</p>
+<p><code style="font-size: 14pt;">clickhouse-local --input-format CSV --output-format Native \
+  --structure 'rank UInt32, domain String' --query "
+  SELECT *,
+    file('data/' || domain || '.log') AS log,
+    file('data/' || domain || '.out') AS content FROM table
+" &lt; tranco_*.csv |
+  clickhouse-client --query "INSERT INTO minicrawl FORMAT Native"</code></p>
+<p>Analyze the data:</p>
+<p><code style="font-size: 14pt;">SELECT rank, domain FROM minicrawl WHERE content LIKE '%ClickHouse%';
+
+SELECT replaceRegexpAll(extractTextFromHTML(content) AS text,
+    '(?i)(clickhouse)', '\x1b[1;31m\1\x1b[0m')
+FROM minicrawl WHERE text ILIKE '%clickhouse%';</code></p>
+</section>
+
+<section class="slide">
+<h2>What Else?</h2>
+<p style="color: gray;">ClickHouse on Raspberry Pi and RISC-V.</p>
+<p style="color: gray;">ClickHouse on Graviton 3 and Threadripper Pro.</p>
+<p style="color: gray;">ClickHouse to speed-up MongoDB and make it web scale again.</p>
+<p style="color: gray;">ClickHouse as a replacement of AWS Athena.</p>
+<p>...</p>
+<p>Use ClickHouse! Abuse ClickHouse.</p>
+<p>Find new horizons with ClickHouse.</p>
+</section>
+
+<section class="slide">
+<h2>ClickHouse 22.12 Release Webinar</h2>
+<p>Tomorrow: <a href="https://clickhouse.com/company/events/v22-12-release-webinar">https://clickhouse.com/company/events/v22-12-release-webinar</a></p>
+<h2>Q&amp;A</h2>
+</section>
+
+
+    <div class="progress"></div>
+    <script src="https://presentations.clickhouse.com/shower/shower.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/shower-video.css">
+    <script src="https://presentations.clickhouse.com/shower/shower-video.js"></script>
+    <!--/Video plugin-->
+<footer class="badge">
+    <a href="https://presentations.clickhouse.com/">ClickHouse Theater</a>
+</footer>
+</body>
+</html>
+

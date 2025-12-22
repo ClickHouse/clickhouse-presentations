@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Parallel and Distributed GROUP BY</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta property="og:image" content="pictures/preview.jpg">
+    <meta property="og:title" content="Parallel and Distributed GROUP BY">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="pictures/preview.jpg">
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/themes/clickhouse/styles/styles.css">
+    <style>
+        .slide p { white-space: pre; line-height: 1 }
+        .shower { --slide-ratio: calc(16 / 10); }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>Parallel and Distributed GROUP BY</h1>
+    </header>
+
+    <section class="slide" id="cover">
+        <h1 style="margin-top: 200px">Parallel and Distributed GROUP BY</h1>
+    </section>
+
+    <section class="slide">
+        <h2>About Me</h2>
+        <p>Alexey, ClickHouse developer.</p>
+        <p>Since 2008, I worked on the data processing engine for Yandex.Metrica.</p>
+    </section>
+
+    <section class="slide">
+        <h2>&nbsp;</h2>
+        <p><b>ClickHouse</b> &mdash; is an analytical DBMS.</p>
+        <p>One query &mdash; a lot of data on input, little on output.</p>
+        <p>Data needs to be aggregated on the fly.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Metrica 2.0</h2>
+        <img src="pictures/metrika2.png" style="height:70%"/>
+    </section>
+
+    <section class="slide">
+        <h2>Example Query</h2>
+        <p style="font-family: Monospace">SELECT MobilePhoneModel, COUNT(DISTINCT UserID) AS u<br />
+    FROM hits<br />
+    WHERE MobilePhoneModel != ''<br />
+    <b>GROUP BY</b> MobilePhoneModel<br />
+    ORDER BY u DESC</p>
+    </section>
+
+    <section class="slide">
+        <h2>&nbsp;</h2>
+        <p>To process queries quickly, data needs to be:</p>
+        <ul>
+            <li>read quickly;</li>
+            <li><b>computed quickly.</b></li>
+        </ul>
+        <p>&nbsp;</p>
+        <p>Query execution pipeline:</p>
+        <p>&mdash; filtering, JOIN, <b>aggregation</b>, sorting...</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 45px;">How to Test Performance?</h2>
+        <p>Benchmarks should be:</p>
+        <ul>
+            <li>on real data;</li>
+            <li>on different datasets covering different use cases;</li>
+            <li>reproducible;</li>
+            <li>automated.</li>
+        </ul>
+    </section>
+
+    <section class="slide">
+        <h2>Benchmark Example (not the best)</h2>
+        <pre style="white-space: pre; font-family: Monospace; font-size: 14px; line-height: 1.25em;">/** Run like this:
+for file in <b>MobilePhoneModel PageCharset Params URLDomain UTMSource Referer URL Title</b>; do
+ for size in <b>30000 100000 300000 1000000 5000000</b>; do
+  echo
+  BEST_METHOD=0
+  BEST_RESULT=0
+  for method in {1..10}; do
+   echo -ne $file $size $method '';
+   TOTAL_ELEMS=0
+   for i in {0..1000}; do
+    TOTAL_ELEMS=$(( $TOTAL_ELEMS + $size ))
+    if [[ $TOTAL_ELEMS -gt 25000000 ]]; then break; fi
+    ./hash_map_string_3 $size $method < ${file}.bin 2>&1 |
+     grep HashMap | grep -oE '[0-9\.]+ elem';
+   done | awk -W interactive '{ if ($1 > x) { x = $1 }; printf(".") } END { print x }' |
+    tee /tmp/hash_map_string_3_res;
+   CUR_RESULT=$(cat /tmp/hash_map_string_3_res | tr -d '.')
+   if [[ $CUR_RESULT -gt $BEST_RESULT ]]; then
+    BEST_METHOD=$method
+    BEST_RESULT=$CUR_RESULT
+   fi;
+  done;
+  echo Best: $BEST_METHOD - $BEST_RESULT
+ done;
+done
+*/</pre>
+    </section>
+
+    <section class="slide">
+        <h2>Aggregation</h2>
+    </section>
+
+    <section class="slide">
+        <h2>Single Machine, Single Core</h2>
+    </section>
+
+    <section class="slide">
+        <h2>Bad Approach</h2>
+        <p>Read data into array; sort by key;
+iterate through key groups and calculate aggregate functions.</p>
+        <p>Advantages:</p>
+        <p>+ simple aggregate function interface;
++ possibility of more efficient aggregate function implementation;
++ can run arbitrary reduce scripts in streaming mode.</p>
+        <p>Disadvantages:</p>
+        <p>&minus; let N be total data size, and M be number of keys;
+Works terribly when N > M &mdash; in typical case.
+Wastes O(N) RAM on intermediate data instead of O(M).</p>
+    </section>
+
+    <section class="slide">
+        <h2>Good Approach</h2>
+        <p>Read data, put it in an associative array</p>
+        <p><b>key tuple</b> -> <b>states of aggregate functions</b></p>
+        <p>update states of aggregate functions.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Which Associative Array?</h2>
+        <p>Lookup table. Hash table.</p>
+<p>Binary tree. Skip-list. B-tree. </p>
+<p>Trie. Trie+hash table...</p>
+    </section>
+
+    <section class="slide">
+        <h2>Binary Tree</h2>
+<p>&minus; too much overhead per element;</p>
+<p>&minus; terrible cache locality;</p>
+<p>&minus; generally slow.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Skip-list. Trie. B-tree...</h2>
+<p>&minus; designed for a different problem;</p>
+    </section>
+
+    <section class="slide">
+        <h2>Lookup Table</h2>
+<p>+ perfect for aggregation by numeric keys of no more than ~16 bits;</p>
+<p>&minus; doesn't work for slightly more complex cases.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Hash Table</h2>
+<p>+ my favorite data structure;</p>
+<p>&minus; many details.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Trie+Hash Table</h2>
+<p>+ sometimes there's something to it, see below;</p>
+    </section>
+
+    <section class="slide">
+        <h2>Single Machine, Multiple Cores</h2>
+    </section>
+
+<section class="slide">
+<h2>1. Trivial Approach</h2>
+
+<p>Different threads read different data as possible.
+They aggregate independently into their local hash tables.
+When all data is read, merge all hash tables into one.
+For example, iterate through all local hash tables except the first
+ and move everything to the first one.
+
+Read and preliminary aggregation phase is parallelized.
+Merge phase is sequential.
+
+Let N be total data size, and M be number of keys.
+O(M) work is done sequentially
+ and with large M (GROUP BY cardinality)
+ work doesn't parallelize well.
+
+Advantages: trivial.
+
+Disadvantages: doesn't scale with high cardinality.</p>
+</section>
+
+
+<section class="slide">
+<h2>2. Partitioning Approach</h2>
+
+<p>For each data block, perform aggregation in two stages:
+
+Stage 1.
+Different threads will process different chunks of the block, whichever they can.
+In each thread, using a separate hash function,
+ hash the key to thread number and remember it.
+
+ hash:  key -> bucket_num
+
+Stage 2.
+Each thread iterates through entire data block
+ and takes for aggregation only rows with the needed bucket number.
+
+Modification: can do everything in one stage &mdash; then each thread
+will calculate hash function from all rows again:
+ works if it's cheap.
+</section>
+
+<section class="slide">
+<p>
+Advantages:
++ scales well with high cardinality
+ and uniform key distribution;
++ conceptual simplicity.
+
+Disadvantages:
+&minus; if data volume is distributed unevenly across keys,
+ then stage 2 doesn't scale well.
+This is a typical case.
+Data volume by keys is almost always distributed by power law.
+
+More disadvantages:
+&minus; if block size is small, the result is too
+  fine-grained multithreading:
+  high synchronization overhead;
+&minus; if block size is large, poor cache locality;
+&minus; on second stage, part of memory bandwidth is multiplied by number of threads;
+&minus; need to compute another hash function,
+  it should be independent from the one in hash table;</p>
+</section>
+
+
+<section class="slide">
+<h2>3. Parallel Hash Table Merge</h2>
+
+<p>Resize hash tables obtained in different threads to the same size.
+Split them implicitly into different subsets of keys.
+In different threads merge corresponding
+ subsets of hash table keys.
+
+Picture on the board.
+
+Disadvantage:
+&minus; very complex code.</p>
+</section>
+
+
+<section class="slide">
+<h2>4. Ordered Hash Table Merge</h2>
+
+<p>For open addressing linear probing hash tables, or for chaining hash tables,
+data in hash table is located almost ordered
+by remainder of dividing hash function by hash table size
+&mdash; up to collision resolution chains.
+
+Resize hash tables obtained in different threads to the same size.
+Make ordered iterator, which will
+ enumerate data in hash table in fixed order.
+
+Iteration work volume:
+ number of collision resolution chains * average square of chain lengths.
+
+Make merging iterator, which using heap (priority queue)
+ will enumerate all hash tables at once.
+</section>
+
+<section class="slide">
+<p>Advantages:
+
++ no need to move elements anywhere: merge is done inplace.
+
++ bonus: suitable for external memory.
+
+
+Disadvantages:
+
+&minus; terribly complex code;
+
+&minus; for open addressing linear probing hash tables,
+  average square of collision resolution chain lengths is too large;
+
+&minus; priority queue is slow;
+
+&minus; merge stage doesn't parallelize*
+
+
+* &mdash; can be combined with previous approach.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 40px;">5. Robin Hood Ordered Hash Table Merge</h2>
+
+<p>If using Robin Hood hash table, the data
+(except for O(1) boundary collision resolution chains)
+will be completely ordered
+by remainder of dividing hash function by hash table size.
+
+Advantages:
++ seems like a beautiful algorithm.
++ bonus: suitable for external memory.
+
+Disadvantages:
+&minus; forces use of robin-hood probing;
+&minus; priority queue is slow;
+&minus; merge stage doesn't parallelize*</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 40px;">6. Shared Hash Table Under Mutex</h2>
+
+<p>Advantages: very simple.
+
+Disadvantages: negative scalability.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30px;">7. Multiple Small Hash Tables Under Different Mutexes</h2>
+
+<p>Which one to use &mdash; chosen using separate hash function.
+
+Disadvantages:
+
+&minus; in typical case data is distributed very unevenly,
+  and threads will compete on one hot bucket.
+
+&minus; in case of small hash table, too slow.
+
+Advantages: if data is somehow distributed uniformly,
+ it scales somewhat.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 35px;">8. Shared Hash Table with Spin-lock in Each Cell</h2>
+
+<p>Disadvantages:
+
+&minus; spin-lock &mdash; is very dangerous;
+  very hard to test performance;
+  you will definitely make garbage.
+
+&minus; in typical case data is distributed very unevenly,
+  and threads will compete on one hot cell.</p>
+</section>
+
+
+<section class="slide">
+<h2>9. Lock Free Shared Hash Table</h2>
+
+<p>Disadvantages:
+
+&minus; lock free hash tables either cannot be resized, or they are very complex;
+
+&minus; in typical case data is distributed very unevenly,
+  and threads will compete on one hot cell:
+  false sharing, slow.
+
+&minus; complex code, many instructions, everything is slow;
+
+&minus; I generally don't like lock-free algorithms.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 35px;">10. Shared Hash Table + Thread Local Hash Tables</h2>
+
+<p>Try to put in shared hash table by locking cell;
+if cell is already locked &mdash; put in local hash table.
+
+Then hot keys will go into local hash tables.
+Local hash tables will be small.
+At the end merge all local hash tables into global.
+
+Additions: can first check
+  for key presence in local hash table.
+
+Advantages:
++ scales excellently;
++ relatively simple implementation.
+
+Disadvantages:
+&minus; many lookups, many instructions &mdash; overall quite slow.
+
+Even though thread local hash table
+ is often also cache local.</p>
+</section>
+
+
+<section class="slide">
+<h2>11. Two-level Hash Table</h2>
+
+<p>On first stage, in each thread independently
+put data into their num_buckets = 256 hash tables,
+storing different keys.
+
+Which one to put into (bucket number)
+is determined by another hash function,
+or by separate byte of hash function.
+
+Have num_threads * num_buckets hash tables.
+
+On second stage merge states
+num_threads * num_buckets hash tables
+into one num_buckets hash tables,
+parallelizing merge by buckets.
+</section>
+
+<section class="slide">
+<p>
+Advantages:
+
++ scales excellently;
++ simple implementation;
+
++ bonus: hash table resizes are amortized;
+
++ bonus: get partitioning for free,
+  which is useful for other pipeline stages.
+
++ bonus: suitable for external memory.
+
+Disadvantages:
+
+&minus; with high cardinality, during merge
+  same amount of work is done as in first stage;
+
+&minus; with low cardinality,
+  too many separate hash tables;
+
+&minus; with low cardinality,
+  works somewhat slower than trivial approach;</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 40px;">12. Trivial + Two-level Hash Table</h2>
+
+<p>Use trivial approach.
+
+When there are many different keys, convert to two-level.</p>
+<p>
+This is exactly the approach used in ClickHouse :)
+</p>
+</section>
+
+
+<section class="slide">
+<h2>Multiple Machines, Multiple Cores</h2>
+
+<p>On different machines are located parts of data,
+which need to be processed.
+
+Differences from shared memory:
+
+&mdash; almost no possibility of work stealing;
+&mdash; need to explicitly transfer data over network.</p>
+</section>
+
+
+<section class="slide">
+<h2>1. Trivial Approach</h2>
+
+<p>Transfer intermediate results to initiator server.
+Sequentially put everything into one hash table.
+
+Advantages:
+
++ trivial;
++ scales well with low cardinality.
+
+Disadvantages:
+
+&minus; doesn't scale with high cardinality;
+&minus; requires RAM for entire result.</p>
+</section>
+
+
+<section class="slide">
+<h2>2. Ordered Merge</h2>
+
+<p>Transfer intermediate results to initiator server
+in specified order. Merge.
+
+Advantages:
++ uses O(1) RAM;
+
+Disadvantages:
+&minus; doesn't scale with high cardinality;
+&minus; merging sorted streams (heap) &mdash; is slow operation;
+&minus; requires either sorting results on remote servers,
+  or using one of those fancy algorithms above.</p>
+</section>
+
+
+<section class="slide">
+<h2>3. Partitioned Merge</h2>
+
+<p>Transfer intermediate results to initiator server,
+split into separate coordinated bucket-partitions,
+in specified order of buckets.
+
+Merge one or several buckets at a time.
+
+Advantages:
++ uses up to num_buckets times less RAM than result size;
++ can easily parallelize, merging several buckets at once
+   &mdash; scales excellently by cores.
+
+Disadvantages:
+&minus; merge is done on one server &mdash; query initiator
+   &mdash; this stage doesn't scale by servers.</p>
+
+<p>
+This is exactly the approach used in ClickHouse :)
+</p>
+</section>
+
+
+<section class="slide">
+<h2>4. Reshuffle + Partitioned Merge</h2>
+
+<p>On remote servers get intermediate results,
+split into coordinated partitions.
+
+Then transfer partitions between servers so,
+that on different servers are different partitions,
+and data of one partition ends up on one server.
+
+Merge on all servers in parallel, also using multiple cores.
+
+Advantages:
++ scales beautifully;
++ for INSERT SELECT, result can
+  not be transferred to initiator server at all,
+  but immediately saved into distributed table on cluster.
+
+Disadvantages:
+&minus; complex server coordination;</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 100px;">The End</h2>
+
+<p style="font-size: 50px;">Questions welcome.</p>
+</section>
+
+
+
+    <div class="progress"></div>
+    <script src="https://presentations.clickhouse.com/shower/shower.js"></script>
+<footer class="badge">
+    <a href="https://presentations.clickhouse.com/">ClickHouse Theater</a>
+</footer>
+</body>
+</html>

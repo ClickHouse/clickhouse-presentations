@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en" style="background-color: #FFF;">
+<head>
+    <title>ClickHouse Meetup in Berlin</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta property="og:image" content="pictures/preview.jpg">
+    <meta property="og:title" content="ClickHouse Meetup in Berlin">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="pictures/preview.jpg">
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/themes/clickhouse/styles/styles.css">
+
+    <style>
+         span { padding: 1px 10px; background: rgba(255, 255, 255, 0.75); }
+         code { display: block; background-color: #EEE; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse Meetup in Berlin</h1>
+    </header>
+
+    <section class="slide" id="cover" style="background: url('pictures/berlin.jpg') no-repeat center center; background-size: 100%">
+        <h1 style="font-size: 36pt"><span>ClickHouse Meetup in Berlin</span></h1>
+    </section>
+
+    <section class="slide">
+        <h2><span>ClickHouse: Past, Present and Future</span></h2>
+    </section>
+    
+    <section class="slide">
+        <h2>What is ClickHouse?</h2>
+        <p>ClickHouse &mdash; distributed analytical column-oriented DBMS</p>
+        <p><br/>Why column-oriented?</p>
+    </section>
+
+    <section class="slide">
+        <h2>Why column-oriented?</h2>
+        <p>Here is how "traditional" row-oriented system work:</p>
+        <p><img src="pictures/row_oriented.gif"/></p>
+    </section>
+    <section class="slide">
+        <h2>Why column-oriented?</h2>
+        <p>Here is how column-oriented systems work:</p>
+        <p><img src="pictures/column_oriented.gif"/></p>
+    </section>
+    
+    <section class="slide" style="background: url('pictures/column_oriented_deutsch.png') no-repeat center center #FFF; background-size: 80%">
+        <h2>&nbsp;</h2>
+    </section>
+    
+    <section class="slide">
+        <h2>Not a new idea...</h2>
+        <p>Examples:</p><ul><li>EXASOL</li><li>SAP HANA</li><li>HyPer</li></ul><p><br/>&mdash; column-oriented DBMSs from Germany.</p>
+    </section>
+    
+    <section class="slide">
+        <h2>Why ClickHouse?</h2>
+        <p>Initially we developed ClickHouse for Yandex.Metrica</p>
+        <p>Yandex.Metrica &mdash; №1 web analytics system in Russia, №2 in the world.</p>
+        <p>(~25 bln. events/day, we must store all of them<br />in non-aggregated form for customizable reports)</p>
+        <p>"Evolution of Data Structures in Yandex Metrica"</p>
+        <p><a href="http://highscalability.com/blog/2017/9/18/evolution-of-data-structures-in-yandexmetrica.html">http://highscalability.com/blog/2017/9/18/evolution-of-data-structures-in-yandexmetrica.html</a></p>
+    </section>
+    
+    <section class="slide" style="background: url('pictures/cost.jpg') no-repeat center center; background-size: 100%">
+        <h2><span style="padding: 10px;">Why ClickHouse?</span></h2>
+        <p><span style="padding: 10px;">1. Efficiency;</span></p>
+        <p><span style="padding: 10px;">2. Flexibility;</span></p>
+        <p><span style="padding: 10px;">3. Scalability;</span></p>
+        <p><span style="padding: 10px;">4. Cost.</span></p>
+        <p><br/><span style="padding: 10px;">Nothing was suitable. Then we developed ClickHouse.</span></p>
+    </section>
+    
+    <section class="slide">
+        <h2>Yandex Metrica 2.0</h2>
+        <img src="pictures/metrika2.png" style="height:70%"/>
+    </section>
+    
+    <section class="slide" style="background: url('pictures/timeline.jpg') no-repeat center center; background-size: 100%">
+        <h2><span>Timeline</span></h2>
+        <p><span>2010 &mdash; start of development</span></p>
+        <p><span>2012 &mdash; first production usages</span></p>
+        <p><span>2015 &mdash; launch of Metrica 2</span></p>
+        <p><span>2016 &mdash; open-source</span></p>
+    </section>
+        
+    <section class="slide">
+        <h2>ClickHouse in Yandex</h2>
+        <p>In Yandex, ClickHouse has proven to be easy of use.</p>
+        <p>For example, we have detailed documentation from the beginning.</p>
+        <p>In 2012..2016, ClickHouse gained a widespread inside Yandex:</p>
+        <p>Mail, Comparison Shopping, Ads, Webmaster Tools, Infrastructure, Business Analytics...</p>
+        <p>Yandex analysts installed ClickHouse on their own VMs without any assistance.</p>
+    </section>
+
+    <section class="slide">
+        <h2>ClickHouse, brief description</h2>
+        <ul>
+            <li>column-oriented</li>
+            <li>linearly scalable</li>
+            <li>fault-tolerant (incl. cross DC)</li>
+            <li>realtime data ingestion</li>
+            <li>realtime (sub-second) queries</li>
+            <li>support of SQL dialect + extensions<br/>(arrays, nested data structures, domain-specific functions, sampling)</li>
+        </ul>
+    </section>
+    <section class="slide">
+        <h2>The main cluster of Yandex.Metrica</h2>
+        <ul style="font-size:30px;">
+            <li>>25 trillion of rows</li>
+            <li>500 servers</li>
+            <li>Up to 2 TB per second query execution speed across the cluster</li>
+        </ul>
+        <p style="font-size:60%; margin-top:2em">* If you want to try ClickHouse, single server will be enough.</p>
+    </section>
+    
+    <section class="slide">
+        <h2>Open-source (since June 2016)</h2>
+        <p>We think ClickHouse is too good to be used solely by Yandex.</p>
+        <p>We made it open-source. License: Apache 2.0.</p>
+        <p>https://github.com/ClickHouse/ClickHouse/</p>
+    </section>
+
+    <section class="slide">
+        <div style="float: right; width: 130px; height: 200px; overflow: hidden;"><img src="pictures/Ampelmann.svg" style="height: 200px;" /></div>
+        <h2>When to use ClickHouse</h2>
+        <p>For well structured, clean, immutable events.</p>
+        <p>&nbsp;</p>
+        <p>Click stream. Web analytics. Adv. networks. RTB. E-commerce.</p>
+        <p>Analytics for online games. Sensor and monitoring data. Telecom&nbsp;data.</p>
+    </section>
+
+    <section class="slide">
+        <div style="float: right; width: 130px; height: 200px; overflow: hidden;"><img src="pictures/Ampelmann.svg" style="position: relative; left: -130px; height: 200px;" /></div>
+        <h2 style="font-size: 40px;">When <span style="color:red;">not</span> to use ClickHouse</h2>
+        <p><span style="padding: 0; font-size: 30px;color: #888;">OLTP</span><br/>ClickHouse doesn't have UPDATE statement and full-featured transactions.</p>
+        <p><span style="padding: 0; font-size: 30px;color: #888;">Key-Value</span><br/>If you want high load of small single-row queries, please use another system.</p>
+        <p><span style="padding: 0; font-size: 30px;color: #888;">Blob-store, document oriented</span><br/>ClickHouse is intended for vast amount of fine-grained data.</p>
+        <p><span style="padding: 0; font-size: 30px;color: #888;">Over-normalized data</span><br/>Better to make up single wide fact table with pre-joined dimensions.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Open-source</h2>
+        <p>More than 100 companies are already using ClickHouse.</p>
+        <p>Examples: Cloudflare, Vertamedia, Mail.ru, Carto, Lifestreet...</p>
+    </section>
+    
+    <section class="slide">
+        <img style="width: 50%; margin-left: -13px;" src="pictures/cloudflare.svg"/>
+        <p>How do we analyze over O(100B) DNS requests daily.</p>
+        <p>"ClickHouse enables us and our customers to explore the the dataset in real time to get operational insights. Due to many of the optimizations built into ClickHouse we are able to store the data for a long time allowing us to look events is perspective and at historical trends."</p>
+    </section>
+    
+    <section class="slide">
+        <h2 style="font-size: 30pt;">Unusual applications of ClickHouse</h2>
+
+        <p>Bioinformatics &mdash; evolutionary genetics:
+        <br/><a href="https://github.com/msestak/FindOrigin">https://github.com/msestak/FindOrigin</a></p>
+
+        <p>"We are exploring evolution of novel genes in genomes because if seems that genomes are far from being static as previously believed and what actually happens is that new genes are constantly being added and old genes are lost."</p>
+        
+        <p>Search engine and analytics for Bitcoin transactions:
+        <br/><a href="https://blockchair.com/">https://blockchair.com/</a></p>
+
+        <p>"We have quite large tables on just single server and everything works really fast &mdash; with any filters and sorting everything is processed just instantly."</p>
+    </section>
+
+    <section class="slide">
+        <h2><span>What's new in ClickHouse</span></h2>
+    </section>
+
+<section class="slide">
+<h2 style="font-size: 40px;">Distributed DDL queries</h2>
+<p><br/>Example:<br/><br/><code>CREATE TABLE table <b>ON CLUSTER cluster</b> ...</code></p>
+</section>
+
+<section class="slide">
+<h2>ODBC driver enhancements</h2>
+<p><a href="https://github.com/ClickHouse/clickhouse-odbc/releases/latest">https://github.com/ClickHouse/clickhouse-odbc/releases/latest</a></p>
+<p>Now ClickHouse works with Tableau.</p>
+<img src="pictures/tableau.png" style="height:60%"/>
+</section>
+
+<section class="slide">
+<h2>Improvements in SQL compatibility</h2>
+<p>Limited support for table aliases and qualified identifiers.
+<br/><br/><code>SELECT t.column FROM table AS t</code></p>
+<p>Support for aliases of functions and data types.
+<br/><br/><code>SELECT CAST(123 AS INT)</code></p>
+<p>Allow both `MySQL` style and "ANSI" style quotes for identifiers.</p>
+<p>SQL style escaping in string literals.</p>
+<p>Type conversions in INSERT SELECT</p>
+</section>
+
+<section class="slide">
+<h2>Improvements of distributed queries</h2>
+<p>Automatic failover for lagged replicas:
+<br/><br/><code style="font-size: 24px; line-height: 120%;">SET max_replica_delay_for_distributed_queries = 300,<br/>
+fallback_to_stale_replicas_for_distributed_queries = 1;</code></p>
+<p>Failover for replicas where table doesn't exist.</p>
+<p>Manually disable replica from leader election:<br/>
+<br/>Example: conf.d/disable_leadership.xml:
+<br/><code style="font-size: 20px;">&lt;yandex&gt;&lt;merge_tree&gt;&lt;replicated_can_become_leader&gt;0&lt;/replicated_can_become_leader&gt;&lt;/merge_tree&gt;&lt;/yandex&gt;</code></p>
+<p>Synchronous INSERTs into Distributed tables:
+<br/><br/><code style="font-size: 24px;">SET insert_distributed_sync = 1;</code></p>
+</section>
+
+<section class="slide">
+<h2>Improvements in maintenance</h2>
+<p>Allow to load parts of configuration from ZooKeeper:
+<br/><br/><code>&lt;remote_servers <b>from_zk</b>="/path/to/node" /&gt;</code></p>
+<p>Isolation of users in ZooKeeper (chroot, authentication, ACL).</p>
+<p>SYSTEM queries:
+<br/><br/><code style="font-size: 24px;">SYSTEM RELOAD DICTIONARY 'my_dict';</code></p>
+<p>Portable clickhouse binary:
+<br/><br/><code style="font-size: 24px;">milovidov@milovidov-xenial:~$ scp ./clickhouse milovidov-centos:~</code></p>
+</section>
+
+<section class="slide">
+<h2>Improvements in dictionaries</h2>
+<p>Dictionary database and tables
+<br/><br/><code>CREATE DATABASE dictionaries ENGINE = Dictionary</code></p>
+<p>Invalidate query for dictionaries
+<br/><br/><code style="font-size: 24px;">&lt;invalidate_query&gt;<br/>SELECT update_time FROM dictionary_source where id = 1<br/>&lt;/invalidate_query&gt;</code></p>
+<p>ip_trie type of dictionary (contributed by CloudFlare)</p>
+<p>MySQL dictionary over socket;<br/>over SSL connection (contributed by Mail.ru)</p>
+</section>
+
+<section class="slide" style="background: url('pictures/berlin_map.png') no-repeat center center; background-size: 110%">
+<h2><span style="background-color: #EEE;">Geospatial functions</span></h2>
+<p><span style="background-color: #EEE;">pointInPolygon</span>
+<br/><br/><code style="background-color: #EEE;">... WHERE pointInPolygon((lat, lon),<br/>&nbsp;&nbsp;&nbsp;&nbsp;[(x1, y1), (x2, y2), (x3, y3)...])</code></p>
+<p><span style="background-color: #EEE;">pointInEllipses</span></p>
+<p><span style="background-color: #EEE;">greatCircleDistance</span></p>
+</section>
+
+<section class="slide">
+<h2>Array and string functions</h2>
+<p><b>substring</b> with dynamic and negative arguments</p>
+<p><b>concat</b> for arrays, <b>arraySlice</b></p>
+<p><b>arrayPushBack</b>, <b>arrayPushFront</b>, <b>arrayPopBack</b>, <b>arrayPopFront</b></p>
+<p><b>arrayStringConcat</b></p>
+</section>
+
+<section class="slide">
+<h2>Features for data manipulation</h2>
+<p>ALTER table CLEAR COLUMN IN PARTITION<br/>
+&mdash; clear old data for specific column;</p>
+<p>OPTIMIZE TABLE ... PARTITION ... DEDUPLICATE<br/>
+&mdash; cleanup accidentially duplicated data</p>
+<p>Limited support for ALTER of primary key columns:<br/>Enum, Date &lt;-> UInt16, DateTime &lt;-> UInt32</p>
+</section>
+
+<section class="slide">
+<h2>Interfaces</h2>
+<p>Sessions in HTTP interface
+<br/><br/><code style="font-size: 14pt;">curl 'http://host:port/?session_id=123&amp;session_timeout=60' \<br /> -d 'CREATE TEMPORARY TABLE t'</code></p>
+</p>
+<p>Allow to send progress info in HTTP interface
+<br/><br/><code style="font-size: 14pt;">...&amp;send_progress_in_http_headers=1</code></p>
+<p>Support for HTTPS in clickhouse-server</p>
+<p style="color: red;">On the way: Support for SSL in native protocol</p>
+</section>
+
+<section class="slide">
+<h2>Misc</h2>
+<p>WITH ... SELECT</p>
+<p>Type conversions for Merge tables</p>
+<p>Allow to skip errors in INSERT data: input_format_allow_errors_*</p>
+</section>
+
+<section class="slide" style="background: url('pictures/community_efforts.jpg') no-repeat center center; background-size: 100%">
+<h2 style="margin-top: 100px;"><span>Community contributions</span></h2>
+</section>
+
+<section class="slide">
+<h2><span>Community contributions</span></h2>
+<p style="line-height: 140%;">  <span>- dictionary for ranges of IP-addresses (CloudFlare)</span>
+<br/><span>- infer index use with pk subexpression (CloudFlare)</span>
+<br/><span>- sumMap aggregate function (CloudFlare)</span>
+<br/><span>- topK aggregate function (CloudFlare)</span>
+<br/><span>- fix for shuffle in choosing ZK server (CloudFlare)</span>
+<br/><span>- fix of UNION ALL (Unknown Chinese Company)</span>
+<br/><span>- SSL for MySQL dictionaries (Mail.ru)</span>
+<br/><span>- UUID data type and functions (Guillaume Tassery)</span>
+<br/><span>- functions for MAC addresses (Dmitry Luhtionov)</span>
+<br/><span>- findClusterIndex, findClusterValue (mfridental)</span>
+<br/><span>- ForEach combinator for aggregate functions (mfridental)</span>
+<br/><span>- 'none' compression method (Sematext Group, Inc.)</span>
+<br/><span>- update zstd (SAKURA Internet Inc.)</p>
+</section>
+
+<section class="slide" style="background: url('pictures/roadmap.jpg') no-repeat center center; background-size: 100%">
+<h2><span>Roadmap</span></h2>
+</section>
+
+<section class="slide">
+<h2>Custom partition keys</h2>
+<p>Almost ready :)</p>
+<p>Nov .. Dec 2017</p>
+</section>
+
+<section class="slide">
+<h2>UPDATE/DELETE</h2>
+<p>In design stage.</p>
+<p>Q1/Q2 2018</p>
+</section>
+
+<section class="slide">
+<h2>Q1/Q2 2018</h2>
+<p>JOINs rectification</h2>
+<p>Resource pools (CPU, disk IO, network bandwidth)</p>
+</section>
+
+
+    <section class="slide">
+        <h2><span>Community</span></h2>
+        <p><span style="padding: 10px;">Web site: <a href="https://clickhouse.com/">https://clickhouse.com/</a></span></p>
+        <p><span style="padding: 10px;">Google groups: <a href="https://groups.google.com/forum/#!forum/clickhouse">https://groups.google.com/forum/#!forum/clickhouse</a></span></p>
+        <p><span style="padding: 10px;">Maillist: clickhouse-feedback@yandex-team.com</span></p>
+        <p><span style="padding: 10px;">Telegram channel: <a href="https://telegram.me/clickhouse_en">https://telegram.me/clickhouse_en</a></span></p><p><span style="padding: 10px;">and <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_ru</a> (now with 983 members)</span></p>
+        <p><span style="padding: 10px;">Twitter: <a href="https://twitter.com/ClickHouseDB">https://twitter.com/ClickHouseDB</a></span></p>
+        <p><span style="padding: 10px;">GitHub: <a href="https://github.com/ClickHouse/ClickHouse/">https://github.com/ClickHouse/ClickHouse/</a></span></p>
+    </section>
+
+    <section class="slide">
+        <h2><span>?</span></h2>
+    </section>
+
+
+
+    <section class="slide">
+        <h2>How to connect to ClickHouse</h2>
+        <p style="font-size: 30px;"><span>HTTP REST</span></p>
+        <p style="font-size: 30px;"><span>clickhouse-client</span></p>
+        <p style="font-size: 30px;"><span>JDBC, ODBC</span></p>
+        <p>&nbsp;</p>
+        <p style="font-size: 30px;"><span>Python, PHP, Perl, Go,<br/>Node.js, Ruby, C++, .NET, Scala, R, Julia, Rust</span></p>
+    </section>
+    
+    <section class="slide">
+        <h2 style="font-size: 40px;">Integrations with data visualization tools</h2>
+        <p style="font-size: 30px;">Tabix (tabix.io) &mdash; specifically developed for ClickHouse.</p>
+        <p style="font-size: 30px;"><img style="float: left; padding-right: 20px;" src="pictures/tabix.gif" width="300" />And also:<br/><br/>Grafana, Redash, Apache Zeppelin,<br/>Superset&hellip; Tableau</p>
+    </section>
+    
+    <div class="progress"></div>
+    <script src="https://presentations.clickhouse.com/shower/shower.js"></script>
+<footer class="badge">
+    <a href="https://presentations.clickhouse.com/">ClickHouse Theater</a>
+</footer>
+</body>
+</html>
