@@ -1,12 +1,6 @@
 /* Inline */
 
 .slide a {
-    background-image: linear-gradient(
-        to top,
-        currentcolor 0.09em,
-        transparent 0.09em
-    );
-    background-repeat: repeat-x;
     color: var(--color-blue);
     text-decoration: none;
 }
