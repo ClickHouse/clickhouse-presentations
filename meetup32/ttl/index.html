@@ -9,15 +9,15 @@
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:image" content="pictures/preview.jpg">
-    <link rel="stylesheet" href="shower/themes/ribbon/styles/styles.css">
+    <link rel="stylesheet" href="shower/themes/clickhouse/styles/styles.css">
 
-    <style type="text/css">
+    <style>
         body {
             background-color: #1a1a1a;
         }
-        
+
         code { display: block; white-space: pre; background-color: #EEE; padding: 13px; }
-       
+
         section {
             font-family: -apple-system,BlinkMacSystemFont,Helvetica Neue,PingFang SC,Microsoft YaHei,Source Han Sans SC,Noto Sans CJK SC,WenQuanYi Micro Hei,sans-serif;
             color: #1a1a1a;
@@ -29,7 +29,6 @@
         }
 
         h3.content {
-            margin-top : -50px;
             margin-left: -50px;
         }
    </style>
@@ -59,13 +58,13 @@
             <li value=">">业务高速发展 => 数据存储量级飞跃发展</li>
             <li value=">">成本问题, 数据治理上需要管控数据的生命周期 </li>
         </ul>
- 
+
         <b>之前我们如何删除过期数据</b>
         <ul>
              <li value=">"> 元数据 + Cron任务 + Drop Partition</li>
              <li value=">"> 如何控制到列字段级别？</li>
         </ul>
-        
+
     </section>
 
     <section class="slide" id="3">
@@ -89,21 +88,21 @@
             <li value=">"> 表级别 TTL
                 <ul>
                         <li>
-                              行级别过期数据 
-                         </li> 
+                              行级别过期数据
+                         </li>
 
                          <li>
                               数据被删除
                          </li>
                 </ul>
-                   
+
             </li>
-            <li value=">"> 列级别 TTL 
+            <li value=">"> 列级别 TTL
 
             <ul>
                     <li>
                           列级别过期数据
-                     </li> 
+                     </li>
                      <li>
                           数据被重置为default值
                      </li>
@@ -113,10 +112,10 @@
             <li value=">">PR: https://github.com/ClickHouse/ClickHouse/pull/4212
                 </li>
         </ul>
-          
-                  
 
-            
+
+
+
        </section>
 
 
@@ -129,28 +128,28 @@
             `d` DateTime,
             `b` UInt32 DEFAULT 3 <mark>TTL d + interval 1 day</mark>
         )
-        ENGINE = MergeTree PARTITION BY toYYYYMMDD(d) 
+        ENGINE = MergeTree PARTITION BY toYYYYMMDD(d)
         ORDER BY d
         <mark>TTL d + toIntervalDay(30)</mark>
         SETTINGS index_granularity = 8192;
         </code>
-        
+
         <code class="next base" >
         insert into ttl  select today() - 5, 2 from system.numbers limit 10 ;
         select sleep(3) format Null;
-        select count(), sum(b) from ttl; 
+        select count(), sum(b) from ttl;
 
         </code>
 
         <code class="next base">
         alter table ttl modify ttl d + interval 4 day;
-        select count(), sum(b) from ttl; 
+        select count(), sum(b) from ttl;
         </code>
 
         <code class="next base" >
         insert into ttl select today() - 3 , 2;
         select count(), sum(b) from ttl;
-        optimize table ttl final; 
+        optimize table ttl final;
         select count(), sum(b) from ttl;
         </code>
 
@@ -167,7 +166,7 @@
 
     <section class="slide" id="TTL expression">
             <h3 class='content'>TTL 表达式</h2>
-             
+
             <code class="next base">
             CREATE TABLE ttl_table
             (
@@ -185,7 +184,7 @@
             <code  class="next base" style="margin-top:30px">
             ParserKeyword s_ttl{"TTL"};
             ASTPtr ttl_expression;
-            
+
             if (s_ttl.ignore(pos, expected))
             {
                 if (!expression_parser.parse(pos, ttl_expression, expected))
@@ -208,26 +207,26 @@
 
             <p>相关代码: MergeTreeDataPartTTLInfo.h, MergeTreeDataWriter::writeTempPart</p>
     </section>
-    
+
     <section class="slide" id="TTL-Merge1">
             <h3 class='content'>TTL Merge 流程</h2>
-             
+
              <div class="columns two">
                 <div>
                     <img src="images/mergetree.png"  width='100%' alt="" />
                     <p>
-                        Partition 内部 Part 的合并 
+                        Partition 内部 Part 的合并
                         <br/>参考代码：
-                        <br/>StorageMergeTree.h 
+                        <br/>StorageMergeTree.h
                     </p>
                 </div>
 
                 <div>
                     <ul>
-                           <li value = '>'>  Merge存在多次写放大</li> 
-                           <li value = '>'>   后台线程轮询Merge Parts </li> 
-                           <li value = '>'>  Merge的选择[Partition,Parts] 策略由很多参数控制</li> 
-                           <li value = '>'>  参考 SimpleMergeSelector.cpp</li> 
+                           <li value = '>'>  Merge存在多次写放大</li>
+                           <li value = '>'>   后台线程轮询Merge Parts </li>
+                           <li value = '>'>  Merge的选择[Partition,Parts] 策略由很多参数控制</li>
+                           <li value = '>'>  参考 SimpleMergeSelector.cpp</li>
                     </ul>
                 </div>
              </div>
@@ -258,7 +257,7 @@
                        </div>
 
                        <div>
-                            <ul> 
+                            <ul>
                                 <li value='>'>
                                     Part被读取后，TTL Info也会应用<mark>最新的TTL表达式</mark>进行更新
                                 </li>
@@ -298,14 +297,14 @@
 
     <section class="slide" id="TTL-Selector1">
             <h3 class='content'>TTLMergeSelector 逻辑</h2>
-            
+
             <div>
                     <div>
                             <img src="./images/s2.svg" height='300px' alt="">
                     </div>
 
                     <div>
-                            <ul> 
+                            <ul>
                                 <li value='>'>
                                     每个 merge_with_ttl_timeout 周期内有一次机会进行select
                                 </li>
@@ -319,14 +318,14 @@
 
     <section class="slide" id="TTL-Selector1">
             <h3 class='content'>Optimize 逻辑</h2>
-            
+
             <div>
                     <div>
                             <img src="./images/ttl_opt.svg" height='300px' alt="">
                     </div>
 
                     <div>
-                            <ul> 
+                            <ul>
                                 <li value='>'>
                                     强制调用一次 force merge
                                 </li>
@@ -341,7 +340,7 @@
 
     <section class="slide" id="notice-ttl">
         <h3 class='content'>TTL 原理总结</h2>
-        
+
         <ul>
             <li value='>'> 每个Part的TTL Info落盘存储</li>
             <li value='>'> 在Merge阶段在 TTLBlockInputStream 读取过程中执行过期逻辑  </li>
@@ -352,7 +351,7 @@
 
     <section class="slide" id="notice-ttl">
             <h3 class='content'>TTL 使用注意事项</h2>
-            
+
             <ul>
                 <li value='>'> TTL 仅支持 '*MergeTree' 引擎表  </li>
                 <li value='>'> TTL表达式只支持 Date or DateTime 返回类型结果 </li>
@@ -364,30 +363,30 @@
 
     <section class="slide" id="ttl-high">
             <h3 class='content'>TTL 高级用法</h2>
-            
+
             <ul>
                 <li value='>'>  SYSTEM STOP/START TTL MERGES  </li>
                 <li value='>'> 参数 ttl_only_drop_parts
                     <ul>
                         <li>  仅选择整个Part都过期的Part （ maxTTL <= currentTime) </li>
                         <li>  默认关闭（开启可以牺牲TTL时效性，节省周期内的写放大IO） </li>
-                    </ul>    
+                    </ul>
                 </li>
-                <li value='>'>  参数 merge_with_ttl_timeout 
+                <li value='>'>  参数 merge_with_ttl_timeout
                         <ul>
                                 <li>  控制 TTL 选择周期 </li>
                                 <li>（默认3600 * 24，一天一次）</li>
                                 <li>  (X) 示例：  TTL day + toIntervalDay(4) <br/>
                                     PARTITION BY (toYYYYMMDD(day), toHour(ifNull(rtime, now())))
                                 </li>
-                            </ul>    
+                            </ul>
                 </li>
             </ul>
     </section>
-   
+
 
     <section class="slide" id="ttl-high">
-        
+
         <div align='center' class='center' style='margin:100px'>
             <h1> 用起来吧！<br/>
                 ClickHouse TTL 是个好功能</h1>
@@ -395,8 +394,8 @@
                 <p>节省了更多业余时间陪家人(女朋友)</p>
         </div>
     </section>
- 
-    
+
+
 
 
 
@@ -408,9 +407,9 @@
                        </h1>
                 </div>
 
-              
 
-                <div align='center'> 
+
+                <div align='center'>
                         <p> 欢迎一切技术交流，微信：543950155</p>
                         <p> BIGO招聘： 大数据，推荐算法(C++/java/python ...)</p>
                         <p> Base： 广州，北京，新加坡</p>
@@ -421,8 +420,8 @@
 
     <footer class="badge">
     </footer>
-    
+
     <div class="progress"></div>
-    <script src="shower/shower.min.js"></script>
+    <script src="shower/shower.js"></script>
 </body>
 </html>

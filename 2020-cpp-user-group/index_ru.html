@@ -5,17 +5,19 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x10.css">
-    
-    <style type="text/css">
+    <link rel="stylesheet" href="shower/themes/clickhouse/styles/styles.css">
+
+    <style>
          code { display: block; white-space: pre; background-color: #EEE; }
+         .shower { --slide-ratio: calc(16 / 10); }
+         pre { line-height: 1; }
     </style>
 </head>
 <body class="shower list">
     <header class="caption">
         <h1>Как я ускорил одну агрегатную функцию в ClickHouse</h1>
     </header>
-    
+
     <section class="slide" id="cover" style="background: #FFF url('pictures/logo.png') no-repeat top right; background-size: 25%;">
         <h1 style="margin-top: 160px; font-size: 36pt;">Как я ускорил одну<br/>агрегатную функцию в ClickHouse</h1>
     </section>
@@ -128,30 +130,30 @@ T sum(const T * ptr, const T * end)
 <p style="margin-top: 2em;">Но разве компилятор C++ не обязан сам это делать?</p>
 </section>
 
-    
-    
+
+
 <section class="slide">
 <h2 style="font-size: 30pt;">Как быстрее всего суммировать числа?</h2>
-<code style="font-size: 16pt; line-height: 1.5">$ g++ -O2 main.cpp &amp;&amp; ./a.out 
+<code style="font-size: 16pt; line-height: 1.5">$ g++ -O2 main.cpp &amp;&amp; ./a.out
 Res: 499999999067108992.000, time: 2.561, 3.123 GB/sec.
 
-$ g++ -O3 main.cpp &amp;&amp; ./a.out 
+$ g++ -O3 main.cpp &amp;&amp; ./a.out
 Res: 499999999067108992.000, time: 1.590, 5.033 GB/sec.
 
-$ g++ -O3 -msse4.2 main.cpp &amp;&amp; ./a.out 
+$ g++ -O3 -msse4.2 main.cpp &amp;&amp; ./a.out
 Res: 499999999067108992.000, time: 1.560, 5.129 GB/sec.
 
-$ g++ -O3 -mavx2 main.cpp &amp;&amp; ./a.out 
+$ g++ -O3 -mavx2 main.cpp &amp;&amp; ./a.out
 Res: 499999999067108992.000, time: 1.188, 6.733 GB/sec.
 
-$ g++ -O3 -march=native main.cpp &amp;&amp; ./a.out 
+$ g++ -O3 -march=native main.cpp &amp;&amp; ./a.out
 Res: 499999999067108992.000, time: 1.192, 6.710 GB/sec.
 </code>
 </section>
 
 <section class="slide">
 <h2 style="font-size: 30pt;">Как быстрее всего суммировать числа?</h2>
-<code style="font-size: 16pt; line-height: 1.5">$ clang++ -O2 main.cpp &amp;&amp; ./a.out 
+<code style="font-size: 16pt; line-height: 1.5">$ clang++ -O2 main.cpp &amp;&amp; ./a.out
 Res: 499999999067108992.000, time: 0.726, 11.013 GB/sec.
 
 $ clang++ -O3 main.cpp &amp;&amp; ./a.out
@@ -190,7 +192,7 @@ Res: 499999999067108992.000, time: 0.741, 10.792 GB/sec.
 <p>Цикл развёрнут, но не векторизован.</p>
 </section>
 
-    
+
 <section class="slide">
 <h2 style="font-size: 30pt;">Как быстрее всего суммировать числа?</h2>
 <code style="font-size: 16pt; line-height: 1.25; margin-bottom: 1em;">$ clang++ -O3 -march=native -S main.cpp &amp;&amp; cat main.s
@@ -351,7 +353,7 @@ __attribute__((__noinline__)) T sum(const T * ptr, const T * end)
 
 <p><pre style="line-height: 1.5">
               median, 1000 queries
-ClickHouse:   <span style="color: green;">0.090</span> sec  
+ClickHouse:   <span style="color: green;">0.090</span> sec
 DBMS-X:       0.093 sec</pre></p>
 
 <p>ClickHouse на <span style="color: green;">три миллисекунды</span> быстрее!</p>
@@ -639,6 +641,6 @@ ClickHouse (new): <span style="color: green;">0.197</span> sec. x1.69
 </section>
 
     <div class="progress"></div>
-    <script src="shower/shower.min.js"></script>
+    <script src="shower/shower.js"></script>
 </body>
 </html>

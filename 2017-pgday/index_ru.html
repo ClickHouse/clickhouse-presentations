@@ -5,11 +5,10 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="shower/themes/ribbon/styles/screen-16x10.css">
-    
-<!--    <style type="text/css">
-         span { padding: 1px 10px; background: rgba(255, 255, 255, 0.75); }
-    </style>-->
+    <link rel="stylesheet" href="shower/themes/clickhouse/styles/styles.css">
+    <style>
+        .shower { --slide-ratio: calc(16 / 10); }
+    </style>
 </head>
 <body class="shower list">
     <header class="caption">
@@ -120,7 +119,7 @@
         <p><span style="font-size: 30px;color: #888;">Key-Value</span><br/><span>Если нужны частые запросы на обновление по ключу, используйте другое решение.</span></p>
         <p><span style="font-size: 30px;color: #888;">Blob-store, document oriented</span><br/><span>ClickHouse предназначен для большого количества мелко-гранулированных данных.</span></p>
     </section>
-    
+
 <!-- Usages -->
 
     <section class="slide">
@@ -129,7 +128,7 @@
         <p>Сотни компаний в России и рядом<br/>Яндекс, Mail.ru, Rambler, СКБ Контур, SMI2&hellip;</p>
         <p>Десятки компаний в Европе, США, Китае<br/>Cloudflare, Wikimedia, Lifestreet, Vertamedia, Carto, Nvidia, Infinidat&hellip;</p>
     </section>
-    
+
     <section class="slide">
         <img style="width: 50%; margin-left: -13px;" src="pictures/cloudflare.svg"/>
         <p>How do we analyze over O(100B) DNS requests daily.</p>
@@ -142,7 +141,7 @@
         <p>"clickhouse is a columnar datastore that we are using as an aid to run complex SQL queries on the edit data "lake" that we have as a result of the edit reconstruction project. It is similar to Druid but faster for complex queries."</p>
         <p><a href="https://phabricator.wikimedia.org/T150343">https://phabricator.wikimedia.org/T150343</a></p>
     </section>
-    
+
     <section class="slide">
         <h2 style="font-size: 30pt;">Необычные примеры применения ClickHouse</h2>
 
@@ -165,33 +164,33 @@
     <section class="slide">
         <h1 style="margin-top: 200px"><span>Почему ClickHouse такой быстрый?</span></h1>
     </section>
-    
-    
+
+
     <section class="slide">
         <h2>Почему ClickHouse такой быстрый?</h2>
         <p>&nbsp;</p>
         <p style="font-size: 40px;">&mdash; от безысходности.</p>
         <p style="font-size: 40px;">Яндекс.Метрика должна работать.</p>
     </section>
-    
+
     <section class="slide">
         <h2>Почему ClickHouse такой быстрый?</h2>
         <p>Чтобы быстро обрабатывать аналитический запрос, система должна:<br/>&nbsp;</p>
         <p style="font-size: 40px;">1. Быстро читать.</p>
         <p style="font-size: 40px;">2. Быстро считать.</p>
     </section>
-    
+
     <section class="slide">
         <h2>Почему ClickHouse такой быстрый?</h2>
         <p style="font-size: 40px;">1. Быстро читать.</p>
-        
+
         <p>&ndash; локальность по первичному ключу;
         <br/>&ndash; столбцы - читаем только нужные;
         <br/>&ndash; строгая типизация;
         <br/>&ndash; сжатие данных.</p>
-        
+
         <p style="font-size: 40px;">2. Быстро считать.</p>
-        
+
         <p>&ndash; векторный движок;
         <br/>&ndash; специализация структур данных;
         <br/>&ndash; низкоуровневые оптимизации.</p>
@@ -209,7 +208,7 @@
     </section>
 
 <!-- Benchmarks -->
-    
+
 <section class="slide">
     <h2>Независимые бенчмарки</h2>
     <p>ClickHouse vs. Spark &amp; MariaDB Column Store</p>
@@ -235,29 +234,29 @@
     <p>Нет UPDATE, DELETE</p>
     <p>Слабая совместимость со стандартом SQL</p>
 </section>
-    
+
     <section class="slide">
         <h2>ClickHouse vs. Vertica</h2>
         <p>Timur Shenkao:<br /><br />&laquo;ClickHouse is extremely fast at simple SELECTs without joins, much faster than Vertica&raquo;.</p>
     </section>
-    
+
     <section class="slide">
         <h2>ClickHouse vs. PrestoDB</h2>
         <p>Ömer Osman Koçak:<br /><br />
         &laquo;When we evaluated ClickHouse the results were great compared to Prestodb. Even though the columnar storage optimizations for ORC and Clickhouse is quite similar, Clickhouse uses CPU and Memory resources more efficiently (Presto also uses vectorized execution but cannot take advantage of hardware level optimizations such as SIMD instruction sets because it's written in Java so that's fair) so we also wanted to add support for Clickhouse for our open-source analytics platform Rakam (https://github.com/rakam-io/rakam)&raquo;</p>
     </section>
-    
+
     <section class="slide">
         <h2>ClickHouse vs. Google BigQuery</h2>
         <p>&laquo;ClickHouse показывает сравнимую скорость на <u>таком запросе</u> за 30 дней и в 8 раз быстрее (!) на <u>таком запросе</u>. В планах есть протестировать и другие запросы, еще не добрались.<br/><br/>Скорость выполнения запросов стабильна. В Google BigQuery в период пиковых нагрузок, например в 4:00 p.m. PDT или в начале месяца, время выполнения запросов может заметно увеличиваться&raquo;.</p>
     </section>
-    
+
     <section class="slide">
         <h2>ClickHouse vs. Druid</h2>
         <p>&laquo;В этом году мы развернули сборку на основе Druid — Imply Analytics Platform, а также Tranquility, и уже приготовились запускать в продакшн… Но после выхода ClickHouse сразу отказались от Druid, хотя потратили два месяца на его изучение и внедрение&raquo;.</p>
         <p><a href="https://habrahabr.ru/company/smi2/blog/314558/">https://habrahabr.ru/company/smi2/blog/314558/</a></p>
     </section>
-    
+
     <section class="slide">
         <h2>ClickHouse vs. InfiniDB</h2>
         <p>&laquo;结论：clickhouse速度更快！&raquo;</p>
@@ -306,6 +305,6 @@
     </section>
 
     <div class="progress"></div>
-    <script src="shower/shower.min.js"></script>
+    <script src="shower/shower.js"></script>
 </body>
 </html>

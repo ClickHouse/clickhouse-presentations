@@ -10,13 +10,14 @@
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:image" content="pictures/preview.jpg">
-    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x10.css">
+    <link rel="stylesheet" href="shower/themes/clickhouse/styles/styles.css">
 
-    <style type="text/css">
-         code { display: block; white-space: pre; background-color: #EEE; }
+    <style>
+        code { display: block; white-space: pre; background-color: #EEE; }
 
-         p.cloud { text-align: center; line-height: 2; }
-         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+        p.cloud { text-align: center; line-height: 2; }
+        p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+        .shower { --slide-ratio: calc(16 / 10); }
     </style>
 </head>
 <body class="shower list">
@@ -327,7 +328,7 @@ If replication exists, but within one region...</p>
 
 <section class="slide">
     <h2>Public Roadmap 2020.</h2>
-    <p><a href="https://clickhouse.tech/docs/ru/whats-new/extended-roadmap/">https://clickhouse.tech/docs/ru/whats-new/extended-roadmap/</a></p>
+    <p><a href="https://clickhouse.com/docs/ru/whats-new/extended-roadmap/">https://clickhouse.com/docs/ru/whats-new/extended-roadmap/</a></p>
     <p>~ 500 tasks with detailed description &mdash; dependencies, assignees...</p>
     <h2 style="color: gray;">Public Roadmap 2021.</h2>
     <p style="color: gray;">&mdash; expected at the end of November.</p>
@@ -339,6 +340,6 @@ If replication exists, but within one region...</p>
 </section>
 
     <div class="progress"></div>
-    <script src="shower/shower.min.js"></script>
+    <script src="shower/shower.js"></script>
 </body>
 </html>

@@ -10,7 +10,10 @@
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:image" content="pictures/preview.jpg">
-    <link rel="stylesheet" href="shower/themes/ribbon/styles/screen-16x10.css">
+    <link rel="stylesheet" href="shower/themes/clickhouse/styles/styles.css">
+    <style>
+        .shower { --slide-ratio: calc(16 / 10); }
+    </style>
 </head>
 <body class="shower list">
     <header class="caption">
@@ -35,7 +38,7 @@
         <h2><span style="padding: 10px; background: rgba(255, 255, 255, 0.75);">About Yandex</span></h2>
         <p style="margin-top: 200px;"><span style="padding: 10px; line-height: 1.8; background: rgba(255, 255, 255, 0.75);">Yandex is one of the largest internet companies in Europe</span><br /><span style="padding: 10px; line-height: 1.8; background: rgba(255, 255, 255, 0.75);">operating Russia’s most popular search engine.</span></p>
     </section>
-    
+
     <section class="slide">
         <h2>About Yandex</h2>
         <p>In short, Yandex is russian Baidu.</p>
@@ -51,7 +54,7 @@
         <p>We are processing about ~25 billions of events (page views, conversions, etc).</p>
         <p>We must generate and show reports in realtime.</p>
     </section>
-    
+
     <section class="slide">
         <h2>About Yandex.Metrica</h2>
         <p>In short, Yandex.Metrica is a something like Baidu.Analytics</p>
@@ -64,7 +67,7 @@
     <section class="slide">
         <h2>History</h2>
     </section>
-    
+
     <section class="slide">
         <h2>How to store data?</h2>
         <p>Big data processing is not a problem.</p>
@@ -257,7 +260,7 @@
         <h2>Countries Breakdown</h2>
         <p><img src="pictures/countries_breakdown.png"/></p>
     </section>
-    
+
     <section class="slide">
         <h2>When to use ClickHouse</h2>
         <p>For well structured, clean, immutable events.</p>
@@ -273,7 +276,7 @@
         <p><span style="font-size: 30px;color: #888;">Blob-store, document oriented</span><br/>ClickHouse is intended for vast amount of fine-grained data.</p>
         <p><span style="font-size: 30px;color: #888;">Over-normalized data</span><br/>Better to make up single wide fact table with pre-joined dimensions.</p>
     </section>
-    
+
     <section class="slide">
         <h2>Benchmarks</h2>
     </section>
@@ -281,7 +284,7 @@
     <section class="slide">
         <h2>Evidencies...</h2>
     </section>
-    
+
     <section class="slide">
         <h2>&nbsp;</h2>
         <p>Our CEO first saw ClickHouse in action:</p>
@@ -337,10 +340,10 @@
         <p>GitHub: <a href="https://github.com/ClickHouse/ClickHouse/">https://github.com/ClickHouse/ClickHouse/</a></p>
         <p>Twitter: <a href="https://twitter.com/ClickHouseDB">https://twitter.com/ClickHouseDB</a></p>
         <p>China User Group: <a href="https://clickhouse.com.cn/">http://clickhouse.com.cn/</a></p>
-        
+
         <p>+ meetups. Moscow, Saint-Petersburg, Novosibirsk, Ekaterinburg, Minsk, Nizhny Novgorod, Berlin, Palo Alto... Beijing.</p>
     </section>
-    
+
     <section class="slide">
         <h1>欧阳辰<br/><a href="https://zhuanlan.zhihu.com/p/22165241">https://zhuanlan.zhihu.com/p/22165241</a></h1>
     </section>
@@ -361,6 +364,6 @@
     </section>
 
     <div class="progress"></div>
-    <script src="shower/shower.min.js"></script>
+    <script src="shower/shower.js"></script>
 </body>
 </html>

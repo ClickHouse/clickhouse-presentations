@@ -10,21 +10,22 @@
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:image" content="pictures/preview.jpg">
-    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x10.css">
+    <link rel="stylesheet" href="shower/themes/clickhouse/styles/styles.css">
 
-    <style type="text/css">
-         code { display: block; white-space: pre; background-color: #EEE; }
-         p.cloud { text-align: center; line-height: 1.7; }
-         p.cloud span { font-size: 14pt; color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
-         p.cloud_big { text-align: center; line-height: 1.7; }
-         p.cloud_big span { font-size: 24pt; color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+    <style>
+        code { display: block; white-space: pre; background-color: #EEE; }
+        p.cloud { text-align: center; line-height: 1.7; }
+        p.cloud span { font-size: 14pt; color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+        p.cloud_big { text-align: center; line-height: 1.7; }
+        p.cloud_big span { font-size: 24pt; color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+        .shower { --slide-ratio: calc(16 / 10); }
     </style>
 </head>
 <body class="shower list">
     <header class="caption">
         <h1>ClickHouse: winter/spring 2020</h1>
     </header>
-    
+
     <section class="slide">
         <h1>ClickHouse: winter/spring 2020</h1>
         <p style="margin-top: 100px;">Zoom: <a href="https://yandex.zoom.us/j/91554601465">https://yandex.zoom.us/j/91554601465</a></p>
@@ -93,7 +94,7 @@
 <section class="slide">
 <h2>Role Based Access Control</h2>
 <p>demo?</p>
-<!-- 
+<!--
 CREATE USER test IDENTIFIED WITH sha256_password BY 'hello'
 
 clickhouse-client --user test --password hello
@@ -128,7 +129,7 @@ SELECT count() FROM test.hits
 <section class="slide">
 <h2>Adaptive JOIN algorithm</h2>
 <p>demo?</p>
-<!-- 
+<!--
 SELECT uniq(a.URL), uniq(b.URL) FROM hits_100m_obfuscated a INNER JOIN hits_100m_obfuscated b ON a.WatchID = b.WatchID;
 SET join_algorithm = 'auto'
 SET send_logs_level = 'trace'
@@ -190,7 +191,7 @@ time clickhouse benchmark <<< "INSERT INTO test.hits_compact (UserID) VALUES (ra
 <section class="slide">
 <h2>ClickHouse Playground</h2>
 <p>(beta version)</p>
-<p><a href="https://play.clickhouse.tech/">https://play.clickhouse.tech/</a></p>
+<p><a href="https://play.clickhouse.com/">https://play.clickhouse.com/</a></p>
 <p>Works on the cheapest VM in Yandex.Cloud.</p>
 </section>
 
@@ -220,7 +221,7 @@ time clickhouse benchmark <<< "INSERT INTO test.hits_compact (UserID) VALUES (ra
 
 <section class="slide">
     <h2>Public roadmap 2020!</h2>
-    <p><a href="https://clickhouse.tech/docs/ru/extended_roadmap/">https://clickhouse.tech/docs/ru/extended_roadmap/</a></p>
+    <p><a href="https://clickhouse.com/docs/ru/extended_roadmap/">https://clickhouse.com/docs/ru/extended_roadmap/</a></p>
     <p>~ 500 tasks with detailed descriptions &mdash; dependencies, assignies...</p>
     <p>and ~ 70 are already done :)</p>
 </section>
@@ -231,6 +232,6 @@ time clickhouse benchmark <<< "INSERT INTO test.hits_compact (UserID) VALUES (ra
 </section>
 
     <div class="progress"></div>
-    <script src="shower/shower.min.js"></script>
+    <script src="shower/shower.js"></script>
 </body>
 </html>

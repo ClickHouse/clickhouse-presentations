@@ -10,10 +10,11 @@
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:image" content="pictures/preview.jpg">
-    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x10.css">
+    <link rel="stylesheet" href="shower/themes/clickhouse/styles/styles.css">
 
-    <style type="text/css">
-         code { display: block; white-space: pre; background-color: #EEE; }
+    <style>
+        code { display: block; white-space: pre; background-color: #EEE; }
+        pre { line-height: 1; }
     </style>
 </head>
 <body class="shower list">
@@ -177,7 +178,7 @@ containing one value.</p>
 
 
 <section class="slide">
-<h2>All Function Computations are Immutable</h2>
+<h2 style="font-size: 32pt;">All Function Computations are Immutable</h2>
 
 <p>Computations:<br/><div style="white-space: pre; font-family: Monospace, Courier New; background-color: #FED; padding: 10px; line-height: 1.25">c1 = x;<br/>c2 = y;<br/>c3 = plus(c1, c2);<br/>c4 = f(c3);<br/>c5 = g(c3);</div></p>
 <p>&mdash; can be executed independently,<br/>in arbitrary order of graph traversal<br/>and in parallel.</p>
@@ -672,6 +673,6 @@ using const COWPtr&lt;T> = immutable_ptr&lt;T>;
     </section>
 
     <div class="progress"></div>
-    <script src="shower/shower.min.js"></script>
+    <script src="shower/shower.js"></script>
 </body>
 </html>

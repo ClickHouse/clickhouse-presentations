@@ -10,12 +10,12 @@
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:image" content="pictures/preview.jpg">
-    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+    <link rel="stylesheet" href="shower/themes/clickhouse/styles/styles.css">
 
-    <style type="text/css">
-         code { display: block; white-space: pre; background-color: #EEE; }
-         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
-         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+    <style>
+        code { display: block; white-space: pre; background-color: #EEE; }
+        p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+        p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
     </style>
 </head>
 <body class="shower list">
@@ -254,7 +254,7 @@ ENGINE = ReplicatedMegreTree('/clickhouse/tables/{uuid}', '{replica}');
 <p>In distributed query, memory usage is displayed as sum and max per host.</p>
 <p>Demo:</p>
 <code style="font-fize: 16pt; line-height: 1.25;">SELECT uniqExact(title)
-  FROM remoteSecure('gh-api.clickhouse.tech',
+  FROM remoteSecure('play.clickhouse.com',
                     default.github_events,
                     'explorer')</code>
 <p style="margin-top: 2em; color: gray; font-size: 14pt;">Developer: Dmitriy Novik, Alexey Milovidov.</p>
@@ -867,7 +867,7 @@ clickhouse-benchmark --query "SELECT UTMSource, count() AS c FROM test.hits_spar
 
 
     <div class="progress"></div>
-    <script src="shower/shower.min.js"></script>
+    <script src="shower/shower.js"></script>
 
     <!--Video plugin-->
     <link rel="stylesheet" href="shower/shower-video.css">
@@ -875,4 +875,3 @@ clickhouse-benchmark --query "SELECT UTMSource, count() AS c FROM test.hits_spar
     <!--/Video plugin-->
 </body>
 </html>
-
