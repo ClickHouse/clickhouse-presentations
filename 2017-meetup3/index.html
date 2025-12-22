@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en" style="background-color: #FFF;">
+<head>
+    <title>ClickHouse meetup in Saint Petersburg</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta property="og:image" content="pictures/preview.jpg">
+    <meta property="og:title" content="ClickHouse meetup in Saint Petersburg">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="pictures/preview.jpg">
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/themes/clickhouse/styles/styles.css">
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse meetup in Saint Petersburg</h1>
+    </header>
+
+    <section class="slide" id="cover">
+        <h1 style="margin-top: 200px">ClickHouse meetup<br/>in Saint Petersburg</h1>
+    </section>
+
+    <section class="slide">
+        <h2>ClickHouse: Present and Future</h2>
+    </section>
+
+    <section class="slide">
+        <h2>Team</h2>
+        <p>Now 5 developers.</p>
+        <p>
+            <img src="pictures/milovidov.jpg" style="height:150px;">
+            <img src="pictures/vludv.jpg" style="height:150px;">
+            <img src="pictures/ztlpn.jpg" style="height:150px;">
+            <img src="pictures/proller.jpg" style="height:150px;">
+            <img src="pictures/stanly.jpg" style="height:150px;">
+        </p>
+    </section>
+
+<section class="slide">
+
+<h2>Previously</h2>
+
+<p>&mdash; HTTP and executable sources;</p>
+<p>&mdash; merge optimization, vertical merge;</p>
+<p>&mdash; distributed query tracing;</p>
+<p>&mdash; clickhouse-local;</p>
+<p>&mdash; BETWEEN, || operators;</p>
+<p>&mdash; UUID - text functions;</p>
+
+</section>
+<section class="slide">
+
+<h2>New in Query Language</h2>
+
+<p>&mdash; KILL QUERY;</p>
+<p>&mdash; LIMIT BY;</p>
+<p>&mdash; SELECT INTO OUTFILE;</p>
+
+</section>
+<section class="slide">
+
+<h2>Interfaces</h2>
+
+<p>&mdash; ability to get progress in HTTP headers;</p>
+<p>&mdash; ability to skip errors in text formats;</p>
+<p>&mdash; proper HTTP response codes;</p>
+
+</section>
+<section class="slide">
+
+<h2>Build</h2>
+
+<p>&mdash; &laquo;proper&raquo; build and packages;</p>
+<p>&mdash; system.build_options table;</p>
+
+</section>
+<section class="slide">
+
+<h2>Dictionaries</h2>
+
+<p>&mdash; cached external dictionary performance;</p>
+<p>&mdash; cached external dictionary instrumentation;</p>
+<p>&mdash; HTTPS dictionaries;</p>
+
+</section>
+<section class="slide">
+
+<h2>Instrumentation</h2>
+
+<p>&mdash; information about index memory usage;</p>
+<p>&mdash; information about uncompressed column sizes;</p>
+<p>&mdash; metrics for cache RAM consumption;</p>
+<p>&mdash; metrics about merges;</p>
+
+</section>
+<section class="slide">
+
+<h2>Optimizations</h2>
+
+<p>&mdash; DISTINCT optimization;</p>
+<p>&mdash; gzip performance in HTTP interface;</p>
+<p>&mdash; mark cache optimization;</p>
+
+</section>
+<section class="slide">
+
+<h2>Functions</h2>
+
+<p>&mdash; proper comparison logic, least, greatest;</p>
+<p>&mdash; groupUniqArray for all data types;</p>
+<p>&mdash; decodeURLComponent;</p>
+
+</section>
+<section class="slide">
+
+<h2>Something Else</h2>
+
+<p>&mdash; protection against accidental DROP TABLE;</p>
+<p>&mdash; use_client_time_zone; timezone in config;</p>
+<p>&mdash; fsync_metadata;</p>
+
+</section>
+<section class="slide">
+
+<h2>Community</h2>
+
+<p>&mdash; integration with Grafana, Redash, Apache Zeppelin, Superset;</p>
+<p>&mdash; proper packages for CentOS, RHEL, GosLinux;</p>
+<p>&mdash; native protocol driver for Go and C++;</p>
+<p>&mdash; ability to pass X-ClickHouse-* headers;</p>
+<p>&mdash; benchmarks NYC Taxi, Percona (Spark);</p>
+<p>&mdash; Greenplum benchmark;</p>
+<p>&mdash; English Telegram chat;</p>
+<p>&mdash; meetings and talks (Brussels, Paris);</p>
+
+</section>
+
+    <section class="slide">
+        <h2>ClickHouse vs. Spark</h2>
+        <p>https://www.percona.com/blog/2017/02/13/clickhouse-new-opensource-columnar-database/</p>
+        <img src="pictures/spark.png" style="height:60%"/>
+    </section>
+
+    <section class="slide">
+        <h2>ClickHouse vs. Greenplum</h2>
+        <p><img src="pictures/greenplum.png" style="width:50%"/></p>
+    </section>
+
+<section class="slide">
+
+<h2>TODO (March-April 2017)</h2>
+
+<p>&mdash; distributed DDL queries;</p>
+<p>&mdash; configs in ZooKeeper;</p>
+<p>&mdash; full NULL support;</p>
+
+</section>
+<section class="slide">
+
+<h2>TODO (Spring-Summer 2017)</h2>
+
+<p>&mdash; ODBC driver functionality on Windows;</p>
+<p>&mdash; rewrite query analysis: proper JOIN support;</p>
+
+</section>
+
+<section class="slide">
+
+<h2>Additional</h2>
+
+<p>job-clickhouse@yandex-team.ru</p>
+
+</section>
+
+    <div class="progress"></div>
+    <script src="https://presentations.clickhouse.com/shower/shower.js"></script>
+<footer class="badge">
+    <a href="https://presentations.clickhouse.com/">ClickHouse Theater</a>
+</footer>
+</body>
+</html>

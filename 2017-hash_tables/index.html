@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>How Hash Tables are Structured in ClickHouse</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta property="og:image" content="pictures/preview.jpg">
+    <meta property="og:title" content="How Hash Tables are Structured in ClickHouse">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="pictures/preview.jpg">
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/themes/clickhouse/styles/styles.css">
+
+    <style>
+         span { padding: 10px 10px; background: rgba(255, 255, 255, 0.75); }
+         code { display: block; background-color: #EEE; white-space: pre; }
+         h2 { line-height: 1.5 !important; padding-bottom: 30px; }
+         td { line-height: 1.5; }
+         p { white-space: pre; }
+         .shower { --slide-ratio: calc(4 / 3); }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>How Hash Tables are Structured in ClickHouse</h1>
+    </header>
+
+    <section class="slide" id="cover" style="background: url('pictures/xor.png') no-repeat center center; background-size: 100%">
+        <h1 style="margin-top: 200px;"><span>How Hash Tables are Structured</span><br/><span>in ClickHouse</span></h1>
+    </section>
+
+    <section class="slide">
+        <h2>About Me</h2>
+        <p>Alexey, ClickHouse developer.</p>
+        <p>Since 2008, I worked on the data processing engine for Yandex.Metrica.</p>
+        <p>I write in C++.</p>
+    </section>
+
+<section class="slide">
+<h2>Where Good Hash Tables are Needed</h2>
+
+<p>GROUP BY<br>
+SELECT DISTINCT<br>
+IN, JOIN</p>
+
+<p><br>And also:<br>
+— uniqExact, uniq;<br>
+— arrayEnumerateUniq;<br>
+— LIMIT BY.</p>
+</section>
+
+<section class="slide">
+<h2>What is a Hash Table</h2>
+</section>
+
+<section class="slide">
+<h2>How do Hash Tables differ<br>from Lookup Tables?</h2>
+
+<p>1. Hashing.</p>
+<p>2. Collision resolution.</p>
+<p>3. Resizes.</p>
+<p>&nbsp;</p>
+<p>All points are not mandatory.</p>
+<p>Example: direct mapped cache.</p>
+</section>
+
+<section class="slide">
+<h2>Hashing</h2>
+
+<div style="float: right; text-align: right;">
+<img src="pictures/power.png" style="margin-bottom: -30px;" />
+<br><span style="padding-right: 10px; font-size: 10px;">xkcd.com</span>
+</div>
+
+<p>A magical technique that permeates<br>all software engineering & computer science.</p>
+<p>Used everywhere.</p>
+<p>Search algorithms, machine learning,<br>distributed systems, data compression,<br>sketching data structures...</p>
+</section>
+
+<section class="slide">
+<h2>Mistakes in Hash Function Selection</h2>
+
+<p>1. Using a trivial hash function</p>
+
+<code>hash(x) = x
+</code>
+
+<p>
+This is how it's done in the standard library implementation (std::hash)<br>in libstdc++ and libc++ for integers.</p>
+</section>
+
+<section class="slide">
+<h2>Why a trivial hash function<br>is bad.</h2>
+
+<p>Example: let's count how many times each user was on the internet.</p>
+<p>Input — array of yandexuid.<br>yandexuid — UInt64</p>
+
+<code>for (const auto &amp; key : data)
+    ++map[key];
+</code>
+
+<p>
+Total 100,000,000 visits, containing 17,630,976 different yandexuid.<br>
+value_type — 16 bytes, RAM approximately 260 MB<br>— doesn't fit in LL cache.</p>
+</section>
+
+<section class="slide">
+<p>
+What is yandexuid: concat(rand, timestamp).<br>Lower bits — <b>unix timestamp</b> with seconds precision.</p>
+
+<img src="pictures/traffic.png" style="height:50%"/>
+
+<code style="font-size: 20px;">SELECT toHour(EventTime) * 60 + toMinute(EventTime) AS k,
+    count() AS c FROM hits_all
+WHERE EventDate >= today() - 365 GROUP BY k ORDER BY k
+INTO OUTFILE 'minutes.tsv' FORMAT TabSeparated</code>
+
+<p>
+Elapsed: 800.580 sec. Processed 4.33 trillion rows</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 40px;">How much worse is a trivial hash function</h2>
+
+<p>std::unordered_map<br/>
+— no difference in performance (10.319 vs 10.279 sec)</p>
+
+<p>google::dense_hash_map<br/>
+— performance difference: 3.156 vs 81.86 sec — <b>26 times</b></p>
+
+<p>ClickHouse HashMap<br/>
+— performance difference: 2.527 vs 10.264 sec — <b>4 times</b></p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 40px;">2. Mistakes when combining<br>hash functions</h2>
+
+<p>hash(x, y) = hash(x) ^ hash(y)
+— terrible, don't do this</p>
+
+<p>hash(x, y) = hash(hash(x) ^ y)
+— you can do this, but often you can do better</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 40px;">3. Using for fixed-length types<br/>a hash function intended for strings.</h2>
+
+<p>Example:</p>
+<code style="font-size: 19px;">hash(int x) = CityHash64(reinterpret_cast&lt;const char *&gt;(&amp;x), sizeof(x))
+</code>
+<p>
+— very bad.</p>
+
+<p>
+— hash functions for strings generally don't inline;
+
+— they contain many branches — variations
+  on the theme of duff device for fast path loops and tail handling,
+  all this is unnecessary when hashing fixed-length types.
+</p>
+</section>
+
+<section class="slide">
+<h2>Why it's bad</h2>
+
+<p style="margin-top: -30px;">HashMap in ClickHouse:
+<table style="margin-top: -15px;">
+<tr><td>— good hash function:</td><td>2.439 sec.</td></tr>
+<tr><td>— mistakenly using CityHash64 for UInt64: </td><td>3.347 sec.</td></tr>
+<tr><td>— using murmur finalizer: </td><td>2.722 sec.</td></tr>
+<tr><td>— trivial hash function: </td><td>9.721 sec.</td></tr></table></p>
+
+<p>std::unordered_map:
+<table style="margin-top: -15px;">
+<tr><td>— good hash function: </td><td>10.097 sec.</td></tr>
+<tr><td>— mistakenly using CityHash64 for UInt64: </td><td>11.040 sec.</td></tr></table></p>
+
+<p>(performance is masked by dependent cache misses)</p>
+
+<p><a style="font-size: 15px;" href="https://github.com/ClickHouse/ClickHouse/blob/master/dbms/src/Common/tests/integer_hash_tables_and_hashes.cpp">https://github.com/ClickHouse/ClickHouse/blob/master/dbms/src/Common/tests/integer_hash_tables_and_hashes.cpp</a></p>
+</section>
+
+<section class="slide">
+<h2>4. Hash Function Interference</h2>
+
+<p>Use different hash functions for directly or indirectly
+related data structures.</p>
+
+<p>Example: for data sharding
+and for hash tables when processing this data.</p>
+
+<p><span style="padding: 0; font-size: 30px;">☠</span> Leads to slowdown by multiple times or complete lockup!</p>
+
+<p>Sometimes choosing multiple hash functions from the same family
+is not a good enough solution.</p>
+<p>Example: <code>hash(x, seed) = hash(x ^ seed)</code>— often not good enough,
+if part of hash operations commute with xor.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 40px;">5. Using outdated slow<br>low-quality hash functions</h2>
+
+<p>Example: libstdc++ from gcc 7 uses FNV1a for strings.
+
+This hash function contains a loop over bytes,
+can only work fast for short strings,
+but for short strings the quality is too low.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 40px;">5. Using outdated slow<br>low-quality hash functions</h2>
+
+<p style="margin-top: -25px;">Example: Making 5 million inserts.
+
+PageCharset — short repeating strings (windows-1251, utf-8)
+<table style="margin-top: -15px;">
+<tr><td>— FNV1a:</td><td>76,409,407 inserts/sec.
+<tr><td>— CityHash64:</td><td>94,725,900 inserts/sec.
+<tr><td>— hash function from ClickHouse:</td><td>112,791,109 inserts/sec.</td></tr></table>
+
+URL — many different strings ~60 bytes
+<table style="margin-top: -15px;"><tr><td>— FNV1a:</td><td>10,108,171 inserts/sec.</td></tr>
+<tr><td>— CityHash64:</td><td>11,337,682 inserts/sec.</td></tr>
+<tr><td>— hash function from ClickHouse:</td><td>13,637,320 inserts/sec.</td></tr></table></p>
+
+<a style="font-size: 15px;" href="https://github.com/ClickHouse/ClickHouse/blob/master/dbms/src/Interpreters/tests/hash_map_string_3.cpp">https://github.com/ClickHouse/ClickHouse/blob/master/dbms/src/Interpreters/tests/hash_map_string_3.cpp</a></p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 40px;">6. Using cryptographic<br>hash functions unnecessarily</h2>
+
+<p>Sometimes not a mistake if you need to avoid algorithmic complexity attack.</p>
+<p>In this case use <b>SipHash</b>.
+Don't use MD5, SHA1,2,3 for hash tables.</p>
+
+<p>But this can also be achieved by other means
+(choosing a random hash function from a family)</p>
+<p>* though this usually doesn't help.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 40px;">6. Using cryptographic<br>hash functions unnecessarily</h2>
+
+<p style="margin-top: -25px;">Example:
+
+URL:
+<table style="margin-top: -15px;">
+<tr><td>CityHash64: </td><td>3755.84 MB/sec.</td></tr>
+<tr><td>SipHash: </td><td>1237.51 MB/sec.</td></tr>
+<tr><td>MD5: </td><td>361.86 MB/sec.</td></tr></table>
+
+SearchPhrase:
+
+<table style="margin-top: -5px;">
+<tr><td>CityHash64: </td><td>822.56 MB/sec.</td></tr>
+<tr><td>SipHash: </td><td>183.35 MB/sec.</td></tr>
+<tr><td>MD5: </td><td>30.87 MB/sec.</td></tr></table>
+
+<a style="font-size: 15px;" href="https://github.com/ClickHouse/ClickHouse/blob/master/dbms/src/Common/tests/hashes_test.cpp">https://github.com/ClickHouse/ClickHouse/blob/master/dbms/src/Common/tests/hashes_test.cpp</a></p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 40px;">Assessing the quality<br>of non-cryptographic hash functions</h2>
+
+<img style="float: right;" src="pictures/avalanche.svg" />
+<p>Example: SMHasher.
+
+<a href="https://github.com/aappleby/smhasher">https://github.com/aappleby/smhasher</a></p>
+
+<p>
+Avalanche, Bit Independence</p>
+
+<a style="font-size: 25px;" href="http://ticki.github.io/blog/designing-a-good-non-cryptographic-hash-function/">http://ticki.github.io/blog/designing-a-good-non-cryptographic-hash-function/</a>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 40px;">Limitations of the Avalanche criterion</h2>
+
+<p>For different algorithms, different
+criteria for hash function quality make sense.</p>
+
+<p>A hash function can be quality
+for linear probing open addressing hash table,
+but not quality for HyperLogLog.</p>
+</section>
+
+<section class="slide">
+<h2>Examples of hash functions for integers</h2>
+</section>
+
+<section class="slide">
+<h2>1. Murmur finalizer</h2>
+<code style="margin-top: -40px;">inline UInt64 intHash64(UInt64 x)
+{
+    x ^= x >> 33;
+    x *= 0xff51afd7ed558ccdULL;
+    x ^= x >> 33;
+    x *= 0xc4ceb9fe1a85ec53ULL;
+    x ^= x >> 33;
+
+    return x;
+}
+</code>
+
+<p>
+2.5 "rounds" consisting of xor-shift and multiplication.
+(city, farm, metro hash use roughly the same thing)</p>
+
+<p>latency of multiplication — 3 cycles, xor and shift — 1 cycle,
+there's no instruction level parallelism in one hash function,
+so total latency is approximately 12 cycles.</p>
+</section>
+
+<section class="slide">
+<h2>1. Murmur finalizer</h2>
+
+<p>Advantages:
+— good quality;
+— independent calculation of multiple hashes vectorizes
+  (gcc, clang even do this themselves);
+— instruction-parallel independent calculation of multiple hashes;
+— clear meaning.</p>
+
+<p>Disadvantages:
+— when hash table fits in L1..L2 cache, overhead is still large.
+  (can be reduced to 1..1.5 rounds if quality is acceptable)</p>
+</section>
+
+<section class="slide">
+<h2>2. CRC-32C</h2>
+
+<code>
+#if __SSE4_2__
+
+#include &lt;nmmintrin.h&gt;
+
+inline UInt64 intHashCRC32(UInt64 x)
+{
+    return _mm_crc32_u64(-1ULL, x);
+}
+
+#endif
+</code>
+</section>
+
+<section class="slide">
+<h2>2. CRC-32C</h2>
+
+<p>
+one instruction (actually two)
+
+latency 3 cycles
+
+instruction level parallelism — 3 operations simultaneously
+
+throughput up to 1 cycle per operation
+
+
+<a href="https://software.intel.com/sites/landingpage/IntrinsicsGuide/">https://software.intel.com/sites/landingpage/IntrinsicsGuide/</a>
+</p>
+</section>
+
+<section class="slide">
+<h2>2. CRC-32C</h2>
+
+<p>Disadvantages:
+— only 32 bits
+— <b>zero</b> quality by Avalanche and Bit Independence Criteria
+  because crc commutes with xor:
+</p>
+<code>crc(x ^ y) = crc(x) ^ crc(y)</code>
+<p>
+  meaning when changing the n-th bit of x,
+  the m-th bit of crc(x) changes or doesn't change
+   depending on n, but independently of x.
+
+  each bit of crc is xor of some bits of x.
+</p>
+<p>
+Advantages:
+— works well in practice in hash tables</p>
+</section>
+
+<section class="slide">
+<p style="padding-top: 50px; font-size: 50px;">By the way, both functions are reversible.</p>
+<p>But nobody cares.</p>
+</section>
+
+<section class="slide">
+<p style="padding-top: 50px;">
+Throughput, Latency, Avalanche
+of hash functions for integers:
+
+<a style="font-size: 20px;" href="https://software.intel.com/sites/landingpage/IntrinsicsGuide/">https://github.com/ClickHouse/ClickHouse/blob/master/dbms/src/Common/tests/int_hashes_perf.cpp</a></p>
+<code>./int_hashes_perf 1000000000</code>
+</section>
+
+<section class="slide">
+<h2>Collision Resolution</h2>
+
+Two classes of hash tables...
+</section>
+
+<section class="slide">
+<h2>1. Chaining</h2>
+<p>(with external explicit collision resolution lists)<br>
+Examples: std::unordered_map, boost::intrusive::hash_table.</p>
+
+<p>Advantages:
+
+— suitable for fat objects;
+— suitable for non-movable objects;
+— suitable for intrusive containers;
+
+— node-based container, pointers to nodes don't invalidate
+      (note, iterators invalidate);
+
+— no mutual influence of collision resolution chains
+      — positive feedback on chain growth;
+
+— more tolerant of bad hash function and large load factor.</p>
+</section>
+
+<section class="slide">
+<h2>1. Chaining</h2>
+
+<p>Disadvantages:
+
+— low cache locality;
+
+— load on allocator;
+
+— large memory overhead for small values;</p>
+</section>
+
+<section class="slide">
+<h2>2. Open-Addressing</h2>
+
+<p>(closed hashing; with internal collision resolution chains)
+
+Examples:
+ClickHouse HashMap, sparse_hash_map,
+dense_hash_map, HashMap in Rust.</p>
+
+<p>Disadvantages:
+— very sensitive to hash function choice;
+— for example, work absolutely badly with trivial hash function;
+— variety of memory layout and collision resolution options,
+      need to choose for specific task;
+— strong performance degradation
+      when storing large objects inplace;</p>
+
+<p>Advantages:
+— when used correctly, work fast :)</p>
+</section>
+
+<section class="slide">
+<h2>Other Options</h2>
+
+<p>Not necessarily lists.</p>
+
+<p>Other external explicit structures for collision resolution:
+— contiguous arrays;
+— balanced trees (example: HashMap in Java).</p>
+
+<p>Chaining with first cell inplace;
+— combine disadvantages of chaining and open-addressing;
+— can use combined variant for multiset/multimap.</p>
+</section>
+
+<section class="slide">
+<h2>Memory Layout Options<br>for open-addressing hash table</h2>
+
+<p>How to indicate that a cell is occupied?
+
+1. Explicitly — occupancy bit in each cell.
+
+2. Implicitly — absence of value denoted by zero key,
+and element with zero key stored separately.</p>
+</section>
+
+<section class="slide">
+<h2>Memory Layout Options<br>for open-addressing hash table</h2>
+<p>
+— simple array of cells;
+
+— unusual array of cells — sparse array (example: sparse_hash_map);
+
+— two-level array;
+
+— array with address translation (indirect addressing);
+
+— two arrays of cells — one for key, another for mapped;
+
+— two or more arrays of cells for cuckoo hash table;
+
+— array of cells + bit masks;</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 40px;">What additional information<br>can be stored in cells</h2>
+<p>
+— hash value — for shortcut comparison of heavy keys;
+      to avoid repeated calculations during resizes;
+
+— version number for instant hash table clearing;
+
+— information on how far away the element is
+      with the corresponding hash modulo value;
+
+— pointers forming collision resolution chain
+      as in chaining hash table;
+
+— atomics and even mutexes for locking.</p>
+</section>
+
+<section class="slide">
+<h2>Collision Resolution Methods</h2>
+</section>
+
+<section class="slide">
+<h2>What does insert and lookup<br>hit in hash tables?</h2>
+
+<p>
+1. When everything fits in L1..L2 cache (sometimes L3 cache):
+— hash function calculation;
+— collision resolution chain traversal
+      (branches, arithmetic, sometimes just many instructions);
+— element equality comparison.
+
+2. When everything doesn't fit in LL cache (sometimes only in L3 cache):
+— random memory reads.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 50px;">What does insert and lookup hit?</h2>
+
+<img style="margin-top: -30px;" src="pictures/random_set_query.png"/>
+<img src="pictures/perf.png"/>
+</section>
+
+
+<section class="slide">
+<h2>Linear probing</h2>
+
+<p>Advantages:
+— excellent cache locality;
+— very simple;
+— fastest given equal chain lengths;
+
+Disadvantages:
+— most finicky method;
+— doesn't tolerate large fill factor.
+
+Average complexity of lookup in hash table:
+O(n^2), where n is average collision resolution chain length.</p>
+</section>
+
+<section class="slide">
+<h2>Quadratic probing</h2>
+
+<p>Advantages:
+— decent cache locality;
+— only slightly more complex than linear probing;
+— slightly less finicky;</p>
+
+<p>Example: used in dense_hash_map.</p>
+</section>
+
+<section class="slide">
+<h2>Double hashing</h2>
+
+<p>Disadvantages:
+— poor cache locality;
+— more complex in implementation and usage;
+— less efficient given equal chain lengths;
+
+Advantages:
+— not finicky.
+
+Bonus:
+— useful not only for hash tables
+For example, for Bloom Filter two hash functions are enough
+to generate a family of hash functions:
+hash(x, k) = hash1(x) + k * hash2(x)</p>
+</section>
+
+<section class="slide">
+<h2>Linear probing<br>with Robin Hood hashing:</h2>
+
+<p>Disadvantages:
+— slightly slower than linear probing
+      given equal chain lengths;
+— need to compute more or store
+      hash function value for cells;
+
+Advantages:
+— same cache locality as linear probing;
+— average chain lengths substantially less than linear probing;
+— hash table becomes almost completely
+      ordered by hash function modulo,
+      which can be used in other algorithms.
+
+Example: HashMap in Rust.
+</p>
+</section>
+
+<section class="slide">
+<h2>Cuckoo hashing</h2>
+
+<p>Advantages:
+
+— O(1) lookup
+
+
+Disadvantages:
+
+— two (on average one and a half)
+      random memory accesses instead of one
+
+— complex inserts</p>
+</section>
+
+<section class="slide">
+<h2>Hopscotch hashing</h2>
+
+<p>Advantages:
+
+— O(1) lookup
+
+
+Disadvantages:
+
+— complex inserts
+
+
+I took the first implementation from the internet yesterday,
+copied it into the project, and it's slow.
+
+<a href="https://github.com/Tessil/hopscotch-map/">https://github.com/Tessil/hopscotch-map/</a>
+<a href="http://codecapsule.com/2013/08/11/hopscotch-hashing/">http://codecapsule.com/2013/08/11/hopscotch-hashing/</a></p>
+
+</section>
+
+<section class="slide">
+<h2>Explicit pointers chain</h2>
+
+<p>Disadvantages:
+
+— completely unclear why needed.</p>
+</section>
+
+
+<section class="slide" style="padding:0; margin: 0">
+    <video style="width: 100%; margin-top: 100px;"><source src="video/resize.mp4" type="video/mp4"></video>
+</section>
+
+<section class="slide">
+<h2>Resizes</h2>
+
+<p>— what max fill to use;
+
+— by how much to resize;
+
+— what hash table size to take;
+
+— how to allocate and initialize memory;
+
+— how to move elements;</p>
+</section>
+
+<section class="slide">
+<h2>What max fill to use</h2>
+
+<p><span style="font-size: 50px;">0.5</span>
+
+— perfectly suitable for most finicky variants,
+
+— if memory overhead is not a big concern;
+
+— with max fill = 0.5 and resize by two, maximum overhead is 4 times.
+
+
+More — unacceptable for linear probing.
+Only for Robin Hood (not always) and double hashing.</p>
+</section>
+
+<section class="slide">
+<h2>By how much to resize</h2>
+
+<p>By two (or close).
+— this is almost the only option if size is power of two;
+
+While hash table is small, can do 4 times.
+— since memory overhead doesn't matter;
+— but benefit from this is small;
+
+Other options:
+
+By 1.5 times; by golden ratio?
+— complex, meaningless, expensive.
+
+Use arrays of chunks
+with indirect addressing and add chunks.
+— complex, expensive.</p>
+</section>
+
+<section class="slide">
+<h2>What hash table size to take</h2>
+
+<p><span style="font-size: 50px">2<sup>n</sup></span>
+
+— cheap arithmetic
+
+— possible monstrous slowdown when inserting elements
+      from one hash table into smaller one, if max_fill > 0.5:
+
+<a style="font-size: 20px;" href="https://accidentallyquadratic.tumblr.com/post/153545455987/rust-hash-iteration-reinsertion">https://accidentallyquadratic.tumblr.com/post/153545455987/rust-hash-iteration-reinsertion</a>
+</p>
+</section>
+
+<section class="slide">
+<h2>What hash table size to take</h2>
+
+<p>Prime number close to 2<sup>n</sup>
+
+Disadvantages:
+
+— division with remainder — very slow
+
+— if constant is compile time,
+     compiler replaces with multiplications and shifts
+
+— to be compile time,
+     have to use switch/case with all variants
+
+— although branch is well predicted,
+     still ends up slow</p>
+</section>
+
+<section class="slide">
+<h2>Prime number close to 2<sup>n</sup></h2>
+
+<p>False advantage:
+— masks low quality hash function;
+
+Why false:
+
+Improved quality of element distribution
+is similar to choosing higher quality hash function,
+but remainder of division is too expensive a way to improve quality.
+
+It makes sense to encapsulate distribution quality inside hash function.
+
+Possibly, using prime number for size is absurd.
+
+std::unordered_map uses exactly this absurdity.
+</section>
+
+<section class="slide">
+<h2 style="font-size: 40px;">How to allocate and initialize memory</h2>
+
+<p>If empty cell is represented by zero bytes,
+then can use mmap or calloc.
+
+During resize, can use mremap or realloc for inplace resize.
+
+But:
+
+— <b>mmap</b> is monstrously slow;
+
+— <b>calloc</b> in almost all allocators is completely useless
+      (works through malloc, memset);
+
+— <b>realloc</b> in almost all allocators is completely useless
+      (works through malloc, memcpy, free);
+
+— also note that <b>std::allocator</b>
+      doesn't even have interface for realloc or calloc.</p>
+</section>
+
+<section class="slide">
+<h2>How slow is mmap</h2>
+<p>~ 2000 calls of mmap, page fault, munmap per second,
+regardless of number of cores.
+
+
+Why mmap is slow:
+
+— system call;
+
+— changing data structures in kernel;
+
+— TLB cache flush;
+
+— page fault.</p>
+</section>
+
+<section class="slide">
+<h2>How slow is mmap</h2>
+
+<p>Can use mmap, munmap, mremap
+only for large chunks of memory.
+
+<span style="font-size: 50px;">64 MiB</span>
+
+(suppose we can work with memory at 50 GB/sec speed;
+ suppose we want mmap overhead to be no more than half;
+ suppose mmap can be done only 1000 times per second)
+
+Actually all allocators already use mmap,
+if chunk of memory is large, but:
+
+— suffer from using mmap
+      for insufficiently large chunks of memory;
+— don't use mremap for realloc even in this case;
+
+So it makes sense to use mmap manually.</p>
+</section>
+
+<section class="slide">
+<h2>How to move elements</h2>
+
+<p>1. Allocate new array, insert all elements there.
+
+Advantages: trivial.</p>
+</section>
+
+<section class="slide">
+<h2>How to move elements</h2>
+<p>2. Expand array by two. Right half will be empty.
+
+Given that array size is always power of two, on average
+— slightly less than half of elements stay in place;
+— half of elements move to new place on the right;
+— some part of elements move slightly left because
+      previous ones in collision resolution chain
+      moved to right half.
+
+Advantages:
+— this is really more efficient;
+— allocate less temporary memory;
+— better cache locality;
+
+Disadvantages:
+— complex algorithm, easy to make mistakes;</p>
+</section>
+
+<section class="slide">
+<h2>How to move elements</h2>
+
+<p>3. Amortized resize
+
+— do resize gradually,
+      spreading complexity over time of inserting new elements.
+
+Advantages:
+
+— latency control;
+
+Disadvantages:
+
+— throughput will be worse;
+— more complex implementation;
+— need up to two random memory accesses instead of one.</p>
+</section>
+
+<section class="slide">
+<h2>Optimizations that don't work</h2>
+</section>
+
+<section class="slide">
+<h2>Optimizations that don't work</h2>
+
+<p>Resize when chain becomes long
+
+— collision resolution chain length
+      is a heavy-tailed distribution,
+      and maximum length in case of linear probing
+      becomes large too early.
+</p>
+</section>
+
+<section class="slide">
+<h2>Optimizations that don't work</h2>
+
+<p>Get rid of overlap
+
+— meaningless, because in case of
+      2<sup>n</sup> hash table size, overlap
+      is bit and with mask,
+      and this is a very simple operation,
+      which doesn't reduce throughput
+      thanks to instruction level parallelism.
+</section>
+
+<section class="slide">
+<h2>Optimizations that don't work</h2>
+
+<p>Move resize condition outside loop</p>
+
+<code>/// This is a loop:
+for (const auto &amp; key : data)
+    ++map[key]; /// And here resize can be called.
+</code>
+
+<p></p>
+
+<code>if (there is enough space)
+    for (batch of data)
+        insert into map without
+        possibility of resize;
+</code>
+
+<p>
+— in this case well-predicted
+      branch costs nothing</p>
+</section>
+
+
+<section class="slide">
+<h2>Optimizations that work</h2>
+</section>
+
+<section class="slide">
+<h2>Optimizations that work</h2>
+
+<p>mmap, mremap for large sizes</p>
+
+<code style="font-size: 20px;">if (old_size &lt; MMAP_THRESHOLD &amp;&amp; new_size &lt; MMAP_THRESHOLD
+    &amp;&amp; alignment &lt;= MALLOC_MIN_ALIGNMENT)
+{
+...
+}
+else if (old_size &gt;= MMAP_THRESHOLD &amp;&amp; new_size &gt;= MMAP_THRESHOLD)
+{
+    ...
+    buf = <b>mremap</b>(buf, old_size, new_size, MREMAP_MAYMOVE);
+    if (MAP_FAILED == buf)
+        DB::throwFromErrno("Allocator: Cannot mremap memory chunk...
+
+    /// No need for zero-fill, because mmap guarantees it.
+}
+else
+{
+...
+}</code>
+
+</section>
+
+<section class="slide">
+<h2>Optimizations that work</h2>
+
+<p>Inplace resizes</p>
+
+<code style="font-size: 13px;">/** Now some items may need to be moved to a new location.
+  * The element can stay in place, or move to a new location "on the right",
+  *  or move to the left of the collision resolution chain, because
+  *  the elements to the left of it have been moved to the new "right" location.
+  */
+size_t i = 0;
+for (; i &lt; old_size; ++i)
+    if (!buf[i].isZero(*this) &amp;&amp; !buf[i].isDeleted())
+        reinsert(buf[i], buf[i].getHash(*this));
+
+/** There is also a special case:
+  *    if the element was to be at the end of the old buffer,                  [        x]
+  *    but is at the beginning because of the collision resolution chain,      [o       x]
+  *    then after resizing, it will first be out of place again,               [        xo        ]
+  *    and in order to transfer it where necessary,
+  *    after transferring all the elements from the old halves you need to     [         o   x    ]
+  *    process tail from the collision resolution chain immediately after it   [        o    x    ]
+  */
+for (; !buf[i].isZero(*this) &amp;&amp; !buf[i].isDeleted(); ++i)
+    reinsert(buf[i], buf[i].getHash(*this));
+</code>
+</section>
+
+<section class="slide">
+<h2>Optimizations that work</h2>
+
+<p>Shortcut for consecutive identical key values</p>
+
+<code style="font-size: 18px;">typename Method::Key <b>prev_key</b>;
+for (size_t i = 0; i &lt; rows; ++i)
+{
+    /// Get the key to insert into the hash table.
+    typename Method::Key key = state.getKey(...);
+
+    /// Optimization for consecutive identical keys.
+    if (!Method::no_consecutive_keys_optimization)
+    {
+        if (i != 0 &amp;&amp; <b>key == prev_key</b>)
+        {
+            /// Add values to the aggregate functions.
+            continue;
+        }
+        else
+            prev_key = key;
+    }
+
+    <b>method.data.emplace(key, it, inserted)</b>;
+    /// Add values to the aggregate functions.
+}
+</code>
+
+</section>
+
+<section class="slide">
+<h2>Optimizations that work</h2>
+
+<p>Storing hash value for heavy keys</p>
+
+<code style="font-size: 20px;">template &lt;typename Key, typename TMapped, typename Hash, ...>
+struct HashMapCellWithSavedHash
+    : public HashMapCell&lt;Key, TMapped, Hash, TState>
+{
+    using Base = HashMapCell&lt;Key, TMapped, Hash, TState>;
+
+    size_t <b>saved_hash</b>;
+
+    using Base::Base;
+
+    bool keyEquals(const Key &amp; key_) const
+        { return this->value.first == key_; }
+    bool keyEquals(const Key &amp; key_, size_t hash_) const
+        { return <b>saved_hash == hash_</b> &amp;&amp; this->value.first == key_; }
+
+    void setHash(size_t hash_value) { saved_hash = hash_value; }
+    size_t getHash(const Hash &amp; hash) const { return <b>saved_hash</b>; }
+};</code>
+</section>
+
+<section class="slide">
+<h2>Optimizations that work</h2>
+
+<p>Instantly clearable hash tables</p>
+
+<code style="font-size: 20px;">template &lt;typename Key, typename BaseCell>
+struct ClearableHashTableCell : public BaseCell
+{
+    using State = ClearableHashSetState;
+    using value_type = typename BaseCell::value_type;
+
+    UInt32 <b>version</b>;
+
+    bool isZero(const State &amp; state) const
+        { return <b>version != state.version</b>; }
+
+    void setZero() { version = 0; }
+    static constexpr bool need_zero_value_storage = false;
+
+    ClearableHashTableCell() {}
+    ClearableHashTableCell(const Key &amp; key_, const State &amp; state)
+        : BaseCell(key_, state), <b>version(state.version)</b> {}
+};</code>
+
+</section>
+
+<section class="slide">
+<h2>Optimizations that work</h2>
+
+<p>Prefetch</p>
+
+<code style="font-size: 20px;">template &lt;size_t N>
+void ALWAYS_INLINE hasN(const Key * x, UInt8 * res) const
+{
+    size_t hash_value[N];
+    size_t place[N];
+
+    for (size_t i = 0; i &lt; N; ++i)
+    {
+        hash_value[i] = hash(x[i]);
+        place[i] = grower.place(hash_value[i]);
+        <b>_mm_prefetch(&amp;buf[place[i]], _MM_HINT_T0);</b>
+    }
+
+    for (size_t i = 0; i &lt; N; ++i)
+        res[i] = Cell::isZero(x[i], *this)
+            ? this->hasZero()
+            : !buf[findCell(x[i], hash_value[i], place[i])]
+                .isZero(*this);
+}</code>
+</section>
+
+<section class="slide">
+<h2>Optimizations that work</h2>
+
+<p>Marking hash table methods as ALWAYS_INLINE,
+
+and external methods containing loops
+working with hash table as NO_INLINE.
+
+</p>
+
+<code style="font-size: 24px;">#define ALWAYS_INLINE __attribute__((__always_inline__))
+
+#define NO_INLINE __attribute__((__noinline__))
+</code>
+
+</section>
+
+<section class="slide">
+<h2 style="font-size: 40px;">Optimizations I haven't tried</h2>
+
+<p>Predicting hash table size before creating it
+
+Storing aggregate function states
+inplace in hash table if they're small
+
+Storing aggregate function states
+inplace in hash table, and if they're large,
+then splitting into two arrays — keys and values separately
+
+Storing short string keys inplace in hash table
+with splitting into multiple hash tables
+by power-of-two size classes
+
+Unrolled speculative probing
+
+SIMD probing</p>
+</section>
+
+<section class="slide">
+<h2>Hash tables for complex keys</h2>
+
+<p>For strings:
+
+— stack strings consecutively in Arena,
+store StringRef in hash table
+
+(std::string_view, std::pair&lt;const char *, size_t&gt;).
+
+For tuples:
+
+— if tuple is small, pack it
+into 64 or 128 or 256 bits and use as key;
+
+— if tuple is large, serialize it into Arena
+and work as with string key.</p>
+</section>
+
+<section class="slide">
+<h2>That's not all.</h2>
+But I ran out of time.
+</section>
+
+<section class="slide">
+<h2>?</h2>
+</section>
+
+    <div class="progress"></div>
+    <script src="https://presentations.clickhouse.com/shower/shower.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/shower-video.css">
+    <script src="https://presentations.clickhouse.com/shower/shower-video.js"></script>
+    <!--/Video plugin-->
+<footer class="badge">
+    <a href="https://presentations.clickhouse.com/">ClickHouse Theater</a>
+</footer>
+</body>
+</html>
