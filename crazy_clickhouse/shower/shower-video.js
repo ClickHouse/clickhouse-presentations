@@ -175,15 +175,16 @@ window.showerVideo = (function(window, document, undefined) {
 		}
 	};
 
+	function toggleVideo(e) {
+		showerVideo.startVideo();
+		showerVideo.startGif();
+	}
+
 	showerVideo.init = function(){
 		showerVideo.prepareEnv();
 
 		// Listen for the Slide Switch event
-		// TODO: wait for proper API implementation in Shower
-		document.addEventListener('keyup', function (e) {
-			showerVideo.startVideo();
-			showerVideo.startGif();
-		}, false);
+		shower.addEventListener('slidechange', toggleVideo);
 	};
 
 
