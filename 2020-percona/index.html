@@ -10,10 +10,10 @@
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:image" content="pictures/preview.jpg">
-    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+    <link rel="stylesheet" href="shower/themes/clickhouse/styles/styles.css">
 
-    <style type="text/css">
-         code { display: block; white-space: pre; background-color: #EEE; }
+    <style>
+        code { display: block; white-space: pre; background-color: #EEE; }
     </style>
 </head>
 <body class="shower list">
@@ -23,7 +23,7 @@
     <section class="slide" id="cover">
         <h1 style="margin-top: 50px; margin-left: -40px; line-height: 150%;">ClickHouse Features 2020</h1>
     </section>
-    
+
 <section class="slide">
     <h1 style="margin-top: 50px; margin-left: -40px; line-height: 150%;">ClickHouse Features</h1>
     <h1>You Have Never Heard Of</h1>
@@ -74,7 +74,7 @@ For every commit and every pull request.</p>
 &mdash; then we can use it for hardware benchmark!</p>
 
 <p>Guide:<br/>
-<a href="https://clickhouse.tech/docs/en/operations/performance_test/">https://clickhouse.tech/docs/en/operations/performance_test/</a></p>
+<a href="https://clickhouse.com/docs/en/operations/performance_test/">https://clickhouse.com/docs/en/operations/performance_test/</a></p>
 <p>Test will take about 30 minutes. Doesn't require ClickHouse install.</p>
 </section>
 
@@ -123,7 +123,7 @@ For every commit and every pull request.</p>
    1718 public:
    1448 break;
    1210 #pragma once
-</code>   
+</code>
 <p><b style="color: red;">1.665 sec.</b><br/>export LC_ALL=C:&emsp;<span style="color: red;">0.376 sec.</span></p>
 </section>
 
@@ -131,8 +131,8 @@ For every commit and every pull request.</p>
 <h2>ClickHouse Without a Server</h2>
 
 <code style="margin-top: -2em; margin-bottom: 1em; font-size: 16pt; line-height: 1.1">clickhouse-local --structure 's String' --query "
-    <span style="color: green;">SELECT count() AS c, trimLeft(s) AS key 
-    FROM table WHERE key != '' 
+    <span style="color: green;">SELECT count() AS c, trimLeft(s) AS key
+    FROM table WHERE key != ''
     GROUP BY key ORDER BY c DESC LIMIT 10</span>" \
     &lt; code.txt
 
@@ -157,7 +157,7 @@ For every commit and every pull request.</p>
 
 <p>Processing GitHub Archive data:<br/><a href="https://www.gharchive.org/">https://www.gharchive.org/</a></p>
 
-<!-- 
+<!--
 cd ~/example_datasets/gharchive
 du -hcs .
 time clickhouse-local --query "SELECT * FROM file('*.json.gz', TSV, 'data String') WHERE JSONExtractString(data, 'actor', 'login') = 'alexey-milovidov' LIMIT 10" | jq
@@ -316,12 +316,12 @@ ORDER BY count() DESC LIMIT 10
 
 <code style="margin-top: -1em; margin-bottom: 1em; font-size: 14pt; line-height: 1.5"><b>CREATE DICTIONARY</b> counters_dict
 (
-    `counter_id` UInt32, 
+    `counter_id` UInt32,
     `name` String
 )
 PRIMARY KEY counter_id
 SOURCE(<b style="color: green;">MYSQL</b>(
-    HOST 'host' PORT '3306' 
+    HOST 'host' PORT '3306'
     DB 'conv_main' TABLE 'counters'
     USER 'metrika' PASSWORD 'password'))
 LIFETIME(MIN 3600 MAX 7200)
@@ -350,9 +350,9 @@ GROUP BY name ORDER BY count() DESC LIMIT 10
 
 
 <section class="slide">
-<code style="margin-top: 1em; margin-bottom: 1em; font-size: 14pt; line-height: 1.3">SELECT 
-    CounterID, 
-    count(), 
+<code style="margin-top: 1em; margin-bottom: 1em; font-size: 14pt; line-height: 1.3">SELECT
+    CounterID,
+    count(),
     <b>dictGet('default.counters_dict', 'name', toUInt64(CounterID))</b> AS name
 FROM test.hits_orig
 WHERE Title LIKE '%Яндекс%'
@@ -424,7 +424,7 @@ GROUP BY name ORDER BY count() DESC LIMIT 10
 <section class="slide">
 <h2>ClickHouse Accelerates MySQL</h2>
 
-<code style="margin-top: -1em; margin-bottom: 1em; font-size: 14pt; line-height: 1.3"><b>CREATE DATABASE</b> conv_main 
+<code style="margin-top: -1em; margin-bottom: 1em; font-size: 14pt; line-height: 1.3"><b>CREATE DATABASE</b> conv_main
     ENGINE = <b style="color: green;">MySQL</b>('host:3306', conv_main, 'metrika', 'password');
 
 SHOW TABLES FROM conv_main
@@ -442,8 +442,8 @@ SHOW TABLES FROM conv_main
 <section class="slide">
 <h2 style="font-size: 32pt;">ClickHouse For Data Integration</h2>
 
-<code style="margin-top: -1em; margin-bottom: 1em; font-size: 14pt; line-height: 1.3">SELECT * 
-    FROM mysql(...) AS a 
+<code style="margin-top: -1em; margin-bottom: 1em; font-size: 14pt; line-height: 1.3">SELECT *
+    FROM mysql(...) AS a
     LEFT JOIN odbc(...) AS b ON ...
     LEFT JOIN url(...) AS c ON ...
 ...</code>
@@ -473,9 +473,9 @@ Create dictionaries with ClickHouse engine on every ClickHouse server.</p>
 <section class="slide">
 <h2>Dictionaries For Sharding Key</h2>
 <code style="margin-top: -1em; margin-bottom: 1em; font-size: 16pt; line-height: 1.3">CREATE TABLE distr ENGINE = Distributed(
-    cluster, db, table, 
+    cluster, db, table,
     <b style="color: green;">dictGet('sharding', 'shard_num', id)</b>);</code>
-    
+
 <code style="margin-top: 1em; margin-bottom: 1em; font-size: 16pt; line-height: 1.3">SET optimize_skip_unused_shards = 1;</code>
 
 </section>
@@ -489,7 +489,7 @@ Create dictionaries with ClickHouse engine on every ClickHouse server.</p>
 
 <p>2. Machine learning in ClickHouse directly.</p>
 
-<p><a href="https://presentations.clickhouse.tech/meetup31/ml.pdf">https://presentations.clickhouse.tech/meetup31/ml.pdf</a></p>
+<p><a href="https://presentations.clickhouse.com/meetup31/ml.pdf">https://presentations.clickhouse.com/meetup31/ml.pdf</a></p>
 </section>
 
 <section class="slide">
@@ -550,7 +550,7 @@ FROM <b>pagerank</b>( -- the graph algorithm
 ORDER BY pagerank DESC
 LIMIT 5</code>
 
-<p><a href="https://presentations.clickhouse.tech/meetup24/2.%20SQLGraph%20--%20When%20ClickHouse%20marries%20graph%20processing%20Amoisbird.pdf">https://presentations.clickhouse.tech/meetup24/2.%20SQLGraph%20--%20When%20ClickHouse%20marries%20graph%20processing%20Amoisbird.pdf</a></p>
+<p><a href="https://presentations.clickhouse.com/meetup24/2.%20SQLGraph%20--%20When%20ClickHouse%20marries%20graph%20processing%20Amoisbird.pdf">https://presentations.clickhouse.com/meetup24/2.%20SQLGraph%20--%20When%20ClickHouse%20marries%20graph%20processing%20Amoisbird.pdf</a></p>
 
 <p>Developer: <b>Amos Bird</b>. <span style="color: gray;">Experimental, not available in open-source :(</span></p>
 </section>
@@ -601,7 +601,7 @@ LIMIT 5</code>
 </section>
 
     <div class="progress"></div>
-    <script src="shower/shower.min.js"></script>
+    <script src="shower/shower.js"></script>
 
     <!--Video plugin-->
     <link rel="stylesheet" href="shower/shower-video.css">
@@ -609,4 +609,3 @@ LIMIT 5</code>
     <!--/Video plugin-->
 </body>
 </html>
-

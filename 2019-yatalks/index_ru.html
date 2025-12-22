@@ -5,12 +5,13 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x10.css">
+    <link rel="stylesheet" href="shower/themes/clickhouse/styles/styles.css">
 
-    <style type="text/css">
+    <style>
          code { display: block; white-space: pre; background-color: #EEE; }
          p.cloud { text-align: center; line-height: 1.5; }
          p.cloud span { font-size: 13pt; color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         .shower { --slide-ratio: calc(16 / 10); }
     </style>
 </head>
 <body class="shower list">
@@ -68,7 +69,7 @@
 
 <section class="slide">
 <h2>Расчёт на возможности железа</h2>
-<p>1. Какие характеристики (throughput, latency, volume...) 
+<p>1. Какие характеристики (throughput, latency, volume...)
 <br/>&emsp;имеет наше железо (CPU, оперативка, SSD, диски, сеть...)
 <br/>&emsp;и на каких операциях?</p>
 <p>2. Какие структуры данных мы используем
@@ -160,10 +161,10 @@ for (const auto &amp; haystack : haystacks)
 <br/>&mdash; одной или множества строк?
 <br/>&mdash; явно заданного множества или заданного языком?
 <br/>&mdash; сравнительно коротких или длинных подстрок?
-<br/>&mdash; подстрока &mdash; это подпоследовательность 
+<br/>&mdash; подстрока &mdash; это подпоследовательность
 <br/>байт / кодовых точек unicode / символов с учётом collation / слов?
 <br/>&mdash; поиск в заранее неизвестной или фиксированной строке?
-<br/>&mdash; расположенной в памяти целиком или в виде потока данных? 
+<br/>&mdash; расположенной в памяти целиком или в виде потока данных?
 <br/>&mdash; со строгими гарантиями на время или без?</p>
 </section>
 
@@ -245,7 +246,7 @@ for (const auto &amp; haystack : haystacks)
 &mdash; выбор хэш-функции;<br/>
 &mdash; memory layout: open-addressing vs. chaining;<br/>
 &mdash; большие или маленькие значения;<br/>
-&mdash; нужна ли поддержка неперемещаемых значений;<br/> 
+&mdash; нужна ли поддержка неперемещаемых значений;<br/>
 &mdash; memory layout: ключи и значения в одном массиве или в разных;<br/>
 &mdash; способ разрешения коллизий;<br/>
 &mdash; способ удаления значений;<br/>
@@ -564,8 +565,8 @@ clickhouse hashmap is faster
     </section>
 
     <div class="progress"></div>
-    <script src="shower/shower.min.js"></script>
-    
+    <script src="shower/shower.js"></script>
+
     <!--Video plugin-->
     <link rel="stylesheet" href="shower/shower-video.css">
     <script src="shower/shower-video.js"></script>

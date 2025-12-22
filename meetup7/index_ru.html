@@ -5,11 +5,12 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="shower/themes/ribbon/styles/screen-16x10.css">
+    <link rel="stylesheet" href="shower/themes/clickhouse/styles/styles.css">
 
-    <style type="text/css">
+    <style>
          span { padding: 1px 10px; background: rgba(255, 255, 255, 0.75); }
          code { display: block; background-color: #EEE; }
+         .shower { --slide-ratio: calc(16 / 10); }
     </style>
 </head>
 <body class="shower list">
@@ -142,7 +143,7 @@
         <h2>Wikimedia.org</h2>
         <p>"clickhouse is a columnar datastore that we are using as an aid to run complex SQL queries on the edit data "lake" that we have as a result of the edit reconstruction project. It is similar to Druid but faster for complex queries."</p>
     </section>
-    
+
 <section class="slide">
 <h2 style="font-size: 40px;">Необычные примеры применения ClickHouse</h2>
 
@@ -208,7 +209,7 @@
 <p>Квотированные идентификаторы в соответствии с ANSI SQL:
 <br/><br/><code>SELECT "column" FROM "db"."table"</code></p>
 </section>
-    
+
 <section class="slide">
 <h2>Удобство работы</h2>
 
@@ -345,7 +346,7 @@
 <p><span>Начальная поддержка UPDATE/DELETE</span></p>
 </section>
 
-    
+
 <section class="slide">
     <h2>Сообщество</h2>
     <p>Сайт: <a href="https://clickhouse.com/">https://clickhouse.com/</a></p>
@@ -362,6 +363,6 @@
     </section>
 
     <div class="progress"></div>
-    <script src="shower/shower.min.js"></script>
+    <script src="shower/shower.js"></script>
 </body>
 </html>

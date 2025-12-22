@@ -10,13 +10,15 @@
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:image" content="pictures/preview.jpg">
-    <link rel="stylesheet" href="shower/themes/ribbon/styles/screen-16x10.css">
+    <link rel="stylesheet" href="shower/themes/clickhouse/styles/styles.css">
 
-    <style type="text/css">
+    <style>
          span { padding: 10px 10px; background: rgba(255, 255, 255, 0.75); }
          code { display: block; background-color: #EEE; white-space: pre; }
          h2 { line-height: 1.5 !important; padding-bottom: 30px; }
          td { line-height: 1.5; }
+         p { white-space: pre; }
+         .shower { --slide-ratio: calc(4 / 3); }
     </style>
 </head>
 <body class="shower list">
@@ -1149,7 +1151,7 @@ But I ran out of time.
 </section>
 
     <div class="progress"></div>
-    <script src="shower/shower.min.js"></script>
+    <script src="shower/shower.js"></script>
 
     <!--Video plugin-->
     <link rel="stylesheet" href="shower/shower-video.css">

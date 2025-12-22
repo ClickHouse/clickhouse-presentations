@@ -5,13 +5,14 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x10.css">
+    <link rel="stylesheet" href="shower/themes/clickhouse/styles/styles.css">
 
-    <style type="text/css">
+    <style>
          p.cloud { text-align: center; line-height: 2; }
          p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
 
          pre { display: block; white-space: pre; background-color: #EEE; padding: 5px; }
+         .shower { --slide-ratio: calc(16 / 10); }
     </style>
 </head>
 <body class="shower list">
@@ -247,7 +248,7 @@ Issues на GitHub не предусмотрены.</p>
 <p>Сейчас <b>46%</b>* изменений &mdash; сообщество.</p>
 
 <p style="font-size: 60%; margin-top: 100px; font-family: monospace; color: gray;">
-* методика расчёта: <a href="https://gh-api.clickhouse.tech/play?user=play#U0VMRUNUCiAgICBhY3Rvcl9sb2dpbiwKICAgIGNvdW50KCkKRlJPTSBnaXRodWJfZXZlbnRzCldIRVJFIChyZXBvX25hbWUgSU4gKCdDbGlja0hvdXNlL0NsaWNrSG91c2UnLCAneWFuZGV4L0NsaWNrSG91c2UnKSkgQU5EIChldmVudF90eXBlID0gJ1B1bGxSZXF1ZXN0RXZlbnQnKSBBTkQgKGFjdGlvbiA9ICdvcGVuZWQnKSBBTkQgKGFjdG9yX2xvZ2luIE5PVCBJTiAoJ3JvYm90LWNsaWNraG91c2UnLCAnZGVwZW5kYWJvdC1wcmV2aWV3W2JvdF0nLCAnaW1nYm90W2JvdF0nKSkKR1JPVVAgQlkgYWN0b3JfbG9naW4KT1JERVIgQlkgY291bnQoKSBERVND">https://gh-api.clickhouse.tech/play?user=play#
+* методика расчёта: <a href="https://play.clickhouse.com/play?user=play#U0VMRUNUCiAgICBhY3Rvcl9sb2dpbiwKICAgIGNvdW50KCkKRlJPTSBnaXRodWJfZXZlbnRzCldIRVJFIChyZXBvX25hbWUgSU4gKCdDbGlja0hvdXNlL0NsaWNrSG91c2UnLCAneWFuZGV4L0NsaWNrSG91c2UnKSkgQU5EIChldmVudF90eXBlID0gJ1B1bGxSZXF1ZXN0RXZlbnQnKSBBTkQgKGFjdGlvbiA9ICdvcGVuZWQnKSBBTkQgKGFjdG9yX2xvZ2luIE5PVCBJTiAoJ3JvYm90LWNsaWNraG91c2UnLCAnZGVwZW5kYWJvdC1wcmV2aWV3W2JvdF0nLCAnaW1nYm90W2JvdF0nKSkKR1JPVVAgQlkgYWN0b3JfbG9naW4KT1JERVIgQlkgY291bnQoKSBERVND">https://play.clickhouse.com/play?user=play#
 U0VMRUNUCiAgICBhY3Rvcl9sb2dpbiwKICAgIGNvdW50KCkKRlJPTSBnaXRodWJfZXZlbnRzCldIRVJFIChyZXBvX25
 hbWUgSU4gKCdDbGlja0hvdXNlL0NsaWNrSG91c2UnLCAneWFuZGV4L0NsaWNrSG91c2UnKSkgQU5EIChldmVudF90eX
 BlID0gJ1B1bGxSZXF1ZXN0RXZlbnQnKSBBTkQgKGFjdGlvbiA9ICdvcGVuZWQnKSBBTkQgKGFjdG9yX2xvZ2luIE5PV
@@ -285,6 +286,6 @@ R1JPVVAgQlkgYWN0b3JfbG9naW4KT1JERVIgQlkgY291bnQoKSBERVND</a>
 </section>
 
     <div class="progress"></div>
-    <script src="shower/shower.min.js"></script>
+    <script src="shower/shower.js"></script>
 </body>
 </html>

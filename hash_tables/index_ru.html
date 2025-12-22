@@ -5,13 +5,15 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="shower/themes/ribbon/styles/screen-16x10.css">
-    
-    <style type="text/css">
+    <link rel="stylesheet" href="shower/themes/clickhouse/styles/styles.css">
+
+    <style>
          span { padding: 10px 10px; background: rgba(255, 255, 255, 0.75); }
          code { display: block; background-color: #EEE; white-space: pre; }
          h2 { line-height: 1.5 !important; padding-bottom: 30px; }
          td { line-height: 1.5; }
+         p { white-space: pre; }
+         .shower { --slide-ratio: calc(4 / 3); }
     </style>
 </head>
 <body class="shower list">
@@ -148,7 +150,7 @@ Elapsed: 800.580 sec. Processed 4.33 trillion rows</p>
 <p>
 — хэш-функции для строк как правило не инлайнятся;
 
-— они содержат много бранчей — представляют собой вариации 
+— они содержат много бранчей — представляют собой вариации
   на тему duff device для fast path цикла и обработки хвостиков,
   всё это не нужно, если хэшируем типы фиксированной длины.
 </p>
@@ -177,10 +179,10 @@ Elapsed: 800.580 sec. Processed 4.33 trillion rows</p>
 <section class="slide">
 <h2>4. Интерференция хэш-функций</h2>
 
-<p>Для прямо или косвенно связанных друг с другом 
+<p>Для прямо или косвенно связанных друг с другом
 структур данных используйте разные хэш-функции.</p>
 
-<p>Пример: для шардирования данных 
+<p>Пример: для шардирования данных
 и для хэш-таблиц при обработке этих данных.</p>
 
 <p><span style="padding: 0; font-size: 30px;">☠</span> Приводит к замедлению в разы или к полному залипанию!</p>
@@ -196,7 +198,7 @@ Elapsed: 800.580 sec. Processed 4.33 trillion rows</p>
 
 <p>Пример: в libstdc++ из gcc 7 используется FNV1a для строк.
 
-Эта хэш-функция содержит цикл по байтам, 
+Эта хэш-функция содержит цикл по байтам,
 может работать не медленно только для коротких строк,
 но для коротких строк слишком низкое качество.</p>
 </section>
@@ -270,7 +272,7 @@ Avalanche, Bit Independence</p>
 <section class="slide">
 <h2 style="font-size: 40px;">Ограниченность критерия Avalanche</h2>
 
-<p>Для разных алгоритмов имеют смысл 
+<p>Для разных алгоритмов имеют смысл
 разные критерии качества хэш-функций.</p>
 
 <p>Хэш-функция может быть качественной
@@ -360,14 +362,14 @@ throughput до 1 такта на операцию
 <p>Недостатки:
 — всего лишь 32 бита
 — <b>нулевое</b> качество по Avalanche и Bit Independence Criteria
-  потому что crc коммутирует с xor: 
+  потому что crc коммутирует с xor:
 </p>
-<code>crc(x ^ y) = crc(x) ^ crc(y)</code>  
+<code>crc(x ^ y) = crc(x) ^ crc(y)</code>
 <p>
   значит при изменении n-го бита x,
-  m-й бит crc(x) меняется или не меняется 
+  m-й бит crc(x) меняется или не меняется
    в зависимости от n, но независимо от x.
-  
+
   каждый бит crc — это xor некоторых бит x.
 </p>
 <p>
@@ -406,10 +408,10 @@ Throughput, Latency, Avalanche
 — подходит для неперемещаемых объектов;
 — подходит для intrusive контейнеров;
 
-— node-based container, не инвалидируются 
+— node-based container, не инвалидируются
       указатели на ноды (внимание, итераторы инвалидируются);
 
-— нет взаимного влияния цепочек разрешения коллизий 
+— нет взаимного влияния цепочек разрешения коллизий
       — положительной обратной связи на разрастание цепочек;
 
 — более терпимо к плохой хэш-функции и к большому load factor.</p>
@@ -432,16 +434,16 @@ Throughput, Latency, Avalanche
 
 <p>(closed hashing; с внутренними цепочками разрешения коллизий)
 
-Примеры: 
+Примеры:
 ClickHouse HashMap, sparse_hash_map,
 dense_hash_map, HashMap в Rust.</p>
 
 <p>Недостатки:
 — очень чувствительны к выбору хэш-функции;
 — например, абсолютно плохо работают с тривиальной хэш-функцией;
-— многообразие вариантов memory layout и collision resolution, 
+— многообразие вариантов memory layout и collision resolution,
       нужно выбирать под конкретную задачу;
-— сильная деградация производительности, 
+— сильная деградация производительности,
       если хранить inplace крупные объекты;</p>
 
 <p>Достоинства:
@@ -583,7 +585,7 @@ hash(x, k) = hash1(x) + k * hash2(x)</p>
 <h2>Linear probing<br>with Robin Hood hashing:</h2>
 
 <p>Недостатки:
-— чуть-чуть медленнее linear probing 
+— чуть-чуть медленнее linear probing
       при условии одинаковых длин цепочек;
 — нужно больше вычислять или хранить
       значение хэш-функции для ячеек;
@@ -591,10 +593,10 @@ hash(x, k) = hash1(x) + k * hash2(x)</p>
 Достоинства:
 — такая же кэш-локальность, как у linear probing;
 — средние длины цепочек существенно меньше linear probing;
-— хэш-таблица получается почти полностью 
-      упорядоченной по остатку от деления хэш-функции, 
+— хэш-таблица получается почти полностью
+      упорядоченной по остатку от деления хэш-функции,
       что можно использовать в других алгоритмах.
-      
+
 Пример: HashMap в Rust.
 </p>
 </section>
@@ -694,7 +696,7 @@ hash(x, k) = hash1(x) + k * hash2(x)</p>
 В 1.5 раза; в golden ratio раз?
 — сложно, бессмысленно, дорого.
 
-Использовать массивы из чанков 
+Использовать массивы из чанков
 с косвенной адресацией и добавлять чанки.
 — сложно, дорого.</p>
 </section>
@@ -706,7 +708,7 @@ hash(x, k) = hash1(x) + k * hash2(x)</p>
 
 — дешёвая арифметика
 
-— возможно чудовищное замедление при вставке элементов 
+— возможно чудовищное замедление при вставке элементов
       из одной хэш-таблицы в меньшую, если max_fill > 0.5:
 
 <a style="font-size: 20px;" href="https://accidentallyquadratic.tumblr.com/post/153545455987/rust-hash-iteration-reinsertion">https://accidentallyquadratic.tumblr.com/post/153545455987/rust-hash-iteration-reinsertion</a>
@@ -722,13 +724,13 @@ hash(x, k) = hash1(x) + k * hash2(x)</p>
 
 — деление с остатком — очень медленно
 
-— если константа compile time, 
+— если константа compile time,
      то компилятор заменяет на умножения и сдвиги
 
-— чтобы было compile time, 
+— чтобы было compile time,
      приходится использовать switch/case со всеми вариантами
 
-— хотя бранч хорошо предсказуем, 
+— хотя бранч хорошо предсказуем,
      в итоге всё-равно медленно</p>
 </section>
 
@@ -740,7 +742,7 @@ hash(x, k) = hash1(x) + k * hash2(x)</p>
 
 Почему ложное:
 
-Повышения качества распределения элементов 
+Повышения качества распределения элементов
 аналогично выбору более качественной хэш-функции,
 но остаток от деления — слишком дорогой способ повышения качества.
 
@@ -754,7 +756,7 @@ std::unordered_map использует именно эту нелепость.
 <section class="slide">
 <h2 style="font-size: 40px;">Как выделять и инициализировать память</h2>
 
-<p>Если пустая ячейка представлена нулевыми байтами, 
+<p>Если пустая ячейка представлена нулевыми байтами,
 то можно использовать mmap, или calloc.
 
 При ресайзе, можно для inplace ресайза использовать mremap или realloc.
@@ -775,7 +777,7 @@ std::unordered_map использует именно эту нелепость.
 
 <section class="slide">
 <h2>Насколько mmap медленный</h2>
-<p>~ 2000 вызовов mmap, page fault, munmap в секунду, 
+<p>~ 2000 вызовов mmap, page fault, munmap в секунду,
 независимо от количества ядер.
 
 
@@ -793,7 +795,7 @@ std::unordered_map использует именно эту нелепость.
 <section class="slide">
 <h2>Насколько mmap медленный</h2>
 
-<p>Можно использовать mmap, munmap, mremap 
+<p>Можно использовать mmap, munmap, mremap
 только для больших кусков памяти.
 
 <span style="font-size: 50px;">64 MiB</span>
@@ -801,17 +803,17 @@ std::unordered_map использует именно эту нелепость.
 (пусть мы умеем работать с памятью со скоростью 50 GB/sec;
  пусть мы хотим, чтобы оверхед на mmap составлял не больше половины;
  пусть mmap можно делать всего 1000 раз в секунду)
- 
-Вообще-то все аллокаторы уже используют mmap, 
+
+Вообще-то все аллокаторы уже используют mmap,
 если кусок памяти большой, но:
 
-— страдают использованием mmap 
+— страдают использованием mmap
       для недостаточно больших кусков памяти;
 — не используют mremap для realloc даже в этом случае;
 
 Поэтому использовать mmap вручную разумно.</p>
 </section>
- 
+
 <section class="slide">
 <h2>Как перемещать элементы</h2>
 
@@ -827,10 +829,10 @@ std::unordered_map использует именно эту нелепость.
 При условии, что размер массива всегда — степень двух, в среднем
 — чуть меньше половины элементов останутся на месте;
 — половина элементов переедет на новое место вправо;
-— некоторая часть элементов переедет немного влево за счёт того, 
-      что предыдущие в цепочке разрешения коллизий 
+— некоторая часть элементов переедет немного влево за счёт того,
+      что предыдущие в цепочке разрешения коллизий
       переедут в правую половину.
-  
+
 Достоинства:
 — это реально эффективнее;
 — меньше выделяем временной памяти;
@@ -845,7 +847,7 @@ std::unordered_map использует именно эту нелепость.
 
 <p>3. Амортизированный ресайз
 
-— делать ресайз постепенно, 
+— делать ресайз постепенно,
       размазав сложность на время вставки новых элементов.
 
 Достоинства:
@@ -868,26 +870,26 @@ std::unordered_map использует именно эту нелепость.
 
 <p>Ресайзить, когда цепочка стала длинной
 
-— длина цепочки разрешения коллизий 
+— длина цепочки разрешения коллизий
       — распределение с тяжёлыми хвостами,
       и максимальная длина в случае linear probing
       слишком рано становится большой.
 </p>
 </section>
-  
+
 <section class="slide">
 <h2>Оптимизации, которые не работают</h2>
 
 <p>Избавиться от overlap
 
 — бессмысленно, так как в случае
-      2<sup>n</sup> размера хэш-таблицы, overlap 
+      2<sup>n</sup> размера хэш-таблицы, overlap
       — это bit and с маской,
-      и это очень простая операция, 
+      и это очень простая операция,
       которая никак не уменьшает throughput
       благодаря instruction level parallelism.
 </section>
-  
+
 <section class="slide">
 <h2>Оптимизации, которые не работают</h2>
 
@@ -921,7 +923,7 @@ for (const auto &amp; key : data)
 
 <p>mmap, mremap для больших размеров</p>
 
-<code style="font-size: 20px;">if (old_size &lt; MMAP_THRESHOLD &amp;&amp; new_size &lt; MMAP_THRESHOLD 
+<code style="font-size: 20px;">if (old_size &lt; MMAP_THRESHOLD &amp;&amp; new_size &lt; MMAP_THRESHOLD
     &amp;&amp; alignment &lt;= MALLOC_MIN_ALIGNMENT)
 {
 ...
@@ -949,7 +951,7 @@ else
 
 <code style="font-size: 13px;">/** Now some items may need to be moved to a new location.
   * The element can stay in place, or move to a new location "on the right",
-  *  or move to the left of the collision resolution chain, because 
+  *  or move to the left of the collision resolution chain, because
   *  the elements to the left of it have been moved to the new "right" location.
   */
 size_t i = 0;
@@ -997,7 +999,7 @@ for (size_t i = 0; i &lt; rows; ++i)
     /// Add values to the aggregate functions.
 }
 </code>
-    
+
 </section>
 
 <section class="slide">
@@ -1015,9 +1017,9 @@ struct HashMapCellWithSavedHash
 
     using Base::Base;
 
-    bool keyEquals(const Key &amp; key_) const 
+    bool keyEquals(const Key &amp; key_) const
         { return this->value.first == key_; }
-    bool keyEquals(const Key &amp; key_, size_t hash_) const 
+    bool keyEquals(const Key &amp; key_, size_t hash_) const
         { return <b>saved_hash == hash_</b> &amp;&amp; this->value.first == key_; }
 
     void setHash(size_t hash_value) { saved_hash = hash_value; }
@@ -1061,14 +1063,14 @@ void ALWAYS_INLINE hasN(const Key * x, UInt8 * res) const
 {
     size_t hash_value[N];
     size_t place[N];
-    
+
     for (size_t i = 0; i &lt; N; ++i)
     {
         hash_value[i] = hash(x[i]);
         place[i] = grower.place(hash_value[i]);
         <b>_mm_prefetch(&amp;buf[place[i]], _MM_HINT_T0);</b>
     }
-        
+
     for (size_t i = 0; i &lt; N; ++i)
         res[i] = Cell::isZero(x[i], *this)
             ? this->hasZero()
@@ -1080,9 +1082,9 @@ void ALWAYS_INLINE hasN(const Key * x, UInt8 * res) const
 <section class="slide">
 <h2>Оптимизации, которые работают</h2>
 
-<p>Пометка методов хэш-таблицы как ALWAYS_INLINE, 
+<p>Пометка методов хэш-таблицы как ALWAYS_INLINE,
 
-а внешних методов, содержащих циклы 
+а внешних методов, содержащих циклы
 работы с хэш-таблицей как NO_INLINE.
 
 </p>
@@ -1099,15 +1101,15 @@ void ALWAYS_INLINE hasN(const Key * x, UInt8 * res) const
 
 <p>Предсказание размера хэш-таблицы перед её созданием
 
-Хранение состояний агрегатных функций 
+Хранение состояний агрегатных функций
 inplace в хэш-таблице, если они маленькие
 
-Хранение состояний агрегатных функций 
-inplace в хэш-таблице, а если они большое, 
+Хранение состояний агрегатных функций
+inplace в хэш-таблице, а если они большое,
 то разделение на два массива — отдельно ключи и значения
 
-Хранение коротких строковых ключей inplace в хэш-таблице 
-с разделением на несколько хэш-таблиц 
+Хранение коротких строковых ключей inplace в хэш-таблице
+с разделением на несколько хэш-таблиц
 по power-of-two size class-ам
 
 Unrolled speculative probing
@@ -1127,7 +1129,7 @@ SIMD probing</p>
 
 Для кортежей:
 
-— если кортеж маленький, то укладываем его 
+— если кортеж маленький, то укладываем его
 в 64 или 128 или 256 бит и используем это в качестве ключа;
 
 — если кортеж большой, то сериализуем его в Arena
@@ -1142,10 +1144,10 @@ SIMD probing</p>
 <section class="slide">
 <h2>?</h2>
 </section>
-    
+
     <div class="progress"></div>
-    <script src="shower/shower.min.js"></script>
-    
+    <script src="shower/shower.js"></script>
+
     <!--Video plugin-->
     <link rel="stylesheet" href="shower/shower-video.css">
     <script src="shower/shower-video.js"></script>

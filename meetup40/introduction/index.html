@@ -10,10 +10,11 @@
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:image" content="pictures/preview.jpg">
-    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x10.css">
+    <link rel="stylesheet" href="shower/themes/clickhouse/styles/styles.css">
 
-    <style type="text/css">
-         code { display: block; white-space: pre; background-color: #EEE; }
+    <style>
+        code { display: block; white-space: pre; background-color: #EEE; }
+        .shower { --slide-ratio: calc(16 / 10); }
     </style>
 </head>
 <body class="shower list">
@@ -41,7 +42,7 @@
 </ul>
 </section>
 
-    
+
 <section class="slide">
 <h2>Why do we need ClickHouse?</h2>
 
@@ -131,7 +132,7 @@ MonetDB, Infobright, InfiniDB...</p>
     <section class="slide">
         <img src="pictures/metrika2.png" style="height:100%"/>
     </section>
-    
+
     <section class="slide">
         <h2>The main cluster of Yandex.Metrica</h2>
         <ul style="font-size:30px;">
@@ -157,7 +158,7 @@ MonetDB, Infobright, InfiniDB...</p>
     &nbsp;
     </section>
 
-    
+
 <section class="slide">
 <h2>How we developed ClickHouse</h2>
 <p style="color: gray;">2008 &mdash; first commits in codebase;</p>
@@ -387,7 +388,7 @@ Impala, Presto, SparkSQL, Druid, Drill...
 
     <section class="slide">
         <h2>Community</h2>
-        <p>Web site: <a href="https://clickhouse.com/">https://clickhouse.tech/</a></p>
+        <p>Web site: <a href="https://clickhouse.com/">https://clickhouse.com/</a></p>
         <p>Maillist: clickhouse-feedback@yandex-team.com</p>
         <p>YouTube: <a href="https://www.youtube.com/c/ClickHouseDB">https://www.youtube.com/c/ClickHouseDB</a></p>
         <p>Telegram chat: <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_en</a>, <a href="https://telegram.me/clickhouse_en">clickhouse_ru</a></p>
@@ -401,6 +402,6 @@ Impala, Presto, SparkSQL, Druid, Drill...
     </section>
 
     <div class="progress"></div>
-    <script src="shower/shower.min.js"></script>
+    <script src="shower/shower.js"></script>
 </body>
 </html>

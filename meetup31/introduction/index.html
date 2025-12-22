@@ -10,7 +10,10 @@
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:image" content="pictures/preview.jpg">
-    <link rel="stylesheet" href="shower/themes/ribbon/styles/screen-16x10.css">
+    <link rel="stylesheet" href="shower/themes/clickhouse/styles/styles.css">
+    <style>
+        .shower { --slide-ratio: calc(16 / 10); }
+    </style>
 </head>
 <body class="shower list">
     <header class="caption">
@@ -173,7 +176,7 @@
         <p>And this is how column-oriented databases work:</p>
         <p><img src="pictures/column_oriented.gif"/></p>
     </section>
-    
+
     <section class="slide" style="background: url('pictures/hk_column.jpg') no-repeat center center; background-size: 100% 100%">
         <h2>&nbsp;</h2>
     </section>
@@ -299,7 +302,7 @@
         <p><b>Specialization and attention to detail.</b></p>
         <p>Example: we have 17 different algorithms for GROUP BY. Best one is selected for your query.</p>
     </section>
-    
+
     <section class="slide">
         <h2 style="font-size: 30pt;">Unusual applications of ClickHouse</h2>
 
@@ -307,7 +310,7 @@
         <br/><a href="https://github.com/msestak/FindOrigin">https://github.com/msestak/FindOrigin</a></p>
 
         <p>"We are exploring evolution of novel genes in genomes because if seems that genomes are far from being static as previously believed and what actually happens is that new genes are constantly being added and old genes are lost."</p>
-        
+
         <p>Search engine and analytics for Bitcoin transactions:
         <br/><a href="https://blockchair.com/">https://blockchair.com/</a></p>
 
@@ -344,6 +347,6 @@
     </section>
 
     <div class="progress"></div>
-    <script src="shower/shower.min.js"></script>
+    <script src="shower/shower.js"></script>
 </body>
 </html>

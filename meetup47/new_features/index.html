@@ -10,13 +10,14 @@
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:image" content="pictures/preview.jpg">
-    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x10.css">
+    <link rel="stylesheet" href="shower/themes/clickhouse/styles/styles.css">
 
-    <style type="text/css">
-         code { display: block; white-space: pre; background-color: #EEE; }
+    <style>
+        code { display: block; white-space: pre; background-color: #EEE; }
 
-         p.cloud { text-align: center; line-height: 2; }
-         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+        p.cloud { text-align: center; line-height: 2; }
+        p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+        .shower { --slide-ratio: calc(16 / 10); }
     </style>
 </head>
 <body class="shower list">
@@ -205,7 +206,7 @@ Since version 20.10 enabled by default for data parts up to 10 MB.</p>
 <code>clickhouse-format --<b>obfuscate</b> &lt; query.sql</code>
 
 <p style="margin-top: 100px; font-size: 14pt; color: gray;">Available since version 20.10.</p>
-<p style="font-size: 14pt; color: gray;">Data Obfuscation: <a href="https://presentations.clickhouse.tech/highload_spb_2019/#">https://presentations.clickhouse.tech/highload_spb_2019/#</a></p>
+<p style="font-size: 14pt; color: gray;">Data Obfuscation: <a href="https://presentations.clickhouse.com/highload_spb_2019/#">https://presentations.clickhouse.com/highload_spb_2019/#</a></p>
 </section>
 
 <section class="slide" style="background-image: url('pictures/query.png'); background-size: 100%;">
@@ -303,6 +304,6 @@ Since version 20.10 enabled by default for data parts up to 10 MB.</p>
 </section>
 
     <div class="progress"></div>
-    <script src="shower/shower.min.js"></script>
+    <script src="shower/shower.js"></script>
 </body>
 </html>

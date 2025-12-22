@@ -10,12 +10,13 @@
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:image" content="pictures/preview.jpg">
-    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+    <link rel="stylesheet" href="shower/themes/clickhouse/styles/styles.css">
 
-    <style type="text/css">
-         code { display: block; white-space: pre; background-color: #EEE; }
-         p.cloud { text-align: center; line-height: 1.8; font-size: 18pt; }
-         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+    <style>
+        code { display: block; white-space: pre; background-color: #EEE; }
+        p.cloud { text-align: center; line-height: 1.8; font-size: 18pt; }
+        p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+        .shower { --slide-ratio: calc(16 / 10); }
     </style>
 </head>
 <body class="shower list">
@@ -504,7 +505,7 @@ type: Tuple(                                           &lt;-- inferred type
 
 
     <div class="progress"></div>
-    <script src="shower/shower.min.js"></script>
+    <script src="shower/shower.js"></script>
 
     <!--Video plugin-->
     <link rel="stylesheet" href="shower/shower-video.css">
@@ -512,4 +513,3 @@ type: Tuple(                                           &lt;-- inferred type
     <!--/Video plugin-->
 </body>
 </html>
-

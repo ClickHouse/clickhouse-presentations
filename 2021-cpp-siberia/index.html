@@ -10,10 +10,11 @@
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:image" content="pictures/preview.jpg">
-    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x10.css">
+    <link rel="stylesheet" href="shower/themes/clickhouse/styles/styles.css">
 
-    <style type="text/css">
-         code { display: block; white-space: pre; background-color: #EEE; }
+    <style>
+        code { display: block; white-space: pre; background-color: #EEE; }
+        .shower { --slide-ratio: calc(16 / 10); }
     </style>
 </head>
 <body class="shower list">
@@ -326,7 +327,7 @@ Mutating string literals...</p>
 
 
 <section class="slide">
-<h2>SQLancer &mdash; logical SQL phaser</h2>
+<h2>SQLancer &mdash; logical SQL fuzzer</h2>
 
 <p>Developed by <b>Manuel Rigger</b> at ETH Zurich.</p>
 <p>Added to ClickHouse by <b>Ilya Yatsishin</b>.</p>
@@ -350,7 +351,7 @@ Mutating string literals...</p>
 <p><b>AFL</b> &mdash; Instrumentation builds are recommended, similar to <b>libfuzzer</b>, but run outside of the process.</p>
 <p><b>Hongfuzz</b> &mdash; supports hardware counters for coverage.</p>
 <p><b>Radamsa</b> &mdash; is not a fuzzer, but a separate data mutator.</p>
-<p>Service security scanners are also phasers, for example:<b> sqlmap</b>.</p>
+<p>Service security scanners are also fuzzers, for example:<b> sqlmap</b>.</p>
 </section>
 
 
@@ -370,6 +371,6 @@ Mutating string literals...</p>
     </section>
 
     <div class="progress"></div>
-    <script src="shower/shower.min.js"></script>
+    <script src="shower/shower.js"></script>
 </body>
 </html>

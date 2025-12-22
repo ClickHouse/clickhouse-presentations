@@ -5,7 +5,10 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+    <link rel="stylesheet" href="shower/themes/clickhouse/styles/styles.css">
+    <style>
+        pre { line-height: 1 }
+    </style>
 </head>
 <body class="shower list">
     <header class="caption">
@@ -25,7 +28,7 @@
         <h2 style="font-size: 28pt;">Я не буду рассказывать, что такое ClickHouse</h2>
         <p>1. Надоело.</p><p>2. Все и так знают.</p>
     </section>
-    
+
     <section class="slide">
         <h2 style="font-size: 28pt;">Как неправильно использовать ClickHouse</h2>
         <p>Какие типичные ошибки, с которыми мы сталкивались на практике.</p>
@@ -35,12 +38,12 @@
             <li>и какие есть лучшие практики, чтобы избежать неоптимальностей.</li>
         </ul>
     </section>
-    
+
     <section class="slide">
         <h2 style="font-size: 24pt;">1. Слишком частые вставки с маленьким размером батча</h2>
-        <p>Пример: 
+        <p>Пример:
         <br/>
-        <br/>Таблица hits: 105 столбцов, 
+        <br/>Таблица hits: 105 столбцов,
         <br/>размер строки в несжатом binary формате &mdash; 718 байт.</p>
         <p>
             Размер батча 1000000 строк:<br/>
@@ -54,12 +57,12 @@
             <br/>&mdash; <b>259 660</b> строк в секунду;<br/>
         </p>
     </section>
-    
+
     <section class="slide">
         <h2 style="font-size: 24pt;">1. Слишком частые вставки с маленьким размером батча</h2>
-        <p>Пример: 
+        <p>Пример:
         <br/>
-        <br/>Таблица hits: 105 столбцов, 
+        <br/>Таблица hits: 105 столбцов,
         <br/>размер строки в несжатом binary формате &mdash; 718 байт.</p>
         <p>
             Размер батча &mdash; одна строка:<br/>
@@ -73,7 +76,7 @@
             <br/>&mdash; <b>2</b> строки в секунду;<br/>
         </p>
     </section>
-    
+
     <section class="slide">
         <h2 style="font-size: 24pt;">1. Слишком частые вставки с маленьким размером батча</h2>
         <p>&mdash; в 10 000 .. 100 000 раз медленнее.</p>
@@ -82,7 +85,7 @@
         <p>Таблицы MergeTree не содержат log и memtable.</p>
         <p>Данные сразу записываются в файловую систему,<br/>разложенные по столбцам.</p>
     </section>
-    
+
     <section class="slide">
         <h2 style="font-size: 24pt;">Как правильно?</h2>
         <p>Способ 1.</p><p>Используйте распределённую очередь (Kafka).</p>
@@ -92,7 +95,7 @@
         <p>&mdash; громоздкая конструкция;</p>
         <p>&mdash; ещё одна сложная распределённая система.</p>
     </section>
-    
+
     <section class="slide">
         <h2 style="font-size: 24pt;">Как правильно?</h2>
         <p>Способ 2.</p><p>Пишите логи в файл.</p>
@@ -102,7 +105,7 @@
         <p><br/>Недостатки:</p>
         <p>&mdash; возможность потери данных при аппаратном сбое.</p>
     </section>
-    
+
     <section class="slide">
         <h2 style="font-size: 24pt;">Как правильно?</h2>
         <p>Способ 3.</p><p>Серверный процесс накапливает пачку с логами во внутреннем буфере.</p>
@@ -113,25 +116,25 @@
         <p>&mdash; потеря данных при kill -9 процесса;</p>
         <p>&mdash; потеря данных либо OOM при невозможности записать в ClickHouse;</p>
     </section>
-    
+
     <section class="slide">
         <h2 style="font-size: 24pt;">Как правильно?</h2>
         <p>Способ 4.</p><p>Серверный процесс держит открытым соединение с ClickHouse,<br/>
         в котором делается запрос INSERT и строчки отправляются по одной <br/>
         или мелкими пачками с Transfer-Encoding: chunked.</p>
-        
+
         <p>Раз в некоторое время, поток данных заканчивается<br/>и выполняется новый запрос INSERT.</p>
         <p>В этом случае, ClickHouse будет буферизовать данные<br/> на своей стороне сам.</p>
 
         <p>Недостатки:</p>
         <p>&mdash; потеря данных при kill -9 процесса;</p>
     </section>
-    
+
     <section class="slide">
         <h2 style="font-size: 24pt;">Как правильно?</h2>
         <p>Способ 5.</p>
         <p>https://github.com/nikepan/clickhouse-bulk</p>
-        
+
         <p>&mdash; промежуточный сервер для группировки INSERT-ов в батчи;</p>
     </section>
 
@@ -144,30 +147,30 @@
         <p>&mdash; снимает проблему не полностью, всё-равно нужны батчи;</p>
         <p>&mdash; добавляет другие проблемы (нет лога, возможна потеря данных).</p>
     </section>
-    
+
     <section class="slide">
         <h2 style="font-size: 24pt;">Бонус</h2>
         <p>Поддержка импорта из Kafka напрямую внутри ClickHouse.</p>
     </section>
-    
+
     <section class="slide">
         <h2 style="font-size: 24pt;">Ещё грабли</h2>
         <p>&mdash; вставка данных в формате VALUES с вычисляемыми выражениями;</p>
         <p>&mdash; вставка данных, относящихся к большому<br/>количеству партиций в каждом батче.</p>
     </section>
-    
-    
+
+
     <section class="slide">
         <h2 style="font-size: 24pt;">2. String typing</h2>
         <p>Пример:</p>
-        <p>Country String, 
-        <br/>City String, 
-        <br/>Browser String, 
+        <p>Country String,
+        <br/>City String,
+        <br/>Browser String,
         <br/>IPAddress String,
         <br/>...
         </p>
     </section>
-    
+
     <section class="slide">
         <h2 style="font-size: 24pt;">Насколько это плохо?</h2>
         <p>Строки сжимаются почти так же хорошо, как числовые идентификаторы.</p>
@@ -176,14 +179,14 @@
         Пример:</p>
         <p>SELECT uniqExact(IPAddress) FROM ip_address_num<br/>
         &mdash; <b>0.073</b> sec, <b>137.79</b> million rows/s.</p>
-        
+
         <p>SELECT uniqExact(IPAddress) FROM ip_address_string<br/>
         &mdash; <b>0.265</b> sec, <b>37.70</b> million rows/s.</p>
-        
+
         <p>SELECT formatReadableSize(sum(data_compressed_bytes)) FROM system.columns WHERE table = 'ip_address_num'<br/>
         &mdash; <b>30.92</b> MiB vs. <b>43.65</b> MiB.</p>
     </section>
-    
+
     <section class="slide">
         <h2 style="font-size: 24pt;">Как правильно?</h2>
 
@@ -261,14 +264,14 @@
 
         <p>Пример: есть столбец URL.<br/>
         Добавьте ещё столбец URLDomain.</p>
-        
+
         Пример:</p>
         <p>SELECT <span style="color: red;">domain(URL)</span> AS k, count() AS c FROM test.hits GROUP BY k<br/>
         &mdash; <b>0.166</b> sec. Processed 762.68 MB (53.60 million rows/s., 4.61 GB/s.)</p>
-        
+
         <p>SELECT <span style="color: green;">URLDomain</span> AS k, count() AS c FROM test.hits GROUP BY k<br/>
         &mdash; <b>0.067</b> sec. Processed 188.06 MB (132.44 million rows/s., 2.81 GB/s.)</p>
-        
+
         <p>На диске: URL - <b>126.80</b> MiB, URLDomain - <b>5.61</b> MiB.</p>
     </section>
 
@@ -319,9 +322,9 @@
         <p>Можно загрузить данные в таблицу типа Log со String полями,<br/>
         затем проанализировать их уже в ClickHouse,<br/>и выяснить правильные типы перед загрузкой дальше.</p>
     </section>
-    
-    
-    
+
+
+
     <section class="slide">
         <h2 style="font-size: 24pt;">3. Большое количество маленьких таблиц.</h2>
 
@@ -339,12 +342,12 @@
 │ stats_8   │
 │ stats_9   │
 │ stats_10  │
-  ...        
+  ...
 │ stats_999 │
 └───────────┘
 </pre>
     </section>
-    
+
     <section class="slide">
         <h2 style="font-size: 24pt;">Причины использования:</h2>
 
@@ -353,7 +356,7 @@
         <p>&mdash; более простые maintenance операции с маленькими таблицами;</p>
         <p>&mdash; микрошардинг.</p>
     </section>
-    
+
     <section class="slide">
         <h2 style="font-size: 24pt;">Почему так не надо делать в ClickHouse?</h2>
 
@@ -365,7 +368,7 @@
         <p>Для каждой таблицы требуется постоянно выполнять<br/>некоторую фоновую работу по мержам.</p>
 
     </section>
-    
+
     <section class="slide">
         <h2 style="font-size: 24pt;">Почему так не надо делать в ClickHouse?</h2>
 
@@ -377,7 +380,7 @@
         <p>Время обработки 10 строк примерно такое же, как 10 000 строк.</p>
         <p>Если ваши таблицы содержат меньше 10 000 строк,<br/>то меньше уже не важно.</p>
     </section>
-    
+
     <section class="slide">
         <h2 style="font-size: 24pt;">Как правильно делать?</h2>
 
@@ -390,9 +393,9 @@
         <p>Поддержка произвольного ключа партиционирования в ClickHouse.</p>
         <p>Если всё-таки нужно много маленьких таблиц без индекса<br>&mdash; используйте StripeLog.</p>
     </section>
-    
-    
-    
+
+
+
     <section class="slide">
         <h2 style="font-size: 24pt;">4. Микрошардинг.</h2>
 
@@ -404,7 +407,7 @@
         <p>На каждом физическом сервере несколько инстансов<br/>&mdash; в разных БД или на разных портах.</p>
         <p>Причина &mdash; упростить задачу перебалансировки данных.</p>
     </section>
-    
+
     <section class="slide">
         <h2 style="font-size: 24pt;">4. Микрошардинг.</h2>
 
@@ -421,7 +424,7 @@
         При объединении таблиц с помощью Merge-таблицы, <b>отключаются некоторые оптимизации</b>.</p>
     </section>
 
-    
+
     <section class="slide">
         <h2 style="font-size: 24pt;">5. Слишком много предагрегации.</h2>
 
@@ -448,9 +451,9 @@ DisplayID, ContextID, TargetType, AbcID, IsGood, CostType, PageID),<br/>
         <p>Для ClickHouse, неагрегированные данные &mdash; лучший сценарий.<br/>
         Предагрегацию тоже можно использовать для простых случаев.</p>
     </section>
-    
-    
-    
+
+
+
     <section class="slide">
         <h2 style="font-size: 24pt;">6. O(N) запросов из скрипта в цикле.</h2>
 
@@ -465,7 +468,7 @@ DisplayID, ContextID, TargetType, AbcID, IsGood, CostType, PageID),<br/>
 
         <p style="color: green;">SELECT URL, count() FROM hits WHERE URL IN (...) GROUP BY URL</p>
     </section>
-    
+
     <section class="slide">
         <h2 style="font-size: 24pt;">Почему много запросов &mdash; плохо?</h2>
 
@@ -475,7 +478,7 @@ DisplayID, ContextID, TargetType, AbcID, IsGood, CostType, PageID),<br/>
 
         <p>Можно переписать в один запрос.</p>
     </section>
-    
+
     <section class="slide">
         <h2 style="font-size: 24pt;">6. O(N) запросов из скрипта в цикле.</h2>
 
@@ -486,7 +489,7 @@ DisplayID, ContextID, TargetType, AbcID, IsGood, CostType, PageID),<br/>
         <p>&mdash; IN (SELECT ...) не использует индекс;</p>
         <p>&mdash; при распределённой обработке запроса,<br/>текст запроса передаётся без сжатия.</p>
     </section>
-    
+
     <section class="slide">
         <h2 style="font-size: 24pt;">6. O(N) запросов из скрипта в цикле.</h2>
 
@@ -494,11 +497,11 @@ DisplayID, ContextID, TargetType, AbcID, IsGood, CostType, PageID),<br/>
         <p>&mdash; резать пользователей API:<br/>квоты, адаптивный throttling.</p>
 
         <p>Бонус: можно настроить квоты по пользователем в ClickHouse, передавая quota_key.</p>
-        
+
         <p style="color: green;">Если API доступно снаружи, наличие квот обязательно!</p>
     </section>
-    
-    
+
+
     <section class="slide">
         <h2 style="font-size: 24pt;">7. Репликация вручную.</h2>
 
@@ -514,7 +517,7 @@ DisplayID, ContextID, TargetType, AbcID, IsGood, CostType, PageID),<br/>
         &mdash; из-за ошибок и недетерминированной работы на стороне приложения, данные расходятся в процессе работы;<br/>
         &mdash; вы не можете решить, какая копия данных правильная.</p>
     </section>
-    
+
     <section class="slide">
         <h2 style="font-size: 24pt;">7. Репликация вручную.</h2>
 
@@ -527,8 +530,8 @@ DisplayID, ContextID, TargetType, AbcID, IsGood, CostType, PageID),<br/>
         &mdash; восстановление после сбоя;<br/>
         &mdash; реплики сами следят за консистентностью данных.</p>
     </section>
-    
-    
+
+
     <section class="slide">
         <h2 style="font-size: 24pt; line-height: 1.5;">8. Использование примитивных table engines<br/> для основных данных.</h2>
 
@@ -547,7 +550,7 @@ DisplayID, ContextID, TargetType, AbcID, IsGood, CostType, PageID),<br/>
         &mdash; immutable структуры данных на диске;<br/>
         &mdash; репликация;</p>
     </section>
-    
+
     <section class="slide">
         <h2 style="font-size: 24pt;">8. Использование примитивных table engines.</h2>
 
@@ -555,14 +558,14 @@ DisplayID, ContextID, TargetType, AbcID, IsGood, CostType, PageID),<br/>
         <p>Для временных батчей для промежуточной обработки<br/>&mdash; <b>StripeLog</b>, <b>TinyLog</b>.</p>
         <p>Для небольшого объёма временных данных<br/>&mdash; <b>Memory</b>.</p>
     </section>
-    
-    
+
+
     <section class="slide">
         <h2 style="font-size: 24pt; line-height: 1.5;">9. Перенормализованные данные.<br/> JOIN большой кардинальности.</h2>
 
         <p>Пример:</p>
 
-        <pre>SELECT url, count() FROM stats 
+        <pre>SELECT url, count() FROM stats
     ANY INNER JOIN urls USING (url_id)</pre>
 
         <p>Почему это плохо?</p>
@@ -574,20 +577,20 @@ DisplayID, ContextID, TargetType, AbcID, IsGood, CostType, PageID),<br/>
 
         <p>Решение: для соединяемых данных большой кардинальности,<br/>лучше использовать их хранение в основной таблице.</p>
     </section>
-    
-    
+
+
     <section class="slide">
         <h2 style="font-size: 24pt;">Ещё антипаттерны</h2>
         <p>10. Использование запросов OPTIMIZE для того,<br/>чтобы изобразить функциональность UPDATE.</p>
         <p>11. Использование распределённых JOIN<br/>с правой таблицей большого размера.<br/>ClickHouse плохо составляет план запроса для распределённых JOIN.</p>
 
         <h2 style="font-size: 24pt;">Плохо, но иногда Ок</h2>
-        
+
         <p>12. Использование ClickHouse только для того,<br/>чтобы прочитать данные обратно с помощью SELECT *.</p>
         <p>13. Выполнение излишне громоздких вычислений<br/>внутри ClickHouse (большое значение cycle/byte).</p>
     </section>
-    
-    
+
+
     <section class="slide">
         <h2>Сообщество</h2>
         <p>Сайт: <a href="https://clickhouse.com/">https://clickhouse.com/</a></p>
@@ -601,9 +604,9 @@ DisplayID, ContextID, TargetType, AbcID, IsGood, CostType, PageID),<br/>
     <section class="slide">
         <h2>Спасибо!</h2>
     </section>
-    
-        
+
+
     <div class="progress"></div>
-    <script src="shower/shower.min.js"></script>
+    <script src="shower/shower.js"></script>
 </body>
 </html>

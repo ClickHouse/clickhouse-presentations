@@ -5,12 +5,13 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-4x3.css">
+    <link rel="stylesheet" href="shower/themes/clickhouse/styles/styles.css">
 
-    <style type="text/css">
+    <style>
          code { display: block; white-space: pre; background-color: #EEE; }
          p.cloud { text-align: center; line-height: 1.5; }
          p.cloud span { font-size: 13pt; color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+         .shower { --slide-ratio: calc(16 / 10); }
     </style>
 </head>
 <body class="shower list">
@@ -69,7 +70,7 @@ that was intended to solve <b>just a single task</b>:<br/>
 
 <section class="slide">
 <h2>Design From Hardware Capabilities</h2>
-<p>1. What are the basic numbers (throughput, latency, volume...) 
+<p>1. What are the basic numbers (throughput, latency, volume...)
 <br/>&emsp;of our hardware (CPU, RAM, SSD, HDD, network...)
 <br/>&emsp;on what operations?</p>
 <p>2. What are the data structures we use?
@@ -161,10 +162,10 @@ for (const auto &amp; haystack : haystacks)
 <br/>&mdash; one or multiple substrings?
 <br/>&mdash; the set of substrings is explicit or specified by a language?
 <br/>&mdash; substrings are rather short or long?
-<br/>&mdash; substring is a sequence of 
+<br/>&mdash; substring is a sequence of
 <br/>bytes / unicode code points / characters with custom collation / words?
 <br/>&mdash; a search in predefined text or the text is not known in advance?
-<br/>&mdash; is located in memory completely or available as a stream of data? 
+<br/>&mdash; is located in memory completely or available as a stream of data?
 <br/>&mdash; with strong guarantees on time or not?</p>
 </section>
 
@@ -246,7 +247,7 @@ for (const auto &amp; haystack : haystacks)
 &mdash; the choice of hash function;<br/>
 &mdash; memory layout: open-addressing vs. chaining;<br/>
 &mdash; small or big values;<br/>
-&mdash; support for non-moveable values;<br/> 
+&mdash; support for non-moveable values;<br/>
 &mdash; memory layout: one array for keys and values or separate arrays;<br/>
 &mdash; collision resolution algorithm;<br/>
 &mdash; algorithm for values removal;<br/>
@@ -555,8 +556,8 @@ clickhouse hashmap is faster
     </section>
 
     <div class="progress"></div>
-    <script src="shower/shower.min.js"></script>
-    
+    <script src="shower/shower.js"></script>
+
     <!--Video plugin-->
     <link rel="stylesheet" href="shower/shower-video.css">
     <script src="shower/shower-video.js"></script>

@@ -10,9 +10,9 @@
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:image" content="pictures/preview.jpg">
-    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+    <link rel="stylesheet" href="shower/themes/clickhouse/styles/styles.css">
 
-    <style type="text/css">
+    <style>
         code { display: block; white-space: pre; background-color: #EEE; }
    </style>
 </head>
@@ -59,7 +59,7 @@
 
         <p>No clean separation between query Analysis and Planning.</p>
         <p>Support for JOINs is not ideal, some features are not supported because we do not have
-            enought semantic information (Indexes, PREWHERE).</p>
+            enough semantic information (Indexes, PREWHERE).</p>
     </section>
 
     <section class="slide">
@@ -795,7 +795,7 @@ INNER JOIN test_table_join_2 AS t2 <b>FINAL</b> ON t1.id = t2.id;</code>
     </section>
 
     <div class="progress"></div>
-    <script src="shower/shower.min.js"></script>
+    <script src="shower/shower.js"></script>
 
     <!--Video plugin-->
     <link rel="stylesheet" href="shower/shower-video.css">

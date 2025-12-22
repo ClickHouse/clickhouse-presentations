@@ -5,7 +5,11 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="shower/themes/ribbon/styles/screen-16x10.css">
+    <link rel="stylesheet" href="shower/themes/clickhouse/styles/styles.css">
+    <style>
+        .slide p { white-space: pre; line-height: 1 }
+        .shower { --slide-ratio: calc(16 / 10); }
+    </style>
 </head>
 <body class="shower list">
     <header class="caption">
@@ -554,6 +558,6 @@ num_threads * num_buckets хэш-таблиц
 
 
     <div class="progress"></div>
-    <script src="shower/shower.min.js"></script>
+    <script src="shower/shower.js"></script>
 </body>
 </html>

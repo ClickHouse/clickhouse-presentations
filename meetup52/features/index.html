@@ -10,12 +10,12 @@
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:image" content="pictures/preview.jpg">
-    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+    <link rel="stylesheet" href="shower/themes/clickhouse/styles/styles.css">
 
-    <style type="text/css">
-         code { display: block; white-space: pre; background-color: #EEE; }
-         p.cloud { text-align: center; line-height: 2; }
-         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+    <style>
+        code { display: block; white-space: pre; background-color: #EEE; }
+        p.cloud { text-align: center; line-height: 2; }
+        p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
     </style>
 </head>
 <body class="shower list">
@@ -167,7 +167,7 @@ SELECT CAST(<b>'0.1'</b> AS Decimal(30, <b>30</b>))
 (
 ...
 ) ENGINE = URL(
-  'https://datasets.clickhouse.tech/github_events_v2.native.<b>xz</b>',
+  'https://datasets.clickhouse.com/github_events_v2.native.<b>xz</b>',
   Native);</pre>
 
 <p style="margin-top: 50px; font-size: 14pt; color: gray;">Developer &mdash; Abi Palagashvili. <span style="color: green;">Available since 21.1.</span></p>
@@ -515,7 +515,7 @@ max_connections: 4096
 </section>
 
     <div class="progress"></div>
-    <script src="shower/shower.min.js"></script>
+    <script src="shower/shower.js"></script>
 
     <!--Video plugin-->
     <link rel="stylesheet" href="shower/shower-video.css">
@@ -523,4 +523,3 @@ max_connections: 4096
     <!--/Video plugin-->
 </body>
 </html>
-
