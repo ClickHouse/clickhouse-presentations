@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Building For Fast</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta property="og:image" content="pictures/preview.jpg">
+    <meta property="og:title" content="ClickHouse: Building For Fast">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="pictures/preview.jpg">
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/themes/clickhouse/styles/styles.css">
+
+    <style>
+        code { display: block; white-space: pre; background-color: #EEE; }
+        p.cloud { text-align: center; line-height: 1.8; font-size: 18pt; }
+        p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Building For Fast</h1>
+        <p>Author: Alexey Milovidov, 2022-05-12.</p>
+    </header>
+    <section class="slide" id="cover" style="background: linear-gradient(to bottom right, rgba(255, 51, 51, 1), rgba(255, 169, 0, 1))">
+        <img src="https://presentations.clickhouse.com/original_website/logo.svg" style="width: 15%; position: absolute; right: 20px; bottom: 20px;" />
+        <h1 style="margin-top: 100px; line-height: 150%; color: white; font-size: 56pt">ClickHouse:<br/>Building For Fast</h1>
+    </section>
+
+<section class="slide">
+<h2>Why ClickHouse Is Fast?</h2>
+<p>— it's very difficult to answer;</p>
+<p>— there is no single "silver bullet";</p>
+<p>It's easier to answer, why <b>every other system is slow</b>.</p>
+<p>I will tell some principles, ideas, and facts...
+<br/>... but mostly do some handwaving.</p>
+</section>
+    
+<section class="slide">
+<h2>Use the Best Algorithms?</h2>
+<p>— but there is <b>no such thing</b> as the best algorithms!</p>
+<p style="margin-top: 2em;">How <b style="color: red;">not to write</b> a DBMS:</p>
+<blockquote>We will write code in C++ / Rust / Asm (it will be fast!)<br/>and use <b>simdjson</b> (isn't it fast?) and <b>Apache Arrow</b> (shall be fast)
+<br/>will use <b>mmap</b> (I heard it's fast) or no... <b>in-memory</b> database (RAM is fast!)<br/> and it will work on asynchronous <b>Seastar</b> framework (fast?)
+<br/>... and it will be faster than ClickHouse!</blockquote>
+</section>
+
+
+<section class="slide">
+<h2>Use the Best Algorithms?</h2>
+<div style="float: right; width: 150px; margin-right: -50px;">
+<img style="width: 150px;" src="pictures/daniel.jpg"/>
+<p style="font-size: 8pt; color: gray; margin-top: -1em;">Daniel Lemire, the author of simdjson library</p>
+</div>
+<p>But it is not enough :(</p>
+<p>Example: so you want to parse and <b style="color: green;">process JSON data</b>, a lot of it.</p>
+<p>The fastest library to parse JSON is <b>simdjson</b>.<br/>And ClickHouse is using it.</p>
+
+<p>"The fastest command-line tools for querying large JSON datasets"
+<br/>feat.: <b>jq</b>, <b>dsq</b>, <b>trdsql</b>, <b>spark-sql</b>, <b>miller</b>, <b>spyql</b>, <b>octosql</b> and <b>ClickHouse</b>.</p>
+<p><a href="https://github.com/dcmoura/spyql/blob/master/notebooks/json_benchmark.ipynb">https://github.com/dcmoura/spyql/blob/master/notebooks/json_benchmark.ipynb</a></p>
+<p>The best performance is shown by ClickHouse and OctoSQL.<br/>And ClickHouse is using simdjson. Is it the reason for high performance?</p>
+</section>
+
+<section class="slide">
+<h2>Use the Best Algorithms?</h2>
+<p>The fastest library to parse JSON is <b>simdjson</b>. And ClickHouse is using it.</p>
+<p>But in a different context. And it is <b>not used</b> for parsing input data.</p>
+<p>Q: Does ClickHouse beat <b>simdjson</b> in speed?
+<br/>A: <b style="color: green;">Yes</b> and <b style="color: red;">No</b>.</p>
+
+<p>Why ClickHouse and OctoSQL are faster on JSON processing?</p>
+<p style="color: gray;">Not because they use simdjson. And they don't need it.</p>
+<p>But because they parse JSONs, <b style="color: green;">learn the structure</b><br/>and then reuse it for <b style="color: green;">specialized, structured</b> parsing!</p>
+</section>
+
+
+<section class="slide">
+<h2>Use the Best Algorithms?</h2>
+<p>— every algorithm makes different sense in different context.</p>
+<p>Example: let's take the best hash function.</p>
+<img style="width: 50%" src="pictures/hash1.png" />
+<img style="width: 50%; margin-left: 20%; margin-top: -0.5em;" src="pictures/hash2.png" />
+<img style="width: 50%; margin-left: 40%; margin-top: -1em;" src="pictures/hash3.png" />
+</p>
+</section>
+
+
+<section class="slide">
+<h2>Use the Best Algorithms?</h2>
+<p>— every algorithm makes different sense in different context.</p>
+<p>Example:</p>
+<p>— let's take the best hash function.</p>
+<p>Where you're going to use it?</p>
+<p>— in hash tables;
+<br/>— in bloom filters;
+<br/>— in hyperloglogs;
+<br/>— as a function in SQL;
+</p>
+</section>
+
+<section class="slide">
+<h2>Use the Best Algorithms?</h2>
+<p>But if you provide it as a function in SQL:</p>
+<p><pre>SELECT <b>myBestHash</b>(x) FROM table</pre></p>
+<p>You cannot longer use it for hash functions, bloom filters and hyperloglogs*</p>
+<p>Example:
+<br/><pre>CREATE TABLE ... ENGINE = Distributed(... <b>myBestHash</b>(x) % 64)</pre>
+<pre>SELECT ... FROM table GROUP BY <b>x</b></pre></p>
+<p style="color: red;">&mdash; interference of hash functions.</p>
+<p style="color: gray; margin-top: 2em; font-size: 14pt;">* — with the same seed; but seeding not always help, e.g. CityHash is flawed.</p>
+</section>
+
+<section class="slide">
+<h2>Use the Best Algorithms?</h2>
+<p>What is the best hash function? How the author tested it?</p>
+<p>Typical mistake:
+<br/>— the author tested the hash function on every input size;
+<br/>— the inputs of 1 byte, 2 bytes, ... 111 bytes, etc;</p>
+<p>... but did not test in a loop with a random <b style="color: red;">distribution</b> of input sizes.</p>
+<p>— using the same input size in a loop makes<br/>&emsp; CPU branch predictor works too good;</p>
+<p>... but did not test in a loop with a <b style="color: red;">not so random</b> distribution of input sizes.</p>
+<p>— what if a real dataset has 90% strings of size zero,<br/>&emsp; 9% strings of size 1..50 and 1% of strings around 1KB?</p>
+</section>
+
+<section class="slide">
+<h2>Always Dig Into Details</h2>
+<img style="width: 60%;" src="pictures/fixing_a_lightbulb.png"/>
+<p style="font-size: 8pt; color: gray;">Malcolm in the Middle S03E06 - Health Scare, Fox Network, 2001</p>
+</section>
+
+<style>
+    @keyframes hourglass-animation 
+    {
+        0% { transform: rotate(0deg); }
+        50% { transform: rotate(180deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .spin { display: inline-block; animation: hourglass-animation 2s linear infinite; }
+</style>
+
+<section class="slide">
+<h2>Always Dig Into Details</h2>
+<p>Example: you load a website and it's loaded in 5 seconds :(
+<br/>You check a few more times and it loads instantly.</p>
+
+<p>Wrong:
+<br/>— it was a temporary glitch; <span class="spin">⌛</span>
+<br/>— it does not reproduce; <span class="spin">⏱</span>
+<br/>— the problem fixed by itself;
+<br/>— why even bother?</p>
+<p>Right:
+<br/>— my precious request was processed slowly!!!
+<br/>— let's find it in the logs.
+<br/>I don't care if millions of other requests are processed quickly,
+<br/>I want to know why <i>that</i> request was slow.</p>
+</section>
+
+<section class="slide">
+<img style="float: left; margin-left: -100px; margin-right: 20px; height: 100%;" src="pictures/cache.png"/>
+<p>Why some queries are slower?
+<code style="background: white; margin-top: 1em; font-size: 13pt; line-height: 1.5;">WITH
+  query_id = 'benchmark_16760_29_2' AS first,
+  query_id = 'benchmark_16760_29_3' AS second
+SELECT
+  PE.Names AS metric,
+  anyIf(PE.Values, first) AS v1,
+  anyIf(PE.Values, second) AS v2
+FROM clusterAllReplicas(
+  default, <b>system.query_log</b>)
+ARRAY JOIN <b>ProfileEvents</b> AS PE
+WHERE (first OR second) 
+  AND (event_date = today()) AND (type = 2)
+GROUP BY metric
+HAVING v1 != v2
+ORDER BY
+  (v2 - v1) / (v1 + v2) DESC,
+  v2 DESC,
+  metric ASC</code></p>
+</section>
+
+<section class="slide">
+<code style="font-size: 14pt;">┌─metric─────────────────────────────────────┬─────────v1─┬─────────v2─┐
+│ <b>OSReadBytes</b>                                │          0 │ <b style="color: red;">1985159168</b> │
+│ OSIOWaitMicroseconds                       │          0 │  357210000 │
+│ AsynchronousReadWaitMicroseconds           │      37405 │  351576828 │
+│ DiskReadElapsedMicroseconds                │     821470 │  358286059 │
+│ RemoteFSReadMicroseconds                   │     864991 │  358322240 │
+│ RealTimeMicroseconds                       │   25954054 │  885426948 │
+│ QueryProfilerRuns                          │         39 │        541 │
+│ NetworkReceiveElapsedMicroseconds          │         52 │        574 │
+│ NetworkSendBytes                           │     253707 │    2387184 │
+│ NetworkSendElapsedMicroseconds             │       1363 │      11219 │
+│ RemoteFSUnprefetchedReads                  │          1 │          4 │
+│ SystemTimeMicroseconds                     │     398182 │    1488797 │
+│ SoftPageFaults                             │      37496 │     108137 │
+│ FileOpen                                   │         79 │        216 │
+│ OSWriteChars                               │     101040 │     194954 │
+│ IOBufferAllocBytes                         │  203671745 │  352569537 │
+│ IOBufferAllocs                             │        199 │        341 │
+│ OpenedFileCacheHits                        │         13 │         18 │
+│ ReadBufferFromFileDescriptorRead           │       2080 │       2119 │
+│ ContextLock                                │       4331 │       4409 │
+│ RemoteFSPrefetchedReads                    │       2044 │       2080 │
+│ RemoteFSPrefetches                         │       2044 │       2080 │
+│ OSReadChars                                │ 2115113576 │ 2114992840 │
+│ ReadBufferFromFileDescriptorReadBytes      │ 2113531138 │ 2113164617 │
+│ RemoteFSCacheReadBytes                     │ 2113528933 │ 2113162412 │
+│ ArenaAllocChunks                           │        294 │        275 │
+│ ArenaAllocBytes                            │   52285440 │   42323968 │
+│ OpenedFileCacheMisses                      │         22 │         17 │
+│ OSCPUVirtualTimeMicroseconds               │   17664773 │   11345988 │
+│ UserTimeMicroseconds                       │   17266392 │    9859270 │
+│ OSCPUWaitMicroseconds                      │     604454 │       3598 │
+│ AggregationHashTablesInitializedAsTwoLevel │         35 │          0 │
+└────────────────────────────────────────────┴────────────┴────────────┘
+</code>
+</section>
+
+<section class="slide">
+<h2>Always Dig Into Details</h2>
+<p style="margin-top: -1em;">Recipes: <b style="color: green;">Always-on profiling</b>. Telemetry and introspection.</p>
+
+<p>What every thread on the server is doing now?<br/>
+<code style="margin-top: 0.3em;">SELECT arrayStringConcat(arrayMap(
+  x -> demangle(addressToSymbol(x)), trace), '\n')
+FROM <b>system.stack_trace</b></code></p>
+
+<p>Where the query spend most of the time?<br/>
+<code style="margin-top: 0.3em;">SELECT arrayStringConcat(arrayMap(
+  x -> demangle(addressToSymbol(x)), trace), '\n')
+FROM <b>system.trace_log</b> WHERE query_id = '...'</code></p>
+
+<p>How many resources the query consumed?<br/>
+<code style="margin-top: 0.3em;">SELECT ProfileEvents FROM <b>system.query_log</b>
+WHERE query_id = '...'</code></p>
+</section>
+
+
+<section class="slide">
+<h2>Always Dig Into Details</h2>
+<p>If you feel bored on Friday night, what to do:</p>
+
+<p>1. Run your program under <b>strace -f</b> and explain the output.</p>
+<p>2. Attach <b>gdb</b> to your program and write <b>thread apply all backtrace</b>.</p>
+<p>3. Run <b>sudo perf top</b> on production. Look at the annotated asm.</p>
+<p>4. If a query runs in 1 second, ask why not 500 ms.</p>
+<p>5. If a query runs in 1 ms ask why it took <i>a whole millisecond</i>.</p>
+</section>
+
+
+<!-- pic bustub -->
+
+<section class="slide">
+<h2>Design For Production Workloads</h2>
+<img style="float: right; margin-right: -3em; width: 200px; opacity: 25%;" src="pictures/bustub.svg" />
+<p>You cannot design a fast DBMS sitting in your auditorium<br/>at University of Something</p>
+<p>... if you do, your DBMS will be fast <i>on paper</i>
+<br/>or on a few synthetic benchmarks <span style="color: gray;">(it's time to forget about TPC)</span></p>
+<p>What to do:</p>
+<p>— optimize for real production workloads;</p>
+<p>— the more diverse workloads the better;</p>
+<p>— do quick development iterations.</p>
+
+<p style="font-size: 8pt; color: gray;">BusTub — educational DBMS from CMU with no production usage intent, and I like the logo.</p>
+</section>
+
+<section class="slide">
+<h2>Benchmarks</h2>
+<p style="margin-top: -1em;">I like benchmarks... I collect them:<br/>
+<a href="https://github.com/ClickHouse/ClickHouse/issues/22398">https://github.com/ClickHouse/ClickHouse/issues/22398</a></p>
+
+<p>Not everyone likes benchmarks:</p>
+<img style="float: left; width: 100px; margin-right: 50px;" src="pictures/fu.jpg" />
+<blockquote style="font-size: 80%; line-height: 1.5; color: gray;">You may not use the Offerings:<br/>
+7. in order to benchmark Offerings or to build similar<br/>or competitive products or services.</blockquote>
+<p style="font-size: 80%; color: gray; margin-top: 1em;">— Snowflake Acceptable Use Policy</p>
+
+<p><b style="color: green;">Do benchmarks.</b> Don't prevent others from doing benchmarks.</p>
+<p>Learn and improve. <b style="color: red;">Don't do benchmarketing.</b><br/>Let your users do the marketing for you!</p>
+</section>
+
+
+<section class="slide">
+<h2>Always Continue Experimenting</h2>
+<p style="margin-top: -1em;">If your system is heavily optimized,<br/>most of the new ideas are not going to work.</p>
+<p>But you still have to collect ideas and try all of them!</p>
+<p>And select one idea out of hundreds.</p>
+<p>Examples:
+<br/><span style="color: gray;">— optimize hash table lookup with __builtin_prefetch; did not work;
+<br/>— optimize hash table lookup with SIMD instructions; did not work;
+<br/>— do instruction-parallel computation of hash functions; did not work;
+<br/>— use Robin Hood hash table algorithm for GROUP BY; did not work;
+<br/>— use Swiss Table hash table algorithm for GROUP BY; did not work;
+<br/>— allocating more memory to avoid wraparound; did not work;</span>
+<br/><span style="color: green;">— predicting hash table sizes for the query; worked! <a href="https://github.com/ClickHouse/ClickHouse/pull/33439">#33439</a></span>
+</p>
+</section>
+
+<section class="slide">
+<h2>Always Continue Experimenting</h2>
+<p>Don't be afraid of changes. Rewrite the code all the time.</p>
+<p>Automated CI tests will do the job.</p>
+<p>Must have: functional and integration tests, fuzzing, and sanitizers.</p>
+<p>Automated performance regression testing:<br/>
+<a href="https://clickhouse.com/blog/testing-the-performance-of-click-house/">https://clickhouse.com/blog/testing-the-performance-of-click-house/</a></p>
+
+<p>Example: you speed up one place of code +50%,<br/>but the average performance decreased by 1% — not to be approved.</p>
+</section>
+
+    <section class="slide">
+        <h2>Always Continue Experimenting</h2>
+        
+        <p>The most recent optimization from Maksim Kita:</p>
+
+        <code>SET compile_sort_description=1;
+
+SELECT * FROM test_nullable_table
+ORDER BY value</code>
+
+        <p style="margin-top: 2em;">&mdash; 0 rows in set. Elapsed: 5.299 sec. Processed 100.00 million rows, 1.70 GB (18.87 million rows/s., 320.81 MB/s.)</p>
+    </section>
+
+    <section class="slide">
+        <h2>Always Continue Experimenting</h2>
+
+        <p>The most recent optimization from Maksim Kita*:</p>
+
+        <code>SET compile_sort_description=1;
+
+SELECT * FROM test_nullable_table
+ORDER BY value</code>
+
+        <p style="margin-top: 2em;">&mdash; 0 rows in set. Elapsed: 4.131 sec. Processed 100.00 million rows, 1.70 GB (24.21 million rows/s., 411.50 MB/s.)<br/>
+            &mdash; <span style="color: green;"><b>+30% performance improvement!</b></span></p>
+            
+        <p style="font-size: 14pt; color: gray;">* — among 100 others by the same author.</p>
+    </section>
+
+<section class="slide">
+<h2>Always Continue Experimenting</h2>
+<img style="height: 77%; margin-top: -1em;" src="pictures/report.webp"/>
+</section>
+
+<section class="slide">
+<h2>Test At Scale</h2>
+<img style="width: 50%;" src="pictures/overload.jpg"/>
+<p style="font-size: 10pt; color: gray;">Source: https://imgur.com/gallery/YegLM, 2016.</p>
+</section>
+
+
+<section class="slide">
+<h2>Test At Scale</h2>
+<p>ClickHouse works fine on databases of 100 trillion rows (10^14)
+<br/>in production.</p>
+<p>Tests should also run at scale.</p>
+<p>Example: Wikipedia pageviews statistics, public domain:<br/>
+<a href="https://dumps.wikimedia.org/other/pageviews/">https://dumps.wikimedia.org/other/pageviews/</a></p>
+<p><b>370 billion records</b>, 1 billion time series 2015..2022.<br/>I've loaded them to ClickHouse.
+I've loaded them again.<br/>I've loaded them in 10 different ways while testing ClickHouse Cloud.</p>
+<p>Now ClickHouse <b style="color: green;">eats this dataset for breakfast</b>
+<br/><span style="color: gray;">(with 40 million rows/second insert speed per node).</span></p>
+</section>
+
+
+<section class="slide">
+<h2>Do Weird Things</h2>
+<img style="width: 80%;" src="pictures/weird.webp"/>
+<p style="font-size: 10pt; color: gray;">Source: Aleksandr Kryukov, 2013, https://www.youtube.com/watch?v=ahQIQxq8JY4</p>
+</section>
+
+<section class="slide">
+<h2>Do Weird Things</h2>
+<p>Always challenge known beliefs.</p>
+
+<p>ClickHouse is probably not good at large BLOBs?
+<br/>— but what if I load 600 GB of HTML pages into ClickHouse?
+<br/><span style="color: gray;">Yes, I did it. And it went alright. <a href="https://github.com/ClickHouse/ClickHouse/issues/18842">#18842</a></span>
+</p>
+
+<p>ClickHouse is probably not good at direct inserts from web pages?
+<br/>— but what if I build a pastebin service on top of this<br/>&emsp; and persuade all my team to use it?
+<br/><span style="color: gray;">Yes, I did it. Welcome <a href="https://pastila.nl/">https://pastila.nl/</a></span></p>
+
+<p>What will happen if I do 10 million HTTP requests with the <b>url</b> table function?
+<br/>— it did not go alright, but we've fixed it! <a href="https://github.com/ClickHouse/ClickHouse/issues/29696">#29696</a>
+</p>
+</section>
+
+<section class="slide">
+<h2>Do Weird Things</h2>
+<p>Always challenge known beliefs.</p>
+
+<p>ClickHouse is probably not good<br/>
+— as a key-value database?<br/>
+— as a streaming data processing system?<br/>
+— as a multi-tenant service with workload isolation?<br/>
+— for vector search in embeddings?<br/>
+— for full text search?
+</p>
+
+<p>Hold my beer...
+<br/>... or read the ClickHouse roadmap 2022.
+</p>
+
+<p><a href="https://github.com/ClickHouse/ClickHouse/issues/32513">https://github.com/ClickHouse/ClickHouse/issues/32513</a></p>
+</section>
+
+<section class="slide">
+<h2>Have Fun</h2>
+<video style="margin-top: -1em; height: 70%;"><source src="pictures/fun.mp4" type="video/mp4"></video>
+<p style="font-size: 10pt; color: gray;">Source: Eh Bee Family, 2014, https://vine.co/v/OwTOez0W6wg</p>
+</section>
+
+<section class="slide">
+<h2>Have Fun</h2>
+<p style="margin-top: -1em;"><b style="color: green;">Do whatever you want</b>
+<br/>if you can make observations and derive conclusions.</p>
+
+<p>Example: I've loaded the first 1 trillion prime numbers into ClickHouse:
+<code style="margin-top: 1em;">CREATE TABLE primes (n UInt64 CODEC(Delta, ZSTD))
+ENGINE = ReplicatedMergeTree ORDER BY n</code></p>
+
+<p style="color: gray;">The idea has no direct application: it's possible to generate the numbers on the fly inside the subranges at decent speed.</p>
+
+<p>But this is how I've tested the reliability of
+<br/>ClickHouse Keeper, MergeTree over S3, and Replicated databases.</p>
+
+<p style="font-size: 14pt; color: gray;">For the curious readers: prove analytically that ZSTD compression is better than LZ4 on this dataset;<br/>prove that increasing ZSTD level does not make sense; estimate the size of the dataset on disk.</p>
+</section>
+
+<section class="slide">
+<h2>Have Fun</h2>
+
+<p style="margin-top: -1em;">What is it?
+<code style="font-size: 14pt; margin-top: 0.5em;">clickhouse-local --query "
+  WITH number + 1 AS x 
+  SELECT x % 15 = 0 ? 'FizzBuzz' 
+    : (x % 3 = 0 ? 'Fizz' 
+    : (x % 5 = 0 ? 'Buzz' : x::String))
+  FROM system.numbers" | pv >/dev/null
+</code>
+</p>
+
+<p>Is it fast?
+<code style="font-size: 14pt; margin-top: 0.5em;">clickhouse-local --query "
+  WITH number * 15 AS x 
+  SELECT format('{}\n{}\nFizz\n{}\nBuzz\nFizz\n{}\n{}\nFizz\nBuzz\n{}\n
+Fizz\n{}\n{}\nFizzBuzz\n', 
+  (x + 1)::String, (x + 2)::String, (x + 4)::String, (x + 7)::String,
+  (x + 8)::String, (x + 11)::String, (x + 13)::String, (x + 14)::String)
+  FROM system.numbers FORMAT RawBLOB" | pv > /dev/null
+</code>
+</p>
+<p><a href="https://codegolf.stackexchange.com/questions/215216">https://codegolf.stackexchange.com/questions/215216</a></p>
+</section>
+
+
+<section class="slide">
+<h2>TLDR</h2>
+
+<p>How to write a fast DBMS?</p>
+<p>— use good algorithms in a good context;
+<br/>— dig into details;
+<br/>— measure everything;
+<br/>— be close to production;
+<br/>— do benchmarks, more of them;
+<br/>— never stop experimenting;
+<br/>— test at scale;
+<br/>— do weird stuff;
+<br/>— have fun!</p>
+<p>Get a life! Start contributing to ClickHouse!</p>
+</section>
+
+<section class="slide">
+<h2>?</h2>
+</section>
+
+    <div class="progress"></div>
+    <script src="https://presentations.clickhouse.com/shower/shower.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/shower-video.css">
+    <script src="https://presentations.clickhouse.com/shower/shower-video.js"></script>
+    <!--/Video plugin-->
+<footer class="badge">
+    <a href="https://presentations.clickhouse.com/">ClickHouse Theater</a>
+</footer>
+</body>
+</html>
+
+
