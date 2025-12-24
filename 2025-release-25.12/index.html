@@ -52,7 +52,6 @@ Small
 HMAC
 dictGetKeys
 Non-constant IN
-INSERT INTO ALIAS columns
 Settings for projections
 Recreating secondary indices on alters
 S3Queue/AzureQueue supports tag and move, non-consuming SELECTs
@@ -184,26 +183,6 @@ SELECT dictGet('taxi_zone_dictionary', 'Borough', 2) <span style="color: gray;">
 <p><b>25.12</b>: <b style="color: green;">everything works!</b></p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Yarik Briukhovetskyi.</p>
-</section>
-
-
-<section class="slide">
-<h2>INSERT Into ALIAS Columns 🍰</h2>
-
-<p><code style="font-size: 14pt; line-height: 1.5;">CREATE TABLE logs
-(
-    URL String,
-    URLDomain <b>ALIAS</b> domain(URL),
-    Referer String,
-    <b style="color: green;">Referrer</b> <b>ALIAS</b> Referer
-)</span></code></p>
-
-<p>Now when an ALIAS column is a trivial expression, you can use it in INSERTs:</p>
-
-<p><code style="font-size: 14pt; line-height: 1.5;">INSERT INTO logs (URL, <b style="color: green;">Referrer</b>) VALUES
-('https://clickhouse.com/', 'https://www.google.com/');</code></p>
-
-<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Shaurya Mohan.</p>
 </section>
 
 
