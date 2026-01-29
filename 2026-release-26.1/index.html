@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 26.1 Call</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta property="og:image" content="pictures/preview.jpg">
+    <meta property="og:title" content="ClickHouse: Release 26.1 Call">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="pictures/preview.jpg">
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/themes/clickhouse/styles/styles.css">
+
+    <style>
+        code { display: block; white-space: pre; background-color: #EEE; }
+        p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+        p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+        .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+        .slide table tr:not(:last-of-type)>* { background: none; }
+        .cell { font-family: Monospace; width: 1.5em; height: 1.5em; display: inline-block; border: 3px solid white; background-color: lightblue; text-align: center; line-height: 1.3em; }
+        .cell-num { font-family: Monospace; width: 1.5em; height: 1.5em; display: inline-block; border: 3px solid white; background-color: lightgreen; text-align: center; line-height: 1.3em; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 26.1 Call</h1>
+        <p>Author: Alexey Milovidov, 2026-01-29.</p>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/back1.jpg); background-size: cover;">
+        <h1 style="margin-top: 25px; line-height: 110%; font-size: 56pt; color: black; text-align: center;"><span class="hilite">ClickHouse Release 26.1</span></h1>
+    </section>
+
+<section class="slide">
+<h2>ClickHouse release 26.1</h2>
+<p>1. (40 min) What's new in ClickHouse 26.1.</p>
+<p>2. (15 min) Guest Talk.</p>
+<p>3. (5 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back2.jpg); background-size: cover;">
+<h2><span class="hilite">Release 26.1</span></h2>
+<p><span class="hilite">ClickHouse New Year Release.</span></p>
+<p><span class="hilite">— 25 new features 🧤</span></p>
+<p><span class="hilite">— 43 performance optimizations 🛷</span></p>
+<p><span class="hilite">— 176 bug fixes ⛄</span></p>
+</section>
+<!--
+
+Small
+
+system.zookeeper_info
+reverseBySeparator
+mergeTreeAnalyzeIndexes - distributed index analysis
+use_primary_key
+`files` in system.parts
+max_insert_block_size_bytes unification
+New syntax for Index Projections
+Extension of data types: QBit is beta, cosineDistanceTransposed, Tuples can be Nullable, Variant is enabled as a common type and used in all functions.
+Text index works for Arrays
+
+Performance
+
+DISTINCT for LowCardinality
+distinctJSONPaths
+More JIT compilation
+Shortcut when the rhs of JOIN is empty
+Faster FINAL
+Faster window functions
+Adaptive write buffers
+Read in order with constant prefix columns
+Max-Min scheduler
+Tons of performance optimizations for JOINs, parallel replicas, data lakes, and low-level algorithms, including extended JIT
+Optimizations for memory usage and resiliency on constrained and containerized systems.
+
+Main
+
+sparseGrams tokenizer
+Introducing Keeper's Web UI and HTTP API
+Deduplication of async inserts with dependent materialized views
+
+Data Lakes
+
+Paimon
+Deletion vectors in Delta Lake
+Support for GCS
+
+A secret presentation.
+
+Integrations
+
+BigQuery connector in ClickPipes
+
+Bonus
+
+chDB data science API
+Langfuse acquisition
+ClickHouse Postgres
+ClickHouse Kubernetes operator
+
+Reading
+
+Christmas gifts
+Tech blogs
+Faster top-N
+ClickPy at 2 trillion rows
+
+-->
+
+<section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
+<h2><span>Small Gifts</span></h2>
+</section>
+
+<section class="slide">
+<h2>A new system table: zookeeper_info</h2>
+
+<p>A system table with the status of all Keeper clusters:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.25; overflow-y: scroll; overflow-x: hidden; height: 20em">:) SELECT * FROM system.zookeeper_info
+
+Row 1:
+──────
+zookeeper_cluster_name:     zookeeper
+host:                       localhost
+port:                       9181
+index:                      0
+is_connected:               1
+is_readonly:                0
+version:                    v26.2.1.90-testing-a44e1bd7dee6266e9b6871a1f38513e1affffd68
+avg_latency:                1
+max_latency:                100
+min_latency:                0
+packets_received:           4598
+packets_sent:               4738
+outstanding_requests:       0
+server_state:               standalone
+is_leader:                  0
+znode_count:                20284
+watch_count:                276
+ephemerals_count:           198
+approximate_data_size:      5693491 -- 5.69 million
+followers:                  0
+synced_followers:           0
+pending_syncs:              0
+open_file_descriptor_count: 247
+max_file_descriptor_count:  1048576 -- 1.05 million
+connections:                3
+outstanding:                0
+zxid:                       423177742 -- 423.18 million
+node_count:                 20284
+snapshot_dir_size:          2391089 -- 2.39 million
+log_dir_size:               66881215 -- 66.88 million
+first_log_idx:              423011138 -- 423.01 million
+first_log_term:             423011138 -- 423.01 million
+last_log_idx:               423178091 -- 423.18 million
+last_log_term:              61
+last_committed_idx:         423178091 -- 423.18 million
+leader_committed_log_idx:   423178091 -- 423.18 million
+target_committed_log_idx:   423178091 -- 423.18 million
+last_snapshot_idx:          423111137 -- 423.11 million
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: -0.5em;">Developer: Smita Kulkarni.</p>
+</section>
+
+
+<section class="slide">
+<h2>A new function: reverseBySeparator</h2>
+
+<p>A function to reverse a delimited collection without conversion to an array:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">:) SELECT <b style="color: green;">reverseBySeparator</b>('benchmark.clickhouse.com', '.') AS x
+
+┌────────────────────────x─┐
+│ com.clickhouse.benchmark │
+└──────────────────────────┘
+
+:) SELECT arrayStringConcat(reverse(splitByChar('.',
+    'benchmark.clickhouse.com')), '.') AS x
+
+┌────────────────────────x─┐
+│ com.clickhouse.benchmark │
+└──────────────────────────┘
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: -0.5em;">Developer: Xuewei Wang.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Table function: mergeTreeAnalyzeIndexes</h2>
+
+<p><code style="font-size: 12pt; line-height: 1.25; overflow-x: hidden;">:) SELECT * FROM <b style="color: green;">mergeTreeAnalyzeIndexes</b>(
+    default, github_events, repo_name = 'ClickHouse/ClickHouse')
+
+    ┌─part_name────────┬─ranges─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+ 1. │ all_0_0_0_288    │ [(101,102),(2149,2150),(6938,6940),(81644,81645),(82552,82554),(98109,98110),(98682,98684),(111296,111297),(111463,111464),(113961,113962),(115571,115577),(151317,151318),(152244,152249),(170872,170873),(171030,171031),(173074,173075),(173154,173155),(174256,174257),(178103,178109),(247897,247898),(248501,248506),(259806,259807),(274355,274360),(532740,532741),(532853,532854),(535098,535099),(536530,536532),(571276,571277),(571723,571724),(572095,572096),(572097,572098),(572126,572127),(572374,572377),(576704,576705),(576708,576709),(576710,576711),(576783,576784),(576785,576786)] │
+ 2. │ all_1_1_0_288    │ [(0,1),(10,11),(12,15),(18,19),(20,22),(27,29),(35,36),(97,99),(102,103)]                                                                                                                                                                                  │
+ 3. │ all_2_2_0_288    │ [(0,1),(8,9),(32,33),(295,296),(300,301),(364,365),(366,367),(390,392),(394,395),(399,400),(504,505),(506,507),(548,549),(553,555),(561,562),(570,571),(724,726),(754,755),(899,900),(2569,2570),(2583,2584),(2589,2590),(2705,2706),(2708,2709)]          │
+ 4. │ all_3_3_0_288    │ [(0,2),(9,13),(15,18),(21,22),(26,27),(98,100),(103,105)]                                                                                                                                                                                                  │
+ 5. │ all_4_4_0_288    │ [(21,22),(309,310),(1041,1043),(10038,10039),(10139,10140),(12283,12284),(12336,12337),(13150,13151),(13161,13162),(13273,13274),(13437,13440),(16622,16623),(16713,16715),(18145,18146),(18168,18169),(18391,18392),(18414,18415),(18644,18645),(18959,18961),(23993,23994),(24050,24051),(25091,25092),(28968,28970),(69144,69145),(69166,69167),(69555,69556),(69754,69755),(73151,73152),(73260,73261)] │
+ 6. │ all_5_5_0_288    │ [(55,56),(854,855),(2423,2424),(22336,22337),(22568,22570),(27126,27127),(27235,27236),(29086,29087),(29108,29109),(29340,29341),(29685,29688),(36379,36380),(36534,36535),(38985,38986),(39019,39020),(39377,39378),(39411,39412),(39791,39792),(40633,40636),(54237,54238),(54346,54348),(56193,56194),(61070,61073),(126787,126788),(126821,126822),(127487,127488),(127789,127791),(133695,133696),(133893,133896)] │
+ 7. │ all_6_6_0_288    │ [(64,65),(893,894),(2721,2723),(24902,24903),(25233,25234),(31163,31164),(31303,31304),(33388,33389),(33413,33414),(33671,33672),(34073,34077),(41345,41346),(41563,41565),(44692,44693),(44744,44745),(45311,45312),(45364,45365),(45906,45907),(46655,46658),(58348,58349),(58477,58479),(60760,60761),(70262,70265),(174990,174991),(175039,175040),(175937,175938),(176483,176485),(185391,185392),(185638,185641)] │
+ 8. │ all_7_2820_6_288 │ [(12,13),(207,208),(2688,2691),(32469,32470),(32825,32828),(39431,39432),(39612,39613),(42083,42084),(42113,42114),(42408,42409),(42966,42971),(53131,53132),(53548,53550),(61175,61176),(61262,61263),(62000,62001),(62085,62086),(62930,62931),(64059,64063),(81149,81150),(81337,81340),(84816,84817),(98635,98639),(257258,257259),(257337,257338),(258876,258877),(259517,259519),(270277,270278),(270606,270610),(278471,278472)] │
+    └──────────────────┴────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+</code></p>
+
+<p>Why do we need this function if we already have <b>EXPLAIN ESTIMATE</b> query?</p>
+<p>&mdash; for distributed index analysis with parallel replicas!</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Azat Khuzhin.</p>
+</section>
+
+
+<section class="slide">
+<h2>Information on files in system.parts</h2>
+
+<p><code style="font-size: 12pt; line-height: 1.25; overflow-x: hidden;">play-eu :) SELECT name, rows, marks, bytes, <b style="color: green;">files</b> FROM system.parts
+    WHERE database = 'default' AND table = 'github_events'
+
+    ┌─name─────────────┬───────rows─┬──marks─┬────────bytes─┬─<b style="color: green;">files</b>─┐
+ 1. │ all_0_0_0_288    │ 4430017383 │ 576807 │ 332974330897 │   145 │
+ 2. │ all_1_1_0_288    │     853559 │    108 │     77871986 │   196 │
+ 3. │ all_2_2_0_288    │   22523075 │   2783 │   1618742341 │   196 │
+ 4. │ all_3_3_0_288    │     855252 │    107 │     42151604 │   202 │
+ 5. │ all_4_4_0_288    │  612539497 │  75810 │  45082755883 │   188 │
+ 6. │ all_5_5_0_288    │ 1082739624 │ 138264 │ 123406140554 │   145 │
+ 7. │ all_6_6_0_288    │ 1546160205 │ 191296 │ 101227190998 │   198 │
+ 8. │ all_7_2820_6_288 │ 2225987644 │ 278473 │ 157837202094 │   192 │
+    └──────────────────┴────────────┴────────┴──────────────┴───────┘
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Gayan Match.</p>
+</section>
+
+
+<section class="slide">
+<h2>New syntax for indexing projections</h2>
+
+<p style="margin-top: -1em; margin-bottom: 0.5em; font-size: 12pt; line-height: 1.25;"><b>25.12</b>:</p>
+<p><code style="font-size: 12pt; line-height: 1.25;">CREATE TABLE pageviews (
+    CounterID UInt32,
+    UserID UInt64,
+    EventTime DateTime,
+    <b>PROJECTION by_time (</b>
+        <b>SELECT <span style="color: green;">_part_offset</span> ORDER BY EventTime
+    )</b>
+) ORDER BY (CounterID, UserID, EventTime)
+</code></p>
+
+<p style="font-size: 12pt; margin-bottom: 0.5em; line-height: 1.25;"><b style="color: green;">26.1</b>:</p>
+<p><code style="font-size: 12pt; line-height: 1.25;">CREATE TABLE pageviews (
+    CounterID UInt32,
+    UserID UInt64,
+    EventTime DateTime,
+    <b>PROJECTION by_time <span style="color: green;">INDEX EventTime</span> TYPE basic</b>,
+) ORDER BY (CounterID, UserID, EventTime)
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: -0.5em;">Developer: Amos Bird.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back3.jpg); background-size: cover;">
+<h2><span class="hilite">Improvements for data types</span></h2>
+</section>
+
+
+<section class="slide">
+<h2>Support for Variant in all functions</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">:) SELECT [1, 'hello'] AS x, toTypeName(x)
+
+┌─x───────────┬─toTypeName(x)─────────────────┐
+│ [1,'hello'] │ Array(<b style="color: green;">Variant(String, UInt8)</b>) │
+└─────────────┴───────────────────────────────┘
+
+:) SELECT number % 2 ? 'Hello' : ['Hello', 'world'] AS x,
+          length(x) FROM numbers(2)
+
+┌─x─────────────────┬─length(x)─┐
+│ ['Hello','world'] │         2 │
+│ Hello             │         5 │
+└───────────────────┴───────────┘
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Bharat Nallan.</p>
+</section>
+
+
+<section class="slide">
+<h2>Tuple can be Nullable</h2>
+
+<p style="margin-top: -1em;">We always allowed Tuples to contain Nullable types.</p>
+<p>In <b>26.1</b>, Tuple itself can be Nullable.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">:) SET allow_experimental_nullable_tuple_type = 1;
+:) CREATE TABLE test (id UInt32, data <b><span style="color: green;">Nullable(</span>Tuple(String, Int64)<span style="color: green;">)</span></b>);
+:) INSERT INTO test VALUES (1, ('hello', 42)), (2, NULL);
+:) SELECT * FROM test
+
+┌─id─┬─data─────────┐
+│  1 │ ('hello',42) │
+│  2 │ ᴺᵁᴸᴸ         │
+└────┴──────────────┘
+</code></p>
+
+<p>What for? &mdash; for compatibility with external data formats and data lakes.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Nihal Z. Miaji.</p>
+</section>
+
+
+<section class="slide">
+<h2>QBit is promoted to Beta</h2>
+
+<p>A data type for <b>vector embeddings</b>,
+<br/>that allows tuning the search precision at runtime.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -1em;">CREATE TABLE vectors (
+    id UInt64, name String, ...
+    vec <b style="color: green;">QBit(BFloat16, 1536)</b>
+) ORDER BY ();</code></p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -1em;">SELECT id, name FROM vectors
+ORDER BY <b style="color: green;">L2DistanceTransposed</b>(vector, target, <b style="color: green;">10</b>)
+LIMIT 10;
+</code></p>
+
+<p>A new function in 26.1: <b>cosineDistanceTransposed</b>.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Raufs Dunamalijevs.</p>
+</section>
+
+
+<section class="slide">
+<h2>Text index on Arrays</h2>
+
+<p>Use <b>Array(String)</b> / <b>Array(FixedString)</b> columns just as usual:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -1em;">CREATE TABLE tab
+(
+    key UInt64,
+    val <b style="color: green;">Array(String)</b>,
+    INDEX idx(val) TYPE text(
+        tokenizer = 'splitByNonAlpha', preprocessor = lower(val))
+);
+</code></p>
+
+<p>And search within your Array columns:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -1em;">SELECT count() FROM tab WHERE hasAllTokens(val, 'clickhouse');</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Jimmy Aguilar Mena.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back4.jpg); background-size: cover;">
+<h2><span style="color: black;"><span class="hilite">Performance Improvements</span></h2>
+</section>
+
+<section class="slide">
+<h2>Faster DISTINCT over LowCardinality</h2>
+
+<p>We alrady optimize the GROUP BY operator over LowCardinality columns.</p>
+<p>Now we optimize the DISTINCT operator as well.</p>
+
+<p>Demo</p>
+
+<!--
+
+./clickhouse-25.11 server
+chc
+SELECT DISTINCT county FROM uk.uk_price_paid
+./clickhouse-server
+SELECT DISTINCT county FROM uk.uk_price_paid
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Nihal Z. Miaji.</p>
+</section>
+
+
+<section class="slide">
+<h2>Extended JIT compilation</h2>
+
+<p>There are two methods for building fast analytical databases:
+<br/>1. Vectorization. 2. JIT compilation.</p>
+
+<p><b>ClickHouse uses both.</b></p>
+
+<p>Now JIT compilation is extended to: aggregate functions over Nullable, Decimal and big integer data types, comparisons, type conversions, and many more functions.</p>
+
+<img src="pictures/jit.png" style="width: 100%;">
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: TaiYang Li, Alexey Milovidov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Adaptive write buffer size</h2>
+
+<p>Helps with insertion into very wide tables.</p>
+
+<p>Example: 30 times memory reduction when inserting into <b>system.metric_log</b>
+<br/>&mdash; a table with <b>1592</b> columns.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Azat Khuzhin.</p>
+</section>
+
+
+<section class="slide">
+<h2>Max-Min Scheduler</h2>
+
+<p>The server can be configured with <b>concurrent_threads_scheduler</b>,
+<br/>which gives better latency distribution on highly concurrent queries:</p>
+
+<img src="pictures/scheduler.png" style="margin-left: -100px; margin-right: -100px; width: calc(100% + 200px);">
+
+<p><code style="font-size: 14pt; line-height: 1.5em;">$ cat config.d/scheduler.yaml
+<b>concurrent_threads_scheduler:</b> max_min_fair</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Sergei Trifonov.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back8.jpg); background-size: cover;">
+<h2 style="font-size: 32pt; margin-left: -1em;"><span class="hilite">Something Interesting</span></h2>
+</section>
+
+<section class="slide">
+<h2>sparseGrams tokenizer in text Index</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-top: -1em;">CREATE TABLE stackoverflow.posts (
+    ...
+    Body String,
+    INDEX idx_body Body TYPE text(
+        tokenizer = <b style="color: green;">sparseGrams(3, 20, 5)</b>,
+        preprocessor = lower(Body))
+)
+ORDER BY (PostTypeId, toDate(CreationDate), CreationDate)
+</code></p>
+
+<p>Similar to <b>ngrams</b>, but in addition to short n-grams, also adds some of selected longer (n+1, n+2, ...) ngrams.</p>
+<p>During the search, it can take the longest ngrams from the search string, and ignore covered shorter ngrams. It will use a less number of more specific, rare tokens for searching.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Anton Popov, Konstantin Vedernikov.</p>
+</section>
+
+<section class="slide">
+<h2>sparseGrams tokenizer in text Index</h2>
+
+<p><code style="font-size: 12pt; line-height: 1.25; margin-top: -1em;">:) SELECT '"' || arrayJoin(sparseGrams('ClickHouse is a good database!', 3, 20, 5))
+              || '"' AS gram
+
+    ┌─gram─────────────────────┐
+ 1. │ "lickHo"                 │
+ 2. │ "House "                 │
+ 3. │ "e is a"                 │
+ 4. │ "House is a"             │
+ 5. │ "lickHouse is a"         │
+ 6. │ " good"                  │
+ 7. │ " good "                 │
+ 8. │ " a good "               │
+ 9. │ "lickHouse is a good "   │
+10. │ "lickHouse is a good da" │
+11. │ "tabas"                  │
+12. │ "atabas"                 │
+13. │ "databas"                │
+    └──────────────────────────┘
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Anton Popov, Konstantin Vedernikov.</p>
+</section>
+
+<section class="slide">
+<h2>sparseGrams tokenizer in text Index</h2>
+
+<p>Example: searching code in <b>68 GB</b> of StackOverflow posts:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">SELECT Tags FROM stackoverflow.posts_ngrams
+WHERE Body LIKE '%<b style="color: blue;">(*(void(*)())0)()</b>%' AND NOT empty(Tags)
+ORDER BY Tags
+</code></p>
+
+<p>With <b>ngrams</b> tokenizer: <b>65 ms</b>.</p>
+<p>With <b>sparseGrams</b> tokenizer: <b style="color: green;">51 ms</b>.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developers: Anton Popov, Konstantin Vedernikov.</p>
+</section>
+
+<section class="slide">
+<h2>Web UI and HTTP interface for Keeper</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">$ cat config.d/keeper_api.yaml
+
+keeper_server:
+    http_control:
+        port: 9182
+        # secure_port: 9183
+</code></p>
+
+<p>Demo</p>
+
+<!--
+
+http://localhost:9182/
+http://localhost:9182/dashboard
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developers: Alexander Tolkachev, Artem Brustovetskii.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt; line-height: 1.5;">Deduplication of asynchronous inserts with mateialized views</h2>
+
+<p>Asynchronous inserts (enabled with <b>async_insert</b>) collect data
+from multiple concurrent clients, and write it as a single batch. This allows serving frequent small inserts.</p>
+
+<p>They also provide idempotency with the <b>async_insert_deduplicate</b> setting. It can use either a hash of the inserted data or a custom idempotency token.
+<br/>So the INSERTs can be safely retried, and keep <b>exactly-once</b> semantic.</p>
+
+<p>Since version <b>26.1</b>, the <b>exactly-once</b> semantic extends to all
+<br/>materialized views attached to a table.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developers: Sema Checherinda.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
+<h2 style="font-size: 32pt; margin-left: -1em;"><span class="hilite">Data Lakes</span></h2>
+</section>
+
+
+<section class="slide">
+<h2>Data Lakes</h2>
+
+<h3>Paimon REST Catalog 🧪</h3>
+<p style="color: gray; font-size: 14pt;">Developers: JIaQi Tang.</p>
+
+<h3>Deletion vectors in Delta Lake</h3>
+<p style="color: gray; font-size: 14pt;">Developers: Kseniia Sumarokova.</p>
+
+<h3>Support for Google Cloud Storage</h3>
+<p style="color: gray; font-size: 14pt;">Developers: Konstantin Vedernikov.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
+<h2><span class="hilite">Guest Talk</span></h2>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back9.jpg); background-size: cover;">
+<h2><span class="hilite">Bonus</span></h2>
+</section>
+
+<section class="slide">
+<h2>Pandas API in chDB</h2>
+
+<p>In addition to SQL, chDB now implements Pandas API.</p>
+<p>It builds a lazy pipeline from Pandas transformations,
+<br/>and runs it with the ClickHouse speed!</p>
+
+<p><code style="font-size: 16pt; line-height: 1.25">import datastore as pd  <span style="color: gray;"># That's it! Use pandas API as usual</span>
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developers: Auxten.</p>
+</section>
+
+<section class="slide">
+<h2>Open-source Kubernetes operator</h2>
+
+<p>The official ClickHouse Kubernetes operator:</p>
+<p><a href="https://github.com/ClickHouse/clickhouse-operator">https://github.com/ClickHouse/clickhouse-operator</a></p>
+
+<p><b>Automated Cluster Provisioning</b>: multi-node with sharding and replication.</p>
+
+<p><b>ClickHouse Keeper Support</b>: deploy and manage ClickHouse Keeper.</p>
+
+<p><b>Vertical &amp; Horizontal Scaling</b>: adjust CPU / Memory resources or shards.</p>
+
+<p><b>Configuration Management</b>: in a single manifest change.</p>
+
+<p><b>Seamless Upgrades</b>: rolling updates without dropping queries.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Grigory Pervakov.</p>
+</section>
+
+<section class="slide">
+<h2>BigQuery connector in ClickPipes</h2>
+
+<img style="width: 100%" src="https://clickhouse.com/uploads/image1_a424ad43f3.jpg">
+</section>
+
+<section class="slide" style="background: black url(pictures/langfuse.png); background-size: cover;">
+</section>
+
+<section class="slide" style="background: url(pictures/wing.jpg); background-size: cover;">
+<h2>Meetups</h2>
+<p style="line-height: 1.5">
+<span class="hilite">&mdash; 🇧🇪 Iceberg Meetup, Brussels, Jan 30</span>
+<br/><span class="hilite">&mdash; 🇧🇪 FOSDEM 2026, Brussels, Jan 31..Feb 1</span>
+<br/><span class="hilite">&mdash; 🇪🇸 Barcelona, Feb 5</span>
+<br/><span class="hilite">&mdash; 🇬🇧 London, Feb 10</span>
+<br/><span class="hilite">&mdash; 🇺🇸 San Francisco AI night, Feb 11</span>
+<br/><span class="hilite">&mdash; 🇨🇦 Toronto, Feb 19</span>
+<br/><span class="hilite">&mdash; 🇦🇺 Melbourne, Feb 24</span>
+<br/><span class="hilite">&mdash; 🇺🇸 Seattle, Feb 26</span>
+</p>
+</section>
+
+<section class="slide" style="background: black url(pictures/fosdem.png); background-size: cover;">
+</section>
+
+<section class="slide">
+<h2>Reading Corner 📖</h2>
+
+<img style="float: right; width: 30%; margin-right: -3em; image-rendering: pixelated; margin-top: -1em;" src="pictures/blog.png"/>
+<p><a href="https://clickhouse.com/blog/">https://clickhouse.com/blog/</a></p>
+
+<p style="line-height: 1.25; margin-right: -5em;">
+&mdash; Christmas gifts from the ClickHouse team
+<br/>&mdash; Solving Advent Of Code in ClickHouse SQL
+<br/>&mdash; Optimization of Top-N queries: low-level details
+<br/>&mdash; PostgreSQL + ClickHouse as the unified data stack
+<br/>&mdash; Ramp rebuilt its analytics platform on ClickHouse
+<br/>&mdash; ClickPy at 2 Trillion rows
+<br/>&mdash; Technology blogs - a reading list from ClickHouse authors
+<br/>&mdash; LaunchDarkly, Polymarket, Buildkite, Picnic &mdash; why everyone use ClickHouse?
+<br/>&mdash; Projections as secondary indices
+</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back10.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
+<h2 style="color: white; margin-left: -1em;">Q&amp;A</a></h2>
+</section>
+
+<section class="slide" style="background: black; padding: 0;">
+<iframe style="width: 100%; height: 100%; position: absolute; top: 0; left: 0;" src="https://www.youtube.com/embed/fWuYt4M0xE4" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</section>
+
+    <div class="progress"></div>
+    <script src="https://presentations.clickhouse.com/shower/shower.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/shower-video.css">
+    <script src="https://presentations.clickhouse.com/shower/shower-video.js"></script>
+    <!--/Video plugin-->
+<footer class="badge">
+    <a href="https://presentations.clickhouse.com/">ClickHouse Theater</a>
+</footer>
+</body>
+</html>
