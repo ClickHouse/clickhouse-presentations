@@ -254,7 +254,7 @@ keeper:
 
 
 <section class="slide" style="background: url(pictures/back3.jpg); background-size: cover;">
-<h2><span style="color: black;"><span class="hilite">Performance Improvements</span></h2>
+<h2><span style="color: black;" class="hilite">Performance Improvements</span></h2>
 </section>
 
 <section class="slide">
@@ -266,14 +266,14 @@ ORDER BY <b>cityHash64(user_id)</b>
 </code></p>
 
 <p style="line-height: 1.5">In <b>25.1</b>, this query didn't use index:
-<code style="font-size: 16pt; line-height: 1.5;">SELECT * FROM pageviews WHERE user_id = 123456;</b>
+<code style="font-size: 16pt; line-height: 1.5;">SELECT * FROM pageviews WHERE user_id = 123456;
 </code>
 You could make it use the index as follows:
 <code style="font-size: 16pt; line-height: 1.5;">SELECT * FROM pageviews WHERE user_id = 123456
-    <span style="color: blue;">AND cityHash64(user_id) = cityHash64(123456)</span>;</b>
+    <span style="color: blue;">AND cityHash64(user_id) = cityHash64(123456)</span>;
 </code></p>
 
-<p>In <b style="color: green;">25.2</b>, both queries use the index!</p>
+<p>In <b style="color: green;">26.2</b>, both queries use the index!</p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Nihal Z. Miaji.</p>
 </section>
@@ -611,7 +611,7 @@ SELECT ... WHERE <b style="color: green;">hasAnyTokens</b>(message, tokens('0144
 <br/><span class="hilite">&mdash; 🇸🇬 Singapore: HackOMania, Mar 7</span>
 <br/><span class="hilite">&mdash; 🇺🇸 San Francisco: Women+ in Open Source, Mar 9</span>
 <br/><span class="hilite">&mdash; 🇯🇵 Tokyo, Mar 9</span>
-<br/><span class="hilite">&mdash; 🇧🇷 Sao Paolo, Mar 10</span>
+<br/><span class="hilite">&mdash; 🇧🇷 São Paulo, Mar 10</span>
 <br/><span class="hilite">&mdash; 🇺🇸 San Francisco, Mar 11</span>
 <br/><span class="hilite">&mdash; 🇺🇸 Pittsburgh: Apache Iceberg Meetup, Mar 12</span>
 <br/><span class="hilite">&mdash; 🇺🇸 New York, Mar 19</span>
@@ -641,7 +641,7 @@ SELECT ... WHERE <b style="color: green;">hasAnyTokens</b>(message, tokens('0144
 </section>
 
 <section class="slide" style="background: url(pictures/back9.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
-<h2 style="color: white; margin-left: -1em;">Q&amp;A</a></h2>
+<h2 style="color: white; margin-left: -1em;">Q&amp;A</h2>
 </section>
 
 <section class="slide" style="background: black; padding: 0;">
