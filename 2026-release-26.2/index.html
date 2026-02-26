@@ -418,17 +418,17 @@ SETTINGS <b style="color: green;">lazy_load_tables</b> = 1;
 <p style="color: gray; font-size: 14pt; margin-top: 3em;">Developers: XiaoHuanLin.</p>
 </section>
 
-<!--
-
 <section class="slide">
 <h2>Batching of "infinite" inserts by time</h2>
 
-<p>Let's insert infinite stream into ClickHouse:</p>
+<p style="margin-top: -1em;">Let's insert infinite stream into ClickHouse:</p>
 
-<p><code style="font-size: 14pt; line-height: 1.5;">curl -sS --globoff -H 'Accept: application/json' --no-buffer \
+<p><code style="font-size: 14pt; line-height: 1.5; margin-right: -1em;">curl -sS --globoff -H 'Accept: application/json' --no-buffer \
     "https://stream.wikimedia.org/v2/stream/recentchange" |
 clickhouse-client --query "
-    INSERT INTO wikipedia_edits FORMAT JSONAsObject"
+    INSERT INTO wikipedia_edits FORMAT JSONAsObject" \
+<span style="color: gray">--min_insert_block_size_rows=0 --min_insert_block_size_bytes=0 \
+--input_format_max_block_wait_ms 1000 --input_format_connection_handling 1</span>
 </code></p>
 
 <p>It works. But how often the data will be flushed into a table?
@@ -438,8 +438,6 @@ clickhouse-client --query "
 
 <p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Mostafa Mohamed Salah.</p>
 </section>
-
--->
 
 <section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
 <h2 style="font-size: 32pt; margin-left: -1em;"><span class="hilite">Data Lakes</span></h2>
