@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 26.2 Call</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta property="og:image" content="pictures/preview.jpg">
+    <meta property="og:title" content="ClickHouse: Release 26.2 Call">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="pictures/preview.jpg">
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/themes/clickhouse/styles/styles.css">
+
+    <style>
+        code { display: block; white-space: pre; background-color: #EEE; }
+        p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+        p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+        .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+        .slide table tr:not(:last-of-type)>* { background: none; }
+        .cell { font-family: Monospace; width: 1.5em; height: 1.5em; display: inline-block; border: 3px solid white; background-color: lightblue; text-align: center; line-height: 1.3em; }
+        .cell-num { font-family: Monospace; width: 1.5em; height: 1.5em; display: inline-block; border: 3px solid white; background-color: lightgreen; text-align: center; line-height: 1.3em; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 26.2 Call</h1>
+        <p>Author: Alexey Milovidov, 2026-02-26.</p>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/back2.jpg); background-size: cover;">
+        <h1 style="margin-top: 25px; line-height: 110%; font-size: 56pt; color: black; text-align: center;"><span class="hilite">ClickHouse Release 26.2</span></h1>
+    </section>
+
+<section class="slide">
+<h2>ClickHouse release 26.2</h2>
+<p>1. (50 min) What's new in ClickHouse 26.2.</p>
+<p>2. (10 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back1.jpg); background-size: cover;">
+<h2><span class="hilite">Release 26.2</span></h2>
+<p><span class="hilite">ClickHouse Winter Release.</span></p>
+<p><span class="hilite">— 25 new features 🧤</span></p>
+<p><span class="hilite">— 43 performance optimizations 🛷</span></p>
+<p><span class="hilite">— 183 bug fixes ⛄</span></p>
+</section>
+<!--
+
+Small
+
+primes, system.primes
+
+add_minmax_index_for_time_columns
+
+SQL compatibility: extended table aliases for JOINs
+
+colorOKLABToSRGB, colorSRGBToOKLAB
+
+system.tokenizers
+system.user_defined_functions
+system.jemalloc_stats
+system.jemalloc_profile_text
+system.fail_points
+
+Keeper has OpenTelemetry support
+
+Query fuzzer and query obfuscator
+
+
+Performance
+
+Any deterministic functions in primary key
+Filtering by primary key even for `assumeNotNull`, `coalesce`, `ifNull`
+Packed format for statistics
+Statistics cache
+Faster FINAL
+Faster Hash JOIN
+Equivalent sets optimization for multiple joins
+Faster uniq
+
+
+Main
+
+Embedded ClickStack
+TOTP
+Lazy loading of tables
+Time-based streaming inserts
+
+Data Lakes
+
+BigLake
+PREWHERE for Iceberg
+ALTER TABLE RENAME COLUMN for Iceberg
+Iceberg writes are GA
+
+Bonus
+
+QBit is production ready
+Text index is production ready
+
+Integrations
+
+ADBC
+MCP Server: Added auth support for secure AI agent connections to ClickHouse.
+- Python: Introducing native async client for concurrent workloads, plus Pandas 3 compatibility and data integrity fixes.
+- Go: Reached feature parity — added structured logging, BFloat16 support, and Time/Time64 type fixes.
+- C#: Released v1.0 with JSON column support, improved BulkCopy UX, and better parameter handling.
+MongoDB Public Beta is live
+- Apache Spark (v0.10.0): Added TableProvider API, Databricks Unity catalog support, and Variant type. Upgraded to Java client 0.9.5.
+- Apache Flink: Added JSON type support and extended DateTime tests.
+- Kafka Connect: Resolved Docker-related test container issues.
+- DBT Core (v1.10.0 & v1.9.8): Major refactor of Materialized View (MV) implementation, allowing decoupling from target tables and support for ALTER COLUMN operations. Updated testing for Python 3.13 and ClickHouse versions up to 25.12.
+- Fivetran: Connector promoted to Public Beta with added logging and observability. Draft of an announcement blog post
+BigQuery connector in ClickPipes
+
+Bonus
+
+AI policy
+
+Reading
+
+Christmas gifts
+Tech blogs
+Faster top-N
+ClickPy at 2 trillion rows
+
+-->
+
+<section class="slide" style="background: url(pictures/back4.jpg); background-size: cover;">
+<h2 style="color: white;"><span>Small And Nice Features</span></h2>
+</section>
+
+<section class="slide">
+<h2>Table function primes</h2>
+
+<p>And a new <b>system.primes</b> table.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.1;">:) SELECT * FROM primes(10)
+
+    ┌─prime─┐
+ 1. │     2 │
+ 2. │     3 │
+ 3. │     5 │
+ 4. │     7 │
+ 5. │    11 │
+ 6. │    13 │
+ 7. │    17 │
+ 8. │    19 │
+ 9. │    23 │
+10. │    29 │
+    └───────┘
+</code></p>
+
+<!--
+
+SELECT * FROM primes() WHERE prime > 1000000000000 LIMIT 10;
+SELECT * FROM primes() WHERE prime > 1000000000000000 LIMIT 10;
+SELECT * FROM primes() WHERE prime > 1000000000000000000 LIMIT 10;
+SELECT count() FROM primes() WHERE prime < 1000000000;
+SELECT * FROM primes(100000000, 10);
+SELECT prime, lag(prime) OVER () AS prev FROM primes() WHERE prime < 1000000 QUALIFY prev + 2 = prime;
+
+-->
+
+<p style="float: right; font-size: 14pt;">Demo</p>
+<p style="color: gray; font-size: 14pt;">Developer: Nihal Miaji.</p>
+</section>
+
+
+<section class="slide">
+<h2>New system tables</h2>
+
+<p>For introspection:</p>
+
+<p>&mdash; system.tokenizers<br/>
+&mdash; system.user_defined_functions<br/>
+&mdash; system.jemalloc_stats<br/>
+&mdash; system.jemalloc_profile_text<br/>
+&mdash; system.fail_points</p>
+
+<p>Demo</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developers: Robert Schulze, Xu Jia, Antonio Andelic, Pedro Ferreira.</p>
+</section>
+
+<section class="slide">
+<h2>SQL Compatibility</h2>
+
+<p>Extended table aliases in JOINs:</p>
+
+<p><code style="font-size: 16pt; line-height: 1.25; overflow-x: hidden;">SELECT *
+FROM (SELECT 1) AS <b style="color: green;">t(a)</b>
+JOIN (SELECT 1) AS <b style="color: green;">u(b)</b>
+ON a = b
+</code></p>
+
+<p>&mdash; that's a weird feature. Now we have it.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Yarik Briukhovetskyi.</p>
+</section>
+
+<section class="slide">
+<h2>Functions for color spaces</h2>
+
+<img style="float: right; width: 40%" src="pictures/oklch.png"/>
+
+<p>&mdash; <span style="color: gray;">colorSRGBToOKLCH &mdash; 25.7</span>
+<br/>&mdash; <span style="color: gray;">colorOKLCHToSRGB &mdash; 25.7</span>
+<br/>&mdash; <span style="color: green;">colorSRGBToOKLAB</span> &mdash; new in 26.2
+<br/>&mdash; <span style="color: green;">colorOKLABToSRGB</span> &mdash; new in 26.2
+</p>
+
+<p><b>OKLAB</b> &mdash; perceptually uniform color space</p>
+<p>Useful for: doing arithmetic on colors, blending colors, generating gradients, programmatically choosing colors.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Pranav Tiwari.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Automatic enabling of minmax indices</h2>
+
+<p><code style="font-size: 16pt; line-height: 1.25;">CREATE TABLE pageviews (event_time DateTime, ...)
+SETTINGS <b style="color: green;">add_minmax_index_for_temporal_columns</b> = 1;
+</code></p>
+
+<p style="color: gray;">25.1:</p>
+<p style="color: gray;">&mdash; add_minmax_index_for_numeric_columns
+<br/>&mdash; add_minmax_index_for_string_columns
+</p>
+<p>26.2:</p>
+<p>&mdash; add_minmax_index_for_temporal_columns</p>
+
+<p style="color: gray; font-size: 14pt; margin-top:3em;">Developer: Michael Jarrett.</p>
+</section>
+
+
+<section class="slide">
+<h2>OpenTelemetry for Keeper</h2>
+
+<p>Enable it in clickhouse-server configuration:</p>
+<p><code style="font-size: 16pt; line-height: 1;"><span style="color: gray;">$ cat config.d/keeper.yaml</span>
+
+keeper:
+    <b style="color: green;">pass_opentelemetry_tracing_context</b>: true
+</code></p>
+
+<p>The data is saved to <b>opentelemetry_span_log</b> with dynamic sample rate.</p>
+<p>It tracks both client-side (clickhouse-server)
+<br/>and server-side (clickhouse-keeper) spans.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top:3em;">Developer: Michael Stetsyuk.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back3.jpg); background-size: cover;">
+<h2><span style="color: black;"><span class="hilite">Performance Improvements</span></h2>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Primary key can be used in more cases</h2>
+
+<p style="margin-top: -0.5em;">When the table is sorted by expressions on columns:</p>
+<p><code style="font-size: 16pt; line-height: 1.5;">CREATE TABLE pageviews (user_id UInt64, ...)
+ORDER BY <b>cityHash64(user_id)</b>
+</code></p>
+
+<p style="line-height: 1.5">In <b>25.1</b>, this query didn't use index:
+<code style="font-size: 16pt; line-height: 1.5;">SELECT * FROM pageviews WHERE user_id = 123456;</b>
+</code>
+You could make it use the index as follows:
+<code style="font-size: 16pt; line-height: 1.5;">SELECT * FROM pageviews WHERE user_id = 123456
+    <span style="color: blue;">AND cityHash64(user_id) = cityHash64(123456)</span>;</b>
+</code></p>
+
+<p>In <b style="color: green;">25.2</b>, both queries use the index!</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Nihal Z. Miaji.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Indexes can be used in more expressions</h2>
+
+<p style="margin-top: -0.5em;">When the table is sorted by expressions on columns:</p>
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE pageviews
+(
+    user_id UInt64,
+    region LowCardinality(Nullable(String)),
+    lat Nullable(Float64),
+    lon Nullable(Float64),
+    INDEX idx_region (region) TYPE set(100),
+    INDEX idx_lat (lat) TYPE minmax,
+    INDEX idx_lon (lon) TYPE minmax,
+);
+</code></p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT user_id FROM pageviews
+WHERE <b style="color: green;">coalesce</b>(region, 'n/a') = 'Amsterdam'
+  AND <b style="color: green;">ifNull</b>(lat, 0) BETWEEN -10 AND 10
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Nihal Z. Miaji.</p>
+</section>
+
+
+<section class="slide">
+<h2>Faster RIGHT and FULL JOIN</h2>
+
+<p>By parallelizing processing of non-joined rows:</p>
+
+<img style="width: 150%" src="pictures/hash_join.png">
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Yarik Briukhovetskyi.</p>
+</section>
+
+
+<section class="slide">
+<h2>Faster JSON parsing</h2>
+
+<p>For the JSON data type:</p>
+
+<img style="width: 150%" src="pictures/json_parsing.png">
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Pavel Kruglov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Faster <b>uniq</b> calculation</h2>
+
+<p>For the case without GROUP BY:</p>
+
+<img style="width: 150%" src="pictures/uniq.png">
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Raúl Marín.</p>
+</section>
+
+
+<section class="slide">
+<h2>Faster INSERT with <b>minmax</b> indices</h2>
+
+<p>Speed-up of the calculation of <b>minmax</b> indices:</p>
+
+<img style="width: 150%" src="pictures/minmax.png">
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Raúl Marín.</p>
+</section>
+
+
+
+<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
+<h2 style="font-size: 32pt; margin-left: -1em;"><span class="hilite">Something Interesting</span></h2>
+</section>
+
+<section class="slide">
+<h2>Embedded ClickStack</h2>
+
+<!--
+
+text_log:
+
+level, logger_name, thread_id, message
+
+query_log:
+
+type, query_duration_ms, query
+
+-->
+
+<img style="width: 100%; margin-top: -0.5em;" src="pictures/clickstack.png">
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Aaron Knudtson.</p>
+</section>
+
+<section class="slide">
+<h2>Time-Based One-Time Passwords</h2>
+
+<p>Secure interactive authentication in clickhouse-client,
+<br/>with Google Authenticator, 1Password, Okta, and similar.</p>
+
+<p><code style="font-size: 12pt; line-height: 1.25; overflow-x: hidden;"><span style="color: gray;">$ cat users.d/totp_user.yaml</span>
+users:
+    totp_user:
+        password_sha256_hex: ecd71870d1963316a97e3ac3408c9835ad8cf0f3c1bc703527c30265534f75ae
+        <span style="color: green;"><b>time_based_one_time_password</b>:
+            secret: 6QNS5E7R35MDN62X7FV4LCUTY3SXRP3V
+            period: 30
+            digits: 6
+            algorithm: SHA1</span>
+        networks:
+            ip: '::/0'
+        profile: default
+        quota: default
+</code></p>
+
+<!--
+
+clickhouse-client --user totp_user --password test123
+
+-->
+
+<p style="float: right; font-size: 14pt;">Demo</p>
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Denis Kamenskii, Vladimir Cherkasov.</p>
+</section>
+
+<section class="slide">
+<h2>Per-database lazy loading of tables</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">CREATE DATABASE db_name
+ENGINE = Atomic
+SETTINGS <b style="color: green;">lazy_load_tables</b> = 1;
+</code></p>
+
+<p>With this setting, the server does not load tables at startup,
+<br/>tables will be loaded on the first use of each.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developers: XiaoHuanLin.</p>
+</section>
+
+<!--
+
+<section class="slide">
+<h2>Batching of "infinite" inserts by time</h2>
+
+<p>Let's insert infinite stream into ClickHouse:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">curl -sS --globoff -H 'Accept: application/json' --no-buffer \
+    "https://stream.wikimedia.org/v2/stream/recentchange" |
+clickhouse-client --query "
+    INSERT INTO wikipedia_edits FORMAT JSONAsObject"
+</code></p>
+
+<p>It works. But how often the data will be flushed into a table?
+<br/>&mdash; depends on the data rate and min_insert_block_size.</p>
+<p>ClickHouse <b>26.2</b> introduces a new setting, <b>input_format_max_block_wait_ms</b>
+&mdash; lets you define the flush interval by time instead of the block size.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Mostafa Mohamed Salah.</p>
+</section>
+
+-->
+
+<section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
+<h2 style="font-size: 32pt; margin-left: -1em;"><span class="hilite">Data Lakes</span></h2>
+</section>
+
+
+<section class="slide">
+<h2>Google BigLake</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">CREATE DATABASE <b style="color: green;">biglake</b>
+ENGINE = DataLakeCatalog(
+    'https://biglake.googleapis.com/iceberg/v1/restcatalog')
+SETTINGS catalog_type = 'biglake',
+    google_adc_credentials_file =
+    '/home/ubuntu/.config/gcloud/application_default_credentials.json',
+    warehouse = 'gs://biglake-public-nyc-taxi-iceberg'
+</code></p>
+
+<p>Demo</p>
+
+<!--
+
+CREATE DATABASE biglake
+ENGINE = DataLakeCatalog('https://biglake.googleapis.com/iceberg/v1/restcatalog')
+SETTINGS
+    catalog_type = 'biglake',
+    google_adc_credentials_file = '/home/milovidov/.config/gcloud/application_default_credentials.json',
+    warehouse = 'gs://biglake-public-nyc-taxi-iceberg';
+
+SHOW TABLES FROM biglake;
+
+SELECT passenger_count, count() FROM biglake."public_data.nyc_taxicab" GROUP BY ALL ORDER BY ALL;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Konstantin Vedernikov.</p>
+</section>
+
+<section class="slide">
+<h2>Improvements for Iceberg</h2>
+
+<p>SELECTs from Iceberg now use the <b>PREWHERE optimization</b>.</p>
+
+<p>Iceberg tables support <b>ALTER TABLE RENAME COLUMN</b>.</p>
+
+<p>INSERTs into Iceberg are <b>production ready</b>!</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developers: Konstantin Vedernikov, murphy-4o.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
+<h2><span class="hilite">Bonus</span></h2>
+</section>
+
+<section class="slide">
+<h2>QBit is production-ready!</h2>
+
+<p>A data type for <b>vector embeddings</b>,
+<br/>that allows tuning the search precision at runtime.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -1em;">CREATE TABLE vectors (
+    id UInt64, name String, ...
+    vec <b style="color: green;">QBit(BFloat16, 1536)</b>
+) ORDER BY ();</code></p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -1em;">SELECT id, name FROM vectors
+ORDER BY <b style="color: green;">L2DistanceTransposed</b>(vector, target, <b style="color: green;">10</b>)
+LIMIT 10;
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Raufs Dunamalijevs.</p>
+</section>
+
+<section class="slide">
+<h2>Text Index is production-ready!</h2>
+
+<p>A full-text search index in ClickHouse.</p>
+<p style="line-height: 1.5">&mdash; In development since 2022
+<br/>&mdash; first prototype in 2023 <span style="color: gray;">(by Harry Lee and Larry Luo)</span>
+<br/>&mdash; experimental in 25.9
+<br/>&mdash; beta in 25.12
+<br/>&mdash; <span style="color: green;">production in <b>26.2</b></span></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developers: Anton Popov, Elmi Ahmadov, Jimmy Aguilar Mena.</p>
+</section>
+
+<section class="slide">
+<h2>Text Index</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -2em;">CREATE TABLE text_log
+(
+    message String,
+    ...
+    INDEX inv_idx(message)
+        TYPE <b style="color: green;">text</b>(tokenizer = 'splitByNonAlpha')
+        GRANULARITY 128
+)
+ENGINE = SharedMergeTree ORDER BY id;
+
+SELECT ... WHERE <b style="color: green;">hasToken</b>(message, 'DDLWorker');
+SELECT ... WHERE <b style="color: green;">hasAllTokens</b>(message, ['peak', 'memory']);
+SELECT ... WHERE <b style="color: green;">hasAnyTokens</b>(message, tokens('01442_merge_detach_attach'));
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developers: Anton Popov, Elmi Ahmadov, Jimmy Aguilar Mena.</p>
+</section>
+
+<section class="slide">
+<h2>Text Index (50 TB logs demo)</h2>
+
+<video style="width: 100%"><source src="pictures/o11y-fts.mp4" type="video/mp4"></video>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developers: Anton Popov, Elmi Ahmadov, Jimmy Aguilar Mena.</p>
+</section>
+
+<section class="slide" style="background: black url(pictures/fts.png); background-size: contain;">
+</section>
+
+<section class="slide" style="background: url(pictures/back8.jpg); background-size: cover;">
+<h2><span class="hilite">Integrations</span></h2>
+</section>
+
+<section class="slide">
+<h2>Integrations</h2>
+
+<p><b>ADBC</b> driver for ClickHouse (Arrow Database Connectivity).</p>
+<p><b>MCP Server</b>: added auth support for secure AI agent connections.</p>
+<p>Language drivers:
+<br/>&mdash; <b>Python</b>: native async client, Pandas 3 compatibility.
+<br/>&mdash; <b>Go</b>: structured logging, BFloat16 and Time/Time64 types.
+<br/>&mdash; <b>C#</b>: v1.0 with JSON column support, parameter handling, bulk copy.</p>
+<p>Updates for <b>Apache Spark</b>, <b>Apache Flink</b>, <b>Kafka Connect</b>,
+<br><b>DBT Core</b>, and <b>Fivetran</b> integrations.</p>
+<p><b>MongoDB</b> CDC in Public Beta in ClickPipes.</p>
+</section>
+
+<section class="slide" style="background-color: black; color: white;">
+<h2 style="color: white;">pg_stat_ch</h2>
+<img style="float: left; margin-right: 3em; height: 80%; background-color: black; margin-top: -1em;" src="https://clickhouse.com/uploads/Logo_Architecture_Diagrams_for_pg_stat_ch_Release_Blog_1365_Open_e095fb2920.png">
+<p>Monitor your Postgres<br/>with ClickHouse.</p>
+<p>Open-source (Apache 2.0) Postgres extension.</p>
+<p>Captures every event<br/>with minimal overhead.</p>
+</section>
+
+<section class="slide">
+<h2>ClickHouse Agent Skills</h2>
+<p style="margin-top: -2em; color: gray;">npx skills add clickhouse/agent-skills</p>
+<video style="width: 100%; margin-top: -1em;" autoplay><source src="https://clickhouse.com/uploads/dons_agent_skills_demo_90f83c3a19.mp4" type="video/mp4"></video>
+</section>
+
+<section class="slide">
+<h2>ClickHouse AI policy</h2>
+
+<p><a href="https://github.com/ClickHouse/ClickHouse/blob/master/AI_POLICY.md">https://github.com/ClickHouse/ClickHouse/blob/master/AI_POLICY.md</a></p>
+
+<p style="color: gray"><b style="color: black;">You can use AI</b> for ClickHouse development. We welcome and embrace AI usage, as well as research and experiments with the frontier AI models and novel methods of AI applications for software engineering.</p>
+
+<p style="color: gray">You <b style="color: black;">don't have to disclose</b> your usage of AI. You can tell about it, share your experience, and show the methods, but it is not required. AI is a normal developer's tool, similar to an IDE, an OS, or a keyboard. <b style="color: black;">We don't judge</b> your work on the basis of the usage of AI, but we recommend taking efforts to filter out slop before sending a pull request; otherwise, it may negatively affect your reputation as an engineer.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/wing.jpg); background-size: cover;">
+<h2>Meetups</h2>
+<p style="line-height: 1.25; margin-top: -1em;">
+<br/><span class="hilite">&mdash; 🇺🇸 Seattle, Feb 26</span>
+<br/><span class="hilite">&mdash; 🇮🇳 Bengaluru, Feb 28</span>
+<br/><span class="hilite">&mdash; 🇦🇺 Melbourne: Data Streaming World, Mar 5</span>
+<br/><span class="hilite">&mdash; 🇺🇸 Los Angeles, Mar 6</span>
+<br/><span class="hilite">&mdash; 🇸🇬 Singapore: HackOMania, Mar 7</span>
+<br/><span class="hilite">&mdash; 🇺🇸 San Francisco: Women+ in Open Source, Mar 9</span>
+<br/><span class="hilite">&mdash; 🇯🇵 Tokyo, Mar 9</span>
+<br/><span class="hilite">&mdash; 🇧🇷 Sao Paolo, Mar 10</span>
+<br/><span class="hilite">&mdash; 🇺🇸 San Francisco, Mar 11</span>
+<br/><span class="hilite">&mdash; 🇺🇸 Pittsburgh: Apache Iceberg Meetup, Mar 12</span>
+<br/><span class="hilite">&mdash; 🇺🇸 New York, Mar 19</span>
+<br/><span class="hilite">&mdash; 🇳🇱 Amsterdam: Launch &amp; Learn, Mar 31</span>
+</p>
+</section>
+
+<section class="slide">
+<h2>Reading Corner 📖</h2>
+
+<img style="float: right; width: 30%; margin-right: -3em; image-rendering: pixelated; margin-top: -1em;" src="pictures/blog.png"/>
+<p><a href="https://clickhouse.com/blog/">https://clickhouse.com/blog/</a></p>
+
+<p style="line-height: 1.25; margin-right: -5em;">
+&mdash; <b>pg_clickhouse</b> &mdash; the fastest analytics for Postgres.
+<br/>&mdash; AI-powered migrations from Postgres to ClickHouse
+<br/>&mdash; How Cloudflare uses ClickHouse at <b>quadrillion-row</b> scale
+<br/>&mdash; <b>Lovable</b> loves ClickHouse (why?)
+<br/>&mdash; Langfuse ended up loving it too
+<br/>&mdash; How Buildkite transformed test analytics with ClickHouse
+<br/>&mdash; Is it over for metrics?
+<br/>&mdash; Monitoring Temporal Cloud with ClickStack
+<br/>&mdash; BigQuery connector for ClickPipes
+<br/>&mdash; Wix built AI-driven incident response on ClickHouse
+<br/>&mdash; How ClickHouse observes one of the <b>largest Kafka deployments on earth</b>
+</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back9.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
+<h2 style="color: white; margin-left: -1em;">Q&amp;A</a></h2>
+</section>
+
+<section class="slide" style="background: black; padding: 0;">
+<iframe style="width: 100%; height: 100%; position: absolute; top: 0; left: 0;" src="https://www.youtube.com/embed/fWuYt4M0xE4" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</section>
+
+    <div class="progress"></div>
+    <script src="https://presentations.clickhouse.com/shower/shower.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/shower-video.css">
+    <script src="https://presentations.clickhouse.com/shower/shower-video.js"></script>
+    <!--/Video plugin-->
+<footer class="badge">
+    <a href="https://presentations.clickhouse.com/">ClickHouse Theater</a>
+</footer>
+</body>
+</html>
