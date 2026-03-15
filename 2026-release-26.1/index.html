@@ -361,7 +361,7 @@ LIMIT 10;
 <section class="slide">
 <h2>Faster DISTINCT over LowCardinality</h2>
 
-<p>We alrady optimize the GROUP BY operator over LowCardinality columns.</p>
+<p>We already optimize the GROUP BY operator over LowCardinality columns.</p>
 <p>Now we optimize the DISTINCT operator as well.</p>
 
 <p>Demo</p>
@@ -392,7 +392,7 @@ SELECT DISTINCT county FROM uk.uk_price_paid
 
 <img src="pictures/jit.png" style="width: 100%;">
 
-<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: TaiYang Li, Alexey Milovidov.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: TaiYang Li, Alexey Milovidov.</p>
 </section>
 
 
@@ -512,7 +512,7 @@ http://localhost:9182/dashboard
 </section>
 
 <section class="slide">
-<h2 style="font-size: 32pt; line-height: 1.5;">Deduplication of asynchronous inserts with mateialized views</h2>
+<h2 style="font-size: 32pt; line-height: 1.5;">Deduplication of asynchronous inserts with materialized views</h2>
 
 <p>Asynchronous inserts (enabled with <b>async_insert</b>) collect data
 from multiple concurrent clients, and write it as a single batch. This allows serving frequent small inserts.</p>
@@ -523,7 +523,7 @@ from multiple concurrent clients, and write it as a single batch. This allows se
 <p>Since version <b>26.1</b>, the <b>exactly-once</b> semantic extends to all
 <br/>materialized views attached to a table.</p>
 
-<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developers: Sema Checherinda.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Sema Checherinda.</p>
 </section>
 
 
@@ -536,13 +536,13 @@ from multiple concurrent clients, and write it as a single batch. This allows se
 <h2>Data Lakes</h2>
 
 <h3>Paimon REST Catalog 🧪</h3>
-<p style="color: gray; font-size: 14pt;">Developers: JIaQi Tang.</p>
+<p style="color: gray; font-size: 14pt;">Developer: Jiaqi Tang.</p>
 
 <h3>Deletion vectors in Delta Lake</h3>
-<p style="color: gray; font-size: 14pt;">Developers: Kseniia Sumarokova.</p>
+<p style="color: gray; font-size: 14pt;">Developer: Kseniia Sumarokova.</p>
 
 <h3>Support for Google Cloud Storage</h3>
-<p style="color: gray; font-size: 14pt;">Developers: Konstantin Vedernikov.</p>
+<p style="color: gray; font-size: 14pt;">Developer: Konstantin Vedernikov.</p>
 </section>
 
 <section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
@@ -564,7 +564,7 @@ from multiple concurrent clients, and write it as a single batch. This allows se
 <p><code style="font-size: 16pt; line-height: 1.25">import datastore as pd  <span style="color: gray;"># That's it! Use pandas API as usual</span>
 </code></p>
 
-<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developers: Auxten.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Auxten.</p>
 </section>
 
 <section class="slide">
@@ -583,7 +583,7 @@ from multiple concurrent clients, and write it as a single batch. This allows se
 
 <p><b>Seamless Upgrades</b>: rolling updates without dropping queries.</p>
 
-<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Grigory Pervakov.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Grigory Pervakov.</p>
 </section>
 
 <section class="slide">
