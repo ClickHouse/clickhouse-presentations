@@ -334,45 +334,27 @@ SELECT toDaysInMonth(toDate('2026-02-15')), toDaysInMonth(toDate('2026-03-15'));
 </section>
 
 <section class="slide">
-<h2 style="font-size: 28pt;">Faster format auto-detection</h2>
+<h2>Vertical merge for TTL DELETE</h2>
 
-<p>Fix excessive memory usage (~514 MiB)
-<br/>during format auto-detection:</p>
+<p>Background merges can use one of the algorithms:
+<br/>&mdash; <b>Horizontal</b>: read blocks of data with all columns and merge them;
+<br/>&mdash; <b>Vertical</b>: merge columns with sorting key first; then read and merge each of the other columns;
+</p>
 
-<p>&mdash; When reading non-Arrow data (e.g. JSON from <b>url</b> or <b>file</b>
-<br/>without explicit format), the ArrowStream reader
-<br/>misinterpreted the first bytes as a huge metadata length.</p>
+<p><b>Vertical</b> merge takes <b style="color: green;">less memory</b> and processed <b style="color: green;">faster</b> for wide tables,
+<br/>and is usually preferred.</p>
 
-<p>&mdash; Now fixed: auto-detection is fast and lightweight.</p>
+<p>But <b>Vertical</b> is not supported for some type of merges and some operations.</p>
 
-<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Konstantin Bogdanov.</p>
+<p>Since <b style="color: green;">26.3</b>, vertical merges work for <b>TTL DELETE</b> operations!</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: murphy-4o.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 28pt;">Metadata prefetching for Iceberg</h2>
+<h2>JOIN reordering for ANTI, SEMI, FULL</h2>
 
-<p>Iceberg tables now support <b>asynchronous metadata prefetching</b>:</p>
-
-<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE my_iceberg (...)
-ENGINE = IcebergS3(...)
-SETTINGS <b style="color: green;">iceberg_metadata_async_prefetch_period_ms</b> = 60000;
-
-SELECT ... FROM my_iceberg
-SETTINGS <b style="color: green;">iceberg_metadata_staleness_ms</b> = 30000;
-</code></p>
-
-<p>&mdash; Periodically pre-populates the metadata cache.
-<br/>&mdash; SELECT queries use cached metadata if fresh enough,
-<br/>&emsp;eliminating calls to the Iceberg catalog.</p>
-
-<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Arsen Muk.</p>
-</section>
-
-<section class="slide">
-<h2 style="font-size: 28pt;">JOIN reordering for ANTI, SEMI, FULL</h2>
-
-<p>The optimizer can now swap sides of
-<br/><b>ANTI</b>, <b>SEMI</b>, and <b>FULL</b> joins
+<p>The optimizer can now swap sides of <b>ANTI</b>, <b>SEMI</b>, and <b>FULL</b> joins
 <br/>based on statistics:</p>
 
 <p><code style="font-size: 14pt; line-height: 1.25;">SELECT * FROM large_table
@@ -380,52 +362,32 @@ SETTINGS <b style="color: green;">iceberg_metadata_staleness_ms</b> = 30000;
 </code></p>
 
 <p>&mdash; Previously only INNER and LEFT/RIGHT joins were reordered.
-<br/>&mdash; Now the optimizer picks the best side automatically
-<br/>&emsp;for all join types.</p>
+<br/>&mdash; Now the optimizer picks the best side automatically for all join types.</p>
+
+<p style="color: gray">In 26.3, this requires enabling statistics for tables.</p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Hechem Selmi.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 28pt;">S3Queue avoids listing the whole directory</h2>
+<h2>Efficient S3Queue updates</h2>
 
-<p>S3Queue ordered mode now uses
-<br/><b style="color: green;">ListObjectsV2 StartAfter</b>:</p>
+<p><b style="color: red;">26.2</b>: S3Queue lists all entries in the prefix to find new files</p>
+<p><b style="color: green;">26.3</b>: In the ordered mode, S3Queue uses the StartAfter parameter</p>
 
 <p>&mdash; Avoids re-listing full prefix history.
 <br/>&mdash; Reduces ListObjects API calls.
-<br/>&mdash; Significant cost and latency improvement
-<br/>&emsp;for queues with long history.</p>
+<br/>&mdash; Significant <b style="color: green;">cost</b> and <b style="color: green;">latency</b> improvement for queues with long history.</p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Venkata Vineel.</p>
 </section>
 
 <section class="slide">
-<h2>TTL can use vertical merge</h2>
-
-<p>Tables with <b>DELETE TTL</b> rules
-<br/>can now use the <b style="color: green;">vertical merge algorithm</b>:</p>
-
-<p>&mdash; Previously, TTL merges always used the horizontal algorithm,
-<br/>&emsp;reading all columns into memory.
-<br/>&mdash; Now vertical merge is used: columns are processed
-<br/>&emsp;one by one, reducing memory usage.</p>
-
-<p>Especially beneficial for wide tables
-<br/>with many columns and active TTL rules.</p>
-
-<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: murphy-4o.</p>
-</section>
-
-<section class="slide">
 <h2>Improved subcolumns reading</h2>
 
-<p>Better size calculation before reading subcolumns:</p>
-
-<p>&mdash; Reduces memory usage.
-<br/>&mdash; Speeds up subcolumn reads
-<br/>&emsp;(e.g. reading <b>json.field</b> from a JSON column,
-<br/>&emsp;or <b>tuple.element</b> from a Tuple column).</p>
+<p>More accurate size calculation allowed to lower memory usage
+<br/>up to <b style="color: green;">8 times</b>
+for heavy JSON objects when reading a few subcolumns.</p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Pavel Kruglov.</p>
 </section>
@@ -435,34 +397,61 @@ SETTINGS <b style="color: green;">iceberg_metadata_staleness_ms</b> = 30000;
 </section>
 
 <section class="slide">
-<h2>Materialized CTE</h2>
+<h2>Materialized CTE 🧪</h2>
 
-<p>CTEs (WITH clause) can now be <b style="color: green;">evaluated only once</b>
+<p>CTEs (subqueries in the WITH clause) can now be <b style="color: green;">evaluated only once</b>
 <br/>and stored in temporary tables:</p>
 
-<p><code style="font-size: 14pt; line-height: 1.25;">WITH <b style="color: green;">top_users</b> AS <b style="color: green;">MATERIALIZED</b> (
-    SELECT user_id, count() AS cnt
-    FROM events GROUP BY user_id
-    ORDER BY cnt DESC LIMIT 1000
-)
-SELECT * FROM top_users WHERE ...
-UNION ALL
-SELECT * FROM top_users WHERE ...
-</code></p>
+<p><code style="font-size: 14pt; line-height: 1.25;">SET enable_materialized_cte = 1;
 
-<p>&mdash; Without MATERIALIZED, the CTE is evaluated each time it's referenced.
-<br/>&mdash; With MATERIALIZED, it's computed once and reused.</p>
+WITH <b>top_users</b> AS <b style="color: green;">MATERIALIZED</b> (
+  SELECT user_id, count() AS cnt
+  FROM events GROUP BY user_id
+  ORDER BY cnt DESC LIMIT 1000)
+SELECT * FROM <b>top_users</b>
+INNER JOIN (SELECT user_id FROM <b>top_users</b> WHERE ...) ...
+</code></p>
 
 <!--
 
-WITH data AS MATERIALIZED (SELECT number AS n FROM numbers(10))
-SELECT sum(n) FROM data
-UNION ALL
-SELECT max(n) FROM data;
+SET enable_materialized_cte = 1;
+
+WITH town_type_prices AS -- MATERIALIZED
+    (
+        SELECT
+            town,
+            type,
+            toYear(date) AS year,
+            median(price) AS median_price
+        FROM uk_price_paid
+        WHERE (year >= 2013) AND (type != 'other')
+        GROUP BY
+            town,
+            type,
+            year
+        HAVING count() >= 10
+    )
+SELECT
+    now.town,
+    now.type AS rising_type,
+    other_now.type AS falling_type,
+    formatReadableQuantity(then.median_price) AS rising_price_2013,
+    formatReadableQuantity(now.median_price) AS rising_price_2023,
+    formatReadableQuantity(other_then.median_price) AS falling_price_2013,
+    formatReadableQuantity(other_now.median_price) AS falling_price_2023,
+    round(((now.median_price / then.median_price) - 1) * 100) AS rising_growth_pct,
+    round(((other_now.median_price / other_then.median_price) - 1) * 100) AS falling_growth_pct
+FROM town_type_prices AS now
+INNER JOIN town_type_prices AS then ON (now.town = then.town) AND (now.type = then.type) AND (then.year = 2013)
+INNER JOIN town_type_prices AS other_now ON (now.town = other_now.town) AND (now.type < other_now.type) AND (now.year = other_now.year)
+INNER JOIN town_type_prices AS other_then ON (other_now.town = other_then.town) AND (other_now.type = other_then.type) AND (other_then.year = 2013)
+WHERE (now.year = 2023) AND (then.median_price < other_then.median_price) AND (now.median_price > other_now.median_price)
+ORDER BY (now.median_price / other_now.median_price) - (then.median_price / other_then.median_price) DESC
+LIMIT 20;
 
 -->
 
-<p style="float: right; font-size: 14pt;">Demo</p>
+<p>Demo</p>
 <p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Dmitry Novik.</p>
 </section>
 
@@ -478,43 +467,38 @@ SETTINGS
     max_buckets_in_map = 32;
 </code></p>
 
-<p>&mdash; Reading <b>m['key']</b> reads only one bucket, not the entire column.
-<br/>&mdash; <b>2&ndash;49x faster</b> single-key lookups depending on map size.
-<br/>&mdash; Use <b>map_serialization_version_for_zero_level_parts = 'basic'</b>
-<br/>&emsp;to keep insert speed close to baseline.</p>
+<p>&mdash; <b style="color: green;">2&ndash;49x faster</b> single-key lookups depending on map size.
+<br/>&mdash; Uses <b>map_serialization_version_for_zero_level_parts = 'basic'</b>
+<br/>&emsp; to keep insert speed close to baseline.</p>
 
 <!--
 
-CREATE TABLE tab (id UInt64, m Map(String, UInt64))
-ENGINE = MergeTree ORDER BY id
-SETTINGS map_serialization_version = 'with_buckets', max_buckets_in_map = 32;
-
-INSERT INTO tab SELECT number, mapFromArrays(
-    arrayMap(x -> 'key_' || toString(x), range(100)),
-    range(100)
-) FROM numbers(1000);
-
-SELECT m['key_42'] FROM tab WHERE id = 500;
+SET optimize_functions_to_subcolumns = 0;
+SELECT sum(ProfileEvents['LogTrace']) FROM query_log_sharded;
+SET optimize_functions_to_subcolumns = 1;
+SELECT sum(ProfileEvents['LogTrace']) FROM query_log_sharded;
 
 -->
-
+<p>Demo</p>
 <p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Pavel Kruglov.</p>
 </section>
 
 <section class="slide">
-<h2>WebAssembly UDFs</h2>
+<h2>WebAssembly UDFs 🧪</h2>
 
 <p>Create user-defined functions in <b style="color: green;">WebAssembly</b>:</p>
 
-<p><code style="font-size: 14pt; line-height: 1.25;">CREATE FUNCTION my_transform AS
-    '<b style="color: green;">wasm</b>:///var/lib/clickhouse/user_scripts/transform.wasm'
-    ARGUMENTS (value UInt64) RETURNS UInt64;
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -2em;">INSERT INTO system.<b style="color: green;">webassembly_modules</b> (name, code) SELECT 'collatz', '...';
 
-SELECT <b style="color: green;">my_transform</b>(number) FROM numbers(10);
+CREATE FUNCTION <b style="color: green;">collatz_steps</b> LANGUAGE WASM
+ARGUMENTS (n UInt32) RETURNS UInt32
+FROM 'collatz' :: 'steps';
+
+SELECT groupArray(<b style="color: green;">collatz_steps</b>(number::UInt32)) FROM numbers(1, 100);
 </code></p>
 
 <p>&mdash; Write UDFs in any language that compiles to WASM:
-<br/>&emsp;Rust, C, C++, Go, Zig, ...
+<br/>&emsp; Rust, C, C++, Go, Zig, ...
 <br/>&mdash; Sandboxed execution with Wasmtime.
 <br/>&mdash; <span style="color: gray;">Experimental.</span></p>
 
@@ -522,39 +506,58 @@ SELECT <b style="color: green;">my_transform</b>(number) FROM numbers(10);
 </section>
 
 <section class="slide">
-<h2>Polyglot SQL</h2>
+<h2>WebAssembly UDFs 🧪</h2>
 
-<p>Support for <b style="color: green;">external SQL dialects</b> using the polyglot library:</p>
+<p>Rust crate: <b>clickhouse-wasm-udf</b>:</p>
 
-<p><code style="font-size: 14pt; line-height: 1.25;">SET dialect = 'polyglot', <b style="color: green;">polyglot_dialect</b> = 'snowflake';
-SELECT DATEADD(day, 1, '2026-01-01'::DATE);
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -2em;">use clickhouse_wasm_udf_bindgen::clickhouse_udf;
 
-SET <b style="color: green;">polyglot_dialect</b> = 'mysql';
-SELECT IFNULL(NULL, 'hello');
+#[clickhouse_udf]
+pub fn some_udf(data: String) -> HashMap&lt;String, String> {
+    // Your implementation here
+}</code></p>
+
+<p>Control over runtime complexity:<br/>
+&mdash; webassembly_udf_max_fuel<br/>
+&mdash; webassembly_udf_max_memory<br/>
+&mdash; webassembly_udf_max_input_block_size<br/>
+&mdash; webassembly_udf_max_instances
+</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Vladimir Cherkasov, Alexey Smirnov, Vasily Chekalkin.</p>
+</section>
+
+<section class="slide">
+<h2>WebAssembly UDFs 🧪</h2>
+
+<p>A showcase:</p>
+
+<p><b>chgeos</b>: PostGIS-compatible spatial functions for ClickHouse,
+<br/>delivered as a WebAssembly UDF module powered by GEOS 3.12+.</p>
+
+<p><a href="https://github.com/bacek/chgeos">https://github.com/bacek/chgeos</a></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Vasily Chekalkin.</p>
+</section>
+
+
+<section class="slide">
+<h2>Polyglot SQL 🧪</h2>
+
+<p>Support for <b>31</b> external SQL dialects using the polyglot library:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">:) SET dialect = 'polyglot', <b style="color: green;">polyglot_dialect</b> = 'snowflake';
+
+:) SELECT <b>IFF</b>(1 > 0, 'yes', 'no');
 </code></p>
 
-<p>&mdash; Translates queries from other SQL dialects to ClickHouse SQL.
-<br/>&mdash; Supports: MySQL, PostgreSQL, Snowflake, SQLite, DuckDB...
-<br/>&mdash; <span style="color: gray;">Experimental.</span></p>
+<p style="font-size: 14pt">Athena, BigQuery, CockroachDB, Databricks, Doris, Dremio, Drill, Druid, DuckDB, Dune, Exasol, Fabric, Hive, Materialize, MySQL, Oracle, PostgreSQL, Presto, Redshift, RisingWave, SingleStore, Snowflake, Solr, Spark, SQLite, StarRocks, Tableau, Teradata, TiDB, Trino, TSQL</p>
 
-<!--
+<p><a href="https://github.com/tobilg/polyglot">https://github.com/tobilg/polyglot</a></p>
 
-SET allow_experimental_polyglot_dialect = 1, dialect = 'polyglot', polyglot_dialect = 'snowflake';
-SELECT DATEADD(day, 1, '2026-01-01'::DATE);
+<p>Full support for the ClickHouse dialect is also contributed to <b>polyglot</b>.</p>
 
-SET polyglot_dialect = 'mysql';
-SELECT IFNULL(NULL, 'hello');
-
-SET polyglot_dialect = 'postgresql';
-SELECT 'hello' || ' ' || 'world';
-
-SET polyglot_dialect = 'sqlite';
-SELECT typeof(42);
-
--->
-
-<p style="float: right; font-size: 14pt;">Demo</p>
-<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexey Milovidov.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Alexey Milovidov.</p>
 </section>
 
 <section class="slide">
@@ -566,23 +569,14 @@ SELECT typeof(42);
 <br/>&mdash; No configuration changes needed for most users.
 <br/>&mdash; Reduces the number of parts created by frequent small inserts.</p>
 
-<p>You can control it at several levels:</p>
-<p><code style="font-size: 14pt; line-height: 1.25;">SET <b style="color: green;">async_insert</b> = 0;  -- disable per query
-</code></p>
-
-<p>&mdash; Or in users profiles, per session, per query, or per table.</p>
-
-<!--
-
-SELECT name, value FROM system.settings WHERE name = 'async_insert';
-
--->
+<p>New: consistent mechanism of deduplication of both regular and asynchronous inserts,
+including inserts with materialized views.</p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Sema Checherinda.</p>
 </section>
 
 <section class="slide">
-<h2>ALP Codec</h2>
+<h2>ALP Codec 🧪</h2>
 
 <p>New <b style="color: green;">ALP</b> compression codec for floating-point data:</p>
 
@@ -595,7 +589,7 @@ SELECT name, value FROM system.settings WHERE name = 'async_insert';
 <p><b>ALP</b> (Adaptive Lossless floating-Point compression):
 <br/>&mdash; Exploits the structure of real-world floating-point data.
 <br/>&mdash; Better compression ratio than Gorilla for many workloads.
-<br/>&mdash; <span style="color: gray;">Experimental.</span></p>
+</p>
 
 <!--
 
@@ -614,7 +608,7 @@ SELECT count() FROM metrics;
 </section>
 
 <section class="slide">
-<h2>Lazy type hints for JSON</h2>
+<h2>Lazy type hints for JSON 🧪</h2>
 
 <p>Add or modify <b>JSON type hints</b> instantly,
 <br/>without rewriting data:</p>
@@ -628,7 +622,7 @@ ALTER TABLE events
 <p>&mdash; Metadata-only operation &mdash; completes <b>instantly</b>.
 <br/>&mdash; Type hints are applied at query time for old parts.
 <br/>&mdash; Materialized during INSERTs and background merges.
-<br/>&mdash; <span style="color: gray;">Experimental.</span></p>
+</p>
 
 <!--
 
@@ -651,15 +645,11 @@ SELECT data.a FROM test_json;
 <section class="slide">
 <h2>Data Lakes Performance</h2>
 
-<p>Reading from data lakes is now <b style="color: green;">~40x faster</b>
-<br/>on multi-core machines:</p>
+<img src="pictures/datalakes.png" style="width: 50%; float: right; margin-top: -2em; margin-right: -3em; padding-left: 2em;">
 
-<p>&mdash; Previously, reading from object storage
-<br/>&emsp;didn't resize the pipeline to the number of processing threads.
-<br/>&mdash; Now fixed: orders of magnitude improvement.</p>
-
-<p>Applies to Iceberg, Delta Lake, Hudi,
-<br/>and all object storage reads.</p>
+<p>Reading from data lakes is now <b style="color: green;">tens of times faster</b>
+on multi-core machines, when reading from a small number of files.</p>
+<p>Applies to Iceberg, Delta Lake, Hudi, and all object storage reads.</p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Alexey Milovidov.</p>
 </section>
@@ -667,14 +657,36 @@ SELECT data.a FROM test_json;
 <section class="slide">
 <h2>Parquet Metadata Cache</h2>
 
-<p>A new <b style="color: green;">SLRU cache for Parquet metadata</b>:</p>
+<p>A new <b style="color: green;">SLRU cache for Parquet metadata</b> (footer):</p>
 
-<p>&mdash; Removes the need to re-download files just to read metadata.
-<br/>&mdash; Improves read performance for Parquet-based data lakes.
-<br/>&mdash; Especially beneficial for repeated queries
-<br/>&emsp;over the same Parquet files.</p>
+<p>&mdash; Up to 2x reduction of reads on regular queries.
+<br/>&mdash; Especially beneficial for repeated queries over the same Parquet files.</p>
 
-<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Grant Holly.</p>
+<p><code>SET <b>use_parquet_metadata_cache</b>;</code></p>
+<p>Enabled by default.</p>
+<p>Consistency is guaranteed by tracking file modifications by etag.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Grant Holly.</p>
+</section>
+
+<section class="slide">
+<h2>Metadata prefetching for Iceberg</h2>
+
+<p>Iceberg tables now support <b>asynchronous metadata prefetching</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE my_iceberg (...)
+ENGINE = IcebergS3(...)
+SETTINGS <b style="color: green;">iceberg_metadata_async_prefetch_period_ms</b> = 60000;
+
+SELECT ... FROM my_iceberg
+SETTINGS <b style="color: green;">iceberg_metadata_staleness_ms</b> = 30000;
+</code></p>
+
+<p>&mdash; Periodically pre-populates the metadata cache.
+<br/>&mdash; SELECT queries use cached metadata if fresh enough,
+<br/>&emsp;eliminating calls to the Iceberg catalog.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Arsen Muk.</p>
 </section>
 
 <section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
