@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 26.3 LTS Call</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta property="og:image" content="pictures/preview.jpg">
+    <meta property="og:title" content="ClickHouse: Release 26.3 LTS Call">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="pictures/preview.jpg">
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/themes/clickhouse/styles/styles.css">
+
+    <style>
+        code { display: block; white-space: pre; background-color: #EEE; }
+        p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+        p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+        .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+        .slide table tr:not(:last-of-type)>* { background: none; }
+        .cell { font-family: Monospace; width: 1.5em; height: 1.5em; display: inline-block; border: 3px solid white; background-color: lightblue; text-align: center; line-height: 1.3em; }
+        .cell-num { font-family: Monospace; width: 1.5em; height: 1.5em; display: inline-block; border: 3px solid white; background-color: lightgreen; text-align: center; line-height: 1.3em; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 26.3 LTS Call</h1>
+        <p>Author: Alexey Milovidov, 2026-03-26.</p>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/back1.jpg); background-size: cover;">
+        <h1 style="margin-top: 25px; line-height: 110%; font-size: 56pt; color: #FF8; text-align: center;">ClickHouse Release<br/>26.3 LTS</h1>
+    </section>
+
+<section class="slide">
+<h2>ClickHouse release 26.3 LTS</h2>
+<p>1. (40 min) What's new in ClickHouse 26.3 LTS.</p>
+<p>2. (15 min) Guest Talk.</p>
+<p>3. (5 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back2.jpg); background-size: cover;">
+<h2><span class="hilite">Release 26.3 LTS</span></h2>
+<p><span class="hilite">ClickHouse LTS Release.</span></p>
+<p><span class="hilite">— 27 new features 🌷</span></p>
+<p><span class="hilite">— 40 performance optimizations 🐇</span></p>
+<p><span class="hilite">— 202 bug fixes 🐝</span></p>
+</section>
+<!--
+
+Small
+
+Natural sorting
+JSONExtract works with JSON
+has for JSON
+table_readonly
+Pretty EXPLAIN
+caseFoldUTF8, caseFoldUTF8,
+normalizeUTF8NFKCCasefold
+max_skip_unavailable_shards_num and max_skip_unavailable_shards_ratio
+Functions with no parentheses
+NOT precendense, SOME, parenthesized table join expressions
+unicodeWord tokenizer
+output_format_trim_fixed_string
+toDaysInMonth
+
+Performance
+
+Faster format autodetection
+Metadata prefetching for Iceberg
+JOIN reordering for ANTI, SEMI, FULL
+S3Queue avoids listing the whole directory
+TTL can use vertical merge
+Subcolumns reading
+
+Main
+
+Materialized CTE
+Sharded Map
+WASM
+Polyglot
+Async Insert by default
+ALP codec
+Lazy type hints for JSON
+
+Data Lakes
+
+Data lakes performance
+Parquet metadata cache
+
+Guest Talk
+
+Reading
+
+AI is redrawing the database market
+Geospatial in ClickHouse
+The Agentic Data ClickStack
+ClickHouse is data lake ready
+Building high-performant full-text search in ClickHouse
+AI observability notebooks
+chDB 4.0
+
+-->
+
+<section class="slide" style="background: url(pictures/back3.jpg); background-size: cover;">
+<h2 style="color: black;"><span>Small And Nice Features</span></h2>
+</section>
+
+<section class="slide">
+<h2>Natural Sorting</h2>
+
+<p>A new function <b style="color: green;">naturalSortKey</b> for human-friendly sorting:</p>
+
+<table><tr><td style="width: 50%">
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT name FROM files
+ORDER BY name
+
+file1.txt
+<span style="color: red;">file10.txt
+file100.txt</span>
+file2.txt
+file20.txt
+</code></p>
+</td><td style="width: 50%">
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT name FROM files
+ORDER BY <b style="color: green;">naturalSortKey</b>(name)
+
+file1.txt
+file2.txt
+file10.txt
+file20.txt
+file100.txt
+</code></p>
+</td></tr></table>
+
+<p>Can be used as a function in any part of the query, e.g., in <b>arraySort</b>. Demo.</p>
+
+<!--
+
+SELECT * FROM url('https://clickhouse.com/data/version_date.tsv') ORDER BY c1
+SELECT * FROM url('https://clickhouse.com/data/version_date.tsv') ORDER BY naturalSortKey(c1)
+SELECT * FROM url('https://clickhouse.com/data/version_date.tsv') ORDER BY c1 COLLATE 'en@colNumeric=yes'
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Nazarii Piontko.</p>
+</section>
+
+<section class="slide">
+<h2>JSONExtract works with JSON type</h2>
+
+<p><code style="font-size: 16pt; line-height: 1.5;"><span style="color: gray;">-- native JSON data type:</span>
+WITH '{"ClickHouse":{"version":"26.3"}}'::<b>JSON</b> AS s
+SELECT s.ClickHouse.version;
+<span style="color: gray;">-- String:</span>
+WITH '{"ClickHouse":{"version":"26.3"}}' AS s
+SELECT JSONExtractString(s, 'ClickHouse', 'version')
+
+<span style="color: gray;">-- Since 26.3:</span>
+WITH '{"ClickHouse":{"version":"26.3"}}'::<b>JSON</b> AS s
+SELECT JSONExtractString(s, 'ClickHouse', 'version')
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Fisnik Kastrati.</p>
+</section>
+
+<section class="slide">
+<h2><b>has</b> function for JSON</h2>
+
+<p>Check if a path exists in a JSON column, similar to Map:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT * FROM events
+WHERE <b style="color: green;">has</b>(data, 'metrics.latency')
+</code></p>
+
+<p>&mdash; Works similarly to <b>has</b> for the <b>Map</b> type.
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: DQ.</p>
+</section>
+
+<section class="slide">
+<h2>Read-only MergeTree tables</h2>
+
+<p>A new MergeTree setting <b style="color: green;">table_readonly</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE my_table (...)
+SETTINGS <b style="color: green;">table_readonly</b> = 1;
+
+-- ALTER TABLE my_table MODIFY SETTING <b style="color: green;">table_readonly</b> = 1;
+
+INSERT INTO my_table VALUES (1, 2, 3);
+<span style="color: gray;">-- Exception: Table is in readonly mode.</span>
+</code></p>
+
+<p>Use case: archived, "sealed" tables.</p>
+<p>Readonly tables don't run background threads.</p>
+
+<!--
+
+CREATE TABLE my_table (x UInt64, y String, z Float64) ENGINE = MergeTree ORDER BY x;
+INSERT INTO my_table VALUES (1, 'hello', 3.14);
+ALTER TABLE my_table MODIFY SETTING table_readonly = 1;
+INSERT INTO my_table VALUES (2, 'world', 2.72); -- Exception: Table is in readonly mode.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Mathuranath Metivier.</p>
+</section>
+
+<section class="slide">
+<h2>Pretty EXPLAIN</h2>
+
+<p style="margin-top: -1em;">New options for <b>EXPLAIN</b>: <b style="color: green;">pretty=1</b> and <b style="color: green;">compact=1</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">play-eu :) EXPLAIN pretty=1, compact=1
+SELECT URL, count() FROM hits WHERE URL LIKE '%google%'
+GROUP BY URL ORDER BY count() DESC LIMIT 10;
+
+┌─explain───────────────────────────────────────────────────────────────┐
+│ Limit (preliminary LIMIT)                                             │
+│ └──Sorting (Sorting for ORDER BY)                                     │
+│    └──Aggregating                                                     │
+│       └──Filter ((WHERE + Change column names to column identifiers)) │
+│          └──ReadFromMergeTree (default.hits)                          │
+└───────────────────────────────────────────────────────────────────────┘
+</code></p>
+
+<p>&mdash; <b>pretty=1</b> &mdash; tree-style indented output.
+<br/>&mdash; <b>compact=1</b> &mdash; collapses Expression steps.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Kirill Kopnev.</p>
+</section>
+
+<section class="slide">
+<h2>More functions for Unicode</h2>
+
+<p style="margin-top: -1em; color: gray; font-size: 14pt;">We already have normalizeUTF8NFC, normalizeUTF8NFD, normalizeUTF8NFKC, normalizeUTF8NFKD.</p>
+
+<p><b style="color: green;">caseFoldUTF8</b> &mdash; Unicode case folding
+<br/><b style="color: green;">removeDiacriticsUTF8</b> &mdash; remove diacritical marks
+<br/><b style="color: green;">normalizeUTF8NFKCCasefold</b> &mdash; NFKC normalization + case folding</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b>caseFoldUTF8</b>('Straße') = <b>caseFoldUTF8</b>('STRASSE')
+<span style="color: gray;">-- 1</span>
+
+SELECT <b>removeDiacriticsUTF8</b>('crème brûlée')
+<span style="color: gray;">-- creme brulee</span>
+
+SELECT <b>normalizeUTF8NFKCCasefold</b>('ﬁle')
+<span style="color: gray;">-- file</span>
+</code></p>
+
+<!--
+
+SELECT caseFoldUTF8('Straße'), caseFoldUTF8('STRASSE'), caseFoldUTF8('Straße') = caseFoldUTF8('STRASSE');
+SELECT removeDiacriticsUTF8('crème brûlée');
+SELECT normalizeUTF8NFKCCasefold('ﬁle');
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: George Larionov.</p>
+</section>
+
+<section class="slide">
+<h2>Limit skipping unavailable shards</h2>
+
+<p>When allowing skipping unavailable shards, control over their number:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SET skip_unavailable_shards = 1;
+SET <b style="color: green;">max_skip_unavailable_shards_num</b> = 5;
+SET <b style="color: green;">max_skip_unavailable_shards_ratio</b> = 0.1;
+</code></p>
+
+<p>Useful on very large clusters, on observability datasets,
+<br/>as well as when aggregating over regionally federated parts of the cluster.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>SQL Compatibility</h2>
+
+<p style="margin-top: -1em;">Some functions can be used without parentheses:</p>
+<p style="margin-top: -0.5em;"><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">NOW</b>, <b style="color: green;">CURRENT_DATE</b>, <b style="color: green;">CURRENT_TIMESTAMP</b>;
+</code></p>
+
+<p><b>NOT operator precedence</b> now matches the SQL standard:</p>
+<p style="margin-top: -0.5em;"><code style="font-size: 14pt; line-height: 1.25;">NOT x IS NULL <span style="color: gray;">-- now parsed as NOT (x IS NULL)</span>
+</code></p>
+
+<p><b>SOME</b> keyword (alias for ANY):</p>
+<p style="margin-top: -0.5em;"><code style="font-size: 14pt; line-height: 1.25;">SELECT * FROM t WHERE x = <b style="color: green;">SOME</b> (SELECT y FROM u)
+</code></p>
+
+<p><b>Parenthesized table join expressions:</b></p>
+<p style="margin-top: -0.5em;"><code style="font-size: 14pt; line-height: 1.25;">SELECT * FROM <b style="color: green;">(</b>t1 CROSS JOIN t2<b style="color: green;">)</b> JOIN t3 ON ...
+</code></p>
+
+<p style="color: gray; font-size: 14pt;">Developers: Aly Kafoury, Alexey Milovidov, Artem Kytkin.</p>
+</section>
+
+<section class="slide">
+<h2>More small features</h2>
+
+<p>A new setting, <b>output_format_trim_fixed_string</b>
+<br/>&mdash; Strip trailing null bytes from FixedString in text output.</p>
+<p><code style="font-size: 14pt;">:) SELECT toFixedString('abc', 10) FORMAT TSV
+
+<span style="color: gray;">abc\0\0\0\0\0\0\0</span>
+
+:) SELECT toFixedString('abc', 10) FORMAT TSV
+   SETTINGS <b style="color: green;">output_format_trim_fixed_string</b> = 1;
+
+<span style="color: gray;">abc</span>
+</code></p>
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: NeedmeFordev.</p>
+
+<p><code style="font-size: 14pt;">:) SELECT <b style="color: green;">toDaysInMonth</b>(now())
+
+<span style="color: gray;">31</span>
+</code></p>
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Vitaly Baranov.</p>
+
+<!--
+
+SELECT toFixedString('abc', 10) SETTINGS output_format_trim_fixed_string = 1;
+SELECT toDaysInMonth(toDate('2026-02-15')), toDaysInMonth(toDate('2026-03-15'));
+
+-->
+
+</section>
+
+<section class="slide" style="background: url(pictures/back4.jpg); background-size: cover;">
+<h2><span style="color: black;" class="hilite">Performance Improvements</span></h2>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 28pt;">Faster format auto-detection</h2>
+
+<p>Fix excessive memory usage (~514 MiB)
+<br/>during format auto-detection:</p>
+
+<p>&mdash; When reading non-Arrow data (e.g. JSON from <b>url</b> or <b>file</b>
+<br/>without explicit format), the ArrowStream reader
+<br/>misinterpreted the first bytes as a huge metadata length.</p>
+
+<p>&mdash; Now fixed: auto-detection is fast and lightweight.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Konstantin Bogdanov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 28pt;">Metadata prefetching for Iceberg</h2>
+
+<p>Iceberg tables now support <b>asynchronous metadata prefetching</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE my_iceberg (...)
+ENGINE = IcebergS3(...)
+SETTINGS <b style="color: green;">iceberg_metadata_async_prefetch_period_ms</b> = 60000;
+
+SELECT ... FROM my_iceberg
+SETTINGS <b style="color: green;">iceberg_metadata_staleness_ms</b> = 30000;
+</code></p>
+
+<p>&mdash; Periodically pre-populates the metadata cache.
+<br/>&mdash; SELECT queries use cached metadata if fresh enough,
+<br/>&emsp;eliminating calls to the Iceberg catalog.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Arsen Muk.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 28pt;">JOIN reordering for ANTI, SEMI, FULL</h2>
+
+<p>The optimizer can now swap sides of
+<br/><b>ANTI</b>, <b>SEMI</b>, and <b>FULL</b> joins
+<br/>based on statistics:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT * FROM large_table
+<b style="color: green;">LEFT ANTI JOIN</b> small_table USING (id)
+</code></p>
+
+<p>&mdash; Previously only INNER and LEFT/RIGHT joins were reordered.
+<br/>&mdash; Now the optimizer picks the best side automatically
+<br/>&emsp;for all join types.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Hechem Selmi.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 28pt;">S3Queue avoids listing the whole directory</h2>
+
+<p>S3Queue ordered mode now uses
+<br/><b style="color: green;">ListObjectsV2 StartAfter</b>:</p>
+
+<p>&mdash; Avoids re-listing full prefix history.
+<br/>&mdash; Reduces ListObjects API calls.
+<br/>&mdash; Significant cost and latency improvement
+<br/>&emsp;for queues with long history.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Venkata Vineel.</p>
+</section>
+
+<section class="slide">
+<h2>TTL can use vertical merge</h2>
+
+<p>Tables with <b>DELETE TTL</b> rules
+<br/>can now use the <b style="color: green;">vertical merge algorithm</b>:</p>
+
+<p>&mdash; Previously, TTL merges always used the horizontal algorithm,
+<br/>&emsp;reading all columns into memory.
+<br/>&mdash; Now vertical merge is used: columns are processed
+<br/>&emsp;one by one, reducing memory usage.</p>
+
+<p>Especially beneficial for wide tables
+<br/>with many columns and active TTL rules.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: murphy-4o.</p>
+</section>
+
+<section class="slide">
+<h2>Improved subcolumns reading</h2>
+
+<p>Better size calculation before reading subcolumns:</p>
+
+<p>&mdash; Reduces memory usage.
+<br/>&mdash; Speeds up subcolumn reads
+<br/>&emsp;(e.g. reading <b>json.field</b> from a JSON column,
+<br/>&emsp;or <b>tuple.element</b> from a Tuple column).</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Pavel Kruglov.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
+<h2 style="font-size: 32pt; margin-left: -1em;"><span class="hilite">Something Interesting</span></h2>
+</section>
+
+<section class="slide">
+<h2>Materialized CTE</h2>
+
+<p>CTEs (WITH clause) can now be <b style="color: green;">evaluated only once</b>
+<br/>and stored in temporary tables:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">WITH <b style="color: green;">top_users</b> AS <b style="color: green;">MATERIALIZED</b> (
+    SELECT user_id, count() AS cnt
+    FROM events GROUP BY user_id
+    ORDER BY cnt DESC LIMIT 1000
+)
+SELECT * FROM top_users WHERE ...
+UNION ALL
+SELECT * FROM top_users WHERE ...
+</code></p>
+
+<p>&mdash; Without MATERIALIZED, the CTE is evaluated each time it's referenced.
+<br/>&mdash; With MATERIALIZED, it's computed once and reused.</p>
+
+<!--
+
+WITH data AS MATERIALIZED (SELECT number AS n FROM numbers(10))
+SELECT sum(n) FROM data
+UNION ALL
+SELECT max(n) FROM data;
+
+-->
+
+<p style="float: right; font-size: 14pt;">Demo</p>
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Dmitry Novik.</p>
+</section>
+
+<section class="slide">
+<h2>Sharded Map</h2>
+
+<p>Bucketed serialization for <b>Map</b> columns:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE tab (id UInt64, m Map(String, UInt64))
+ENGINE = MergeTree ORDER BY id
+SETTINGS
+    <b style="color: green;">map_serialization_version</b> = 'with_buckets',
+    max_buckets_in_map = 32;
+</code></p>
+
+<p>&mdash; Reading <b>m['key']</b> reads only one bucket, not the entire column.
+<br/>&mdash; <b>2&ndash;49x faster</b> single-key lookups depending on map size.
+<br/>&mdash; Use <b>map_serialization_version_for_zero_level_parts = 'basic'</b>
+<br/>&emsp;to keep insert speed close to baseline.</p>
+
+<!--
+
+CREATE TABLE tab (id UInt64, m Map(String, UInt64))
+ENGINE = MergeTree ORDER BY id
+SETTINGS map_serialization_version = 'with_buckets', max_buckets_in_map = 32;
+
+INSERT INTO tab SELECT number, mapFromArrays(
+    arrayMap(x -> 'key_' || toString(x), range(100)),
+    range(100)
+) FROM numbers(1000);
+
+SELECT m['key_42'] FROM tab WHERE id = 500;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Pavel Kruglov.</p>
+</section>
+
+<section class="slide">
+<h2>WebAssembly UDFs</h2>
+
+<p>Create user-defined functions in <b style="color: green;">WebAssembly</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE FUNCTION my_transform AS
+    '<b style="color: green;">wasm</b>:///var/lib/clickhouse/user_scripts/transform.wasm'
+    ARGUMENTS (value UInt64) RETURNS UInt64;
+
+SELECT <b style="color: green;">my_transform</b>(number) FROM numbers(10);
+</code></p>
+
+<p>&mdash; Write UDFs in any language that compiles to WASM:
+<br/>&emsp;Rust, C, C++, Go, Zig, ...
+<br/>&mdash; Sandboxed execution with Wasmtime.
+<br/>&mdash; <span style="color: gray;">Experimental.</span></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Vladimir Cherkasov, Alexey Smirnov, Vasily Chekalkin.</p>
+</section>
+
+<section class="slide">
+<h2>Polyglot SQL</h2>
+
+<p>Support for <b style="color: green;">external SQL dialects</b> using the polyglot library:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SET dialect = 'polyglot', <b style="color: green;">polyglot_dialect</b> = 'snowflake';
+SELECT DATEADD(day, 1, '2026-01-01'::DATE);
+
+SET <b style="color: green;">polyglot_dialect</b> = 'mysql';
+SELECT IFNULL(NULL, 'hello');
+</code></p>
+
+<p>&mdash; Translates queries from other SQL dialects to ClickHouse SQL.
+<br/>&mdash; Supports: MySQL, PostgreSQL, Snowflake, SQLite, DuckDB...
+<br/>&mdash; <span style="color: gray;">Experimental.</span></p>
+
+<!--
+
+SET allow_experimental_polyglot_dialect = 1, dialect = 'polyglot', polyglot_dialect = 'snowflake';
+SELECT DATEADD(day, 1, '2026-01-01'::DATE);
+
+SET polyglot_dialect = 'mysql';
+SELECT IFNULL(NULL, 'hello');
+
+SET polyglot_dialect = 'postgresql';
+SELECT 'hello' || ' ' || 'world';
+
+SET polyglot_dialect = 'sqlite';
+SELECT typeof(42);
+
+-->
+
+<p style="float: right; font-size: 14pt;">Demo</p>
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Async Insert by default</h2>
+
+<p>Starting from <b>26.3 LTS</b>, <b style="color: green;">async inserts are enabled by default</b>.</p>
+
+<p>&mdash; ClickHouse will batch all small inserts automatically.
+<br/>&mdash; No configuration changes needed for most users.
+<br/>&mdash; Reduces the number of parts created by frequent small inserts.</p>
+
+<p>You can control it at several levels:</p>
+<p><code style="font-size: 14pt; line-height: 1.25;">SET <b style="color: green;">async_insert</b> = 0;  -- disable per query
+</code></p>
+
+<p>&mdash; Or in users profiles, per session, per query, or per table.</p>
+
+<!--
+
+SELECT name, value FROM system.settings WHERE name = 'async_insert';
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Sema Checherinda.</p>
+</section>
+
+<section class="slide">
+<h2>ALP Codec</h2>
+
+<p>New <b style="color: green;">ALP</b> compression codec for floating-point data:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE metrics (
+    timestamp DateTime,
+    value Float64 CODEC(<b style="color: green;">ALP</b>, ZSTD)
+) ENGINE = MergeTree ORDER BY timestamp;
+</code></p>
+
+<p><b>ALP</b> (Adaptive Lossless floating-Point compression):
+<br/>&mdash; Exploits the structure of real-world floating-point data.
+<br/>&mdash; Better compression ratio than Gorilla for many workloads.
+<br/>&mdash; <span style="color: gray;">Experimental.</span></p>
+
+<!--
+
+SET allow_experimental_codecs = 1;
+
+CREATE TABLE metrics (ts DateTime, value Float64 CODEC(ALP, ZSTD))
+ENGINE = MergeTree ORDER BY ts;
+
+INSERT INTO metrics SELECT now() + number, sin(number) * 100 FROM numbers(10000);
+
+SELECT count() FROM metrics;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Nazarii Piontko.</p>
+</section>
+
+<section class="slide">
+<h2>Lazy type hints for JSON</h2>
+
+<p>Add or modify <b>JSON type hints</b> instantly,
+<br/>without rewriting data:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SET allow_experimental_json_lazy_type_hints = 1;
+
+ALTER TABLE events
+    MODIFY COLUMN data <b style="color: green;">JSON(metrics.count UInt64)</b>;
+</code></p>
+
+<p>&mdash; Metadata-only operation &mdash; completes <b>instantly</b>.
+<br/>&mdash; Type hints are applied at query time for old parts.
+<br/>&mdash; Materialized during INSERTs and background merges.
+<br/>&mdash; <span style="color: gray;">Experimental.</span></p>
+
+<!--
+
+CREATE TABLE test_json (data JSON) ENGINE = MergeTree ORDER BY tuple();
+INSERT INTO test_json VALUES ('{"a": 1, "b": "hello"}');
+
+SET allow_experimental_json_lazy_type_hints = 1;
+ALTER TABLE test_json MODIFY COLUMN data JSON(a UInt64);
+SELECT data.a FROM test_json;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: tanner-bruce.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
+<h2 style="font-size: 32pt; margin-left: -1em;"><span class="hilite">Data Lakes</span></h2>
+</section>
+
+<section class="slide">
+<h2>Data Lakes Performance</h2>
+
+<p>Reading from data lakes is now <b style="color: green;">~40x faster</b>
+<br/>on multi-core machines:</p>
+
+<p>&mdash; Previously, reading from object storage
+<br/>&emsp;didn't resize the pipeline to the number of processing threads.
+<br/>&mdash; Now fixed: orders of magnitude improvement.</p>
+
+<p>Applies to Iceberg, Delta Lake, Hudi,
+<br/>and all object storage reads.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Parquet Metadata Cache</h2>
+
+<p>A new <b style="color: green;">SLRU cache for Parquet metadata</b>:</p>
+
+<p>&mdash; Removes the need to re-download files just to read metadata.
+<br/>&mdash; Improves read performance for Parquet-based data lakes.
+<br/>&mdash; Especially beneficial for repeated queries
+<br/>&emsp;over the same Parquet files.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Grant Holly.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
+<h2><span class="hilite">Guest Talk</span></h2>
+</section>
+
+<section class="slide" style="background: url(pictures/wing.jpg); background-size: cover;">
+<h2>Meetups</h2>
+<p style="line-height: 1.25; margin-top: -1em;">
+<br/><span class="hilite">&mdash; 🇺🇸 Seattle: Observability Meetup, Mar 26</span>
+<br/><span class="hilite">&mdash; 🇮🇹 Milan: ClickHouse x Apache Kafka x AWS, Mar 26</span>
+<br/><span class="hilite">&mdash; 🇨🇳 Shenzhen Meetup, Mar 28</span>
+<br/><span class="hilite">&mdash; 🇺🇸 San Francisco: Fireside Chat, Mar 31</span>
+<br/><span class="hilite">&mdash; 🇳🇱 Amsterdam: Lunch &amp; Learn, Mar 31</span>
+<br/><span class="hilite">&mdash; 🇺🇸 Seattle: Startup Summit, Apr 1</span>
+<br/><span class="hilite">&mdash; 🇺🇸 San Francisco: Iceberg Summit, Apr 8</span>
+<br/><span class="hilite">&mdash; 🇳🇱 Amsterdam: Training, Apr 8</span>
+<br/><span class="hilite">&mdash; 🇺🇸 San Francisco: AI Demo Night, Apr 9</span>
+<br/><span class="hilite">&mdash; 🇹🇼 Taipei: Open Source Meetup, Apr 16</span>
+<br/><span class="hilite">&mdash; 🇺🇸 Las Vegas: Google Cloud Next, Apr 22</span>
+</p>
+</section>
+
+<section class="slide">
+<h2>Reading Corner 📖</h2>
+
+<img style="float: right; width: 30%; margin-right: -3em; image-rendering: pixelated; margin-top: -1em;" src="pictures/blog.png"/>
+<p><a href="https://clickhouse.com/blog/">https://clickhouse.com/blog/</a></p>
+
+<p style="line-height: 1.5; margin-right: -5em;">
+&mdash; <b>AI is redrawing the database market</b>
+<br/>&mdash; Geospatial in ClickHouse
+<br/>&mdash; The Agentic Data ClickStack
+<br/>&mdash; ClickHouse is data lake ready
+<br/>&mdash; Building high-performant full-text search in ClickHouse
+<br/>&mdash; AI observability notebooks
+<br/>&mdash; chDB 4.0
+</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back8.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
+<h2 style="color: white; margin-left: -1em;">Q&amp;A</h2>
+</section>
+
+    <div class="progress"></div>
+    <script src="https://presentations.clickhouse.com/shower/shower.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/shower-video.css">
+    <script src="https://presentations.clickhouse.com/shower/shower-video.js"></script>
+    <!--/Video plugin-->
+<footer class="badge">
+    <a href="https://presentations.clickhouse.com/">ClickHouse Theater</a>
+</footer>
+</body>
+</html>
