@@ -5,17 +5,23 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+    <meta property="og:image" content="pictures/preview.jpg">
+    <meta property="og:title" content="ClickHouse 2021: New Features and Roadmap">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="pictures/preview.jpg">
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/themes/clickhouse/styles/styles.css">
 
-    <style type="text/css">
-         code { display: block; white-space: pre; background-color: #EEE; }
-         p.cloud { text-align: center; line-height: 2; }
-         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+    <style>
+        code { display: block; white-space: pre; background-color: #EEE; }
+        p.cloud { text-align: center; line-height: 2; }
+        p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
     </style>
 </head>
 <body class="shower list">
     <header class="caption">
         <h1>ClickHouse 2021: New Features and Roadmap</h1>
+        <p>Author: Alexey Milovidov, 2021-05-12.</p>
     </header>
     <section class="slide" id="cover">
         <h1 style="margin-top: 150px; line-height: 150%;">ClickHouse 2021:<br/>New Features and Roadmap</h1>
@@ -162,7 +168,7 @@ SELECT CAST(<b>'0.1'</b> AS Decimal(30, <b>30</b>))
 (
 ...
 ) ENGINE = URL(
-  'https://datasets.clickhouse.tech/github_events_v2.native.<b>xz</b>',
+  'https://datasets.clickhouse.com/github_events_v2.native.<b>xz</b>',
   Native);</pre>
 
 <p style="margin-top: 50px; font-size: 14pt; color: gray;">Developer &mdash; Abi Palagashvili. <span style="color: green;">Available since 21.1.</span></p>
@@ -514,12 +520,14 @@ max_connections: 4096
 </section>
 
     <div class="progress"></div>
-    <script src="shower/shower.min.js"></script>
+    <script src="https://presentations.clickhouse.com/shower/shower.js"></script>
 
     <!--Video plugin-->
-    <link rel="stylesheet" href="shower/shower-video.css">
-    <script src="shower/shower-video.js"></script>
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/shower-video.css">
+    <script src="https://presentations.clickhouse.com/shower/shower-video.js"></script>
     <!--/Video plugin-->
+<footer class="badge">
+    <a href="https://presentations.clickhouse.com/">ClickHouse Theater</a>
+</footer>
 </body>
 </html>
-

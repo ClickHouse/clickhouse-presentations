@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse Meetup in Saint Petersburg</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta property="og:image" content="pictures/preview.jpg">
+    <meta property="og:title" content="ClickHouse Meetup in Saint Petersburg">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="pictures/preview.jpg">
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/themes/clickhouse/styles/styles.css">
+
+    <style>
+        code { display: block; white-space: pre; background-color: #EEE; }
+        pre { line-height: 1 }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse Meetup in Saint Petersburg</h1>
+        <p>Author: Alexey Milovidov, 2018-08-20.</p>
+    </header>
+
+    <section class="slide" id="cover">
+        <h1 style="margin-top: 200px;"><span style="background: rgba(255, 255, 255, 0.75)">New ClickHouse Features</span></h1>
+    </section>
+
+<section class="slide">
+<h2>JOIN Improvements</h2>
+</section>
+
+<section class="slide">
+<h2>JOIN Improvements</h2>
+
+<p>Support for ON.</p>
+<p>&mdash; chains of AND with expression equalities.</p>
+<p>Support for qualified names and aliases<br/>for both left and right tables.</p>
+
+<p style="color: green;">Starting from version 18.6.0.</p>
+</section>
+
+<section class="slide">
+<h2>JOIN Improvements</h2>
+
+<p>Correct behavior of &laquo;asterisk&raquo;.</p>
+<p>You can keep the old behavior with the asterisk_left_columns_only setting.</p>
+
+<p style="color: gray;">Already in master.</p>
+</section>
+
+
+<section class="slide">
+<h2>DECIMAL</h2>
+
+<code>SELECT 1 - 0.9 - 0.1 AS x
+
+┌───────────────────────x─┐
+│ -2.7755575615628914e-17 │
+└─────────────────────────┘
+</code>
+</section>
+
+<section class="slide">
+<h2>DECIMAL</h2>
+
+<p>Decimal numbers with fixed point.</p>
+<p>Example: DECIMAL(16, 6).</p>
+
+<p style="color: gray;"><br/>Already in master, but development is in progress.</p>
+</section>
+
+<section class="slide">
+<h2>DECIMAL</h2>
+
+<p>Number of decimal digits &mdash; up to 38.</p>
+<p>Stored as integer Int32, Int64 or Int128, containing all significant digits.</p>
+<p>Performance for most operations is the same as when using integers.</p>
+
+<p>There are overflow checks &mdash; possibly will be disabled.</p>
+</section>
+
+
+
+<section class="slide">
+<h2>Performance Introspection</h2>
+</section>
+
+<section class="slide">
+<h2>Performance Introspection</h2>
+<p>Was</p>
+
+<p>Information per individual query:
+<br/>&mdash; system.processes, SHOW PROCESSLIST;
+<br/>&mdash; system.query_log;
+<br/>&mdash; server text log.
+</p>
+
+<p>Global performance metrics:
+<br/>&mdash; system.events;
+<br/>&mdash; system.metrics;
+<br/>&mdash; system.asynchronous_metrics;
+<br/>&mdash; also sent to Graphite;
+</p>
+</section>
+
+<section class="slide">
+<h2>Performance Introspection</h2>
+<p>Adding information about actual CPU and IO consumption:</p>
+<p>
+RealTime, UserTime, SystemTime,<br/>
+SoftPageFaults, HardPageFaults,<br/>
+VoluntaryContextSwitches,<br/>
+InvoluntaryContextSwitches
+</p>
+<p>
+IOWait, CPUWait,<br/>
+CPUVirtualTime,<br/>
+ReadBytes, WriteBytes,<br/>
+ReadChars, WriteChars
+</p>
+</section>
+
+<section class="slide">
+<h2>Performance Introspection</h2>
+<p>Adding information about actual CPU and IO consumption:</p>
+<p>Half of metrics &mdash; getrusage,
+<br/>the other half &mdash; from Linux kernel, obtained through AF_NETLINK socket.</p>
+<p>Requires Linux and CAP_NET_ADMIN capability<br/>&mdash; set during ClickHouse installation.</p>
+</section>
+
+<section class="slide">
+<h2>Performance Introspection</h2>
+<p>Metrics become hierarchical:</p>
+<p>&mdash; global<br/>&emsp; &mdash; in system.events table;</p>
+<p>&mdash; per query<br/>&emsp; &mdash; in system.processes, system.query_log tables;</p>
+<p>&mdash; per query execution thread<br/>&emsp; &mdash; in system.query_thread_log table;</p>
+</section>
+
+<section class="slide">
+<h2>Performance Introspection</h2>
+<p>Metrics become hierarchical:</p>
+<p>&mdash; in system.processes and system.query_log tables<br/>
+a nested ProfileEvents data structure is added<br/>with all metrics;</p>
+<p>&mdash; a nested Settings data structure is added<br/>with all changed settings;</p>
+<p>&mdash; a thread_numbers column is added<br/>with numbers of all threads that executed the query;</p>
+<p>&mdash; system.query_thread_log table is added;</p>
+<p>&mdash; settings log_profile_events, log_query_settings, log_query_threads;</p>
+</section>
+
+<section class="slide">
+<h2>Performance Introspection</h2>
+<p>Query information in regular text log:</p>
+<p>&mdash; each log line outputs the query identifier.</p>
+<p style="margin-top: 2em;">Getting query execution log in command-line client:</p>
+<p>SET send_logs_level = 'trace';</p>
+<p>Works independently of server logging level.</p>
+</section>
+
+<section class="slide">
+<pre style="font-size: 10pt; line-height: 1.35;">example.yandex.ru :) SET send_logs_level = 'debug'
+example.yandex.ru :) SELECT SearchPhrase, count() c FROM test.hits GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10
+
+[example.yandex.ru] 2018.08.16 02:06:17.302711 {e70872c6-30e5-4774-a965-ab9fcabedf02} [ 45 ]
+&lt;Debug&gt; executeQuery: (from [::1]:56440) SELECT SearchPhrase, count() c FROM test.hits GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10
+[example.yandex.ru] 2018.08.16 02:06:17.303662 {e70872c6-30e5-4774-a965-ab9fcabedf02} [ 45 ]
+&lt;Debug&gt; test.hits (SelectExecutor): Key condition: unknown
+[example.yandex.ru] 2018.08.16 02:06:17.303697 {e70872c6-30e5-4774-a965-ab9fcabedf02} [ 45 ]
+&lt;Debug&gt; test.hits (SelectExecutor): MinMax index condition: unknown
+[example.yandex.ru] 2018.08.16 02:06:17.303716 {e70872c6-30e5-4774-a965-ab9fcabedf02} [ 45 ]
+&lt;Debug&gt; test.hits (SelectExecutor): Selected 1 parts by date, 1 parts by key, 1084 marks to read from 1 ranges
+[example.yandex.ru] 2018.08.16 02:06:17.304632 {e70872c6-30e5-4774-a965-ab9fcabedf02} [ 45 ]
+&lt;Debug&gt; executeQuery: Query pipeline:
+Limit
+ Expression
+  MergeSorting
+   PartialSorting
+    Expression
+     ParallelAggregating
+      ConvertColumnWithDictionaryToFull × 16
+       Expression
+        MergeTreeThread
+
+┌─SearchPhrase────────────┬───────c─┐
+│ yandex                  │    1655 │
+│ spring 2014 fashion     │    1549 │
+│ angelina jolie          │    1245 │
+  ...
+[example.yandex.ru] 2018.08.16 02:06:17.395362 {e70872c6-30e5-4774-a965-ab9fcabedf02} [ 45 ] &lt;Debug&gt;
+ MemoryTracker: Peak memory usage (total): 86.74 MiB.
+
+10 rows in set. Elapsed: 0.093 sec. Processed 8.87 million rows, 108.44 MB (94.92 million rows/s., 1.16 GB/s.)</pre>
+</section>
+
+<section class="slide">
+<h2>Performance Introspection</h2>
+<p style="color: green;">Not yet in master. All this is being merged now.</p>
+</section>
+
+<section class="slide">
+<h2>Performance Introspection</h2>
+<p>Want to implement:</p>
+<p>&mdash; resource pools;</p>
+<p>&mdash; throttle resource consumption when exceeding quota;</p>
+</section>
+
+<section class="slide">
+<h2>Performance Introspection</h2>
+<p>Want to implement:</p>
+<p>&mdash; write regular text log to system table;</p>
+<p>&mdash; write global system metrics to system table;</p>
+<p>&mdash; calculate histogram-type metrics;</p>
+<p>&mdash; add metrics for all error codes;</p>
+<p>&mdash; send all query execution metrics to client;</p>
+</section>
+
+
+<section class="slide">
+<h2>Table Functions</h2>
+<p>&mdash; url;</p>
+<p>&mdash; file;</p>
+<p>&mdash; cluster;</p>
+<p>&mdash; mysql;</p>
+<p>&mdash; odbc.</p>
+</section>
+
+
+<section class="slide">
+<h2>Security</h2>
+<p>Encryption for replication</p>
+<p>Authentication when transferring data between replicas</p>
+<p>Encryption for Distributed tables</p>
+<p>Secure connection for ODBC drivers</p>
+</section>
+
+
+<section class="slide">
+<h2>How to &laquo;Corrupt&raquo; Data</h2>
+<p></p>
+</section>
+
+
+<section class="slide">
+<h2>How to &laquo;Corrupt&raquo; Data</h2>
+<pre style="font-size: 14pt;">SELECT substringUTF8(Title, 1, 50) AS k, count() AS c
+FROM hits_1000m_transformed
+WHERE k != '' GROUP BY k ORDER BY c DESC LIMIT 100
+
+┌─k──────────────────────────────────────────────────┬────────c─┐
+│ Photos and goods in online store                   │ 12780666 │
+│ world map                                          │ 12064769 │
+│ Histor Bazar automobiles with cutout, l/b, popads T│ 10990408 │
+│ Blocks                                             │ 10359444 │
+│ Stroy bank in rossonnia and Cat EuroCargorod geevich│  6763901 │
+│ AUTO.ria.ua Bazar auto - Yandex.Weather, retail. P │  4346693 │
+│ world — Yandex.Pog                                 │  4297599 │
+│ Inexpensive, 21 catalog                            │  3985733 │
+│ 5211 — Afisha: what is cholmskaya in translated    │  3574826 │
+│ @diaries, Chaikon Autosearch                       │  3501227 │
+│ Vacancies in Moscow - Pulse ce                     │  3119487 │
+│ Histor Bazar automobile on Love.QIP.ru affordable  │  3065342 │
+│ Dress or buy in                                    │  2839515 │
+│ Spain - MIR APARTMENT, KORETTEONOVA - predacted    │  2629122 │
+│ New cheap : Selection serving for work             │  2379676 │
+│ LADA, LLC "AH, EVACUATORS, Greece, Ukraine Auto    │  2139439 │
+│ Alexa | Buy bicycle Smart (Peugeot) PajeroII -     │  1639138 │
+│ Mods and tourists                                  │  1523733 │
+│ Work, handex.RU - fashion forums AQUASTOK          │  1226220 │
+│ Games to secrets online store                      │  1068327 │
+</pre>
+</section>
+
+
+<section class="slide">
+<h2>JIT Compilation of Expressions</h2>
+<code>SELECT count() FROM hits
+WHERE
+       ((EventDate >= '2018-08-01')
+    AND (EventDate &lt;= '2018-08-03')
+    AND (CounterID >= 34))
+ OR    ((EventDate >= '2018-08-04')
+    AND (EventDate &lt;= '2018-08-05')
+    AND (CounterID &lt;= 101500))
+</code>
+
+<p style="margin-top: 2em;">&mdash; 649,533,033 rows per second.</p>
+</section>
+
+<section class="slide">
+<h2>JIT Compilation of Expressions</h2>
+<code style="margin-top: -1em;">SET compile_expressions = 1;
+
+SELECT count() FROM hits
+WHERE
+       ((EventDate >= '2018-08-01')
+    AND (EventDate &lt;= '2018-08-03')
+    AND (CounterID >= 34))
+ OR    ((EventDate >= '2018-08-04')
+    AND (EventDate &lt;= '2018-08-05')
+    AND (CounterID &lt;= 101500))
+</code>
+
+<p style="margin-top: 2em;">&mdash; 865,491,052 rows per second.<br/>
+&mdash; <span style="color: green;"><b>+33% performance!</b></span></p>
+</section>
+
+
+    <section class="slide">
+        <h2>.</h2>
+    </section>
+
+    <section class="slide">
+        <h2>.</h2>
+        <p>Web site: <a href="https://clickhouse.com/">https://clickhouse.com/</a></p>
+        <p>Google groups: <a href="https://groups.google.com/forum/#!forum/clickhouse">https://groups.google.com/forum/#!forum/clickhouse</a></p>
+        <p>Maillist: clickhouse-feedback@yandex-team.com</p>
+        <p>Telegram chat: <a href="https://telegram.me/clickhouse_ru">https://telegram.me/clickhouse_ru</a> (more than 1800 participants) and <a href="https://telegram.me/clickhouse_en">https://telegram.me/clickhouse_en</a></p>
+        <p>GitHub: <a href="https://github.com/ClickHouse/ClickHouse/">https://github.com/ClickHouse/ClickHouse/</a></p>
+        <p>Twitter: <a href="https://twitter.com/ClickHouseDB">https://twitter.com/ClickHouseDB</a></p>
+
+        <p>Next: meetup in Paris on October 2nd.</p>
+    </section>
+
+    <div class="progress"></div>
+    <script src="https://presentations.clickhouse.com/shower/shower.js"></script>
+<footer class="badge">
+    <a href="https://presentations.clickhouse.com/">ClickHouse Theater</a>
+</footer>
+</body>
+</html>

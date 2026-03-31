@@ -5,19 +5,25 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+    <meta property="og:image" content="pictures/preview.jpg">
+    <meta property="og:title" content="ClickHouse: Release 24.8 Webinar">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="pictures/preview.jpg">
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/themes/clickhouse/styles/styles.css">
 
-    <style type="text/css">
-         code { display: block; white-space: pre; background-color: #EEE; }
-         p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
-         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
-         .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
-         .slide table tr:not(:last-of-type)>* { background: none; }
+    <style>
+        code { display: block; white-space: pre; background-color: #EEE; }
+        p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+        p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+        .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+        .slide table tr:not(:last-of-type)>* { background: none; }
     </style>
 </head>
 <body class="shower list">
     <header class="caption">
         <h1>ClickHouse: Release 24.8 Webinar</h1>
+        <p>Author: Alexey Milovidov, 2024-08-20.</p>
     </header>
     <section class="slide" id="cover" style="background: url(pictures/back1.jpg); background-size: cover;">
         <h1 style="margin-top: 10px; line-height: 110%; font-size: 56pt; color: black;"><span class="hilite">ClickHouse Release<br/>24.8 LTS</span></h1>
@@ -321,7 +327,7 @@ formatReadableSize(total_bytes): <b style="color: green;">184.63 GiB</b></pre></
 </p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 1em;">It is controlled by the new table-level setting, <b>merge_preferred_step_execution_time_ms</b>,
-<br/>which is alrady set by default to the optimal value.</p>
+<br/>which is already set by default to the optimal value.</p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Anton Popov.</p>
 </section>
@@ -713,15 +719,22 @@ SELECT JSONAllPaths(data) FROM test2 WHERE data.actor.login = 'alexey-milovidov'
 <section class="slide" style="background: url(pictures/back7.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
 <h2 style="color: white; margin-left: -1em;">Q&amp;A</a></h2>
 </section>
+<section class="slide" style="background: black; padding: 0;">
+<iframe style="width: 100%; height: 100%; position: absolute; top: 0; left: 0;" src="https://www.youtube.com/embed/AeLmp2jc51k" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</section>
+
 
 
     <div class="progress"></div>
-    <script src="shower/shower.min.js"></script>
+    <script src="https://presentations.clickhouse.com/shower/shower.js"></script>
 
     <!--Video plugin-->
-    <link rel="stylesheet" href="shower/shower-video.css">
-    <script src="shower/shower-video.js"></script>
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/shower-video.css">
+    <script src="https://presentations.clickhouse.com/shower/shower-video.js"></script>
     <!--/Video plugin-->
+<footer class="badge">
+    <a href="https://presentations.clickhouse.com/">ClickHouse Theater</a>
+</footer>
 </body>
 </html>
 

@@ -1,0 +1,17 @@
+/* Yandex Sans Display */
+
+@font-face {
+    font-family: 'Yandex Sans Display Web';
+    src: url(../fonts/sUYVCPUAQE7ExrvMS7FoISoO83s.woff2) format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-stretch: normal
+}
+
+@font-face {
+    font-family: 'Yandex Sans Display Web';
+    src: url(../fonts/LGiRvlfqQHlWR9YKLhsw5e7KGNA.woff2) format('woff2');
+    font-weight: 300;
+    font-style: normal;
+    font-stretch: normal
+}

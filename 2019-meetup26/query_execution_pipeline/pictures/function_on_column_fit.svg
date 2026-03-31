@@ -1,0 +1,643 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="840"
+   height="720"
+   viewBox="-2 -55 460.45642 401.88444"
+   id="svg4600"
+   version="1.1"
+   inkscape:version="0.91 r13725"
+   sodipodi:docname="function_on_column_fit.svg">
+  <metadata
+     id="metadata4800">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <defs
+     id="defs4798" />
+  <sodipodi:namedview
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="1016"
+     inkscape:window-height="480"
+     id="namedview4796"
+     showgrid="false"
+     units="px"
+     inkscape:zoom="0.32347009"
+     inkscape:cx="460.62992"
+     inkscape:cy="318.89764"
+     inkscape:window-x="65"
+     inkscape:window-y="24"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg4600" />
+  <g
+     id="g4602"
+     transform="matrix(0.91081264,0,0,1.0542041,-0.05464919,17.527106)">
+    <line
+       style="fill:none;fill-opacity:0;stroke:#7f7f7f;stroke-width:2"
+       x1="0"
+       y1="100"
+       x2="160"
+       y2="100"
+       id="line4604" />
+    <line
+       style="fill:none;fill-opacity:0;stroke:#7f7f7f;stroke-width:2"
+       x1="0"
+       y1="140"
+       x2="160"
+       y2="140"
+       id="line4606" />
+    <line
+       style="fill:none;fill-opacity:0;stroke:#7f7f7f;stroke-width:2"
+       x1="0"
+       y1="180"
+       x2="160"
+       y2="180"
+       id="line4608" />
+    <rect
+       style="fill:none;fill-opacity:0;stroke:#000000;stroke-width:2"
+       x="0"
+       y="60"
+       width="160"
+       height="160"
+       id="rect4610" />
+  </g>
+  <text
+     font-size="20.32"
+     style="font-style:normal;font-weight:normal;font-size:20.31999969px;font-family:sans-serif;text-anchor:start;fill:#000000"
+     x="80"
+     y="185.88443"
+     id="text4612">
+    <tspan
+       x="80"
+       y="185.88443"
+       id="tspan4614" />
+  </text>
+  <text
+     font-size="20.32"
+     style="font-style:normal;font-weight:normal;font-size:20.31999969px;font-family:sans-serif;text-anchor:start;fill:#000000"
+     x="235"
+     y="340.88443"
+     id="text4616">
+    <tspan
+       x="235"
+       y="340.88443"
+       id="tspan4618" />
+  </text>
+  <text
+     font-size="20.32"
+     style="font-style:normal;font-weight:normal;font-size:19.91134453px;font-family:'Yandex Sans Text';text-anchor:middle;fill:#000000"
+     x="78.332329"
+     y="101.66438"
+     id="text4620"
+     transform="scale(0.92950597,1.0758403)">
+    <tspan
+       x="78.332329"
+       y="101.66438"
+       id="tspan4622">iPhone</tspan>
+  </text>
+  <text
+     font-size="20.32"
+     style="font-style:normal;font-weight:normal;font-size:19.91134453px;font-family:'Yandex Sans Text';text-anchor:middle;fill:#000000"
+     x="78.332329"
+     y="140.85992"
+     id="text4624"
+     transform="scale(0.92950597,1.0758403)">
+    <tspan
+       x="78.332329"
+       y="140.85992"
+       id="tspan4626">Galaxy A3</tspan>
+  </text>
+  <text
+     font-size="20.32"
+     style="font-style:normal;font-weight:normal;font-size:19.91134453px;font-family:'Yandex Sans Text';text-anchor:middle;fill:#000000"
+     x="78.332329"
+     y="180.05548"
+     id="text4628"
+     transform="scale(0.92950597,1.0758403)">
+    <tspan
+       x="78.332329"
+       y="180.05548"
+       id="tspan4630">Redmi Note 3</tspan>
+  </text>
+  <text
+     font-size="20.32"
+     style="font-style:normal;font-weight:normal;font-size:19.91134453px;font-family:'Yandex Sans Text';text-anchor:middle;fill:#000000"
+     x="78.332329"
+     y="219.25105"
+     id="text4632"
+     transform="scale(0.92950597,1.0758403)">
+    <tspan
+       x="78.332329"
+       y="219.25105"
+       id="tspan4634">Lenovo A2010-a</tspan>
+  </text>
+  <g
+     id="g4636"
+     transform="matrix(0.91081264,0,0,1.0542041,-0.05464919,17.527106)">
+    <line
+       style="fill:none;fill-opacity:0;stroke:#7f7f7f;stroke-width:2"
+       x1="180"
+       y1="20"
+       x2="220"
+       y2="20"
+       id="line4638" />
+    <line
+       style="fill:none;fill-opacity:0;stroke:#7f7f7f;stroke-width:2"
+       x1="180"
+       y1="60"
+       x2="220"
+       y2="60"
+       id="line4640" />
+    <line
+       style="fill:none;fill-opacity:0;stroke:#7f7f7f;stroke-width:2"
+       x1="180"
+       y1="100"
+       x2="220"
+       y2="100"
+       id="line4642" />
+    <line
+       style="fill:none;fill-opacity:0;stroke:#7f7f7f;stroke-width:2"
+       x1="180"
+       y1="140"
+       x2="220"
+       y2="140"
+       id="line4644" />
+    <line
+       style="fill:none;fill-opacity:0;stroke:#7f7f7f;stroke-width:2"
+       x1="180"
+       y1="180"
+       x2="220"
+       y2="180"
+       id="line4646" />
+    <line
+       style="fill:none;fill-opacity:0;stroke:#7f7f7f;stroke-width:2"
+       x1="180"
+       y1="220"
+       x2="220"
+       y2="220"
+       id="line4648" />
+    <line
+       style="fill:none;fill-opacity:0;stroke:#7f7f7f;stroke-width:2"
+       x1="180"
+       y1="260"
+       x2="220"
+       y2="260"
+       id="line4650" />
+    <rect
+       style="fill:none;fill-opacity:0;stroke:#000000;stroke-width:2"
+       x="180"
+       y="-20"
+       width="40"
+       height="320"
+       id="rect4652" />
+  </g>
+  <text
+     font-size="20.32"
+     style="font-style:normal;font-weight:normal;font-size:19.91134453px;font-family:'Yandex Sans Text';text-anchor:middle;fill:#000000"
+     x="195.91901"
+     y="23.27326"
+     id="text4654"
+     transform="scale(0.92950597,1.0758403)">
+    <tspan
+       x="195.91901"
+       y="23.27326"
+       id="tspan4656">2</tspan>
+  </text>
+  <text
+     font-size="20.32"
+     style="font-style:normal;font-weight:normal;font-size:19.91134453px;font-family:'Yandex Sans Text';text-anchor:middle;fill:#000000"
+     x="195.91901"
+     y="62.468819"
+     id="text4658"
+     transform="scale(0.92950597,1.0758403)">
+    <tspan
+       x="195.91901"
+       y="62.468819"
+       id="tspan4660">4</tspan>
+  </text>
+  <text
+     font-size="20.32"
+     style="font-style:normal;font-weight:normal;font-size:19.91134453px;font-family:'Yandex Sans Text';text-anchor:middle;fill:#000000"
+     x="195.91901"
+     y="101.66438"
+     id="text4662"
+     transform="scale(0.92950597,1.0758403)">
+    <tspan
+       x="195.91901"
+       y="101.66438"
+       id="tspan4664">1</tspan>
+  </text>
+  <text
+     font-size="20.32"
+     style="font-style:normal;font-weight:normal;font-size:19.91134453px;font-family:'Yandex Sans Text';text-anchor:middle;fill:#000000"
+     x="195.91901"
+     y="140.85992"
+     id="text4666"
+     transform="scale(0.92950597,1.0758403)">
+    <tspan
+       x="195.91901"
+       y="140.85992"
+       id="tspan4668">1</tspan>
+  </text>
+  <text
+     font-size="20.32"
+     style="font-style:normal;font-weight:normal;font-size:19.91134453px;font-family:'Yandex Sans Text';text-anchor:middle;fill:#000000"
+     x="195.91901"
+     y="180.05548"
+     id="text4670"
+     transform="scale(0.92950597,1.0758403)">
+    <tspan
+       x="195.91901"
+       y="180.05548"
+       id="tspan4672">3</tspan>
+  </text>
+  <text
+     font-size="20.32"
+     style="font-style:normal;font-weight:normal;font-size:19.91134453px;font-family:'Yandex Sans Text';text-anchor:middle;fill:#000000"
+     x="195.91901"
+     y="219.25105"
+     id="text4674"
+     transform="scale(0.92950597,1.0758403)">
+    <tspan
+       x="195.91901"
+       y="219.25105"
+       id="tspan4676">4</tspan>
+  </text>
+  <text
+     font-size="20.32"
+     style="font-style:normal;font-weight:normal;font-size:19.91134453px;font-family:'Yandex Sans Text';text-anchor:middle;fill:#000000"
+     x="195.91901"
+     y="258.44662"
+     id="text4678"
+     transform="scale(0.92950597,1.0758403)">
+    <tspan
+       x="195.91901"
+       y="258.44662"
+       id="tspan4680">2</tspan>
+  </text>
+  <text
+     font-size="20.32"
+     style="font-style:normal;font-weight:normal;font-size:19.91134453px;font-family:'Yandex Sans Text';text-anchor:middle;fill:#000000"
+     x="195.91901"
+     y="297.64218"
+     id="text4682"
+     transform="scale(0.92950597,1.0758403)">
+    <tspan
+       x="195.91901"
+       y="297.64218"
+       id="tspan4684">1</tspan>
+  </text>
+  <text
+     font-size="20.32"
+     style="font-style:normal;font-weight:700;font-size:19.91134453px;font-family:'Yandex Sans Text';text-anchor:middle;fill:#000000"
+     x="78.332329"
+     y="62.468819"
+     id="text4686"
+     transform="scale(0.92950597,1.0758403)">
+    <tspan
+       x="78.332329"
+       y="62.468819"
+       id="tspan4688">Dictionary</tspan>
+  </text>
+  <text
+     font-size="20.32"
+     style="font-style:normal;font-weight:700;font-size:19.91134453px;font-family:'Yandex Sans Text';text-anchor:middle;fill:#000000"
+     x="195.91901"
+     y="-15.922302"
+     id="text4690"
+     transform="scale(0.92950597,1.0758403)">
+    <tspan
+       x="195.91901"
+       y="-15.922302"
+       id="tspan4692">Positions</tspan>
+  </text>
+  <g
+     id="g4694"
+     transform="matrix(0.91081264,0,0,1.0542041,-0.05464919,17.527106)">
+    <line
+       style="fill:none;fill-opacity:0;stroke:#000000;stroke-width:2"
+       x1="240"
+       y1="140"
+       x2="335.52802"
+       y2="140"
+       id="line4696" />
+    <polyline
+       style="fill:none;fill-opacity:0;stroke:#000000;stroke-width:2"
+       points="327.764,145 337.764,140 327.764,135 "
+       id="polyline4698" />
+  </g>
+  <text
+     font-size="20.32"
+     style="font-style:normal;font-weight:900;font-size:19.91134453px;font-family:'Yandex Sans Text';text-anchor:middle;fill:#000000"
+     x="284.10901"
+     y="148.52756"
+     id="text4700"
+     transform="scale(0.92950597,1.0758403)">
+    <tspan
+       x="284.10901"
+       y="148.52756"
+       id="tspan4702">length()</tspan>
+  </text>
+  <g
+     id="g4704"
+     transform="matrix(0.91081264,0,0,1.0542041,-0.05464919,17.527106)">
+    <line
+       style="fill:none;fill-opacity:0;stroke:#7f7f7f;stroke-width:2"
+       x1="360"
+       y1="100"
+       x2="400"
+       y2="100"
+       id="line4706" />
+    <line
+       style="fill:none;fill-opacity:0;stroke:#7f7f7f;stroke-width:2"
+       x1="360"
+       y1="140"
+       x2="400"
+       y2="140"
+       id="line4708" />
+    <line
+       style="fill:none;fill-opacity:0;stroke:#7f7f7f;stroke-width:2"
+       x1="360"
+       y1="180"
+       x2="400"
+       y2="180"
+       id="line4710" />
+    <rect
+       style="fill:none;fill-opacity:0;stroke:#000000;stroke-width:2"
+       x="360"
+       y="60"
+       width="40"
+       height="160"
+       id="rect4712" />
+  </g>
+  <text
+     font-size="20.32"
+     style="font-style:normal;font-weight:normal;font-size:20.31999969px;font-family:sans-serif;text-anchor:start;fill:#000000"
+     x="380"
+     y="185.88443"
+     id="text4714">
+    <tspan
+       x="380"
+       y="185.88443"
+       id="tspan4716" />
+  </text>
+  <text
+     font-size="20.32"
+     style="font-style:normal;font-weight:normal;font-size:20.31999969px;font-family:sans-serif;text-anchor:start;fill:#000000"
+     x="655"
+     y="340.88443"
+     id="text4718">
+    <tspan
+       x="655"
+       y="340.88443"
+       id="tspan4720" />
+  </text>
+  <text
+     font-size="20.32"
+     style="font-style:normal;font-weight:normal;font-size:19.91134453px;font-family:'Yandex Sans Text';text-anchor:middle;fill:#000000"
+     x="372.29901"
+     y="101.66438"
+     id="text4722"
+     transform="scale(0.92950597,1.0758403)">
+    <tspan
+       x="372.29901"
+       y="101.66438"
+       id="tspan4724">6</tspan>
+  </text>
+  <text
+     font-size="20.32"
+     style="font-style:normal;font-weight:normal;font-size:19.91134453px;font-family:'Yandex Sans Text';text-anchor:middle;fill:#000000"
+     x="372.29901"
+     y="140.85992"
+     id="text4726"
+     transform="scale(0.92950597,1.0758403)">
+    <tspan
+       x="372.29901"
+       y="140.85992"
+       id="tspan4728">9</tspan>
+  </text>
+  <text
+     font-size="20.32"
+     style="font-style:normal;font-weight:normal;font-size:19.91134453px;font-family:'Yandex Sans Text';text-anchor:middle;fill:#000000"
+     x="372.29901"
+     y="180.05548"
+     id="text4730"
+     transform="scale(0.92950597,1.0758403)">
+    <tspan
+       x="372.29901"
+       y="180.05548"
+       id="tspan4732">12</tspan>
+  </text>
+  <text
+     font-size="20.32"
+     style="font-style:normal;font-weight:normal;font-size:19.91134453px;font-family:'Yandex Sans Text';text-anchor:middle;fill:#000000"
+     x="372.29901"
+     y="219.25105"
+     id="text4734"
+     transform="scale(0.92950597,1.0758403)">
+    <tspan
+       x="372.29901"
+       y="219.25105"
+       id="tspan4736">14</tspan>
+  </text>
+  <g
+     id="g4738"
+     transform="matrix(0.91081264,0,0,1.0542041,-0.05464919,17.527106)">
+    <line
+       style="fill:none;fill-opacity:0;stroke:#7f7f7f;stroke-width:2"
+       x1="440"
+       y1="20"
+       x2="480"
+       y2="20"
+       id="line4740" />
+    <line
+       style="fill:none;fill-opacity:0;stroke:#7f7f7f;stroke-width:2"
+       x1="440"
+       y1="60"
+       x2="480"
+       y2="60"
+       id="line4742" />
+    <line
+       style="fill:none;fill-opacity:0;stroke:#7f7f7f;stroke-width:2"
+       x1="440"
+       y1="100"
+       x2="480"
+       y2="100"
+       id="line4744" />
+    <line
+       style="fill:none;fill-opacity:0;stroke:#7f7f7f;stroke-width:2"
+       x1="440"
+       y1="140"
+       x2="480"
+       y2="140"
+       id="line4746" />
+    <line
+       style="fill:none;fill-opacity:0;stroke:#7f7f7f;stroke-width:2"
+       x1="440"
+       y1="180"
+       x2="480"
+       y2="180"
+       id="line4748" />
+    <line
+       style="fill:none;fill-opacity:0;stroke:#7f7f7f;stroke-width:2"
+       x1="440"
+       y1="220"
+       x2="480"
+       y2="220"
+       id="line4750" />
+    <line
+       style="fill:none;fill-opacity:0;stroke:#7f7f7f;stroke-width:2"
+       x1="440"
+       y1="260"
+       x2="480"
+       y2="260"
+       id="line4752" />
+    <rect
+       style="fill:none;fill-opacity:0;stroke:#000000;stroke-width:2"
+       x="440"
+       y="-20"
+       width="40"
+       height="320"
+       id="rect4754" />
+  </g>
+  <text
+     font-size="20.32"
+     style="font-style:normal;font-weight:normal;font-size:19.91134453px;font-family:'Yandex Sans Text';text-anchor:middle;fill:#000000"
+     x="450.69016"
+     y="23.27326"
+     id="text4756"
+     transform="scale(0.92950597,1.0758403)">
+    <tspan
+       x="450.69016"
+       y="23.27326"
+       id="tspan4758">2</tspan>
+  </text>
+  <text
+     font-size="20.32"
+     style="font-style:normal;font-weight:normal;font-size:19.91134453px;font-family:'Yandex Sans Text';text-anchor:middle;fill:#000000"
+     x="450.69016"
+     y="62.468819"
+     id="text4760"
+     transform="scale(0.92950597,1.0758403)">
+    <tspan
+       x="450.69016"
+       y="62.468819"
+       id="tspan4762">4</tspan>
+  </text>
+  <text
+     font-size="20.32"
+     style="font-style:normal;font-weight:normal;font-size:19.91134453px;font-family:'Yandex Sans Text';text-anchor:middle;fill:#000000"
+     x="450.69016"
+     y="101.66438"
+     id="text4764"
+     transform="scale(0.92950597,1.0758403)">
+    <tspan
+       x="450.69016"
+       y="101.66438"
+       id="tspan4766">1</tspan>
+  </text>
+  <text
+     font-size="20.32"
+     style="font-style:normal;font-weight:normal;font-size:19.91134453px;font-family:'Yandex Sans Text';text-anchor:middle;fill:#000000"
+     x="450.69016"
+     y="140.85992"
+     id="text4768"
+     transform="scale(0.92950597,1.0758403)">
+    <tspan
+       x="450.69016"
+       y="140.85992"
+       id="tspan4770">1</tspan>
+  </text>
+  <text
+     font-size="20.32"
+     style="font-style:normal;font-weight:normal;font-size:19.91134453px;font-family:'Yandex Sans Text';text-anchor:middle;fill:#000000"
+     x="450.69016"
+     y="180.05548"
+     id="text4772"
+     transform="scale(0.92950597,1.0758403)">
+    <tspan
+       x="450.69016"
+       y="180.05548"
+       id="tspan4774">3</tspan>
+  </text>
+  <text
+     font-size="20.32"
+     style="font-style:normal;font-weight:normal;font-size:19.91134453px;font-family:'Yandex Sans Text';text-anchor:middle;fill:#000000"
+     x="450.69016"
+     y="219.25105"
+     id="text4776"
+     transform="scale(0.92950597,1.0758403)">
+    <tspan
+       x="450.69016"
+       y="219.25105"
+       id="tspan4778">4</tspan>
+  </text>
+  <text
+     font-size="20.32"
+     style="font-style:normal;font-weight:normal;font-size:19.91134453px;font-family:'Yandex Sans Text';text-anchor:middle;fill:#000000"
+     x="450.69016"
+     y="258.44662"
+     id="text4780"
+     transform="scale(0.92950597,1.0758403)">
+    <tspan
+       x="450.69016"
+       y="258.44662"
+       id="tspan4782">2</tspan>
+  </text>
+  <text
+     font-size="20.32"
+     style="font-style:normal;font-weight:normal;font-size:19.91134453px;font-family:'Yandex Sans Text';text-anchor:middle;fill:#000000"
+     x="450.69016"
+     y="297.64218"
+     id="text4784"
+     transform="scale(0.92950597,1.0758403)">
+    <tspan
+       x="450.69016"
+       y="297.64218"
+       id="tspan4786">1</tspan>
+  </text>
+  <text
+     font-size="20.32"
+     style="font-style:normal;font-weight:700;font-size:19.91134453px;font-family:'Yandex Sans Text';text-anchor:middle;fill:#000000"
+     x="372.29901"
+     y="62.468819"
+     id="text4788"
+     transform="scale(0.92950597,1.0758403)">
+    <tspan
+       x="372.29901"
+       y="62.468819"
+       id="tspan4790">Dictionary</tspan>
+  </text>
+  <text
+     font-size="20.32"
+     style="font-style:normal;font-weight:700;font-size:19.91134453px;font-family:'Yandex Sans Text';text-anchor:middle;fill:#000000"
+     x="450.69016"
+     y="-18.372025"
+     id="text4792"
+     transform="scale(0.92950597,1.0758403)">
+    <tspan
+       x="450.69016"
+       y="-18.372025"
+       id="tspan4794">Positions</tspan>
+  </text>
+</svg>

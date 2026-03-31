@@ -2,4 +2,4 @@ User-agent: *
 Disallow: /original_website/*
 Disallow: /cdn-cgi/
 Allow: /
-Host: https://presentations.clickhouse.tech
+Host: https://presentations.clickhouse.com/

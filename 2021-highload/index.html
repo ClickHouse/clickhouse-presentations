@@ -1,55 +1,61 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Необычные случаи оптимизации производительности на примере ClickHouse</title>
+    <title>Unusual Cases of Performance Optimization Using ClickHouse as an Example</title>
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+    <meta property="og:image" content="pictures/preview.jpg">
+    <meta property="og:title" content="Unusual Cases of Performance Optimization Using ClickHouse as an Example">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="pictures/preview.jpg">
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/themes/clickhouse/styles/styles.css">
 </head>
 <body class="shower list">
     <header class="caption">
-        <h1>Необычные случаи оптимизации производительности на примере ClickHouse</h1>
+        <h1>Unusual Cases of Performance Optimization Using ClickHouse as an Example</h1>
+        <p>Author: Alexey Milovidov, 2021-05-11.</p>
     </header>
 
     <section class="slide" id="cover" style="background: #FFF url('pictures/title.png') no-repeat; background-size: 100%;">
-        <h1 style="margin-top: 50px; font-size: 32pt; color: white;">Необычные случаи оптимизации<br/>производительности<br/>на примере ClickHouse</h1>
+        <h1 style="margin-top: 50px; font-size: 32pt; color: white;">Unusual Cases of Performance<br/>Optimization<br/>Using ClickHouse as an Example</h1>
     </section>
 
     <section class="slide">
-        <h2>Обо мне</h2>
-        <p>Алексей, разработчик ClickHouse.</p>
+        <h2>About Me</h2>
+        <p>Alexey, ClickHouse developer.</p>
     </section>
 
     <section class="slide">
         <h2>ClickHouse</h2>
         <p><ul>
-            <li>не тормозил;</li>
-            <li>не тормозит;</li>
-            <li>будет не тормозить ещё больше.</li>
+            <li>didn't slow down;</li>
+            <li>doesn't slow down;</li>
+            <li>will not slow down even more.</li>
         </ul></p>
     </section>
 
     <section class="slide">
-        <h2>Оптимизация производительности</h2>
+        <h2>Performance Optimization</h2>
         <img style="float: right; width: 30%;" src="pictures/whack_a_mole.jpg" />
-        <p>Профилирование на разных нагрузках.</p>
-        <p>Оптимизация всего, что вылезает.</p>
-        <p style="color: gray; font-size: 75%; margin-top: 200px;">Про тестирование производительности &mdash; смотрите доклад Александра Кузьменкова завтра в 10 утра.</p>
+        <p>Profiling under different workloads.</p>
+        <p>Optimizing everything that pops up.</p>
+        <p style="color: gray; font-size: 75%; margin-top: 200px;">About performance testing &mdash; see Alexander Kuzmenkov's talk tomorrow at 10 AM.</p>
         <p style="float: right; color: gray; font-size: 40%;">https://www.techdesignforums.com/practice/technique/<br/>winning-at-whac-a-mole-redesigning-an-rf-transceiver/</p>
     </section>
 
     <section class="slide">
-        <h2>Эпизод 1: MergeTree vs Memory</h2>
-        <p>В ClickHouse есть разные &laquo;движки таблиц&raquo;.</p>
-        <p><b>MergeTree</b> таблицы хранят данные на диске.</p>
-        <p><b>Memory</b> таблицы хранят данные в оперативке.</p>
+        <h2>Episode 1: MergeTree vs Memory</h2>
+        <p>ClickHouse has different &laquo;table engines&raquo;.</p>
+        <p><b>MergeTree</b> tables store data on disk.</p>
+        <p><b>Memory</b> tables store data in RAM.</p>
 
-        <p>Память быстрее, чем диски*.</p>
-        <p>Значит Memory таблицы быстрее, чем MergeTree?</p>
+        <p>Memory is faster than disks*.</p>
+        <p>Does this mean Memory tables are faster than MergeTree?</p>
 
-        <p style="color: gray; font-size: 75%; margin-top: 50px;">* Что значит &laquo;быстрее&raquo;?. Скорость последовательного чтения и записи. Задержки случайных чтений и записи. IOPS при заданном параллелизме и распределении нагрузки.</p>
-        <p style="color: gray; font-size: 75%;">Конечно память может быть медленнее, чем дисковая подсистема,<br/>например одноканальная память vs. 10x PCIe 4.0 SSDs.</p>
+        <p style="color: gray; font-size: 75%; margin-top: 50px;">* What does &laquo;faster&raquo; mean? Sequential read and write speed. Random read and write latency. IOPS at given parallelism and load distribution.</p>
+        <p style="color: gray; font-size: 75%;">Of course memory can be slower than disk subsystem,<br/>for example single-channel memory vs. 10x PCIe 4.0 SSDs.</p>
     </section>
 
     <!--
@@ -61,57 +67,57 @@
         -->
 
     <section class="slide">
-        <video style="height: 100%; margin-top: -10px; margin-left: -80px; margin-right: -80px;"><source src="video/mergetree_vs_memory.ogv" type="video/ogg"></video>
+        <video style="height: 100%; margin-top: -10px; margin-left: -80px; margin-right: -80px;"><source src="video/mergetree_vs_memory.mp4" type="video/mp4"></video>
     </section>
 
     <section class="slide">
         <h2>MergeTree vs Memory</h2>
-        <p><b>Memory</b> таблицы хранят данные в оперативке.</p>
-        <p><b>MergeTree</b> таблицы хранят данные на диске,<br/>точнее в файловой системе.</p>
-        <p>Но данные из файловой системы попадают в <b>page cache</b>.</p>
-        <p>И затем читаются уже <span style="color: green;">из оперативки</span>.</p>
+        <p><b>Memory</b> tables store data in RAM.</p>
+        <p><b>MergeTree</b> tables store data on disk,<br/>more precisely in the file system.</p>
+        <p>But data from the file system goes into <b>page cache</b>.</p>
+        <p>And then is read <span style="color: green;">from RAM</span>.</p>
 
-        <p>Значит нет разницы между <b>Memory</b> и <b>MergeTree</b> таблицами
-        <br/>в случае наличия данных в page cache?</p>
+        <p>Does this mean there's no difference between <b>Memory</b> and <b>MergeTree</b> tables
+        <br/>when data is in page cache?</p>
     </section>
 
     <section class="slide">
         <h2>MergeTree vs Memory</h2>
-        <p>Очевидные случаи, когда <b>MergeTree</b> быстрее, чем <b>Memory</b>.</p>
-        <p><b>MergeTree</b> таблицы имеют первичный ключ и вторичные индексы,<br/>и позволяют читать только нужные диапазоны данных.</p>
-        <p><b>Memory</b> таблицы позволяют только full scan.</p>
+        <p>Obvious cases when <b>MergeTree</b> is faster than <b>Memory</b>.</p>
+        <p><b>MergeTree</b> tables have a primary key and secondary indexes,<br/>and allow reading only the necessary data ranges.</p>
+        <p><b>Memory</b> tables only allow full scan.</p>
 
-        <p style="color: gray;">Но этот случай не интересен.</p>
+        <p style="color: gray;">But this case is not interesting.</p>
 
-        <p style="color: green;">А при full scan может MergeTree быть быстрее, чем Memory?</p>
+        <p style="color: green;">Can MergeTree be faster than Memory in full scan?</p>
     </section>
 
     <!-- clickhouse-benchmark <<< "SELECT SearchPhrase, any(replaceAll(substring(URL, 1, 100), 'google', 'yandex')) AS s, count() AS c FROM test.hits GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10" -->
 
     <section class="slide">
-        <video style="width: 100%;"><source src="video/memory_is_slower.ogv" type="video/ogg"></video>
+        <video style="width: 100%;"><source src="video/memory_is_slower.mp4" type="video/mp4"></video>
     </section>
 
     <section class="slide">
         <h2>MergeTree vs Memory</h2>
-        <p>Неочевидные случаи, когда <b>MergeTree</b> быстрее, чем <b>Memory</b>.</p>
-        <p><b>MergeTree</b> таблицы хранят данные в сортированном порядке<br/>по первичному ключу.</p>
-        <p>Некоторые алгоритмы в ClickHouse эксплуатируют<br/>преимущества локальности данных, если она есть (fast path).</p>
+        <p>Non-obvious cases when <b>MergeTree</b> is faster than <b>Memory</b>.</p>
+        <p><b>MergeTree</b> tables store data in sorted order<br/>by primary key.</p>
+        <p>Some algorithms in ClickHouse exploit<br/>data locality advantages when available (fast path).</p>
 
-        <p>Например, если при GROUP BY подряд дважды встретилось
-        <br/>одно и то же значение, то мы не делаем повторный поиск в хэш-таблице.</p>
+        <p>For example, if during GROUP BY the same value occurs
+        <br/>twice in a row, we don't do a repeated lookup in the hash table.</p>
 
-        <p style="color: gray; font-size: 75%;">Про хэш-таблицы в ClickHouse смотрите доклад Максима Киты завтра в 12:50.</p>
+        <p style="color: gray; font-size: 75%;">About hash tables in ClickHouse, see Maxim Kita's talk tomorrow at 12:50.</p>
 
-        <p style="color: green;">А если данные в таблицах находятся в одинаковом порядке,<br/>может ли MergeTree быть быстрее, чем Memory?</p>
+        <p style="color: green;">And if data in tables is in the same order,<br/>can MergeTree be faster than Memory?</p>
     </section>
 
-    <!-- Пример про ClientIP и RegionID -->
+    <!-- Example about ClientIP and RegionID -->
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">Как обрабатываются данные в ClickHouse</h2>
-        <p>Данные в ClickHouse хранятся по столбцам
-        <br/>и обрабатываются тоже по столбцам.</p>
+        <h2 style="font-size: 32pt;">How Data is Processed in ClickHouse</h2>
+        <p>Data in ClickHouse is stored by columns
+        <br/>and is also processed by columns.</p>
 
         <table>
             <thead>
@@ -142,9 +148,9 @@ std::vector&lt;Point3d> points;</pre>
 
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">Как обрабатываются данные в ClickHouse</h2>
-        <p>Данные в ClickHouse хранятся по столбцам
-        <br/>и обрабатываются тоже по столбцам. <b style="color: green;">По кусочкам столбцов</b>.</p>
+        <h2 style="font-size: 32pt;">How Data is Processed in ClickHouse</h2>
+        <p>Data in ClickHouse is stored by columns
+        <br/>and is also processed by columns. <b style="color: green;">By chunks of columns</b>.</p>
 
         <pre>struct Chunk
 {
@@ -160,90 +166,90 @@ std::vector&lt;Point3d> points;</pre>
 
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">Как именно читаются данные из таблицы?</h2>
+        <h2 style="font-size: 32pt;">How Exactly is Data Read from the Table?</h2>
         <img style="float: right; height: 70%; margin-top: -70px; margin-right: -80px;" src="pictures/not_optimal.webp" />
-        <p>В случае <b>MergeTree</b>:</p>
-        <p>&mdash; читаем сжатые файлы из файловой системы;</p>
-        <p>&mdash; вычисляем и сверяем чексуммы;</p>
-        <p>&mdash; разжимаем сжатые блоки;</p>
-        <p>&mdash; десериализуем кусочки столбцов;</p>
-        <p>&mdash; обрабатываем их;</p>
+        <p>In the case of <b>MergeTree</b>:</p>
+        <p>&mdash; read compressed files from the file system;</p>
+        <p>&mdash; calculate and verify checksums;</p>
+        <p>&mdash; decompress compressed blocks;</p>
+        <p>&mdash; deserialize column chunks;</p>
+        <p>&mdash; process them;</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">Как именно читаются данные из таблицы?</h2>
+        <h2 style="font-size: 32pt;">How Exactly is Data Read from the Table?</h2>
         <img style="float: left; height: 70%; margin-top: -70px; margin-left: -80px;" src="pictures/optimal.webp" />
-        <p>В случае <b>Memory</b>:</p>
-        <p>&mdash; в оперативке уже находятся готовые<br/>&emsp; кусочки столбцов,</p>
-        <p>&emsp; обрабатываем их;</p>
+        <p>In the case of <b>Memory</b>:</p>
+        <p>&mdash; ready-made column chunks are<br/>&emsp; already in RAM,</p>
+        <p>&emsp; process them;</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">Что именно происходит при чтении?</h2>
-        <p style="margin-top: -1em;">В случае <b>MergeTree</b>:</p>
-        <p>1. Читаем сжатые файлы из файловой системы:</p>
-        <p>&mdash; читать можно с помощью синхронного (<b>read</b>/<b>pread</b>, <b>mmap</b>)<br/>&emsp; или асинхронного (<b>AIO</b>, <b>uring</b>) ввода-вывода;</p>
-        <p>&mdash; в случае синхронного ввода-вывода, можно<br/>&emsp; использовать (обычный read или mmap)<br/>&emsp; или не использовать page cache (<b>O_DIRECT</b>);</p>
-        <p>&mdash; если читать из page cache без mmap,<br/>&emsp; то будет <span style="color: red;">копирование</span> из page cache в userspace;</p>
-        <p>&mdash; читаем сжатые данные &mdash; если коэффициент сжатия большой,<br/>&emsp; то доля времени в обработке запроса маленькая;</p>
+        <h2 style="font-size: 32pt;">What Exactly Happens During Reading?</h2>
+        <p style="margin-top: -1em;">In the case of <b>MergeTree</b>:</p>
+        <p>1. Read compressed files from the file system:</p>
+        <p>&mdash; reading can be done with synchronous (<b>read</b>/<b>pread</b>, <b>mmap</b>)<br/>&emsp; or asynchronous (<b>AIO</b>, <b>uring</b>) I/O;</p>
+        <p>&mdash; in case of synchronous I/O, we can<br/>&emsp; use (regular read or mmap)<br/>&emsp; or not use page cache (<b>O_DIRECT</b>);</p>
+        <p>&mdash; if reading from page cache without mmap,<br/>&emsp; there will be <span style="color: red;">copying</span> from page cache to userspace;</p>
+        <p>&mdash; reading compressed data &mdash; if compression ratio is large,<br/>&emsp; the proportion of time in query processing is small;</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">Что именно происходит при чтении?</h2>
-        <p style="margin-top: -1em;">В случае <b>MergeTree</b>:</p>
-        <p>2. Разжимаем сжатые блоки:</p>
-        <p>&mdash; по-умолчанию используется LZ4*;</p>
-        <p>&mdash; можно выбрать как более сильный метод сжатия (ZSTD),<br/>&emsp; так и более слабый, например вообще без сжатия (NONE);</p>
-        <p>&mdash; иногда NONE внезапно работает медленнее, с чего бы это?</p>
-        <p>&mdash; а блоками какого размера были сжаты данные?<br/>&emsp; и как это влияет на скорость?</p>
+        <h2 style="font-size: 32pt;">What Exactly Happens During Reading?</h2>
+        <p style="margin-top: -1em;">In the case of <b>MergeTree</b>:</p>
+        <p>2. Decompress compressed blocks:</p>
+        <p>&mdash; by default LZ4* is used;</p>
+        <p>&mdash; you can choose a stronger compression method (ZSTD),<br/>&emsp; or weaker, for example no compression at all (NONE);</p>
+        <p>&mdash; sometimes NONE unexpectedly works slower, why would that be?</p>
+        <p>&mdash; and what block size was used for compressing data?<br/>&emsp; and how does this affect speed?</p>
 
-        <p style="color: gray; font-size: 75%; margin-top: 50px;">* Смотрите доклад &laquo;Как ускорить разжатие LZ4&raquo; с HighLoad++ Siberia 2018.</p>
+        <p style="color: gray; font-size: 75%; margin-top: 50px;">* See the talk &laquo;How to Speed Up LZ4 Decompression&raquo; from HighLoad++ Siberia 2018.</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">Что именно происходит при чтении?</h2>
-        <p>В случае <b>MergeTree</b>:</p>
-        <p>3. Десериализуем кусочки столбцов:</p>
-        <p>&mdash; десериализации как таковой нет;</p>
-        <p>&mdash; это просто перекладывание данных (memcpy);</p>
-        <p>&mdash; а зачем вообще нужно перекладывать данные?</p>
+        <h2 style="font-size: 32pt;">What Exactly Happens During Reading?</h2>
+        <p>In the case of <b>MergeTree</b>:</p>
+        <p>3. Deserialize column chunks:</p>
+        <p>&mdash; there is no deserialization as such;</p>
+        <p>&mdash; it's just moving data (memcpy);</p>
+        <p>&mdash; why is it necessary to move data at all?</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">Отличие MergeTree и Memory</h2>
-        <p>В случае <b>Memory</b>:<br/>&mdash; готовые кусочки столбцов в оперативке.</p>
-        <p>В случае <b>MergeTree</b>:<br/>&mdash; кусочки столбцов формируются динамически при чтении.</p>
-        <p><b>MergeTree</b> делает больше работы,<br/>но может ли это иногда быть оптимальнее?</p>
+        <h2 style="font-size: 32pt;">Difference Between MergeTree and Memory</h2>
+        <p>In the case of <b>Memory</b>:<br/>&mdash; ready-made column chunks in RAM.</p>
+        <p>In the case of <b>MergeTree</b>:<br/>&mdash; column chunks are formed dynamically during reading.</p>
+        <p><b>MergeTree</b> does more work,<br/>but can this sometimes be more optimal?</p>
     </section>
 
     <section class="slide">
         <h2>MergeTree vs Memory</h2>
-        <p>В случае <b>MergeTree</b>:</p>
-        <p>&mdash; кусочки столбцов формируются динамически при чтении,
-        <br/>&emsp; и их размер в числе строк может выбираться адаптивно
-        <br/>&emsp; для <span style="color: green;">кэш-локальности</span>!</p>
+        <p>In the case of <b>MergeTree</b>:</p>
+        <p>&mdash; column chunks are formed dynamically during reading,
+        <br/>&emsp; and their size in rows can be chosen adaptively
+        <br/>&emsp; for <span style="color: green;">cache locality</span>!</p>
     </section>
 
     <!-- SELECT round(avg(blockSize())) FROM test.hits WHERE NOT ignore(URL, SearchPhrase) -->
 
     <section class="slide">
-        <h2>Кэш-локальность</h2>
-        <p><b>С какой скоростью работает оперативка?</b>
-        <br/>&mdash; какая оперативка, на какой машине?</p>
-        <p><b>С какой скоростью работает кэш?</b>
-        <br/>&mdash; кэш какого уровня, на каком CPU?
-        <br/>&mdash; один или все вместе?</p>
-        <p><b>С какой скоростью чего?</b>
+        <h2>Cache Locality</h2>
+        <p><b>What speed does RAM work at?</b>
+        <br/>&mdash; which RAM, on which machine?</p>
+        <p><b>What speed does cache work at?</b>
+        <br/>&mdash; which cache level, on which CPU?
+        <br/>&mdash; one or all together?</p>
+        <p><b>What speed of what?</b>
         <br/>&mdash; throughput, latency?..</p>
     </section>
 
     <section class="slide">
-        <h2>Эпизод 2: сжатие данных тормозит?</h2>
-        <p>В ClickHouse данные по-умолчанию хранятся сжатыми.</p>
-        <p>При записи сжимаются, при чтении &mdash; разжимаются.</p>
-        <p>Профилируем запросы...</p>
-        <p>В топе по CPU &mdash; функция LZ4_decomress_safe.</p>
-        <p style="margin-top: 2em;">🤔 Чтобы всё ускорить, надо просто убрать сжатие данных?</p>
+        <h2>Episode 2: does data compression slow things down?</h2>
+        <p>In ClickHouse data is stored compressed by default.</p>
+        <p>It's compressed on write, decompressed on read.</p>
+        <p>Profiling queries...</p>
+        <p>At the top by CPU &mdash; LZ4_decomress_safe function.</p>
+        <p style="margin-top: 2em;">To speed everything up, should we just remove data compression?</p>
     </section>
 
     <section class="slide">
@@ -252,74 +258,74 @@ std::vector&lt;Point3d> points;</pre>
     </section>
 
     <section class="slide">
-        <h2>Пробуем убрать сжатие данных</h2>
+        <h2>Trying to Remove Data Compression</h2>
         <img style="float: right; width: 20%; margin-right: -80px;" src="pictures/frustration.jpg" />
-        <p style="color: red;">Но ничего хорошего из этого не выходит:</p>
-        <p>1. Убрали сжатие данных и теперь они не помещаются на диск.</p>
-        <p>2. Убрали сжатие данных и теперь чтение с диска тормозит.</p>
-        <p>3. Убрали сжатие данных и теперь<br/>&emsp;меньше данных помещается в page cache.</p>
+        <p style="color: red;">But nothing good comes of it:</p>
+        <p>1. Removed data compression and now it doesn't fit on disk.</p>
+        <p>2. Removed data compression and now reading from disk is slow.</p>
+        <p>3. Removed data compression and now<br/>&emsp;less data fits in page cache.</p>
         <p>...</p>
-        <p>Но даже если несжатые данные помещаются целиком<br/>в оперативку &mdash; <b>имеет ли смысл не сжимать</b> их?</p>
+        <p>But even if uncompressed data fits entirely<br/>in RAM &mdash; <b>does it make sense to not compress</b> it?</p>
     </section>
 
-    <!-- Пример -->
+    <!-- Example -->
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">Что быстрее: разжатие или memcpy?</h2>
-        <p>Функцию <b>memcpy</b> используют как baseline<br/> самого слабого сжатия или разжатия в бенчмарках.</p>
-        <p>Конечно, это самый быстрый эталон для сравнения.</p>
-        <p>Пример:
-        <br/>&mdash; memcpy: <b style="color: green;">12 ГБ</b> в секунду.
-        <br/>&mdash; LZ4 decompression: <b style="color: red;">2..4 ГБ</b> разжатых данных в секунду.</p>
-        <p>Вывод: memcpy быстрее, чем разжатие LZ4?</p>
-    </section>
-
-    <section class="slide">
-        <h2 style="font-size: 32pt;">Что быстрее: разжатие или memcpy?</h2>
-        <p>Рассмотрим сценарий:</p>
-        <p style="line-height: 1.5">&mdash; данные хранятся в оперативке;
-        <br/>&mdash; данные обрабатываются по блокам;
-        <br/>&mdash; каждый блок достаточно небольшой и помещается в кэш CPU;
-        <br/>&mdash; обработка каждого блока помещается в кэш CPU;
-        <br/>&mdash; <b style="color: green;">данные обрабатываются в несколько потоков</b>;</p>
-
-        <p>Данные читаются из оперативки, дальше используется только кэш CPU.</p>
+        <h2 style="font-size: 32pt;">What's Faster: Decompression or memcpy?</h2>
+        <p>The <b>memcpy</b> function is used as a baseline<br/> of the weakest compression or decompression in benchmarks.</p>
+        <p>Of course, this is the fastest benchmark for comparison.</p>
+        <p>Example:
+        <br/>&mdash; memcpy: <b style="color: green;">12 GB</b> per second.
+        <br/>&mdash; LZ4 decompression: <b style="color: red;">2..4 GB</b> of decompressed data per second.</p>
+        <p>Conclusion: is memcpy faster than LZ4 decompression?</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">Что быстрее: разжатие или memcpy?</h2>
-        <p>Пример: Ryzen 3950 (16 ядер)</p>
-        <p style="line-height: 1.5">&mdash; memcpy: 16×12 ГБ = <b>192 ГБ</b> в секунду.
-        <br/>&mdash; LZ4 decompression: 16×2..4 ГБ = <b>32..48 ГБ</b> разжатых данных в секунду.
-        <br/>&mdash; скорость чтения из памяти: <b style="color: red;">30 ГБ</b>* в секунду.
+        <h2 style="font-size: 32pt;">What's Faster: Decompression or memcpy?</h2>
+        <p>Consider the scenario:</p>
+        <p style="line-height: 1.5">&mdash; data is stored in RAM;
+        <br/>&mdash; data is processed in blocks;
+        <br/>&mdash; each block is quite small and fits in CPU cache;
+        <br/>&mdash; processing of each block fits in CPU cache;
+        <br/>&mdash; <b style="color: green;">data is processed in multiple threads</b>;</p>
+
+        <p>Data is read from RAM, then only CPU cache is used.</p>
+    </section>
+
+    <section class="slide">
+        <h2 style="font-size: 32pt;">What's Faster: Decompression or memcpy?</h2>
+        <p>Example: Ryzen 3950 (16 cores)</p>
+        <p style="line-height: 1.5">&mdash; memcpy: 16×12 GB = <b>192 GB</b> per second.
+        <br/>&mdash; LZ4 decompression: 16×2..4 GB = <b>32..48 GB</b> of decompressed data per second.
+        <br/>&mdash; memory read speed: <b style="color: red;">30 GB</b>* per second.
         </p>
 
-        <p>В случае memcpy чтение упирается в скорость памяти.</p>
-        <p><span style="color: green;">Но если используется сжатие, то из памяти читается меньше данных.</span>
-        <br/><b>Память работает как диск.</b> Разжатие LZ4 быстрее, чем memcpy?</p>
+        <p>In the case of memcpy, reading is limited by memory speed.</p>
+        <p><span style="color: green;">But if compression is used, less data is read from memory.</span>
+        <br/><b>Memory works like disk.</b> Is LZ4 decompression faster than memcpy?</p>
 
-        <p style="color: gray; font-size: 75%;">* память двухканальная, но работает не на максимальной частоте.<br/>По спецификации для этого CPU до 48 ГБ в секунду.</p>
+        <p style="color: gray; font-size: 75%;">* dual-channel memory, but not working at maximum frequency.<br/>According to specs for this CPU up to 48 GB per second.</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">Что быстрее: разжатие или memcpy?</h2>
-        <p>Пример: 2 × AMD EPYC 7742 (<b>128 ядер</b>)</p>
+        <h2 style="font-size: 32pt;">What's Faster: Decompression or memcpy?</h2>
+        <p>Example: 2 × AMD EPYC 7742 (<b>128 cores</b>)</p>
         <p>8 channel memory, max throughput <b>190 GiB/s</b></p>
 
-        <p>Для этого сервера работа с данными,<br/>сжатыми LZ4, также будет быстрее.</p>
-        <p>Но если ядер меньше &mdash; уже не всё однозначно.</p>
-        <p style="color: gray;">Если данные хорошо сжаты, то разжатие всё-таки упирается в CPU,<br/> а значит, его можно ускорить!</p>
+        <p>For this server, working with data<br/>compressed with LZ4, will also be faster.</p>
+        <p>But if there are fewer cores &mdash; it's not so clear anymore.</p>
+        <p style="color: gray;">If data is well compressed, decompression still hits CPU,<br/> which means it can be sped up!</p>
     </section>
 
     <section class="slide">
-        <h2 style="font-size: 32pt;">Оптимизации в ClickHouse</h2>
-        <p style="margin-top: -1em;">Для <b>Memory</b> таблиц:</p>
-        <p>&mdash; Уменьшили размер блока при записи<br/>для лучшей кэш-локальности обработки данных <a href="https://github.com/ClickHouse/ClickHouse/pull/20169">#20169</a>.</p>
-        <p>&mdash; Возможность сжатия Memory таблиц <a href="https://github.com/ClickHouse/ClickHouse/pull/20168">#20168</a>.</p>
-        <p>Для <b>MergeTree</b> таблиц:</p>
-        <p>&mdash; Убрали лишнее копирование для режима сжатия NONE <a href="https://github.com/ClickHouse/ClickHouse/pull/22145">#22145</a>.</p>
-        <p>&mdash; Возможность отключить чексуммы при чтении <a href="https://github.com/ClickHouse/ClickHouse/pull/19588">#19588</a>,<br/>но использовать эту возможность не надо.</p>
-        <p>&mdash; Возможность чтения с помощью mmap <a href="https://github.com/ClickHouse/ClickHouse/pull/8520">#8520</a>, чтобы убрать<br/>лишнее копирование из page cache а также кэш memory mappings <a href="https://github.com/ClickHouse/ClickHouse/pull/22206">#22206</a>.</p>
+        <h2 style="font-size: 32pt;">Optimizations in ClickHouse</h2>
+        <p style="margin-top: -1em;">For <b>Memory</b> tables:</p>
+        <p>&mdash; Reduced block size on write<br/>for better cache locality of data processing <a href="https://github.com/ClickHouse/ClickHouse/pull/20169">#20169</a>.</p>
+        <p>&mdash; Ability to compress Memory tables <a href="https://github.com/ClickHouse/ClickHouse/pull/20168">#20168</a>.</p>
+        <p>For <b>MergeTree</b> tables:</p>
+        <p>&mdash; Removed unnecessary copying for NONE compression mode <a href="https://github.com/ClickHouse/ClickHouse/pull/22145">#22145</a>.</p>
+        <p>&mdash; Ability to disable checksums when reading <a href="https://github.com/ClickHouse/ClickHouse/pull/19588">#19588</a>,<br/>but this ability should not be used.</p>
+        <p>&mdash; Ability to read using mmap <a href="https://github.com/ClickHouse/ClickHouse/pull/8520">#8520</a>, to remove<br/>unnecessary copying from page cache and also cache memory mappings <a href="https://github.com/ClickHouse/ClickHouse/pull/22206">#22206</a>.</p>
     </section>
 
     <!--
@@ -332,34 +338,37 @@ std::vector&lt;Point3d> points;</pre>
         -->
 
     <section class="slide">
-        <video style="width: 100%;"><source src="video/memory_compressed_slower.ogv" type="video/ogg"></video>
+        <video style="width: 100%;"><source src="video/memory_compressed_slower.mp4" type="video/mp4"></video>
     </section>
 
     <section class="slide">
-        <video style="width: 100%;"><source src="video/memory_compressed_faster.ogv" type="video/ogg"></video>
+        <video style="width: 100%;"><source src="video/memory_compressed_faster.mp4" type="video/mp4"></video>
     </section>
 
     <section class="slide">
-        <h2>Выводы</h2>
-        <p>Чтобы оптимизировать производительность, нужно всего лишь:</p>
-        <p>&mdash; точно знать, что делает ваш код;</p>
-        <p>&mdash; профилировать систему на реалистичных сценариях нагрузки;</p>
-        <p>&mdash; представлять возможности железа;</p>
+        <h2>Conclusions</h2>
+        <p>To optimize performance, you just need to:</p>
+        <p>&mdash; know exactly what your code does;</p>
+        <p>&mdash; profile the system under realistic load scenarios;</p>
+        <p>&mdash; understand hardware capabilities;</p>
         <p>...</p>
-        <p>&mdash; не забывать что в системе много ядер, а у процессора есть кэш;<br/>&emsp; не путать latency и throughput :)</p>
+        <p>&mdash; not forget that the system has many cores, and the processor has cache;<br/>&emsp; don't confuse latency and throughput :)</p>
     </section>
 
     <section class="slide">
-        <h2>Спасибо!</h2>
+        <h2>Thank you!</h2>
     </section>
 
 
     <div class="progress"></div>
-    <script src="shower/shower.min.js"></script>
+    <script src="https://presentations.clickhouse.com/shower/shower.js"></script>
 
     <!--Video plugin-->
-    <link rel="stylesheet" href="shower/shower-video.css">
-    <script src="shower/shower-video.js"></script>
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/shower-video.css">
+    <script src="https://presentations.clickhouse.com/shower/shower-video.js"></script>
     <!--/Video plugin-->
+<footer class="badge">
+    <a href="https://presentations.clickhouse.com/">ClickHouse Theater</a>
+</footer>
 </body>
 </html>

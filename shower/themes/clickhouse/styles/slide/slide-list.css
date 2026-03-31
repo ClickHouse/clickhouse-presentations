@@ -1,0 +1,31 @@
+/* Slide List */
+
+.shower.list .slide {
+    border-radius: 2px;
+    box-shadow: 0 20px 50px rgb(0 0 0);
+    transform-origin: 0 0;
+    transform: scale(
+        var(--slide-scale)
+    );
+}
+
+.shower.list .slide * {
+    pointer-events: none;
+}
+
+/* Hover */
+
+.shower.list .slide:hover {
+    box-shadow:
+        0 0 0 20px rgb(0 0 0 / 30%),
+        0 20px 50px rgb(0 0 0);
+}
+
+/* Active */
+
+.shower.list .slide.active {
+    box-shadow:
+        0 0 0 1px white,
+        0 0 0 10px var(--color-yellow),
+        0 20px 50px rgb(0 0 0);
+}

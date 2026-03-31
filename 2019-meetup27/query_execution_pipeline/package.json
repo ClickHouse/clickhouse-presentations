@@ -1,0 +1,21 @@
+{
+  "name": "jekyller",
+  "version": "1.0.0",
+  "description": "[build]: https://travis-ci.org/shower/jekyller.png?branch=gh-pages [build-link]: https://travis-ci.org/shower/jekyller",
+  "main": "index.md",
+  "directories": {
+    "example": "examples"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.yandex-team.ru/presentation/jekyller"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "shower-core": "^2.1.0"
+  }
+}

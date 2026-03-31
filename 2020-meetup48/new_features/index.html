@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Even More New Features of ClickHouse</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta property="og:image" content="pictures/preview.jpg">
+    <meta property="og:title" content="Even More New Features of ClickHouse">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="pictures/preview.jpg">
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/themes/clickhouse/styles/styles.css">
+
+    <style>
+        code { display: block; white-space: pre; background-color: #EEE; }
+
+        p.cloud { text-align: center; line-height: 2; }
+        p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+        .shower { --slide-ratio: calc(16 / 10); }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>Even More New Features of ClickHouse</h1>
+        <p>Author: Alexey Milovidov, 2020-11-12.</p>
+    </header>
+
+    <section class="slide" id="cover">
+        <h1 style="margin-top: 180px; font-size: 48pt;"><span>Even More New Features of ClickHouse</h1>
+    </section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Previously on: Summer 2020</h2>
+<p class="cloud">
+<span>PostgreSQL wire protocol</span>
+<span>Geographical dictionaries</span>
+<span>Data coarsening with TTL expressions</span>
+<span>Parallel calculation of FINAL</span>
+<span>Insertion into ODBC and JDBC</span>
+<span>Cassandra dictionary source</span>
+<span>Dictionary layout for SSD</span>
+<span>Settings for data formats in dictionaries</span>
+<span>Support for Distributed over Distributed queries</span>
+<span>Query metrics from PMU</span>
+<span>GROUP BY optimization on sorted data</span>
+<span>Apache Arrow import/export</span>
+<span>MsgPack format</span>
+<span>"direct" dictionary source</span>
+</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">EXPLAIN Query</h2>
+<p><code>EXPLAIN [AST|SYNTAX|PLAN|PIPELINE]
+SELECT ...</code></p>
+<p><code>EXPLAIN PLAN
+    header = 0, description = 1,
+    actions = 0, optimize = 1
+SELECT ...</code></p>
+<p><code>EXPLAIN PIPELINE
+    header = 0, graph = 1, compact = 1
+SELECT ...</code></p>
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Available since version 20.6. Developer &mdash; Nikolai Kochetov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">WITH subqueries (CTE)</h2>
+<p>&mdash; for subqueries:<br><br/>
+<code>WITH <b>a</b> AS (SELECT ...),
+     <b>b</b> AS (SELECT ...),
+     <b>c</b> AS (SELECT ...)
+SELECT * FROM <b>a</b>, <b>b</b> WHERE x IN <b>c</b></code></p>
+<p>&mdash; global scope:<br><br/>
+<code>WITH <b>a</b> AS (SELECT ...)
+SELECT * FROM (SELECT * FROM <b>a</b>)</code></p>
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Available since version 20.10. Developer &mdash; Amos Bird.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">LDAP Authentication</h2>
+<p>&mdash; for authentication of existing users (20.7);</p>
+<p>&mdash; LDAP as a user directory (20.11);</p>
+<p style="color: gray;">&mdash; LDAP as a role directory;</p>
+<p style="color: gray;">&mdash; Kerberos authentication;</p>
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Developers &mdash; Denis Glazachev, Vitaly Baranov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Atomic Database</h2>
+<p>&mdash; DROP TABLE, RENAME TABLE queries are now non-blocking;</p>
+<p>&mdash; EXCHANGE TABLES query;</p>
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Developer &mdash; Alexander Tokmakov.<br/>
+Default since version 20.10. Backward compatibility since version 20.4.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Replication Improvements</h2>
+<p>&mdash; removal of leader selection (20.5);</p>
+<p>&mdash; parallel insert with quorum (20.10);</p>
+<p>&mdash; ability to retry insert on different replicas (20.10);</p>
+<p>&mdash; ALTER DROP/DETACH PART query (20.12);</p>
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Developers:<br/> Alexey Milovidov, Aleksandra Latysheva, Alexander Sapin, Nicolae Vartolomei.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">New Data Format in MergeTree</h2>
+<p>&mdash; Compact data parts (since version <span style="color: green">20.3</span>).</p>
+<p>&mdash; In-memory data parts (since version <span style="color: green">20.6</span>).</p>
+<p>&mdash; Write-Ahead Log (since version <span style="color: green">20.6</span>).</p>
+<p>&mdash; Durability settings (since version <span style="color: gray">20.10</span>).</p>
+
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Developer &mdash; Anton Popov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Three Data Part Formats</h2>
+<p>1. Wide &mdash; classic format.</p>
+<p>2. Compact &mdash; all columns in one file.</p>
+<p>3. Memory &mdash; data in RAM.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Three Data Part Formats</h2>
+<p>Controlled by settings:</p>
+<p>&mdash; <b>min_bytes_for_wide_part</b>,<br/>&emsp; <b>min_rows_for_wide_part</b>:</p>
+<p>&emsp; if size is larger &mdash; use <b>wide</b> format.</p>
+<p>&mdash; <b>min_bytes_for_compact_part</b>,<br/>&emsp; <b>min_rows_for_compact_part</b>:</p>
+<p>&emsp; if size is larger &mdash; use <b>compact</b> format,<br/>
+&emsp; if smaller &mdash; use memory format.</p>
+<p>Wide > Compact > Memory</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Wide Parts</h2>
+<p>Classic format.</p>
+<p>Each column and index in a separate file.</p>
+<p>Optimal for reading data from disks, including slow ones.</p>
+<p>Cheap ALTER for adding or removing columns.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Compact Parts</h2>
+<p>All columns in one file.</p>
+<p style="color: green;">Optimal for inserting new data.<br/>
+Especially on slow filesystems.</p>
+<p style="color: red;">Less optimal for reading.</p>
+
+<p>Recommended for small data parts.</p>
+<p>Not recommended for all parts.</p>
+
+<p>Available since version 20.3, but disabled by default.<br/>
+Since version 20.10, it will be used for parts up to 10 MB.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">In-Memory Parts</h2>
+<img style="float: left; height: 60%; margin-left: -60px; margin-top: -60px; margin-right: 20px;" src="pictures/optimal.webp" />
+<p>Data in RAM.</p>
+<p>+ Write-Ahead Log, can be disabled.</p>
+
+<p>&mdash; in_memory_parts_enable_wal;<br/>
+&mdash; write_ahead_log_max_bytes.</p>
+
+<p><span style="color: green;">Even more optimal for inserting new data...</span><br/>
+... if write-ahead log is disabled.</p>
+
+<p><span style="color: green;">More efficient for reading...</span><br/>
+... but data in RAM is uncompressed.</p>
+
+<p>All parts are replicated as usual.</p>
+
+<p style="color: gray">Experimental feature.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Durability</h2>
+<p>If all your data is located on one server...</p>
+<p>If you don't use replication...</p>
+<p>If replication exists, but within one region...</p>
+
+<p style="margin-top: 2em; color: green;">&mdash; should we just call fsync before responding to INSERT?</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Durability</h2>
+<p>Eat My Data (2007):<br/>
+<a href="https://www.youtube.com/watch?v=LMe7hf2G1po">https://www.youtube.com/watch?v=LMe7hf2G1po</a></p>
+
+<p>Files Are Hard (2015):<br/>
+<a href="https://danluu.com/file-consistency/">https://danluu.com/file-consistency/</a></p>
+
+<p>PostgreSQL "Fsyncgate" (2018):<br/>
+<a href="https://lwn.net/Articles/752063/">https://lwn.net/Articles/752063/</a></p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Durability</h2>
+<p>If all your data is located on one server...<br/>
+If you don't use replication...<br/>
+If replication exists, but within one region...</p>
+
+<p style="color: green;">Then here you go:</p>
+
+<p>&mdash; min_rows_to_fsync_after_merge;
+<br/>&mdash; min_compressed_bytes_to_fsync_after_merge;
+<br/>&mdash; min_compressed_bytes_to_fsync_after_fetch;
+<br/>&mdash; fsync_after_insert;
+<br/>&mdash; fsync_part_directory;
+<br/>&mdash; write_ahead_log_bytes_to_fsync;
+<br/>&mdash; write_ahead_log_interval_ms_to_fsync;
+<br/>&mdash; in_memory_parts_insert_sync.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Query Normalization and Obfuscation</h2>
+<p>Functions <b>normalizeQuery</b>, <b>normalizedQueryHash</b>.</p>
+<code>SELECT <b>normalizeQuery</b>(query) FROM system.query_log</code>
+<p style="margin-top: 2em;">&mdash; replacement of literals with <span style="background-color: #EEE; padding: 5px 10px; font-family: Monospace;">?</span></p>
+<p>&mdash; replacement of literal lists with <span style="background-color: #EEE; padding: 5px 10px; font-family: Monospace;">?..</span></p>
+<p>&mdash; replacement of complex aliases with <span style="background-color: #EEE; padding: 5px 10px; font-family: Monospace;">`?`</span></p>
+
+<p style="margin-top: 100px; font-size: 14pt; color: green;">Available since version 20.8.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Query Obfuscation</h2>
+<p>A friend of mine had a slow query...<br/>
+... but he didn't want to show it.</p>
+<p>Solution:</p>
+<code>clickhouse-format --<b>obfuscate</b> &lt; query.sql</code>
+
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Available since version 20.10.</p>
+<p style="font-size: 14pt; color: gray;">Data obfuscation: <a href="https://www.youtube.com/watch?v=2iR7i4akL44">https://www.youtube.com/watch?v=2iR7i4akL44</a></p>
+</section>
+
+<section class="slide" style="background-image: url('pictures/query.png'); background-size: 100%;">
+&nbsp;
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Recompression of Old Data</h2>
+<code>CREATE TABLE hits
+(
+  event_time DateTime,
+  ...
+) ENGINE MergeTree ORDER BY ...
+
+<b>TTL</b> event_time + INTERVAL 1 MONTH
+        <b>RECOMPRESS</b> CODEC(ZSTD(1)),
+    event_time + INTERVAL 1 YEAR
+        <b>RECOMPRESS</b> CODEC(ZSTD(6))</code>
+
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Developer &mdash; Alexander Sapin. Available since version 20.10.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Minor Features for ALTER</h2>
+<code>CREATE TABLE hits
+(
+  event_time DateTime CODEC(Delta, <b>Default</b>),
+  ...
+) ENGINE MergeTree ORDER BY ...</code>
+
+<code style="margin-top: 2em;">ALTER TABLE hits MODIFY COLUMN c
+    <b>REMOVE</b> COMMENT|CODEC|TTL
+        |DEFAULT|MATERIALIZED|ALIAS</code>
+
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Developer &mdash; Alexander Sapin. Available since version 20.10.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Column List Transformations</h2>
+<code>SELECT * <b>EXCEPT</b>(secret_column) FROM table;</code>
+<code style="margin-top: 0.5em;">SELECT table.* <b>REPLACE</b>(
+  (URL LIKE '%yandex%' ? '' : URL) AS URL) FROM table;</code>
+<code style="margin-top: 0.5em;">SELECT <b>COLUMNS('^packet_')</b> FROM table;</code>
+<code style="margin-top: 0.5em;">SELECT t.* <b>APPLY</b>(sum) FROM table AS t;</code>
+<code style="margin-top: 0.5em;">SELECT <b>COLUMNS(x, y, z)</b> <b>APPLY</b>(sum) FROM table;</code>
+
+<p style="margin-top: 100px; font-size: 14pt; color: gray;">Developer &mdash; Amos Bird, mfridental. Available since version 20.10.</p>
+<p style="font-size: 14pt; color: gray;">COLUMNS('regexp'): developer &mdash; mfridental. Available since version <span style="color: green;">19.12</span>.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">New Versions of ClickHouse</h2>
+<p style="color: gray">20.12 &mdash; testing.</p>
+<p style="color: gray">20.11 &mdash; prestable.</p>
+<p style="color: green">20.10 &mdash; stable.</p>
+<p style="color: green">20.9 &mdash; stable.</p>
+<p style="color: green">20.8 &mdash; LTS until 2021-09-30.</p>
+<p style="color: gray">20.7 ... 20.4 &mdash; obsolete.</p>
+<p style="color: green">20.3 &mdash; LTS until 2021-03-12.</p>
+<p>...</p>
+<p style="color: gray">19.14 &mdash; obsolete.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">What Else?</h2>
+<p>Data import from RabbitMQ.</p>
+<p>Kerberos authentication for Kafka.</p>
+<p>Beta unlimited storage in Yandex Cloud.</p>
+<p>Regexp, RawBLOB, JSONAsString, LinesAsString formats.</p>
+<p>Running ClickHouse without packages and configuration.</p>
+<p>system.crash_log table, Sentry.</p>
+<p>Rank correlation calculation.</p>
+<p>256bit Decimal.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">What's Next?</h2>
+<p>Backups.</p>
+<p>Projections.</p>
+<p>Moving away from ZooKeeper.</p>
+<p>OpenTracing support.</p>
+<p>Query hedging.</p>
+<p>Reading column slices.</p>
+<p>Geodata analysis functions.</p>
+<p>Semi-duplicate text analysis.</p>
+</section>
+
+
+<section class="slide">
+    <h2>Public Roadmap 2020.</h2>
+    <p><a href="https://clickhouse.com/docs/ru/whats-new/extended-roadmap/">https://clickhouse.com/docs/ru/whats-new/extended-roadmap/</a></p>
+    <p>~ 500 tasks with detailed description &mdash; dependencies, assignees...</p>
+    <h2 style="color: gray;">Public Roadmap 2021.</h2>
+    <p style="color: gray;">&mdash; expected at the end of November.</p>
+</section>
+
+
+<section class="slide">
+    <h2>.</h2>
+</section>
+
+    <div class="progress"></div>
+    <script src="https://presentations.clickhouse.com/shower/shower.js"></script>
+<footer class="badge">
+    <a href="https://presentations.clickhouse.com/">ClickHouse Theater</a>
+</footer>
+</body>
+</html>
