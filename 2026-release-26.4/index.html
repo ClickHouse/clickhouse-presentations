@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 26.4 Call</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta property="og:image" content="pictures/preview.jpg">
+    <meta property="og:title" content="ClickHouse: Release 26.4 Call">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="pictures/preview.jpg">
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/themes/clickhouse/styles/styles.css">
+
+    <style>
+        code { display: block; white-space: pre; background-color: #EEE; }
+        p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+        p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+        .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+        .slide table tr:not(:last-of-type)>* { background: none; }
+        .cell { font-family: Monospace; width: 1.5em; height: 1.5em; display: inline-block; border: 3px solid white; background-color: lightblue; text-align: center; line-height: 1.3em; }
+        .cell-num { font-family: Monospace; width: 1.5em; height: 1.5em; display: inline-block; border: 3px solid white; background-color: lightgreen; text-align: center; line-height: 1.3em; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 26.4 Call</h1>
+        <p>Author: Alexey Milovidov, 2026-04-30.</p>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/back1.jpg); background-size: cover;">
+        <h1 style="margin-top: 25px; line-height: 110%; font-size: 56pt; color: #FF8; text-align: center;">ClickHouse Release<br/>26.4</h1>
+    </section>
+
+<section class="slide">
+<h2>ClickHouse release 26.4</h2>
+<p>1. (50 min) What's new in ClickHouse 26.4.</p>
+<p>2. (10 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back2.jpg); background-size: cover;">
+<h2><span class="hilite">Release 26.4</span></h2>
+<p><span class="hilite">ClickHouse "Spring" Release.</span></p>
+<p><span class="hilite">— 39 new features 🌷</span></p>
+<p><span class="hilite">— 45 performance optimizations 🐇</span></p>
+<p><span class="hilite">— 238 bug fixes 🐝</span></p>
+</section>
+<!--
+
+Small
+
+stem
+INSERT squashing
+pretty EXPLAIN
+input_format_column_name_matching_mode
+arrayAutocorrelation
+arrayTranspose
+obfuscateQuery
+highlight
+Quotas by normalized query hash
+hasPhrase/matchPhrase
+Web UI improvements: parameterized queries, TOTALS, multi-query, icons, ...
+
+SQL compatibility
+
+NATURAL JOIN
+OVERLAY
+SET TIME ZONE
+VALUES
+PostgreSQL-compatible units to the `EXTRACT`
+INTERVAL combined syntax
+
+
+Performance
+
+indices on JSON columns + JSONAllValues
+Statistics by default
+LIKE can use text index
+Distributed index analysis
+Regexps with alternatives can use indices
+Faster hash join on small int ranges
+Faster parsing of floats
+Faster COUNT DISTINCT
+
+Main
+
+Spilling to disk for JOINs
+Arrow Flight SQL
+AI functions
+
+Data Lakes
+
+Bonus
+
+Agentic coding at ClickHouse
+clickhousectl
+OTel.FYI
+PostgresBench
+
+
+Reading
+
+Agentic coding at ClickHouse
+ClickHouse at FOSDEM 2026
+ClickHouse at Google Next
+Do you need Elasticsearch?
+pg_clickhouse update
+Google Axion
+
+-->
+
+<section class="slide" style="background: url(pictures/back3.jpg); background-size: cover;">
+<h2 style="color: black;"><span class="hilite">Small And Nice Features</span></h2>
+</section>
+
+<section class="slide">
+<h2>The <b>stem</b> function</h2>
+
+<p>The <b style="color: green;">stem</b> function is now <b>non-experimental</b>
+<br/>and works on entire columns of all string-like types:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">stem</b>('searching', 'en')
+<span style="color: gray;">-- 'search'</span>
+
+SELECT <b style="color: green;">stem</b>(['running', 'jumps', 'flying'], 'en')
+<span style="color: gray;">-- ['run', 'jump', 'fli']</span>
+</code></p>
+
+<p>Works for <b>String</b>, <b>FixedString</b>, <b>Array([Fixed]String)</b>,
+<br/><b>Nullable</b>, <b>LowCardinality</b>, and <b>Const</b> arguments.</p>
+
+<p>Useful for normalizing tokens before full-text search.</p>
+
+<!-- Demo:
+
+SELECT stem('information', 'en');
+SELECT stem('information', 'finnish');
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Jimmy Aguilar Mena.</p>
+</section>
+
+<section class="slide">
+<h2>Smarter INSERT squashing</h2>
+
+<p>New behavior of <b>min/max_insert_block_size_rows/bytes</b>
+<br/>under the compatibility setting <b style="color: green;">use_strict_insert_block_limits</b>:</p>
+
+<p>&mdash; Inserted blocks are squashed into chunks closer to <b>max_insert_block_size_*</b>;
+<br/>&mdash; Reduces the number of small parts generated by chatty inserts;
+<br/>&mdash; Less write amplification, fewer background merges.</p>
+
+<p>Old behavior is preserved by default for compatibility.</p>
+
+<!-- Demo:
+
+SET use_strict_insert_block_limits = 1;
+SET max_insert_block_size = 100000, min_insert_block_size_rows = 50000;
+CREATE TABLE squash (x UInt64) ENGINE = MergeTree ORDER BY x;
+INSERT INTO squash SELECT number FROM numbers(1000000);
+SELECT count() AS parts FROM system.parts WHERE table = 'squash' AND active;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Kirill Kopnev.</p>
+</section>
+
+<section class="slide">
+<h2>Even prettier EXPLAIN</h2>
+
+<p style="margin-top: -1em;"><b style="color: green;">EXPLAIN PLAN pretty=1</b> now prints expressions in a human-readable form,
+<br/>shows top-level output columns and per-step output columns,
+<br/>and labels JOINs with estimated row counts and locality.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">EXPLAIN PLAN pretty=1
+SELECT URL, count() FROM hits
+WHERE URL LIKE '%google%'
+GROUP BY URL ORDER BY count() DESC LIMIT 10;
+</code></p>
+
+<p>&mdash; Friendlier output for understanding query plans.
+<br/>&mdash; Especially useful for plans with multiple JOINs and aggregations.</p>
+
+<!-- Demo:
+
+EXPLAIN pretty = 0, actions = 1, compact = 1
+SELECT
+    URL,
+    count()
+FROM url('https://datasets.clickhouse.com/hits/tsv/hits_v1.tsv.xz', TSV, 'URL String, EventTime DateTime')
+WHERE URL LIKE '%google%'
+GROUP BY URL
+ORDER BY count() DESC
+LIMIT 10
+
+EXPLAIN pretty = 1, actions = 1, compact = 1
+SELECT
+    URL,
+    count()
+FROM url('https://datasets.clickhouse.com/hits/tsv/hits_v1.tsv.xz', TSV, 'URL String, EventTime DateTime')
+WHERE URL LIKE '%google%'
+GROUP BY URL
+ORDER BY count() DESC
+LIMIT 10
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Kirill Kopnev.</p>
+</section>
+
+<section class="slide">
+<h2>Case-insensitive column matching</h2>
+
+<p>For input formats:</p>
+<p>A new setting, <b style="color: green;">input_format_column_name_matching_mode</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SET <b style="color: green;">input_format_column_name_matching_mode</b> = 'ignore_case';
+
+INSERT INTO t (UserID, Country)
+FROM INFILE 'data.csv' FORMAT CSVWithNames;
+<span style="color: gray;">-- Matches userid, USERID, UserID, ... in the CSV header.</span>
+</code></p>
+
+<p>Modes: <b>match_case</b> (default), <b>ignore_case</b>, <b>auto</b>.</p>
+
+<p>Helpful when ingesting CSV/TSV/Parquet files from heterogeneous sources.</p>
+
+<!-- Demo:
+
+-- echo 'USERID,country\n1,DE\n2,US' > /tmp/test.csv
+CREATE TABLE t (UserID UInt64, Country String) ENGINE = Memory;
+INSERT INTO t SELECT * FROM file('/tmp/test.csv', CSVWithNames)
+SETTINGS input_format_column_name_matching_mode = 'ignore_case';
+SELECT * FROM t;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: manerone.</p>
+</section>
+
+<section class="slide">
+<h2>arrayAutocorrelation</h2>
+
+<p>Compute the normalized autocorrelation of a numeric array per lag:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">arrayAutocorrelation</b>([1, 2, 3, 4, 5, 4, 3, 2, 1])
+<span style="color: gray;">-- [1, 0.625, 0.166..., -0.25, ...]</span>
+
+SELECT <b style="color: green;">arrayAutocorrelation</b>(values, 10) FROM metrics
+</code></p>
+
+<p>&mdash; Supports integer, float, and decimal array types.
+<br/>&mdash; Optional <b>max_lag</b> argument controls the result length.
+<br/>&mdash; Useful for time series analysis and seasonality detection.</p>
+
+<!-- Demo:
+
+SELECT arrayAutocorrelation([1, 2, 3, 4, 5, 4, 3, 2, 1]);
+SELECT arrayAutocorrelation([1.0, 2.0, 3.0, 4.0, 5.0], 3);
+SELECT arrayAutocorrelation(arrayMap(i -> sin(i / 10.), range(100)), 20);
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Wenyu Chen.</p>
+</section>
+
+<section class="slide">
+<h2>arrayTranspose</h2>
+
+<p>Transpose a 2D array (a matrix):</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">arrayTranspose</b>([[1, 2, 3], [4, 5, 6]])
+<span style="color: gray;">-- [[1, 4], [2, 5], [3, 6]]</span>
+</code></p>
+
+<p>Convenient for switching between row-major and column-major arrays,
+<br/>working with <b>groupArray</b> results, and preparing data for ML pipelines.</p>
+
+<!-- Demo:
+
+SELECT arrayTranspose([[1, 2, 3], [4, 5, 6]]);
+SELECT arrayTranspose([['a', 'b'], ['c', 'd'], ['e', 'f']]);
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 4em;">Developer: Vitaly Baranov.</p>
+</section>
+
+<section class="slide">
+<h2>obfuscateQuery</h2>
+
+<p>A new SQL function that returns the obfuscated form of a query &mdash;
+<br/>identifiers and literals are replaced, structure preserved:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">obfuscateQuery</b>(
+  'SELECT name, count() FROM users WHERE age > 18 GROUP BY name')</code></p>
+
+<p>&mdash; Same logic as the <b>clickhouse-format --obfuscate</b> tool,<br/>&emsp; now available as a function.
+<br/>&mdash; Useful for sharing queries publicly without leaking schema details.
+<br/>&mdash; Pairs well with <b>normalizedQueryHash</b> for query analytics.</p>
+
+<!-- Demo:
+
+SELECT obfuscateQuery($$
+SELECT check_start_time, check_name, test_name, report_url
+FROM checks
+WHERE 1
+    AND check_start_time >= now() - INTERVAL 24 HOUR
+    AND (head_ref = 'master' AND startsWith(head_repo, 'ClickHouse/'))
+    AND test_status != 'SKIPPED'
+    AND (test_status LIKE 'F%' OR test_status LIKE 'E%')
+    AND check_status != 'success'
+    AND check_name NOT LIKE 'libFuzzer%'
+    AND check_name != 'ClickHouse Keeper Jepsen'
+    AND check_name NOT ILIKE '%experimental%'
+ORDER BY check_start_time DESC
+$$)
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Xuewei Wang.</p>
+</section>
+
+<section class="slide">
+<h2>highlight</h2>
+
+<p>Wrap occurrences of search terms with HTML tags:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">highlight</b>('ClickHouse is fast', ['fast', 'click'])
+<span style="color: gray;">-- &lt;em&gt;Click&lt;/em&gt;House is &lt;em&gt;fast&lt;/em&gt;</span>
+
+SELECT <b style="color: green;">highlight</b>(text, ['error', 'warn'], '&lt;mark&gt;', '&lt;/mark&gt;')
+</code></p>
+
+<p>&mdash; ASCII case-insensitive matching.
+<br/>&mdash; Automatic merging of overlapping matches.
+<br/>&mdash; Custom open/close tags.</p>
+
+<p>Pairs nicely with text indices for building search UIs.</p>
+
+<!-- Demo:
+
+SELECT highlight('ClickHouse is fast', ['fast', 'click']);
+SELECT highlight('error: timeout. another error here', ['error', 'timeout']);
+SELECT highlight('error: timeout', ['error'], '<mark>', '</mark>');
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Peng.</p>
+</section>
+
+<section class="slide">
+<h2>Quotas by normalized query hash</h2>
+
+<p>Protect public endpoints from runaway query patterns:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE QUOTA q1
+KEYED BY <b style="color: green;">normalized_query_hash</b>
+FOR INTERVAL 1 minute MAX queries = 100, read_bytes = '100G';
+
+CREATE QUOTA q2
+FOR INTERVAL 1 minute MAX <b style="color: green;">queries_per_normalized_hash</b> = 100;
+</code></p>
+
+<p>&mdash; <b>NORMALIZED_QUERY_HASH</b>: separate quota per unique query shape.
+<br/>&mdash; <b>QUERIES_PER_NORMALIZED_HASH</b>: cap how often any single query
+<br/>&emsp;pattern can run within an interval.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>hasPhrase / matchPhrase</h2>
+
+<p>Phrase search &mdash; match a continuous sequence of tokens:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT * FROM logs
+WHERE <b style="color: green;">hasPhrase</b>(message, 'connection refused')
+</code></p>
+
+<p>&mdash; Tokens must appear consecutively, in order.
+<br/>&mdash; Brute-force matching by default.
+<br/>&mdash; A text index on the column accelerates phrase search:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE logs (..., message String,
+  INDEX msg_idx message TYPE <b>text</b>(tokenizer = 'ngrams') GRANULARITY 1)
+</code></p>
+
+<!-- Demo:
+
+SELECT hasPhrase('connection refused on port 5432', 'connection refused');
+SELECT hasPhrase('timeout error happened', 'connection refused');
+
+CREATE TABLE docs (id UInt32, text String,
+  INDEX idx text TYPE text(tokenizer='ngrams') GRANULARITY 1)
+ENGINE = MergeTree ORDER BY id;
+INSERT INTO docs VALUES (1, 'connection refused on port 5432'),
+  (2, 'timeout error'), (3, 'connection accepted');
+SELECT * FROM docs WHERE hasPhrase(text, 'connection refused');
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Elmi Ahmadov.</p>
+</section>
+
+<section class="slide">
+<h2>Web UI improvements</h2>
+
+<p>The built-in <b>play.html</b> got a lot of polish in 26.4:</p>
+
+<p>&mdash; <b style="color: green;">Parameterized queries</b>: <code style="display: inline; font-size: 14pt;">{name:Type}</code> placeholders show input fields.
+<br/>&mdash; <b style="color: green;">Multi-query mode</b>: run several queries at once, in parallel.
+<br/>&mdash; <b style="color: green;">TOTALS row</b> rendered as a table footer.
+<br/>&mdash; Engine-specific <b style="color: green;">icons</b> in the table sidebar.
+<br/>&mdash; Cell heights capped, with a cell viewer on click.</p>
+
+<!--
+
+SELECT count() FROM github_events;
+SELECT count() FROM github_events WHERE actor_login = {name:String};
+SELECT repo_name, count(), min(created_at), max(created_at) FROM github_events WHERE actor_login = {name:String} AND repo_name NOT ILIKE '%ClickHouse%' GROUP BY repo_name WITH TOTALS ORDER BY count() DESC LIMIT 20;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back4.jpg); background-size: cover;">
+<h2><span class="hilite">SQL Compatibility</span></h2>
+</section>
+
+<section class="slide">
+<h2>NATURAL JOIN</h2>
+
+<p>Join on all columns sharing the same name and deduplicate them in the result:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT * FROM customers
+<b style="color: green;">NATURAL JOIN</b> orders
+<span style="color: gray;">-- joins on every column with the same name in both tables</span>
+</code></p>
+
+<p>&mdash; Automatically matches columns by name.
+<br/>&mdash; Shared columns appear once in the output.
+<br/>&mdash; Standard SQL syntax, now supported in ClickHouse.</p>
+
+<!-- Demo:
+
+CREATE TABLE customers (id UInt32, name String) ENGINE = MergeTree ORDER BY id;
+CREATE TABLE orders (id UInt32, name String, amount UInt32) ENGINE = MergeTree ORDER BY id;
+INSERT INTO customers VALUES (1, 'Alice'), (2, 'Bob');
+INSERT INTO orders VALUES (1, 'Alice', 100), (2, 'Bob', 250), (3, 'Carol', 50);
+SELECT * FROM customers NATURAL JOIN orders;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 4em;">Developer: Peter Nguyen.</p>
+</section>
+
+<section class="slide">
+<h2>OVERLAY syntax</h2>
+
+<p>SQL standard <b>OVERLAY</b> with <b>PLACING</b> / <b>FROM</b> / <b>FOR</b> keywords:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">OVERLAY</b>('Hello world' <b style="color: green;">PLACING</b> 'SQL' <b style="color: green;">FROM</b> 7 <b style="color: green;">FOR</b> 5)
+<span style="color: gray;">-- 'Hello SQL'</span>
+</code></p>
+
+<p>&mdash; The <b>overlay</b> function already existed.
+<br/>&mdash; This adds the keyword-based syntactic sugar from SQL:2003.
+<br/>&mdash; Drop-in compatibility with PostgreSQL and other engines.</p>
+
+<!-- Demo:
+
+SELECT OVERLAY('Hello world' PLACING 'SQL' FROM 7 FOR 5);
+SELECT OVERLAY('2026-01-01' PLACING '04-30' FROM 6 FOR 5);
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 4em;">Developer: Desel72.</p>
+</section>
+
+<section class="slide">
+<h2>SET TIME ZONE</h2>
+
+<p>SQL standard alias for <b>SET session_timezone</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;"><b style="color: green;">SET TIME ZONE</b> 'Europe/Amsterdam';
+
+SELECT now();
+<span style="color: gray;">-- now reported in Amsterdam time</span>
+</code></p>
+
+<p>Drop-in compatible with PostgreSQL session settings.</p>
+
+<!-- Demo:
+
+SET TIME ZONE 'Europe/Amsterdam';
+SELECT now();
+SET TIME ZONE 'America/Los_Angeles';
+SELECT now();
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 6em;">Developer: phulv94.</p>
+</section>
+
+<section class="slide">
+<h2>VALUES as a table expression</h2>
+
+<p>26.3:</p>
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT * FROM <b>VALUES</b>((1, 'a'), (2, 'b'), (3, 'c'))
+</code></p>
+
+<p>26.4: "standard" syntax, compatible with PostgreSQL:</p>
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT * FROM (<b style="color: green;">VALUES</b> (1, 'a'), (2, 'b'), (3, 'c'))
+</code></p>
+
+<p>&mdash; Convenient for ad-hoc data without a CSV/external source.
+<br/>&mdash; Works as a regular subquery, can be JOINed, filtered, etc.</p>
+
+<!-- Demo:
+
+SELECT * FROM (VALUES (1, 'a'), (2, 'b'), (3, 'c')) AS t(id, val) ORDER BY id;
+
+WITH ratings AS (SELECT * FROM (VALUES ('A', 5), ('B', 3), ('A', 4)) AS r(grade, score))
+SELECT grade, avg(score) FROM ratings GROUP BY grade;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Desel72.</p>
+</section>
+
+<section class="slide">
+<h2>EXTRACT &mdash; PostgreSQL units</h2>
+
+<p>The <b>EXTRACT</b> operator now supports PostgreSQL-style units:</p>
+
+<p style="font-size: 14pt; line-height: 1.4;"><b style="color: green;">EPOCH</b>, <b style="color: green;">DOW</b>, <b style="color: green;">DOY</b>, <b style="color: green;">ISODOW</b>, <b style="color: green;">ISOYEAR</b>, <b style="color: green;">WEEK</b>, <b style="color: green;">CENTURY</b>, <b style="color: green;">DECADE</b>, <b style="color: green;">MILLENNIUM</b></p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT
+  EXTRACT(<b>EPOCH</b>     FROM now())   AS epoch,
+  EXTRACT(<b>DOW</b>       FROM today()) AS day_of_week,
+  EXTRACT(<b>WEEK</b>      FROM today()) AS iso_week,
+  EXTRACT(<b>CENTURY</b>   FROM today()) AS century;
+</code></p>
+
+<p>Bonus: <b>EXTRACT(WEEK FROM date)</b> no longer throws &mdash;
+<br/>it now returns the ISO week number as expected.</p>
+
+<!-- Demo:
+
+SELECT
+  EXTRACT(EPOCH     FROM now())   AS epoch,
+  EXTRACT(DOW       FROM today()) AS day_of_week,
+  EXTRACT(DOY       FROM today()) AS day_of_year,
+  EXTRACT(WEEK      FROM today()) AS iso_week,
+  EXTRACT(CENTURY   FROM today()) AS century,
+  EXTRACT(MILLENNIUM FROM today()) AS millennium;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Compound INTERVAL literals</h2>
+
+<p>SQL-standard intervals with <b>TO</b> range qualifiers:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT now() + <b style="color: green;">INTERVAL '1:30' HOUR TO MINUTE</b>;
+SELECT now() + <b style="color: green;">INTERVAL '5 12:30:00' DAY TO SECOND</b>;
+SELECT <b style="color: green;">INTERVAL '2-6' YEAR TO MONTH</b>;
+</code></p>
+
+<p>&mdash; Internally decomposed into a sum of single-unit intervals.
+<br/>&mdash; Familiar for users coming from PostgreSQL, Oracle, DB2.</p>
+
+<!-- Demo:
+
+SELECT now() + INTERVAL '1:30' HOUR TO MINUTE;
+SELECT now() + INTERVAL '5 12:30:00' DAY TO SECOND;
+SELECT INTERVAL '2-6' YEAR TO MONTH;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 4em;">Developer: Desel72.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
+<h2><span style="color: black;" class="hilite">Performance Improvements</span></h2>
+</section>
+
+<section class="slide">
+<h2>Indices on JSON columns</h2>
+
+<p>MergeTree skip indices now work on the set of <b>JSON paths</b>
+<br/>using <b style="color: green;">JSONAllPaths</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">ALTER TABLE events
+ADD INDEX paths_idx <b style="color: green;">JSONAllPaths</b>(data)
+TYPE <b>bloom_filter</b> GRANULARITY 1;
+</code></p>
+
+<p>&mdash; Supported types: <b>bloom_filter</b>, <b>tokenbf_v1</b>, <b>ngrambf_v1</b>, and <b>text</b> (inverted).
+<br/>&mdash; Skip granules where the JSON paths a query is filtering by are absent.</p>
+
+<!-- Demo:
+
+CREATE TABLE events (data JSON,
+  INDEX paths_idx JSONAllPaths(data) TYPE bloom_filter GRANULARITY 1)
+ENGINE = MergeTree ORDER BY tuple();
+INSERT INTO events VALUES ('{"a": 1}'), ('{"b": 2}'), ('{"c": 3}');
+SELECT JSONAllPaths(data) FROM events;
+SELECT count() FROM events WHERE has(JSONAllPaths(data), 'a');
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 4em;">Developer: Pavel Kruglov.</p>
+</section>
+
+<section class="slide">
+<h2>JSONAllValues + text index</h2>
+
+<p>A new function <b style="color: green;">JSONAllValues</b> returns every leaf value
+<br/>of a JSON column as <b>Array(String)</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">JSONAllValues</b>(data) FROM events
+<span style="color: gray;">-- ['42', 'click', '2026-04-30', ...]</span>
+</code></p>
+
+<p>Build a text index on it &mdash; and it kicks in automatically
+<br/>for filters on JSON subcolumns:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">ALTER TABLE events ADD INDEX vals
+  <b>JSONAllValues</b>(data) TYPE <b>text</b>(tokenizer='ngrams') GRANULARITY 1;
+
+SELECT * FROM events WHERE data.event_type = 'click';
+<span style="color: gray;">-- The text index is used to skip granules.</span>
+</code></p>
+
+<!-- Demo:
+
+CREATE TABLE j (data JSON) ENGINE = MergeTree ORDER BY tuple();
+INSERT INTO j VALUES ('{"event":"click","user":42}'),
+                    ('{"event":"view","page":"/home"}');
+SELECT JSONAllValues(data) FROM j;
+SELECT JSONAllPaths(data) FROM j;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Anton Popov.</p>
+</section>
+
+<section class="slide">
+<h2>Statistics by default</h2>
+
+<p>From 26.4, basic statistics are <b style="color: green;">on by default</b> for new tables:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;"><b>auto_statistics_types</b> = '<b style="color: green;">minmax, uniq</b>'
+<b>materialize_statistics_on_insert</b> = false
+</code></p>
+
+<p>&mdash; <b>minmax</b> and <b>uniq</b> stats are created for every suitable column.
+<br/>&mdash; Built during background merges &mdash; <b>no insert overhead</b>.
+<br/>&mdash; Used by the optimizer for predicate selectivity, JOIN reordering,
+<br/>&emsp;and the new part-pruning min/max optimization.</p>
+
+<!-- Demo:
+
+CREATE TABLE t (x UInt64, y Float64) ENGINE = MergeTree ORDER BY x;
+INSERT INTO t VALUES (1, 1.5), (2, 2.5), (3, 3.5);
+SELECT name, type, statistics FROM system.columns WHERE table = 't';
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Han Fei.</p>
+</section>
+
+<section class="slide">
+<h2>LIKE can use text index</h2>
+
+<p>Queries with <b>LIKE</b> can now be accelerated by text indices:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">ALTER TABLE logs
+ADD INDEX msg_idx message TYPE <b>text</b>(tokenizer='ngrams') GRANULARITY 1;
+
+SELECT * FROM logs
+WHERE message <b style="color: green;">LIKE</b> '%timeout%error%';
+<span style="color: gray;">-- Granules without both terms are skipped.</span>
+</code></p>
+
+<p>&mdash; Works for substring patterns extractable from a LIKE expression.
+<br/>&mdash; Bonus: text index is now <b>GA</b>, no compatibility flag required.</p>
+
+<!-- Demo:
+
+CREATE TABLE logs (id UInt32, message String,
+  INDEX msg_idx message TYPE text(tokenizer='ngrams') GRANULARITY 1)
+ENGINE = MergeTree ORDER BY id;
+INSERT INTO logs VALUES (1, 'connection timeout error'),
+  (2, 'server started'), (3, 'fatal error out of memory');
+SELECT * FROM logs WHERE message LIKE '%error%';
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Elmi Ahmadov.</p>
+</section>
+
+<section class="slide">
+<h2>Distributed index analysis</h2>
+
+<p>For huge clusters with many shards, the initiator node can do
+<br/>primary index analysis <b>across the cluster</b> before reading data.</p>
+
+<p>26.4 brings two improvements:</p>
+
+<p>&mdash; Index analysis is applied <b style="color: green;">after partition pruning</b>,
+<br/>&emsp; so heavy clusters with many partitions skip irrelevant shards faster.
+<br/>&mdash; Fixed the <b style="color: green;">quadratic blow-up</b> when predicates contained <b>IN</b> subqueries.</p>
+
+<p>Result: lower latency for selective queries on very wide deployments.</p>
+
+<!-- Demo (cluster only — requires a Distributed table over many shards):
+
+SET distributed_index_analysis_min_indexes_size_to_activate = '100Mi';
+SELECT count() FROM big_distributed
+WHERE event_date BETWEEN today() - 1 AND today() AND user_id IN (SELECT id FROM filter_table);
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developers: Azat Khuzhin, Anton Popov.</p>
+</section>
+
+<section class="slide">
+<h2>Regexps with alternatives use indices</h2>
+
+<p>Primary key pruning now understands regex alternations
+<br/>that share a common literal prefix:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT * FROM events
+WHERE match(id, '^(abc-1|abc-2|abc-3)');
+<span style="color: gray;">-- The common prefix 'abc-' is used for primary key pruning.</span>
+</code></p>
+
+<p>&mdash; Detects shared literal prefixes inside <b>(...|...|...)</b>.
+<br/>&mdash; Falls back to no pruning when no shared prefix exists.</p>
+
+<!-- Demo:
+
+CREATE TABLE pk_test (id String) ENGINE = MergeTree ORDER BY id;
+INSERT INTO pk_test VALUES ('abc-1'), ('abc-2'), ('abc-3'), ('xyz-1'), ('def-1');
+EXPLAIN indexes = 1 SELECT * FROM pk_test WHERE match(id, '^(abc-1|abc-2)');
+-- The Condition shows: (id in ['abc-', 'abc.')) — prefix-based pruning.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 4em;">Developer: Yash.</p>
+</section>
+
+<section class="slide">
+<h2>Faster Float &harr; String</h2>
+
+<p>The Float-to-String hot path was rewritten in 26.4:</p>
+
+<p>&mdash; Replaced <b>dragonbox</b> with <b style="color: green;">zmij</b> &mdash; <b>1.5&ndash;3x</b> faster Float &rarr; String.
+<br/>&mdash; Extended the <b>itoa</b> fast path with dragonbox-compatible rounding
+<br/>&emsp; for large integral floats.
+<br/>&mdash; <b>Int128</b>/<b>UInt128</b> &rarr; String: software division replaced
+<br/>&emsp; by Barrett reduction with an unrolled inner loop.</p>
+
+<p>Visible in big aggregations and exports to text formats.</p>
+
+<!-- Demo (transparent — just runs faster):
+
+SELECT toString(toFloat64(number) * 0.123456) FROM numbers(10000000) FORMAT Null;
+SELECT toString(toInt128(number) * 1234567890123456789) FROM numbers(10000000) FORMAT Null;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Raúl Marín.</p>
+</section>
+
+<section class="slide">
+<h2>Faster COUNT DISTINCT</h2>
+
+<p>The parallel merge of <b>uniqExact</b> (used by <b>COUNT(DISTINCT)</b>)
+<br/>was rewritten:</p>
+
+<p>&mdash; <b style="color: green;">Batch parallel merge</b> instead of per-thread sequential merge.
+<br/>&mdash; Avoids spawning redundant threads for small intermediate states.
+<br/>&mdash; Significant speedups for high-cardinality <b>COUNT(DISTINCT)</b>
+<br/>&emsp; on machines with many cores.</p>
+
+<!-- Demo:
+
+SELECT uniqExact(number) FROM numbers_mt(100000000);
+SELECT count(DISTINCT number % 10000000) FROM numbers_mt(100000000);
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Jiebin Sun.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
+<h2 style="font-size: 32pt; margin-left: -1em;"><span class="hilite">Something</span><br/><span class="hilite">Interesting</span></h2>
+</section>
+
+<section class="slide">
+<h2>JOIN spilling to disk 🧪</h2>
+
+<p>Hash and parallel hash joins now <b style="color: green;">spill to disk automatically</b>
+<br/>when the memory limit is reached:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SET <b style="color: green;">max_bytes_before_external_join</b> = '4G';
+
+SELECT *
+FROM orders LEFT JOIN customers USING (customer_id)
+<span style="color: gray;">-- Once the hash side exceeds 4 GB, join converts to grace hash join.</span>
+</code></p>
+
+<p>&mdash; Transparent fallback &mdash; same query, same result.
+<br/>&mdash; Converts to <b>grace hash join</b> on the fly.
+<br/>&mdash; Big JOINs no longer fail with <b>Memory limit exceeded</b>.</p>
+
+<!-- Demo:
+
+SET max_bytes_before_external_join = '64Mi';
+SELECT count() FROM
+  (SELECT number AS id, randomString(100) AS s FROM numbers(2000000)) AS a
+  JOIN (SELECT number AS id FROM numbers(2000000)) AS b USING (id);
+
+-- Watch the spilled bytes in system.query_log:
+SELECT ProfileEvents['ExternalJoinWritePart'] AS spilled_parts,
+       ProfileEvents['ExternalJoinTotalBytes'] AS spilled_bytes
+FROM system.query_log WHERE type = 'QueryFinish' ORDER BY event_time DESC LIMIT 1;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: János Benjamin Antal.</p>
+</section>
+
+<section class="slide">
+<h2>Arrow Flight SQL</h2>
+
+<p>ClickHouse can now serve queries over <b style="color: green;">Arrow Flight SQL</b>
+<br/>&mdash; a high-throughput, columnar gRPC protocol from Apache Arrow.</p>
+
+<p>Configured as a separate listener:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;"><span style="color: gray;">$ cat config.d/arrow.yaml</span>
+
+arrowflight_port: 9005
+</code></p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">import pyarrow.flight as flight
+client = flight.FlightClient("grpc://localhost:9005")
+ticket = flight.Ticket(b"SELECT * FROM system.numbers LIMIT 10")
+reader = client.do_get(ticket)
+print(reader.read_all())
+</code></p>
+
+<!-- Demo (server only):
+
+# In config.xml:  <arrowflight_port>9005</arrowflight_port>
+# Connect from Python:
+import pyarrow.flight as flight
+client = flight.FlightClient("grpc://localhost:9005")
+ticket = flight.Ticket(b"SELECT * FROM system.numbers LIMIT 10")
+reader = client.do_get(ticket)
+print(reader.read_all())
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Yakov Olkhovskiy.</p>
+</section>
+
+<section class="slide">
+<h2>AI functions 🧪</h2>
+
+<p>Call LLM endpoints (OpenAI, Anthropic) directly from SQL:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">aiGenerate</b>('Summarize this in one line: ' || review)
+FROM product_reviews LIMIT 10;
+</code></p>
+
+<p>Higher-level helpers built on top:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">aiClassify</b>(text, ['bug', 'feature', 'question']) FROM tickets;
+SELECT <b style="color: green;">aiExtract</b>(article, 'people, organizations, dates') FROM news;
+SELECT <b style="color: green;">aiTranslate</b>(message, 'English') FROM logs;
+</code></p>
+
+<p>&mdash; Provider configured server-side; secrets never leak to clients.</p>
+
+<!-- Demo (requires AI provider configured server-side):
+
+SET allow_experimental_ai_functions = 1;
+SELECT aiGenerate('Write a one-line SQL joke');
+SELECT aiClassify('Cannot connect to database',
+                  ['bug', 'feature_request', 'question', 'docs']);
+SELECT aiExtract('Anthropic was founded in 2021 by Dario Amodei in San Francisco.',
+                 'people, organizations, dates, locations');
+SELECT aiTranslate('Bonjour, comment allez-vous?', 'English');
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: George Larionov.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
+<h2 style="font-size: 32pt; margin-left: -1em;"><span class="hilite">Data Lakes</span></h2>
+</section>
+
+<section class="slide">
+<h2>Iceberg: remove orphan files 🧪</h2>
+
+<p>Reclaim space from files that no live snapshot references:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;"><b>ALTER TABLE</b> my_iceberg
+<b style="color: green;">EXECUTE remove_orphan_files</b>;
+</code></p>
+
+<p>&mdash; Walks the snapshot graph to determine the set of live data files.
+<br/>&mdash; Removes everything else from object storage.
+<br/>&mdash; Companion to <b>EXECUTE expire_snapshots(...)</b> shipped earlier.</p>
+
+<p>Together they let ClickHouse fully maintain Iceberg tables in place.</p>
+
+<!-- Demo (needs an Iceberg table on object storage):
+
+ALTER TABLE my_iceberg EXECUTE remove_orphan_files;
+ALTER TABLE my_iceberg EXECUTE expire_snapshots('2026-04-01 00:00:00');
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: murphy-4o.</p>
+</section>
+
+<section class="slide">
+<h2>Delta Lake virtual column pruning</h2>
+
+<p>Delta Lake now prunes data files using predicates over <b>virtual columns</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT * FROM my_delta
+WHERE <b style="color: green;">_partition</b> = 'country=DE/year=2026';
+<span style="color: gray;">-- Only files in matching partitions are scanned.</span>
+</code></p>
+
+<p>&mdash; Fewer files opened, fewer requests to object storage.
+<br/>&mdash; Same idea as partition pruning, applied via virtual columns.</p>
+
+<!-- Demo (needs a partitioned Delta Lake table):
+
+SELECT * FROM deltaLake('s3://bucket/path/', ...) WHERE _partition = 'country=DE/year=2026';
+EXPLAIN indexes = 1
+SELECT * FROM deltaLake('s3://bucket/path/', ...) WHERE _partition = 'country=DE/year=2026';
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 4em;">Developer: Konstantin Vedernikov.</p>
+</section>
+
+<section class="slide">
+<h2>Iceberg: Unity Catalog &amp; better paths</h2>
+
+<p>A round of fixes and improvements for Iceberg writes:</p>
+
+<p>&mdash; Better support for <b style="color: green;">Unity Catalog</b> writes.
+<br/>&mdash; Cleaner <b>storage paths vs. metadata paths</b> abstraction.
+<br/>&mdash; Tables now record their location as a URL or absolute path.
+<br/>&mdash; <b>version-hint.txt</b> handled in a Spark-compatible way.
+<br/>&mdash; Position deletes no longer rely on path-inference heuristics.
+<br/>&mdash; Cross-engine interop tests with Azure and Local catalogs.</p>
+
+<p>And a redesigned interface for catalog inserts &mdash; cleaner settings,
+<br/>old <b>storage_*</b> options deprecated.</p>
+
+<!-- Demo (needs a Unity Catalog endpoint):
+
+CREATE DATABASE unity ENGINE = DataLakeCatalog('https://...unity-catalog/api/2.1/unity-catalog')
+  SETTINGS catalog_type = 'unity', warehouse = 'my_warehouse';
+USE unity;
+INSERT INTO my_iceberg_table SELECT ... ;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Daniil Ivanik, Konstantin Vedernikov.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back8.jpg); background-size: cover;">
+<h2><span class="hilite">Bonus</span></h2>
+</section>
+
+<section class="slide">
+<h2>clickhousectl</h2>
+
+<p>A new <b style="color: green;">clickhousectl</b> CLI &mdash;
+<br/>one tool for local ClickHouse <b>and</b> ClickHouse Cloud:</p>
+
+<p>&mdash; Install and manage local ClickHouse instances.
+<br/>&mdash; Run queries against local servers and Cloud services.
+<br/>&mdash; Manage Cloud organizations, services, API keys.
+<br/>&mdash; Integrates with AI coding agents via installable <b>skills</b>.</p>
+
+<p>Used in benchmarking blog post:
+<br/><a href="https://clickhouse.com/blog/comparing-clickhouse-versions-with-clickhousectl">Comparing ClickHouse versions with clickhousectl</a></p>
+
+<p><a href="https://github.com/ClickHouse/clickhousectl">https://github.com/ClickHouse/clickhousectl</a></p>
+</section>
+
+<section class="slide">
+<h2>OTel.FYI</h2>
+
+<p>A new docs site for the OpenTelemetry Collector ecosystem:</p>
+
+<p><a href="https://otel.fyi/">https://otel.fyi/</a></p>
+
+<p>&mdash; Auto-generated from <b>opentelemetry-collector-contrib</b>.
+<br/>&mdash; Browse Receivers, Exporters, Processors, Connectors, Extensions.
+<br/>&mdash; <b style="color: green;">MCP server</b> &mdash; query OTel component docs from
+<br/>&emsp; Claude / Cursor / Windsurf inside your IDE.</p>
+
+<p>A small, focused tool that makes the OTel collector easier to discover and use.</p>
+</section>
+
+<section class="slide">
+<h2>PostgresBench</h2>
+
+<p>An open benchmark for Postgres-compatible DBMS using <b>pgbench</b>:</p>
+
+<p><a href="https://github.com/ClickHouse/postgresbench">https://github.com/ClickHouse/postgresbench</a></p>
+
+<p>&mdash; Industry-standard <b>TPC-B-like</b> workload.
+<br/>&mdash; Throughput, latency, stability across services.
+<br/>&mdash; Results for AWS RDS, Aurora, Neon, and others.</p>
+
+<p>Built to run reproducible, transparent comparisons of transactional Postgres-compatible engines &mdash;
+<br/>same spirit as ClickBench for analytical workloads.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/agentic.svg); background-size: cover;"></section>
+
+<section class="slide" style="background: url(pictures/wing.jpg); background-size: cover;">
+<h2>Meetups</h2>
+<p style="line-height: 1.25; margin-top: -1em;">
+<br/><span class="hilite">&mdash; 🇺🇸 Boston Meetup, May 5</span>
+<br/><span class="hilite">&mdash; 🇸🇬 AWS Summit Singapore, May 6</span>
+<br/><span class="hilite">&mdash; 🇮🇳 Delhi/Gurgaon Meetup, May 9</span>
+<br/><span class="hilite">&mdash; 🇧🇷 São Paulo: Real-time Analytics Training, May 12</span>
+<br/><span class="hilite">&mdash; 🇦🇺 AWS Summit Sydney, May 13</span>
+<br/><span class="hilite">&mdash; 🇮🇳 Bangalore: Data Engineering Summit, May 14</span>
+<br/><span class="hilite">&mdash; 🇬🇧 London: Real-time Analytics Training, May 19</span>
+<br/><span class="hilite">&mdash; 🇰🇷 AWS Summit Seoul, May 20</span>
+<br/><span class="hilite">&mdash; 🇯🇵 Tokyo: Findy VPoE Summit, May 22</span>
+<br/><span class="hilite">&mdash; 🇺🇸 San Francisco: Open House, May 26</span>
+<br/><span class="hilite">&mdash; 🇯🇵 Tokyo: AI Engineering Summit, Jun 8</span>
+<br/><span class="hilite">&mdash; 🇸🇬 SuperAI Singapore, Jun 10</span>
+</p>
+</section>
+
+<section class="slide">
+<h2>Reading Corner 📖</h2>
+
+<a href="https://clickhouse.com/blog/agentic-coding"><img style="float: right; width: 30%; margin-right: -3em; image-rendering: pixelated; margin-top: -1em;" src="pictures/qr_agentic.png" alt="QR: clickhouse.com/blog/agentic-coding"/></a>
+<p><a href="https://clickhouse.com/blog/">https://clickhouse.com/blog/</a></p>
+
+<p style="line-height: 1.5; margin-right: -5em;">
+&mdash; <b>Agentic coding at ClickHouse</b>
+<br/>&mdash; ClickHouse at FOSDEM 2026
+<br/>&mdash; ClickHouse at Google Cloud Next '26
+<br/>&mdash; Do you still need Elasticsearch for log analytics?
+<br/>&mdash; What's New in pg_clickhouse
+<br/>&mdash; ClickHouse Cloud on Google Axion processors
+<br/>&mdash; Comparing ClickHouse versions with clickhousectl
+</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back9.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
+<h2 style="color: white; margin-left: -1em;">Q&amp;A</h2>
+</section>
+
+<section class="slide" style="background: black; padding: 0;">
+<iframe style="width: 100%; height: 100%; position: absolute; top: 0; left: 0;" src="https://www.youtube.com/embed/9lSVy7k2EoI" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</section>
+
+    <div class="progress"></div>
+    <script src="https://presentations.clickhouse.com/shower/shower.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/shower-video.css">
+    <script src="https://presentations.clickhouse.com/shower/shower-video.js"></script>
+    <!--/Video plugin-->
+<footer class="badge">
+    <a href="https://presentations.clickhouse.com/">ClickHouse Theater</a>
+</footer>
+</body>
+</html>
