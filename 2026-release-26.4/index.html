@@ -109,7 +109,7 @@ Google Axion
 -->
 
 <section class="slide" style="background: url(pictures/back3.jpg); background-size: cover;">
-<h2 style="color: black;"><span>Small And Nice Features</span></h2>
+<h2 style="color: black;"><span class="hilite">Small And Nice Features</span></h2>
 </section>
 
 <section class="slide">
@@ -132,8 +132,8 @@ SELECT <b style="color: green;">stem</b>(['running', 'jumps', 'flying'], 'en')
 
 <!-- Demo:
 
-SELECT stem('searches', 'en'), stem('walking', 'en'), stem('cats', 'en');
-SELECT stem(['running', 'jumps', 'flying'], 'en');
+SELECT stem('information', 'en');
+SELECT stem('information', 'finnish');
 
 -->
 
@@ -166,7 +166,7 @@ SELECT count() AS parts FROM system.parts WHERE table = 'squash' AND active;
 </section>
 
 <section class="slide">
-<h2>Pretty EXPLAIN</h2>
+<h2>Even prettier EXPLAIN</h2>
 
 <p style="margin-top: -1em;"><b style="color: green;">EXPLAIN PLAN pretty=1</b> now prints expressions in a human-readable form,
 <br/>shows top-level output columns and per-step output columns,
@@ -183,9 +183,25 @@ GROUP BY URL ORDER BY count() DESC LIMIT 10;
 
 <!-- Demo:
 
-EXPLAIN PLAN pretty=1
-SELECT URL, count() FROM url('https://datasets.clickhouse.com/hits/tsv/hits_v1.tsv.xz', TSV, 'URL String, EventTime DateTime')
-WHERE URL LIKE '%google%' GROUP BY URL ORDER BY count() DESC LIMIT 10;
+EXPLAIN pretty = 0, actions = 1, compact = 1
+SELECT
+    URL,
+    count()
+FROM url('https://datasets.clickhouse.com/hits/tsv/hits_v1.tsv.xz', TSV, 'URL String, EventTime DateTime')
+WHERE URL LIKE '%google%'
+GROUP BY URL
+ORDER BY count() DESC
+LIMIT 10
+
+EXPLAIN pretty = 1, actions = 1, compact = 1
+SELECT
+    URL,
+    count()
+FROM url('https://datasets.clickhouse.com/hits/tsv/hits_v1.tsv.xz', TSV, 'URL String, EventTime DateTime')
+WHERE URL LIKE '%google%'
+GROUP BY URL
+ORDER BY count() DESC
+LIMIT 10
 
 -->
 
@@ -195,6 +211,7 @@ WHERE URL LIKE '%google%' GROUP BY URL ORDER BY count() DESC LIMIT 10;
 <section class="slide">
 <h2>Case-insensitive column matching</h2>
 
+<p>For input formats:</p>
 <p>A new setting, <b style="color: green;">input_format_column_name_matching_mode</b>:</p>
 
 <p><code style="font-size: 14pt; line-height: 1.25;">SET <b style="color: green;">input_format_column_name_matching_mode</b> = 'ignore_case';
@@ -276,19 +293,28 @@ SELECT arrayTranspose([['a', 'b'], ['c', 'd'], ['e', 'f']]);
 <br/>identifiers and literals are replaced, structure preserved:</p>
 
 <p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">obfuscateQuery</b>(
-  'SELECT name, count() FROM users WHERE age > 18 GROUP BY name')
+  'SELECT name, count() FROM users WHERE age > 18 GROUP BY name')</code></p>
 
-<span style="color: gray;">-- SELECT _0, count() FROM _1 WHERE _2 > 90 GROUP BY _0</span>
-</code></p>
-
-<p>&mdash; Same logic as the <b>clickhouse-obfuscator</b> tool, now available as a function.
+<p>&mdash; Same logic as the <b>clickhouse-format --obfuscate</b> tool,<br/>&emsp; now available as a function.
 <br/>&mdash; Useful for sharing queries publicly without leaking schema details.
 <br/>&mdash; Pairs well with <b>normalizedQueryHash</b> for query analytics.</p>
 
 <!-- Demo:
 
-SELECT obfuscateQuery('SELECT name, count() FROM users WHERE age > 18 GROUP BY name');
-SELECT obfuscateQuery('SELECT count(), avg(salary) FROM employees WHERE department = ''Sales'' AND age > 30 GROUP BY country');
+SELECT obfuscateQuery($$
+SELECT check_start_time, check_name, test_name, report_url
+FROM checks
+WHERE 1
+    AND check_start_time >= now() - INTERVAL 24 HOUR
+    AND (head_ref = 'master' AND startsWith(head_repo, 'ClickHouse/'))
+    AND test_status != 'SKIPPED'
+    AND (test_status LIKE 'F%' OR test_status LIKE 'E%')
+    AND check_status != 'success'
+    AND check_name NOT LIKE 'libFuzzer%'
+    AND check_name != 'ClickHouse Keeper Jepsen'
+    AND check_name NOT ILIKE '%experimental%'
+ORDER BY check_start_time DESC
+$$)
 
 -->
 
@@ -328,25 +354,17 @@ SELECT highlight('error: timeout', ['error'], '<mark>', '</mark>');
 
 <p>Protect public endpoints from runaway query patterns:</p>
 
-<p><code style="font-size: 14pt; line-height: 1.25;">CREATE QUOTA q
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE QUOTA q1
 KEYED BY <b style="color: green;">normalized_query_hash</b>
+FOR INTERVAL 1 minute MAX queries = 100, read_bytes = '100G';
+
+CREATE QUOTA q2
 FOR INTERVAL 1 minute MAX <b style="color: green;">queries_per_normalized_hash</b> = 100;
 </code></p>
 
-<p>&mdash; <b>NORMALIZED_QUERY_HASH</b>: separate quota bucket per unique query shape.
+<p>&mdash; <b>NORMALIZED_QUERY_HASH</b>: separate quota per unique query shape.
 <br/>&mdash; <b>QUERIES_PER_NORMALIZED_HASH</b>: cap how often any single query
 <br/>&emsp;pattern can run within an interval.</p>
-
-<p>Built to protect ClickHouse public services from abuse.</p>
-
-<!-- Demo (server only — quotas don't apply to clickhouse-local):
-
-CREATE QUOTA q1 KEYED BY normalized_query_hash
-  FOR INTERVAL 1 minute MAX queries_per_normalized_hash = 100
-  TO default;
-SELECT * FROM system.quotas WHERE name = 'q1';
-
--->
 
 <p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Alexey Milovidov.</p>
 </section>
@@ -394,14 +412,20 @@ SELECT * FROM docs WHERE hasPhrase(text, 'connection refused');
 <br/>&mdash; <b style="color: green;">Multi-query mode</b>: run several queries at once, in parallel.
 <br/>&mdash; <b style="color: green;">TOTALS row</b> rendered as a table footer.
 <br/>&mdash; Engine-specific <b style="color: green;">icons</b> in the table sidebar.
-<br/>&mdash; Cell heights capped at 3 lines, click to expand.
-<br/>&mdash; Table-info balloon only on the table name (not the row).
-<br/>&mdash; Light/dark theme switch no longer duplicates charts.</p>
+<br/>&mdash; Cell heights capped, with a cell viewer on click.</p>
+
+<!--
+
+SELECT count() FROM github_events;
+SELECT count() FROM github_events WHERE actor_login = {name:String};
+SELECT repo_name, count(), min(created_at), max(created_at) FROM github_events WHERE actor_login = {name:String} AND repo_name NOT ILIKE '%ClickHouse%' GROUP BY repo_name WITH TOTALS ORDER BY count() DESC LIMIT 20;
+
+-->
 
 <p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Alexey Milovidov.</p>
 </section>
 
-<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
+<section class="slide" style="background: url(pictures/back4.jpg); background-size: cover;">
 <h2><span class="hilite">SQL Compatibility</span></h2>
 </section>
 
@@ -441,7 +465,7 @@ SELECT * FROM customers NATURAL JOIN orders;
 <span style="color: gray;">-- 'Hello SQL'</span>
 </code></p>
 
-<p>&mdash; The <b>overlay()</b> function already existed.
+<p>&mdash; The <b>overlay</b> function already existed.
 <br/>&mdash; This adds the keyword-based syntactic sugar from SQL:2003.
 <br/>&mdash; Drop-in compatibility with PostgreSQL and other engines.</p>
 
@@ -483,16 +507,16 @@ SELECT now();
 <section class="slide">
 <h2>VALUES as a table expression</h2>
 
-<p>Standard <b>VALUES</b> clause now usable in <b>FROM</b>:</p>
+<p>26.3:</p>
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT * FROM <b>VALUES</b>((1, 'a'), (2, 'b'), (3, 'c'))
+</code></p>
 
+<p>26.4: "standard" syntax, compatible with PostgreSQL:</p>
 <p><code style="font-size: 14pt; line-height: 1.25;">SELECT * FROM (<b style="color: green;">VALUES</b> (1, 'a'), (2, 'b'), (3, 'c'))
-  AS t(id, val)
-ORDER BY id;
 </code></p>
 
 <p>&mdash; Convenient for ad-hoc data without a CSV/external source.
-<br/>&mdash; Works as a regular subquery, can be JOINed, filtered, etc.
-<br/>&mdash; Standard SQL: same syntax as PostgreSQL.</p>
+<br/>&mdash; Works as a regular subquery, can be JOINed, filtered, etc.</p>
 
 <!-- Demo:
 
@@ -503,7 +527,7 @@ SELECT grade, avg(score) FROM ratings GROUP BY grade;
 
 -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 4em;">Developer: Desel72.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Desel72.</p>
 </section>
 
 <section class="slide">
@@ -562,7 +586,7 @@ SELECT INTERVAL '2-6' YEAR TO MONTH;
 <p style="color: gray; font-size: 14pt; margin-top: 4em;">Developer: Desel72.</p>
 </section>
 
-<section class="slide" style="background: url(pictures/back4.jpg); background-size: cover;">
+<section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
 <h2><span style="color: black;" class="hilite">Performance Improvements</span></h2>
 </section>
 
@@ -714,7 +738,7 @@ WHERE event_date BETWEEN today() - 1 AND today() AND user_id IN (SELECT id FROM 
 <br/>that share a common literal prefix:</p>
 
 <p><code style="font-size: 14pt; line-height: 1.25;">SELECT * FROM events
-WHERE id <b style="color: green;">REGEXP</b> '^(abc-1|abc-2|abc-3)';
+WHERE match(id, '^(abc-1|abc-2|abc-3)');
 <span style="color: gray;">-- The common prefix 'abc-' is used for primary key pruning.</span>
 </code></p>
 
@@ -731,28 +755,6 @@ EXPLAIN indexes = 1 SELECT * FROM pk_test WHERE match(id, '^(abc-1|abc-2)');
 -->
 
 <p style="color: gray; font-size: 14pt; margin-top: 4em;">Developer: Yash.</p>
-</section>
-
-<section class="slide">
-<h2>Faster hash join on small int ranges</h2>
-
-<p>When join keys are <b>Int32</b> or <b>Int64</b> with a small value range,
-<br/>ClickHouse now uses a <b style="color: green;">direct-index hash table</b>
-<br/>(an array indexed by the key) instead of a hash map.</p>
-
-<p>&mdash; No hash computation, no collision chains.
-<br/>&mdash; Better cache locality and SIMD-friendly probes.
-<br/>&mdash; Big speedups for joins on dense numeric IDs (categories, statuses, ...).</p>
-
-<!-- Demo:
-
-SELECT count() FROM
-  (SELECT number::Int32 AS k FROM numbers(100000000)) AS a
-  JOIN (SELECT number::Int32 AS k FROM numbers(1000)) AS b USING (k);
-
--->
-
-<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Hechem Selmi.</p>
 </section>
 
 <section class="slide">
@@ -791,20 +793,20 @@ SELECT toString(toInt128(number) * 1234567890123456789) FROM numbers(10000000) F
 
 <!-- Demo:
 
-SELECT uniqExact(number) FROM numbers(100000000);
-SELECT count(DISTINCT number % 10000000) FROM numbers(100000000);
+SELECT uniqExact(number) FROM numbers_mt(100000000);
+SELECT count(DISTINCT number % 10000000) FROM numbers_mt(100000000);
 
 -->
 
 <p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Jiebin Sun.</p>
 </section>
 
-<section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
-<h2 style="font-size: 32pt; margin-left: -1em;"><span class="hilite">Main Features</span></h2>
+<section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
+<h2 style="font-size: 32pt; margin-left: -1em;"><span class="hilite">Something</span><br/><span class="hilite">Interesting</span></h2>
 </section>
 
 <section class="slide">
-<h2>JOIN spilling to disk</h2>
+<h2>JOIN spilling to disk 🧪</h2>
 
 <p>Hash and parallel hash joins now <b style="color: green;">spill to disk automatically</b>
 <br/>when the memory limit is reached:</p>
@@ -826,6 +828,7 @@ SET max_bytes_before_external_join = '64Mi';
 SELECT count() FROM
   (SELECT number AS id, randomString(100) AS s FROM numbers(2000000)) AS a
   JOIN (SELECT number AS id FROM numbers(2000000)) AS b USING (id);
+
 -- Watch the spilled bytes in system.query_log:
 SELECT ProfileEvents['ExternalJoinWritePart'] AS spilled_parts,
        ProfileEvents['ExternalJoinTotalBytes'] AS spilled_bytes
@@ -839,16 +842,21 @@ FROM system.query_log WHERE type = 'QueryFinish' ORDER BY event_time DESC LIMIT 
 <section class="slide">
 <h2>Arrow Flight SQL</h2>
 
-<p>ClickHouse can now serve queries over <b style="color: green;">Arrow Flight SQL</b> &mdash;
-<br/>a high-throughput, columnar gRPC protocol from Apache Arrow.</p>
-
-<p>&mdash; Stream large result sets <b>zero-copy</b> as Arrow record batches.
-<br/>&mdash; Native client support in pandas/Polars/DuckDB/Spark/Dremio/...
-<br/>&mdash; Standard JDBC/ODBC drivers via Flight SQL.</p>
+<p>ClickHouse can now serve queries over <b style="color: green;">Arrow Flight SQL</b>
+<br/>&mdash; a high-throughput, columnar gRPC protocol from Apache Arrow.</p>
 
 <p>Configured as a separate listener:</p>
 
-<p><code style="font-size: 14pt; line-height: 1.25;">&lt;arrowflight_port&gt;9005&lt;/arrowflight_port&gt;
+<p><code style="font-size: 14pt; line-height: 1.25;"><span style="color: gray;">$ cat config.d/arrow.yaml</span>
+
+arrowflight_port: 9005
+</code></p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">import pyarrow.flight as flight
+client = flight.FlightClient("grpc://localhost:9005")
+ticket = flight.Ticket(b"SELECT * FROM system.numbers LIMIT 10")
+reader = client.do_get(ticket)
+print(reader.read_all())
 </code></p>
 
 <!-- Demo (server only):
@@ -882,8 +890,7 @@ SELECT <b style="color: green;">aiExtract</b>(article, 'people, organizations, d
 SELECT <b style="color: green;">aiTranslate</b>(message, 'English') FROM logs;
 </code></p>
 
-<p>&mdash; Provider configured server-side; secrets never leak to clients.
-<br/>&mdash; Disabled in the embedded SSH/WebSocket clients to avoid env exposure.</p>
+<p>&mdash; Provider configured server-side; secrets never leak to clients.</p>
 
 <!-- Demo (requires AI provider configured server-side):
 
@@ -900,7 +907,7 @@ SELECT aiTranslate('Bonjour, comment allez-vous?', 'English');
 <p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: George Larionov.</p>
 </section>
 
-<section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
+<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
 <h2 style="font-size: 32pt; margin-left: -1em;"><span class="hilite">Data Lakes</span></h2>
 </section>
 
@@ -980,51 +987,9 @@ INSERT INTO my_iceberg_table SELECT ... ;
 <p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Daniil Ivanik, Konstantin Vedernikov.</p>
 </section>
 
-<section class="slide">
-<h2>Apache Paimon: incremental reads</h2>
 
-<p>The <b>Paimon</b> table engine now supports <b style="color: green;">incremental reads</b>
-<br/>with Keeper-backed snapshot progress tracking:</p>
-
-<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE my_paimon (...)
-ENGINE = Paimon(...)
-SETTINGS <b style="color: green;">paimon_target_snapshot_id</b> = ...;
-</code></p>
-
-<p>&mdash; Read only data added since the last snapshot.
-<br/>&mdash; Progress is durably stored in Keeper.
-<br/>&mdash; Tested for type mapping, partition pruning, incremental scenarios.</p>
-
-<!-- Demo (needs a Paimon warehouse and a Keeper):
-
-CREATE TABLE my_paimon (id UInt64, val String)
-ENGINE = Paimon('s3://bucket/warehouse', 'db', 'tab')
-SETTINGS paimon_target_snapshot_id = 42;
-SELECT count() FROM my_paimon;
-
--->
-
-<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: XiaoBinMu.</p>
-</section>
-
-<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
+<section class="slide" style="background: url(pictures/back8.jpg); background-size: cover;">
 <h2><span class="hilite">Bonus</span></h2>
-</section>
-
-<section class="slide">
-<h2>Agentic coding at ClickHouse</h2>
-
-<p>How we use AI agents in ClickHouse engineering:</p>
-
-<p>&mdash; Code review, refactoring, and PR triage with Claude Code.
-<br/>&mdash; CI feedback loops &mdash; agents fix flaky tests and lints.
-<br/>&mdash; Internal MCP servers for system tables, query logs, perf tools.
-<br/>&mdash; Agents inside <b>clickhouse-client</b> via the <b>??</b> command.</p>
-
-<p>The <b>aiGenerate</b> / <b>aiClassify</b> / <b>aiExtract</b> / <b>aiTranslate</b> functions
-<br/>are part of this initiative &mdash; AI as a first-class data primitive.</p>
-
-<p>Talk &amp; blog post linked in the Reading Corner.</p>
 </section>
 
 <section class="slide">
@@ -1074,6 +1039,8 @@ SELECT count() FROM my_paimon;
 <br/>same spirit as ClickBench for analytical workloads.</p>
 </section>
 
+<section class="slide" style="background: url(pictures/agentic.svg); background-size: cover;"></section>
+
 <section class="slide" style="background: url(pictures/wing.jpg); background-size: cover;">
 <h2>Meetups</h2>
 <p style="line-height: 1.25; margin-top: -1em;">
@@ -1095,7 +1062,7 @@ SELECT count() FROM my_paimon;
 <section class="slide">
 <h2>Reading Corner 📖</h2>
 
-<img style="float: right; width: 30%; margin-right: -3em; image-rendering: pixelated; margin-top: -1em;" src="pictures/blog.png"/>
+<a href="https://clickhouse.com/blog/agentic-coding"><img style="float: right; width: 30%; margin-right: -3em; image-rendering: pixelated; margin-top: -1em;" src="pictures/qr_agentic.png" alt="QR: clickhouse.com/blog/agentic-coding"/></a>
 <p><a href="https://clickhouse.com/blog/">https://clickhouse.com/blog/</a></p>
 
 <p style="line-height: 1.5; margin-right: -5em;">
@@ -1110,7 +1077,7 @@ SELECT count() FROM my_paimon;
 </section>
 
 
-<section class="slide" style="background: url(pictures/back8.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
+<section class="slide" style="background: url(pictures/back9.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
 <h2 style="color: white; margin-left: -1em;">Q&amp;A</h2>
 </section>
 
