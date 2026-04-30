@@ -118,10 +118,10 @@ Google Axion
 <p>The <b style="color: green;">stem</b> function is now <b>non-experimental</b>
 <br/>and works on entire columns of all string-like types:</p>
 
-<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">stem</b>('en', 'searching')
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">stem</b>('searching', 'en')
 <span style="color: gray;">-- 'search'</span>
 
-SELECT <b style="color: green;">stem</b>('en', ['running', 'jumps', 'flying'])
+SELECT <b style="color: green;">stem</b>(['running', 'jumps', 'flying'], 'en')
 <span style="color: gray;">-- ['run', 'jump', 'fli']</span>
 </code></p>
 
@@ -129,6 +129,13 @@ SELECT <b style="color: green;">stem</b>('en', ['running', 'jumps', 'flying'])
 <br/><b>Nullable</b>, <b>LowCardinality</b>, and <b>Const</b> arguments.</p>
 
 <p>Useful for normalizing tokens before full-text search.</p>
+
+<!-- Demo:
+
+SELECT stem('searches', 'en'), stem('walking', 'en'), stem('cats', 'en');
+SELECT stem(['running', 'jumps', 'flying'], 'en');
+
+-->
 
 <p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Jimmy Aguilar Mena.</p>
 </section>
@@ -144,6 +151,16 @@ SELECT <b style="color: green;">stem</b>('en', ['running', 'jumps', 'flying'])
 <br/>&mdash; Less write amplification, fewer background merges.</p>
 
 <p>Old behavior is preserved by default for compatibility.</p>
+
+<!-- Demo:
+
+SET use_strict_insert_block_limits = 1;
+SET max_insert_block_size = 100000, min_insert_block_size_rows = 50000;
+CREATE TABLE squash (x UInt64) ENGINE = MergeTree ORDER BY x;
+INSERT INTO squash SELECT number FROM numbers(1000000);
+SELECT count() AS parts FROM system.parts WHERE table = 'squash' AND active;
+
+-->
 
 <p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Kirill Kopnev.</p>
 </section>
@@ -164,6 +181,14 @@ GROUP BY URL ORDER BY count() DESC LIMIT 10;
 <p>&mdash; Friendlier output for understanding query plans.
 <br/>&mdash; Especially useful for plans with multiple JOINs and aggregations.</p>
 
+<!-- Demo:
+
+EXPLAIN PLAN pretty=1
+SELECT URL, count() FROM url('https://datasets.clickhouse.com/hits/tsv/hits_v1.tsv.xz', TSV, 'URL String, EventTime DateTime')
+WHERE URL LIKE '%google%' GROUP BY URL ORDER BY count() DESC LIMIT 10;
+
+-->
+
 <p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Kirill Kopnev.</p>
 </section>
 
@@ -172,16 +197,26 @@ GROUP BY URL ORDER BY count() DESC LIMIT 10;
 
 <p>A new setting, <b style="color: green;">input_format_column_name_matching_mode</b>:</p>
 
-<p><code style="font-size: 14pt; line-height: 1.25;">SET <b style="color: green;">input_format_column_name_matching_mode</b> = 'case_insensitive';
+<p><code style="font-size: 14pt; line-height: 1.25;">SET <b style="color: green;">input_format_column_name_matching_mode</b> = 'ignore_case';
 
 INSERT INTO t (UserID, Country)
 FROM INFILE 'data.csv' FORMAT CSVWithNames;
 <span style="color: gray;">-- Matches userid, USERID, UserID, ... in the CSV header.</span>
 </code></p>
 
-<p>Modes: <b>case_sensitive</b> (default), <b>case_insensitive</b>.</p>
+<p>Modes: <b>match_case</b> (default), <b>ignore_case</b>, <b>auto</b>.</p>
 
 <p>Helpful when ingesting CSV/TSV/Parquet files from heterogeneous sources.</p>
+
+<!-- Demo:
+
+-- echo 'USERID,country\n1,DE\n2,US' > /tmp/test.csv
+CREATE TABLE t (UserID UInt64, Country String) ENGINE = Memory;
+INSERT INTO t SELECT * FROM file('/tmp/test.csv', CSVWithNames)
+SETTINGS input_format_column_name_matching_mode = 'ignore_case';
+SELECT * FROM t;
+
+-->
 
 <p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: manerone.</p>
 </section>
@@ -201,6 +236,14 @@ SELECT <b style="color: green;">arrayAutocorrelation</b>(values, 10) FROM metric
 <br/>&mdash; Optional <b>max_lag</b> argument controls the result length.
 <br/>&mdash; Useful for time series analysis and seasonality detection.</p>
 
+<!-- Demo:
+
+SELECT arrayAutocorrelation([1, 2, 3, 4, 5, 4, 3, 2, 1]);
+SELECT arrayAutocorrelation([1.0, 2.0, 3.0, 4.0, 5.0], 3);
+SELECT arrayAutocorrelation(arrayMap(i -> sin(i / 10.), range(100)), 20);
+
+-->
+
 <p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Wenyu Chen.</p>
 </section>
 
@@ -215,6 +258,13 @@ SELECT <b style="color: green;">arrayAutocorrelation</b>(values, 10) FROM metric
 
 <p>Convenient for switching between row-major and column-major arrays,
 <br/>working with <b>groupArray</b> results, and preparing data for ML pipelines.</p>
+
+<!-- Demo:
+
+SELECT arrayTranspose([[1, 2, 3], [4, 5, 6]]);
+SELECT arrayTranspose([['a', 'b'], ['c', 'd'], ['e', 'f']]);
+
+-->
 
 <p style="color: gray; font-size: 14pt; margin-top: 4em;">Developer: Vitaly Baranov.</p>
 </section>
@@ -234,6 +284,13 @@ SELECT <b style="color: green;">arrayAutocorrelation</b>(values, 10) FROM metric
 <p>&mdash; Same logic as the <b>clickhouse-obfuscator</b> tool, now available as a function.
 <br/>&mdash; Useful for sharing queries publicly without leaking schema details.
 <br/>&mdash; Pairs well with <b>normalizedQueryHash</b> for query analytics.</p>
+
+<!-- Demo:
+
+SELECT obfuscateQuery('SELECT name, count() FROM users WHERE age > 18 GROUP BY name');
+SELECT obfuscateQuery('SELECT count(), avg(salary) FROM employees WHERE department = ''Sales'' AND age > 30 GROUP BY country');
+
+-->
 
 <p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Xuewei Wang.</p>
 </section>
@@ -255,6 +312,14 @@ SELECT <b style="color: green;">highlight</b>(text, ['error', 'warn'], '&lt;mark
 
 <p>Pairs nicely with text indices for building search UIs.</p>
 
+<!-- Demo:
+
+SELECT highlight('ClickHouse is fast', ['fast', 'click']);
+SELECT highlight('error: timeout. another error here', ['error', 'timeout']);
+SELECT highlight('error: timeout', ['error'], '<mark>', '</mark>');
+
+-->
+
 <p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Peng.</p>
 </section>
 
@@ -274,6 +339,15 @@ FOR INTERVAL 1 minute MAX <b style="color: green;">queries_per_normalized_hash</
 
 <p>Built to protect ClickHouse public services from abuse.</p>
 
+<!-- Demo (server only — quotas don't apply to clickhouse-local):
+
+CREATE QUOTA q1 KEYED BY normalized_query_hash
+  FOR INTERVAL 1 minute MAX queries_per_normalized_hash = 100
+  TO default;
+SELECT * FROM system.quotas WHERE name = 'q1';
+
+-->
+
 <p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Alexey Milovidov.</p>
 </section>
 
@@ -288,11 +362,25 @@ WHERE <b style="color: green;">hasPhrase</b>(message, 'connection refused')
 
 <p>&mdash; Tokens must appear consecutively, in order.
 <br/>&mdash; Brute-force matching by default.
-<br/>&mdash; <b>HINT</b> mode uses the text index to skip granules:</p>
+<br/>&mdash; A text index on the column accelerates phrase search:</p>
 
-<p><code style="font-size: 14pt; line-height: 1.25;">SELECT * FROM logs
-WHERE <b>hasPhrase</b>(message, 'connection refused', <b style="color: green;">'HINT'</b>)
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE logs (..., message String,
+  INDEX msg_idx message TYPE <b>text</b>(tokenizer = 'ngrams') GRANULARITY 1)
 </code></p>
+
+<!-- Demo:
+
+SELECT hasPhrase('connection refused on port 5432', 'connection refused');
+SELECT hasPhrase('timeout error happened', 'connection refused');
+
+CREATE TABLE docs (id UInt32, text String,
+  INDEX idx text TYPE text(tokenizer='ngrams') GRANULARITY 1)
+ENGINE = MergeTree ORDER BY id;
+INSERT INTO docs VALUES (1, 'connection refused on port 5432'),
+  (2, 'timeout error'), (3, 'connection accepted');
+SELECT * FROM docs WHERE hasPhrase(text, 'connection refused');
+
+-->
 
 <p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Elmi Ahmadov.</p>
 </section>
@@ -331,6 +419,16 @@ WHERE <b>hasPhrase</b>(message, 'connection refused', <b style="color: green;">'
 <br/>&mdash; Shared columns appear once in the output.
 <br/>&mdash; Standard SQL syntax, now supported in ClickHouse.</p>
 
+<!-- Demo:
+
+CREATE TABLE customers (id UInt32, name String) ENGINE = MergeTree ORDER BY id;
+CREATE TABLE orders (id UInt32, name String, amount UInt32) ENGINE = MergeTree ORDER BY id;
+INSERT INTO customers VALUES (1, 'Alice'), (2, 'Bob');
+INSERT INTO orders VALUES (1, 'Alice', 100), (2, 'Bob', 250), (3, 'Carol', 50);
+SELECT * FROM customers NATURAL JOIN orders;
+
+-->
+
 <p style="color: gray; font-size: 14pt; margin-top: 4em;">Developer: Peter Nguyen.</p>
 </section>
 
@@ -346,6 +444,13 @@ WHERE <b>hasPhrase</b>(message, 'connection refused', <b style="color: green;">'
 <p>&mdash; The <b>overlay()</b> function already existed.
 <br/>&mdash; This adds the keyword-based syntactic sugar from SQL:2003.
 <br/>&mdash; Drop-in compatibility with PostgreSQL and other engines.</p>
+
+<!-- Demo:
+
+SELECT OVERLAY('Hello world' PLACING 'SQL' FROM 7 FOR 5);
+SELECT OVERLAY('2026-01-01' PLACING '04-30' FROM 6 FOR 5);
+
+-->
 
 <p style="color: gray; font-size: 14pt; margin-top: 4em;">Developer: Desel72.</p>
 </section>
@@ -363,6 +468,15 @@ SELECT now();
 
 <p>Drop-in compatible with PostgreSQL session settings.</p>
 
+<!-- Demo:
+
+SET TIME ZONE 'Europe/Amsterdam';
+SELECT now();
+SET TIME ZONE 'America/Los_Angeles';
+SELECT now();
+
+-->
+
 <p style="color: gray; font-size: 14pt; margin-top: 6em;">Developer: phulv94.</p>
 </section>
 
@@ -379,6 +493,15 @@ ORDER BY id;
 <p>&mdash; Convenient for ad-hoc data without a CSV/external source.
 <br/>&mdash; Works as a regular subquery, can be JOINed, filtered, etc.
 <br/>&mdash; Standard SQL: same syntax as PostgreSQL.</p>
+
+<!-- Demo:
+
+SELECT * FROM (VALUES (1, 'a'), (2, 'b'), (3, 'c')) AS t(id, val) ORDER BY id;
+
+WITH ratings AS (SELECT * FROM (VALUES ('A', 5), ('B', 3), ('A', 4)) AS r(grade, score))
+SELECT grade, avg(score) FROM ratings GROUP BY grade;
+
+-->
 
 <p style="color: gray; font-size: 14pt; margin-top: 4em;">Developer: Desel72.</p>
 </section>
@@ -400,6 +523,18 @@ ORDER BY id;
 <p>Bonus: <b>EXTRACT(WEEK FROM date)</b> no longer throws &mdash;
 <br/>it now returns the ISO week number as expected.</p>
 
+<!-- Demo:
+
+SELECT
+  EXTRACT(EPOCH     FROM now())   AS epoch,
+  EXTRACT(DOW       FROM today()) AS day_of_week,
+  EXTRACT(DOY       FROM today()) AS day_of_year,
+  EXTRACT(WEEK      FROM today()) AS iso_week,
+  EXTRACT(CENTURY   FROM today()) AS century,
+  EXTRACT(MILLENNIUM FROM today()) AS millennium;
+
+-->
+
 <p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexey Milovidov.</p>
 </section>
 
@@ -415,6 +550,14 @@ SELECT <b style="color: green;">INTERVAL '2-6' YEAR TO MONTH</b>;
 
 <p>&mdash; Internally decomposed into a sum of single-unit intervals.
 <br/>&mdash; Familiar for users coming from PostgreSQL, Oracle, DB2.</p>
+
+<!-- Demo:
+
+SELECT now() + INTERVAL '1:30' HOUR TO MINUTE;
+SELECT now() + INTERVAL '5 12:30:00' DAY TO SECOND;
+SELECT INTERVAL '2-6' YEAR TO MONTH;
+
+-->
 
 <p style="color: gray; font-size: 14pt; margin-top: 4em;">Developer: Desel72.</p>
 </section>
@@ -437,6 +580,17 @@ TYPE <b>bloom_filter</b> GRANULARITY 1;
 <p>&mdash; Supported types: <b>bloom_filter</b>, <b>tokenbf_v1</b>, <b>ngrambf_v1</b>, and <b>text</b> (inverted).
 <br/>&mdash; Skip granules where the JSON paths a query is filtering by are absent.</p>
 
+<!-- Demo:
+
+CREATE TABLE events (data JSON,
+  INDEX paths_idx JSONAllPaths(data) TYPE bloom_filter GRANULARITY 1)
+ENGINE = MergeTree ORDER BY tuple();
+INSERT INTO events VALUES ('{"a": 1}'), ('{"b": 2}'), ('{"c": 3}');
+SELECT JSONAllPaths(data) FROM events;
+SELECT count() FROM events WHERE has(JSONAllPaths(data), 'a');
+
+-->
+
 <p style="color: gray; font-size: 14pt; margin-top: 4em;">Developer: Pavel Kruglov.</p>
 </section>
 
@@ -454,11 +608,21 @@ TYPE <b>bloom_filter</b> GRANULARITY 1;
 <br/>for filters on JSON subcolumns:</p>
 
 <p><code style="font-size: 14pt; line-height: 1.25;">ALTER TABLE events ADD INDEX vals
-  <b>JSONAllValues</b>(data) TYPE <b>text</b> GRANULARITY 1;
+  <b>JSONAllValues</b>(data) TYPE <b>text</b>(tokenizer='ngrams') GRANULARITY 1;
 
 SELECT * FROM events WHERE data.event_type = 'click';
 <span style="color: gray;">-- The text index is used to skip granules.</span>
 </code></p>
+
+<!-- Demo:
+
+CREATE TABLE j (data JSON) ENGINE = MergeTree ORDER BY tuple();
+INSERT INTO j VALUES ('{"event":"click","user":42}'),
+                    ('{"event":"view","page":"/home"}');
+SELECT JSONAllValues(data) FROM j;
+SELECT JSONAllPaths(data) FROM j;
+
+-->
 
 <p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Anton Popov.</p>
 </section>
@@ -477,6 +641,14 @@ SELECT * FROM events WHERE data.event_type = 'click';
 <br/>&mdash; Used by the optimizer for predicate selectivity, JOIN reordering,
 <br/>&emsp;and the new part-pruning min/max optimization.</p>
 
+<!-- Demo:
+
+CREATE TABLE t (x UInt64, y Float64) ENGINE = MergeTree ORDER BY x;
+INSERT INTO t VALUES (1, 1.5), (2, 2.5), (3, 3.5);
+SELECT name, type, statistics FROM system.columns WHERE table = 't';
+
+-->
+
 <p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Han Fei.</p>
 </section>
 
@@ -486,7 +658,7 @@ SELECT * FROM events WHERE data.event_type = 'click';
 <p>Queries with <b>LIKE</b> can now be accelerated by text indices:</p>
 
 <p><code style="font-size: 14pt; line-height: 1.25;">ALTER TABLE logs
-ADD INDEX msg_idx message TYPE <b>text</b> GRANULARITY 1;
+ADD INDEX msg_idx message TYPE <b>text</b>(tokenizer='ngrams') GRANULARITY 1;
 
 SELECT * FROM logs
 WHERE message <b style="color: green;">LIKE</b> '%timeout%error%';
@@ -495,6 +667,17 @@ WHERE message <b style="color: green;">LIKE</b> '%timeout%error%';
 
 <p>&mdash; Works for substring patterns extractable from a LIKE expression.
 <br/>&mdash; Bonus: text index is now <b>GA</b>, no compatibility flag required.</p>
+
+<!-- Demo:
+
+CREATE TABLE logs (id UInt32, message String,
+  INDEX msg_idx message TYPE text(tokenizer='ngrams') GRANULARITY 1)
+ENGINE = MergeTree ORDER BY id;
+INSERT INTO logs VALUES (1, 'connection timeout error'),
+  (2, 'server started'), (3, 'fatal error out of memory');
+SELECT * FROM logs WHERE message LIKE '%error%';
+
+-->
 
 <p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Elmi Ahmadov.</p>
 </section>
@@ -513,6 +696,14 @@ WHERE message <b style="color: green;">LIKE</b> '%timeout%error%';
 
 <p>Result: lower latency for selective queries on very wide deployments.</p>
 
+<!-- Demo (cluster only — requires a Distributed table over many shards):
+
+SET distributed_index_analysis_min_indexes_size_to_activate = '100Mi';
+SELECT count() FROM big_distributed
+WHERE event_date BETWEEN today() - 1 AND today() AND user_id IN (SELECT id FROM filter_table);
+
+-->
+
 <p style="color: gray; font-size: 14pt; margin-top: 2em;">Developers: Azat Khuzhin, Anton Popov.</p>
 </section>
 
@@ -530,6 +721,15 @@ WHERE id <b style="color: green;">REGEXP</b> '^(abc-1|abc-2|abc-3)';
 <p>&mdash; Detects shared literal prefixes inside <b>(...|...|...)</b>.
 <br/>&mdash; Falls back to no pruning when no shared prefix exists.</p>
 
+<!-- Demo:
+
+CREATE TABLE pk_test (id String) ENGINE = MergeTree ORDER BY id;
+INSERT INTO pk_test VALUES ('abc-1'), ('abc-2'), ('abc-3'), ('xyz-1'), ('def-1');
+EXPLAIN indexes = 1 SELECT * FROM pk_test WHERE match(id, '^(abc-1|abc-2)');
+-- The Condition shows: (id in ['abc-', 'abc.')) — prefix-based pruning.
+
+-->
+
 <p style="color: gray; font-size: 14pt; margin-top: 4em;">Developer: Yash.</p>
 </section>
 
@@ -543,6 +743,14 @@ WHERE id <b style="color: green;">REGEXP</b> '^(abc-1|abc-2|abc-3)';
 <p>&mdash; No hash computation, no collision chains.
 <br/>&mdash; Better cache locality and SIMD-friendly probes.
 <br/>&mdash; Big speedups for joins on dense numeric IDs (categories, statuses, ...).</p>
+
+<!-- Demo:
+
+SELECT count() FROM
+  (SELECT number::Int32 AS k FROM numbers(100000000)) AS a
+  JOIN (SELECT number::Int32 AS k FROM numbers(1000)) AS b USING (k);
+
+-->
 
 <p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Hechem Selmi.</p>
 </section>
@@ -560,6 +768,13 @@ WHERE id <b style="color: green;">REGEXP</b> '^(abc-1|abc-2|abc-3)';
 
 <p>Visible in big aggregations and exports to text formats.</p>
 
+<!-- Demo (transparent — just runs faster):
+
+SELECT toString(toFloat64(number) * 0.123456) FROM numbers(10000000) FORMAT Null;
+SELECT toString(toInt128(number) * 1234567890123456789) FROM numbers(10000000) FORMAT Null;
+
+-->
+
 <p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Raúl Marín.</p>
 </section>
 
@@ -573,6 +788,13 @@ WHERE id <b style="color: green;">REGEXP</b> '^(abc-1|abc-2|abc-3)';
 <br/>&mdash; Avoids spawning redundant threads for small intermediate states.
 <br/>&mdash; Significant speedups for high-cardinality <b>COUNT(DISTINCT)</b>
 <br/>&emsp; on machines with many cores.</p>
+
+<!-- Demo:
+
+SELECT uniqExact(number) FROM numbers(100000000);
+SELECT count(DISTINCT number % 10000000) FROM numbers(100000000);
+
+-->
 
 <p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Jiebin Sun.</p>
 </section>
@@ -598,6 +820,19 @@ FROM orders LEFT JOIN customers USING (customer_id)
 <br/>&mdash; Converts to <b>grace hash join</b> on the fly.
 <br/>&mdash; Big JOINs no longer fail with <b>Memory limit exceeded</b>.</p>
 
+<!-- Demo:
+
+SET max_bytes_before_external_join = '64Mi';
+SELECT count() FROM
+  (SELECT number AS id, randomString(100) AS s FROM numbers(2000000)) AS a
+  JOIN (SELECT number AS id FROM numbers(2000000)) AS b USING (id);
+-- Watch the spilled bytes in system.query_log:
+SELECT ProfileEvents['ExternalJoinWritePart'] AS spilled_parts,
+       ProfileEvents['ExternalJoinTotalBytes'] AS spilled_bytes
+FROM system.query_log WHERE type = 'QueryFinish' ORDER BY event_time DESC LIMIT 1;
+
+-->
+
 <p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: János Benjamin Antal.</p>
 </section>
 
@@ -615,6 +850,18 @@ FROM orders LEFT JOIN customers USING (customer_id)
 
 <p><code style="font-size: 14pt; line-height: 1.25;">&lt;arrowflight_port&gt;9005&lt;/arrowflight_port&gt;
 </code></p>
+
+<!-- Demo (server only):
+
+# In config.xml:  <arrowflight_port>9005</arrowflight_port>
+# Connect from Python:
+import pyarrow.flight as flight
+client = flight.FlightClient("grpc://localhost:9005")
+ticket = flight.Ticket(b"SELECT * FROM system.numbers LIMIT 10")
+reader = client.do_get(ticket)
+print(reader.read_all())
+
+-->
 
 <p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Yakov Olkhovskiy.</p>
 </section>
@@ -638,6 +885,18 @@ SELECT <b style="color: green;">aiTranslate</b>(message, 'English') FROM logs;
 <p>&mdash; Provider configured server-side; secrets never leak to clients.
 <br/>&mdash; Disabled in the embedded SSH/WebSocket clients to avoid env exposure.</p>
 
+<!-- Demo (requires AI provider configured server-side):
+
+SET allow_experimental_ai_functions = 1;
+SELECT aiGenerate('Write a one-line SQL joke');
+SELECT aiClassify('Cannot connect to database',
+                  ['bug', 'feature_request', 'question', 'docs']);
+SELECT aiExtract('Anthropic was founded in 2021 by Dario Amodei in San Francisco.',
+                 'people, organizations, dates, locations');
+SELECT aiTranslate('Bonjour, comment allez-vous?', 'English');
+
+-->
+
 <p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: George Larionov.</p>
 </section>
 
@@ -660,6 +919,13 @@ SELECT <b style="color: green;">aiTranslate</b>(message, 'English') FROM logs;
 
 <p>Together they let ClickHouse fully maintain Iceberg tables in place.</p>
 
+<!-- Demo (needs an Iceberg table on object storage):
+
+ALTER TABLE my_iceberg EXECUTE remove_orphan_files;
+ALTER TABLE my_iceberg EXECUTE expire_snapshots('2026-04-01 00:00:00');
+
+-->
+
 <p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: murphy-4o.</p>
 </section>
 
@@ -675,6 +941,14 @@ WHERE <b style="color: green;">_partition</b> = 'country=DE/year=2026';
 
 <p>&mdash; Fewer files opened, fewer requests to object storage.
 <br/>&mdash; Same idea as partition pruning, applied via virtual columns.</p>
+
+<!-- Demo (needs a partitioned Delta Lake table):
+
+SELECT * FROM deltaLake('s3://bucket/path/', ...) WHERE _partition = 'country=DE/year=2026';
+EXPLAIN indexes = 1
+SELECT * FROM deltaLake('s3://bucket/path/', ...) WHERE _partition = 'country=DE/year=2026';
+
+-->
 
 <p style="color: gray; font-size: 14pt; margin-top: 4em;">Developer: Konstantin Vedernikov.</p>
 </section>
@@ -694,6 +968,15 @@ WHERE <b style="color: green;">_partition</b> = 'country=DE/year=2026';
 <p>And a redesigned interface for catalog inserts &mdash; cleaner settings,
 <br/>old <b>storage_*</b> options deprecated.</p>
 
+<!-- Demo (needs a Unity Catalog endpoint):
+
+CREATE DATABASE unity ENGINE = DataLakeCatalog('https://...unity-catalog/api/2.1/unity-catalog')
+  SETTINGS catalog_type = 'unity', warehouse = 'my_warehouse';
+USE unity;
+INSERT INTO my_iceberg_table SELECT ... ;
+
+-->
+
 <p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Daniil Ivanik, Konstantin Vedernikov.</p>
 </section>
 
@@ -711,6 +994,15 @@ SETTINGS <b style="color: green;">paimon_target_snapshot_id</b> = ...;
 <p>&mdash; Read only data added since the last snapshot.
 <br/>&mdash; Progress is durably stored in Keeper.
 <br/>&mdash; Tested for type mapping, partition pruning, incremental scenarios.</p>
+
+<!-- Demo (needs a Paimon warehouse and a Keeper):
+
+CREATE TABLE my_paimon (id UInt64, val String)
+ENGINE = Paimon('s3://bucket/warehouse', 'db', 'tab')
+SETTINGS paimon_target_snapshot_id = 42;
+SELECT count() FROM my_paimon;
+
+-->
 
 <p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: XiaoBinMu.</p>
 </section>
