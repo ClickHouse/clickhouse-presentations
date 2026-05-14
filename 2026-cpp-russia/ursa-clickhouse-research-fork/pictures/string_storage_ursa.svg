@@ -1,0 +1,92 @@
+<svg viewBox="0 0 1200 600" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity="0.15"/>
+    </filter>
+    <marker id="arrowGreen" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#059669"/>
+    </marker>
+  </defs>
+
+  <!-- Legend (top right) -->
+  <g transform="translate(940, 30)">
+    <rect x="0" y="0" width="220" height="70" rx="8" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1"/>
+    <rect x="16" y="14" width="22" height="22" rx="3" fill="#6366F1"/>
+    <text x="48" y="30" font-size="14" fill="#111827">String size</text>
+    <rect x="16" y="40" width="22" height="22" rx="3" fill="#F97316"/>
+    <text x="48" y="56" font-size="14" fill="#111827">String raw data</text>
+  </g>
+
+  <!-- Title -->
+  <text x="40" y="58" font-size="28" font-weight="700" fill="#111827">Ursa</text>
+  <text x="40" y="88" font-size="16" fill="#6B7280">two columns — sizes and data stored separately (like Arrays)</text>
+
+  <!-- Sizes column label -->
+  <text x="40" y="140" font-size="13" fill="#9CA3AF" font-family="ui-monospace, 'SF Mono', Menlo, monospace">url.sizes.bin</text>
+
+  <!-- Sizes row -->
+  <g transform="translate(40, 160)" filter="url(#shadow)">
+    <rect x="0"   y="0" width="80" height="80" rx="5" fill="#6366F1"/>
+    <text x="40"  y="52" text-anchor="middle" font-size="28" font-weight="700" fill="#fff">5</text>
+
+    <rect x="80"  y="0" width="80" height="80" rx="5" fill="#6366F1"/>
+    <text x="120" y="52" text-anchor="middle" font-size="28" font-weight="700" fill="#fff">2</text>
+
+    <rect x="160" y="0" width="80" height="80" rx="5" fill="#6366F1"/>
+    <text x="200" y="52" text-anchor="middle" font-size="28" font-weight="700" fill="#fff">5</text>
+
+    <rect x="240" y="0" width="80" height="80" rx="5" fill="#6366F1"/>
+    <text x="280" y="52" text-anchor="middle" font-size="28" font-weight="700" fill="#fff">3</text>
+
+    <rect x="320" y="0" width="80" height="80" rx="5" fill="#6366F1"/>
+    <text x="360" y="52" text-anchor="middle" font-size="28" font-weight="700" fill="#fff">4</text>
+  </g>
+
+  <!-- "only sizes read" callout -->
+  <g transform="translate(40, 268)">
+    <line x1="0" y1="10" x2="400" y2="10" stroke="#059669" stroke-width="2.5" marker-end="url(#arrowGreen)"/>
+    <line x1="0" y1="0"  x2="0"   y2="20" stroke="#059669" stroke-width="2.5"/>
+    <text x="0" y="44" font-size="15" fill="#059669" font-weight="600">Length-only query reads only the sizes column.</text>
+  </g>
+
+  <!-- Data column label -->
+  <text x="40" y="370" font-size="13" fill="#9CA3AF" font-family="ui-monospace, 'SF Mono', Menlo, monospace">url.data.bin</text>
+
+  <!-- Data row -->
+  <g transform="translate(40, 390)" filter="url(#shadow)">
+    <rect x="0"   y="0" width="150" height="80" rx="5" fill="#F97316"/>
+    <text x="75"  y="52" text-anchor="middle" font-size="24" fill="#fff" font-family="ui-monospace, 'SF Mono', Menlo, monospace">hello</text>
+
+    <rect x="150" y="0" width="90"  height="80" rx="5" fill="#F97316"/>
+    <text x="195" y="52" text-anchor="middle" font-size="24" fill="#fff" font-family="ui-monospace, 'SF Mono', Menlo, monospace">hi</text>
+
+    <rect x="240" y="0" width="150" height="80" rx="5" fill="#F97316"/>
+    <text x="315" y="52" text-anchor="middle" font-size="24" fill="#fff" font-family="ui-monospace, 'SF Mono', Menlo, monospace">world</text>
+
+    <rect x="390" y="0" width="110" height="80" rx="5" fill="#F97316"/>
+    <text x="445" y="52" text-anchor="middle" font-size="24" fill="#fff" font-family="ui-monospace, 'SF Mono', Menlo, monospace">foo</text>
+
+    <rect x="500" y="0" width="130" height="80" rx="5" fill="#F97316"/>
+    <text x="565" y="52" text-anchor="middle" font-size="24" fill="#fff" font-family="ui-monospace, 'SF Mono', Menlo, monospace">data</text>
+  </g>
+
+  <!-- Benefits callout (right side) -->
+  <g transform="translate(700, 160)">
+    <rect x="0" y="0" width="460" height="310" rx="10" fill="#ECFDF5" stroke="#A7F3D0" stroke-width="1.5"/>
+    <text x="20" y="36" font-size="18" font-weight="700" fill="#065F46">Why this is faster</text>
+
+    <circle cx="32" cy="78" r="4" fill="#065F46"/>
+    <text x="48" y="74" font-size="14" fill="#064E3B">Sizes and data each (de)serialize in</text>
+    <text x="48" y="94" font-size="14" fill="#064E3B">large contiguous chunks.</text>
+
+    <circle cx="32" cy="138" r="4" fill="#065F46"/>
+    <text x="48" y="134" font-size="14" fill="#064E3B">Length-only queries skip the data</text>
+    <text x="48" y="154" font-size="14" fill="#064E3B">column — potentially unbounded speedup.</text>
+
+    <circle cx="32" cy="198" r="4" fill="#065F46"/>
+    <text x="48" y="194" font-size="14" fill="#064E3B">Planner rewrites</text>
+    <text x="48" y="220" font-size="14" fill="#064E3B" font-family="ui-monospace, 'SF Mono', Menlo, monospace">col = ''  → length(col) = 0</text>
+    <text x="48" y="248" font-size="14" fill="#064E3B" font-family="ui-monospace, 'SF Mono', Menlo, monospace">col != '' → length(col) != 0</text>
+    <text x="48" y="278" font-size="14" fill="#064E3B">to enable that path.</text>
+  </g>
+</svg>

@@ -1,0 +1,77 @@
+<svg viewBox="0 0 1200 460" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity="0.15"/>
+    </filter>
+    <marker id="arrowRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#DC2626"/>
+    </marker>
+  </defs>
+
+  <!-- Legend (top right) -->
+  <g transform="translate(940, 30)">
+    <rect x="0" y="0" width="220" height="70" rx="8" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1"/>
+    <rect x="16" y="14" width="22" height="22" rx="3" fill="#6366F1"/>
+    <text x="48" y="30" font-size="14" fill="#111827">String size</text>
+    <rect x="16" y="40" width="22" height="22" rx="3" fill="#F97316"/>
+    <text x="48" y="56" font-size="14" fill="#111827">String raw data</text>
+  </g>
+
+  <!-- Title -->
+  <text x="40" y="58" font-size="28" font-weight="700" fill="#111827">ClickHouse</text>
+  <text x="40" y="88" font-size="16" fill="#6B7280">one file — sizes and data interleaved</text>
+
+  <!-- File label -->
+  <text x="40" y="140" font-size="13" fill="#9CA3AF" font-family="ui-monospace, 'SF Mono', Menlo, monospace">url.bin</text>
+
+  <!-- Interleaved row -->
+  <g transform="translate(40, 160)" filter="url(#shadow)">
+    <rect x="0"   y="0" width="70"  height="90" rx="5" fill="#6366F1"/>
+    <text x="35"  y="56" text-anchor="middle" font-size="28" font-weight="700" fill="#fff">5</text>
+
+    <rect x="70"  y="0" width="150" height="90" rx="5" fill="#F97316"/>
+    <text x="145" y="56" text-anchor="middle" font-size="24" fill="#fff" font-family="ui-monospace, 'SF Mono', Menlo, monospace">hello</text>
+
+    <rect x="220" y="0" width="70"  height="90" rx="5" fill="#6366F1"/>
+    <text x="255" y="56" text-anchor="middle" font-size="28" font-weight="700" fill="#fff">2</text>
+
+    <rect x="290" y="0" width="90"  height="90" rx="5" fill="#F97316"/>
+    <text x="335" y="56" text-anchor="middle" font-size="24" fill="#fff" font-family="ui-monospace, 'SF Mono', Menlo, monospace">hi</text>
+
+    <rect x="380" y="0" width="70"  height="90" rx="5" fill="#6366F1"/>
+    <text x="415" y="56" text-anchor="middle" font-size="28" font-weight="700" fill="#fff">5</text>
+
+    <rect x="450" y="0" width="150" height="90" rx="5" fill="#F97316"/>
+    <text x="525" y="56" text-anchor="middle" font-size="24" fill="#fff" font-family="ui-monospace, 'SF Mono', Menlo, monospace">world</text>
+
+    <rect x="600" y="0" width="70"  height="90" rx="5" fill="#6366F1"/>
+    <text x="635" y="56" text-anchor="middle" font-size="28" font-weight="700" fill="#fff">3</text>
+
+    <rect x="670" y="0" width="110" height="90" rx="5" fill="#F97316"/>
+    <text x="725" y="56" text-anchor="middle" font-size="24" fill="#fff" font-family="ui-monospace, 'SF Mono', Menlo, monospace">foo</text>
+
+    <rect x="780" y="0" width="70"  height="90" rx="5" fill="#6366F1"/>
+    <text x="815" y="56" text-anchor="middle" font-size="28" font-weight="700" fill="#fff">4</text>
+
+    <rect x="850" y="0" width="130" height="90" rx="5" fill="#F97316"/>
+    <text x="915" y="56" text-anchor="middle" font-size="24" fill="#fff" font-family="ui-monospace, 'SF Mono', Menlo, monospace">data</text>
+  </g>
+
+  <!-- "must read entire file" callout -->
+  <g transform="translate(40, 290)">
+    <line x1="0" y1="14" x2="980" y2="14" stroke="#DC2626" stroke-width="2.5" marker-end="url(#arrowRed)"/>
+    <line x1="0" y1="4"  x2="0"   y2="24" stroke="#DC2626" stroke-width="2.5"/>
+    <text x="0" y="58" font-size="16" fill="#DC2626" font-weight="600">Length-only query (WHERE URL != '') still reads the entire file.</text>
+  </g>
+
+  <!-- Problem badges -->
+  <g transform="translate(40, 370)">
+    <rect x="0" y="0" width="560" height="70" rx="10" fill="#FEF2F2" stroke="#FECACA" stroke-width="1.5"/>
+    <text x="20" y="30" font-size="14" font-weight="700" fill="#991B1B">Hot (de)serialization loop</text>
+    <text x="20" y="52" font-size="13" fill="#7F1D1D">size, data, size, data, … — prevents large-chunk memory copy.</text>
+
+    <rect x="580" y="0" width="560" height="70" rx="10" fill="#FEF2F2" stroke="#FECACA" stroke-width="1.5"/>
+    <text x="600" y="30" font-size="14" font-weight="700" fill="#991B1B">No way to read only sizes</text>
+    <text x="600" y="52" font-size="13" fill="#7F1D1D">size-dependent queries pay the full string data cost.</text>
+  </g>
+</svg>

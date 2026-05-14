@@ -231,7 +231,53 @@ queries:
         </ul>
     </section>
 
-    TODO: For each feature, create a couple of slides
+    <section class="slide">
+        <h2>String Physical Storage</h2>
+        <img style="width: 100%;" src="pictures/string_storage_clickhouse.svg"/>
+    </section>
+
+    <section class="slide">
+        <h2>String Physical Storage</h2>
+        <img style="width: 100%;" src="pictures/string_storage_ursa.svg"/>
+    </section>
+
+    <section class="slide">
+        <h2>String Physical Storage Example</h2>
+
+        <p>Query performance in ClickHouse:</p>
+
+<code style="font-size:14pt;">SELECT CounterID, AVG(length(URL)) AS l, COUNT(*) AS c FROM hits
+WHERE URL &lt;&gt; '' GROUP BY CounterID HAVING COUNT(*) > 100000
+ORDER BY l DESC LIMIT 25 FORMAT Null;
+
+0 rows in set. Elapsed: 0.641 sec. Processed 100.00 million rows, 10.34 GB
+Peak memory usage: 120.11 MiB.</code>
+
+        <p></p>
+
+        <p>Query performance in Ursa:</p>
+<code style="font-size:14pt;">SELECT CounterID, AVG(length(URL)) AS l, COUNT(*) AS c FROM hits
+WHERE URL &lt;&gt; '' GROUP BY CounterID HAVING COUNT(*) > 100000
+ORDER BY l DESC LIMIT 25 FORMAT Null;
+
+0 rows in set. Elapsed: 0.125 sec. Processed 100.00 million rows, 1.20 GB
+Peak memory usage: 1.42 MiB.</code>
+    </section>
+
+    <section class="slide">
+        <h2>String Physical Storage ClickHouse</h2>
+
+        <img style="width: 100%;" src="pictures/clickbench_query_27_clickhouse.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>String Physical Storage ClickHouse</h2>
+
+        <img style="width: 100%;" src="pictures/clickbench_query_27_ursa.png"/>
+    </section>
+
+
+    <!-- TODO: slides for remaining features (partitioned GROUP BY, ORDER BY LIMIT push-down, runtime bit indexes, interval indexes, index analysis cache, ORDER BY late materialization, cache in heavy functions, other) -->
 
     <section class="slide">
         <h2>Conclusion</h2>
