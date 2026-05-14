@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Ursa — ClickHouse Research Fork</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+
+    <style type="text/css">
+        code { display: block; white-space: pre; background-color: #EEE; }
+   </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>Ursa — ClickHouse Research Fork</h1>
+    </header>
+
+    <section class="slide" id="cover">
+        <h1 style="margin-top: 150px">Ursa — ClickHouse Research Fork</h1>
+    </section>
+
+    <section class="slide">
+        <h2>About me</h2>
+
+        <p>Maksim, database management systems developer.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Motivation</h2>
+
+        <p>1. Research all possible ClickHouse optimizations, even if they are backward incompatible with the original ClickHouse codebase.</p>
+        <p>2. Build a system that is significantly faster than the original ClickHouse.</p>
+        <p>3. Beat Umbra in ClickBench benchmark.</p>
+        <p>4. Build some tooling around ClickHouse to measure performance and debug issues.</p>
+    </section>
+
+    <section class="slide">
+        <h2>ClickBench</h2>
+
+        <p>Data, queries, methodology, results are publicly available on GitHub: <a href="https://github.com/ClickHouse/ClickBench">https://github.com/ClickHouse/ClickBench</a></p>
+        <p>Tests both Cold and Hot runs.</p>
+        <p>Based on Yandex Metrica anonymized hits dataset.</p>
+        <p>44 production like queries that represent typical analytical workload.</p>
+        <p>Very easy to run and reproduce results.</p>
+        <p>By default, all tests are run on c6a.4xlarge VM in AWS with 500 GB gp2 disk. </p>
+    </section>
+
+    <section class="slide">
+        <h2>ClickBench March 2025 Cold Run</h2>
+
+        <img style="width: 80%;" src="pictures/clickbench_results_march_2025_cold_run.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>ClickBench March 2025 Hot Run</h2>
+
+        <img style="width: 80%;" src="pictures/clickbench_results_march_2025_hot_run.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>ClickBench March 2025</h2>
+
+        <p>TODO: Compare with ClickHouse directly</p>
+    </section>
+
+    <section class="slide">
+        <h2>ClickBench Now</h2>
+
+        <p>TODO: now</p>
+    </section>
+
+    <section class="slide">
+        <h2>Tooling</h2>
+
+        <p>Additionally, I was short on time and had around 2 holiday weeks for development, so I wanted to implement optimizations in order of importance.</p>
+        <p>I tried to measure potential performance improvement from some features before actual development to understand if it was worth it.</p>
+        <p>To measure every performance improvement during development, I developed a <b>paw</b> tool that I ran for all queries in ClickBench countless times and analyzed both on-CPU and off-CPU flame graphs for every query before and after different optimizations.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Paw</h2>
+
+        <p>Before going into details of optimizations, I wanted to describe what tooling I used during the development of Ursa. I will show a simple example of <b>paw</b> tool
+            usage and my typical workflow.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Paw</h2>
+
+        <p><b>paw</b> (Performance Analysis Workbench) is a very simple tool for performance testing, analysis, and continuous iteration over results.</p>
+        <a href="https://github.com/kitaisreal/paw">https://github.com/kitaisreal/paw</a>
+        <img style="width: 50%;" src="pictures/paw_logo.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Paw</h2>
+
+        <p>The tool is tailored for such workflow:</p>
+
+        <ol>
+            <li>Run performance tests and collect data (for example, collect on-CPU, off-CPU flame graphs)</li>
+            <li>Analyze collected data to find spots for potential optimizations</li>
+            <li>Implement optimizations</li>
+            <li>Re-run performance tests, recollect data, and compare the old runs with the new ones.</li>
+            <li>Repeat :)</li>
+        </ol>
+    </section>
+
+    <section class="slide">
+        <h2>Paw Configuration Example</h2>
+
+        <code style="font-size:10pt;">profiles:
+  - name: clickhouse
+    driver: clickhouse
+    settings:
+      host: 127.0.0.1
+      port: 9000
+  - name: clickhouse_scatter_aggregation
+    driver: clickhouse
+    settings:
+      host: 127.0.0.1
+      port: 9000
+      force_scatter_aggregation: 1
+  - name: clickhouse_aggregation_scatter_copy_chunks
+    driver: clickhouse
+    settings:
+      host: 127.0.0.1
+      port: 9000
+      aggregation_scatter_based_on_statistics: 1
+      aggregation_default_scatter_algorithm: copy_chunks
+collector_profiles:
+  - name: cpu_flamegraph
+    collector: cpu_flamegraph
+    settings:
+      build_seconds: 5
+  - name: off_cpu_flamegraph
+    collector: off_cpu_flamegraph
+    settings:
+      build_seconds: 5
+settings:
+  query_measure_runs: 5
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Paw Test Example</h2>
+
+        <code style="font-size:10pt;">name: ClickBench
+collectors:
+  - cpu_flamegraph
+queries:
+  - SELECT COUNT(*) FROM hits;
+  - SELECT COUNT(*) FROM hits WHERE AdvEngineID &lt;&gt; 0;
+  - SELECT SUM(AdvEngineID), COUNT(*), AVG(ResolutionWidth) FROM hits;
+  - SELECT AVG(UserID) FROM hits;
+  - SELECT COUNT(DISTINCT UserID) FROM hits;
+  - SELECT COUNT(DISTINCT SearchPhrase) FROM hits;
+
+  ...
+
+  - SELECT DATE_TRUNC('minute', EventTime) AS M, COUNT(*) AS PageViews FROM hits ...
+        </code>
+    </section>
+
+    <section class="slide">
+        <h2>Paw Run Example</h2>
+
+        <p>Then you can run <b>paw</b> with:</p>
+        <code style="font-size:14pt;">./paw record -c config.yaml clickbench.yaml -o clickhouse_dev_clickbench_cpu_only</code>
+
+        <br>
+        <p>Then you can check results in <b>clickhouse_dev_clickbench_cpu_only</b> directory using web viewer:</p>
+        <code style="font-size:14pt;">./paw view clickhouse_dev_clickbench_cpu_only</code>
+    </section>
+
+    <section class="slide">
+        <h2>Paw Run Example</h2>
+
+        <p>Queries in single test result:</p>
+        <img style="width: 100%;" src="pictures/paw_view_single.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Paw Run Detail Example</h2>
+        <img style="width: 75%;" src="pictures/paw_view_single_details.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Paw Iteration Example</h2>
+
+        <p>Then, when you find a place for performance improvement and implement optimization in ClickHouse, you can rerun the test and recheck the results:</p>
+        <code style="font-size:14pt;">./paw record -c config.yaml clickbench_cpu_only.yaml -o ursa_clickbench_cpu_only</code>
+        <br>
+        <p>Now you can compare two test results using web viewer:</p>
+        <code style="font-size:14pt;">./paw view clickhouse_dev_clickbench_cpu_only ursa_clickbench_cpu_only</code>
+    </section>
+
+    <section class="slide">
+        <h2>Paw Run Difference Example</h2>
+        <img style="width: 90%;" src="pictures/paw_view_diff.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Paw Run Difference Details Example</h2>
+        <img style="width: 40%;" src="pictures/paw_view_diff_details.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>New features</h2>
+
+        <p>I will describe all the new features that I implemented in Ursa 0.0.1 in order of importance:</p>
+
+        <ul>
+            <li>Physical storage changes for String with Analyzer/Planner changes to support it</li>
+            <li>Partitioned GROUP BY optimization using 2 algorithms (copy chunks/indexes info)</li>
+            <li>Aggregation ORDER BY LIMIT push down before materialization</li>
+            <li>Runtime bit indexes</li>
+        </ul>
+    </section>
+
+    <section class="slide">
+        <h2>New features</h2>
+
+        <ul>
+            <li>Interval indexes</li>
+            <li>Index analysis cache</li>
+            <li>ORDER BY late materialization</li>
+            <li>Cache in heavy functions</li>
+            <li>Other optimizations</li>
+        </ul>
+    </section>
+
+    TODO: For each feature, create a couple of slides
+
+    <section class="slide">
+        <h2>Conclusion</h2>
+
+        <p>Sometimes, you can achieve significant performance improvement not only by using some high-level complex optimizations
+            but also by using better algorithms and data structures for your specific tasks or by small source code level optimizations.</p>
+
+        <p>Blog post <a href="https://maksimkita.com/blog/power-of-small-optimizations.html">https://maksimkita.com/blog/power-of-small-optimizations.html</a></p>
+        <p>Talk about <a href="https://www.youtube.com/watch?v=timRXe7884I">ClickHouse performance optimization techniques</a> at C++ Russia 2023.</p>
+        <p>Talk about <a href="https://www.youtube.com/watch?v=KedCUDZE9N4">ClickHouse performance optimization practices</a> at C++ Russia 2022.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Questions?</h2>
+    </section>
+
+    <div class="progress"></div>
+    <script src="shower/shower.min.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="shower/shower-video.css">
+    <script src="shower/shower-video.js"></script>
+    <!--/Video plugin-->
+</body>
+</html>

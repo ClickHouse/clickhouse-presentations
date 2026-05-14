@@ -1,0 +1,9 @@
+/*!
+	Video plugin for Shower, HTML presentation engine (github.com/shower/shower)
+
+	Browser support: latest versions of all major browsers
+
+	@url github.com/operatino/shower-video
+	@author Robert Haritonov <r@rhr.me>
+	@twitter @operatino
+*/video{background-color:#000}.mobile .video_wrapper{display:none}.slide.cover video:not(.background){z-index:1}.ipad .slide.cover.w video{width:1024px;height:576px}.ipad .slide.cover.h video{width:1365.33333px;height:768px}.iphone .slide.cover .video_wrapper{position:relative;height:300px}.iphone .slide.cover .video_wrapper video{width:100%;height:100%}
