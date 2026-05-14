@@ -571,7 +571,77 @@ SETTINGS use_index_analysis_cache = 1, use_bit_indexes = 1;
 Peak memory usage: 5.46 KiB.</code>
     </section>
 
-    <!-- TODO: slides for remaining features (ORDER BY late materialization, cache in heavy functions, other) -->
+    <section class="slide">
+        <h2>ORDER BY late materialization</h2>
+
+        <p>Let's take a look at this query:</p>
+        <code style="font-size:14pt;">SELECT * FROM hits WHERE URL LIKE '%google%' ORDER BY EventTime LIMIT 10;</code>
+    </section>
+
+    <section class="slide">
+        <h2>ORDER BY late materialization</h2>
+        <img style="width: 90%;" src="pictures/orderby_late_materialization_clickhouse.svg"/>
+    </section>
+
+    <section class="slide">
+        <h2>ORDER BY late materialization</h2>
+        <img style="width: 90%;" src="pictures/orderby_late_materialization_ursa.svg"/>
+    </section>
+
+    <section class="slide">
+        <h2>ORDER BY late materialization</h2>
+        <p>In Ursa this optimization is implemented on the query planning level.</p>
+        <p>Query:</p>
+<code style="font-size:14pt;">SELECT * FROM hits WHERE URL LIKE '%google%' ORDER BY EventTime LIMIT 10;</code>
+        <p></p>
+        <p>Is transformed into:</p>
+<code style="font-size:14pt;">SELECT * FROM hits WHERE (URL, EventTime)
+IN (
+  SELECT URL, EventTime FROM hits
+  WHERE URL LIKE '%google%'
+  ORDER BY EventTime LIMIT 10
+) ORDER BY EventTime LIMIT 10;</code>
+    </section>
+
+    <section class="slide">
+        <h2>ORDER BY late materialization</h2>
+
+        <p>Query performance in ClickHouse without lazy materialization:</p>
+
+<code style="font-size:14pt;">SELECT * FROM hits WHERE URL LIKE '%google%'
+ORDER BY EventTime LIMIT 10 FORMAT Null
+SETTINGS query_plan_optimize_lazy_materialization = 0;
+
+0 rows in set. Elapsed: 2.550 sec. Processed 100.00 million rows, 21.89 GB
+Peak memory usage: 1.22 GiB.
+</code>
+
+<p></p>
+<p>Query performance in ClickHouse with lazy materialization:</p>
+
+<code style="font-size:14pt;">SELECT * FROM hits WHERE URL LIKE '%google%'
+ORDER BY EventTime LIMIT 10 FORMAT Null
+SETTINGS query_plan_optimize_lazy_materialization = 1;
+
+0 rows in set. Elapsed: 1.207 sec. Processed 100.00 million rows, 10.81 GB
+Peak memory usage: 117.91 MiB.
+</code>
+    </section>
+
+    <section class="slide">
+        <h2>ORDER BY late materialization</h2>
+
+        <p>Query performance in Ursa:</p>
+<code style="font-size:14pt;">SELECT * FROM hits WHERE URL LIKE '%google%'
+ORDER BY EventTime LIMIT 10 FORMAT Null;
+
+0 rows in set. Elapsed: 0.379 sec. Processed 25.32 million rows, 4.19 GB
+Peak memory usage: 120.91 MiB.</code>
+        <p></p>
+        <p>There is around a 4x speedup in Ursa for such a query. </p>
+    </section>
+
+    <!-- TODO: slides for remaining features (cache in heavy functions, other) -->
 
     <section class="slide">
         <h2>Conclusion</h2>

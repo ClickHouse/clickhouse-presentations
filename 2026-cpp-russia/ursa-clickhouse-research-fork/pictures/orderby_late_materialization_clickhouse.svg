@@ -1,0 +1,91 @@
+<svg viewBox="0 0 1200 600" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#000" flood-opacity="0.12"/>
+    </filter>
+    <filter id="shadowStrong" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.18"/>
+    </filter>
+    <marker id="arrowGray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6B7280"/>
+    </marker>
+    <linearGradient id="redBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FEF2F2"/>
+      <stop offset="1" stop-color="#FEE2E2"/>
+    </linearGradient>
+    <linearGradient id="greenBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ECFDF5"/>
+      <stop offset="1" stop-color="#D1FAE5"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Title -->
+  <text x="40" y="48" font-size="26" font-weight="700" fill="#111827">ClickHouse — read all columns, then filter / sort / LIMIT</text>
+  <text x="40" y="76" font-size="15" fill="#6B7280">Every stage carries the full row width — most reads are thrown away</text>
+
+  <!-- Query box -->
+  <g transform="translate(40, 100)">
+    <rect x="0" y="0" width="1120" height="44" rx="8" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1.5"/>
+    <text x="20" y="28" font-size="14" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#1F2937">SELECT * FROM hits WHERE URL LIKE '%google%' ORDER BY EventTime LIMIT 10</text>
+  </g>
+
+  <!-- Step 1 -->
+  <g transform="translate(40, 170)">
+    <circle cx="14" cy="14" r="14" fill="#DC2626"/>
+    <text x="14" y="19" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">1</text>
+    <text x="40" y="20" font-size="15" font-weight="700" fill="#1F2937">Read all columns × all rows from MergeTree</text>
+  </g>
+
+  <!-- Big read block: all cols × 100M rows -->
+  <g transform="translate(200, 200)" filter="url(#shadowStrong)">
+    <rect width="800" height="200" rx="12" fill="url(#redBg)" stroke="#F87171" stroke-width="2"/>
+    <!-- column dividers suggesting many columns -->
+    <line x1="80"  y1="10" x2="80"  y2="190" stroke="#FCA5A5" stroke-width="1"/>
+    <line x1="160" y1="10" x2="160" y2="190" stroke="#FCA5A5" stroke-width="1"/>
+    <line x1="240" y1="10" x2="240" y2="190" stroke="#FCA5A5" stroke-width="1"/>
+    <line x1="320" y1="10" x2="320" y2="190" stroke="#FCA5A5" stroke-width="1"/>
+    <line x1="400" y1="10" x2="400" y2="190" stroke="#FCA5A5" stroke-width="1"/>
+    <line x1="480" y1="10" x2="480" y2="190" stroke="#FCA5A5" stroke-width="1"/>
+    <line x1="560" y1="10" x2="560" y2="190" stroke="#FCA5A5" stroke-width="1"/>
+    <line x1="640" y1="10" x2="640" y2="190" stroke="#FCA5A5" stroke-width="1"/>
+    <line x1="720" y1="10" x2="720" y2="190" stroke="#FCA5A5" stroke-width="1"/>
+    <!-- column header strip -->
+    <rect x="0" y="0" width="800" height="22" rx="12" fill="#FECACA"/>
+    <text x="400" y="16" text-anchor="middle" font-size="11" font-weight="700" fill="#7F1D1D">all N columns →</text>
+    <!-- labels in body -->
+    <text x="400" y="100" text-anchor="middle" font-size="22" font-weight="700" fill="#991B1B">all columns × 100M rows</text>
+    <text x="400" y="134" text-anchor="middle" font-size="15" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#991B1B">21.89 GB read</text>
+    <text x="400" y="172" text-anchor="middle" font-size="13" font-style="italic" fill="#B91C1C">… and the full row width is carried through every following stage</text>
+  </g>
+
+  <!-- Arrow down -->
+  <line x1="600" y1="408" x2="600" y2="448" stroke="#6B7280" stroke-width="2" marker-end="url(#arrowGray)"/>
+
+  <!-- Step 2 -->
+  <g transform="translate(40, 440)">
+    <circle cx="14" cy="14" r="14" fill="#4F46E5"/>
+    <text x="14" y="19" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">2</text>
+    <text x="40" y="20" font-size="15" font-weight="700" fill="#1F2937">filter URL LIKE  +  sort by EventTime  +  LIMIT 10</text>
+  </g>
+
+  <!-- Result block: 10 rows × all cols -->
+  <g transform="translate(200, 480)" filter="url(#shadow)">
+    <rect width="800" height="36" rx="8" fill="url(#greenBg)" stroke="#6EE7B7" stroke-width="2"/>
+    <line x1="80"  y1="0" x2="80"  y2="36" stroke="#A7F3D0" stroke-width="1"/>
+    <line x1="160" y1="0" x2="160" y2="36" stroke="#A7F3D0" stroke-width="1"/>
+    <line x1="240" y1="0" x2="240" y2="36" stroke="#A7F3D0" stroke-width="1"/>
+    <line x1="320" y1="0" x2="320" y2="36" stroke="#A7F3D0" stroke-width="1"/>
+    <line x1="400" y1="0" x2="400" y2="36" stroke="#A7F3D0" stroke-width="1"/>
+    <line x1="480" y1="0" x2="480" y2="36" stroke="#A7F3D0" stroke-width="1"/>
+    <line x1="560" y1="0" x2="560" y2="36" stroke="#A7F3D0" stroke-width="1"/>
+    <line x1="640" y1="0" x2="640" y2="36" stroke="#A7F3D0" stroke-width="1"/>
+    <line x1="720" y1="0" x2="720" y2="36" stroke="#A7F3D0" stroke-width="1"/>
+    <text x="400" y="23" text-anchor="middle" font-size="14" font-weight="700" fill="#065F46">10 rows × all N columns</text>
+  </g>
+
+  <!-- Bottom callout -->
+  <g transform="translate(40, 540)">
+    <rect x="0" y="0" width="1120" height="48" rx="10" fill="#FEF2F2" stroke="#FECACA" stroke-width="1.5"/>
+    <text x="20" y="30" font-size="14" fill="#7F1D1D"><tspan font-weight="700">Bottleneck:</tspan> the query reads 21.89 GB across all columns of 100M rows, then keeps just 10 rows.</text>
+  </g>
+</svg>
