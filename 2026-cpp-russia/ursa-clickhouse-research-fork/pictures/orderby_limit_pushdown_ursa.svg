@@ -1,0 +1,190 @@
+<svg viewBox="0 0 1200 620" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#000" flood-opacity="0.12"/>
+    </filter>
+    <filter id="shadowStrong" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.18"/>
+    </filter>
+    <marker id="arrowGray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6B7280"/>
+    </marker>
+    <linearGradient id="indigoBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#EEF2FF"/>
+      <stop offset="1" stop-color="#E0E7FF"/>
+    </linearGradient>
+    <linearGradient id="greenBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ECFDF5"/>
+      <stop offset="1" stop-color="#D1FAE5"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Title -->
+  <text x="40" y="48" font-size="26" font-weight="700" fill="#111827">Ursa — ORDER BY LIMIT pushed into aggregation finalization</text>
+  <text x="40" y="76" font-size="15" fill="#6B7280">materialize only the ORDER BY column → heap-select top-k → materialize the rest for survivors</text>
+
+  <!-- =============================== Stage 1: Hash table =============================== -->
+  <g transform="translate(40, 120)">
+    <circle cx="14" cy="14" r="14" fill="#4F46E5"/>
+    <text x="14" y="19" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">1</text>
+    <text x="40" y="20" font-size="15" font-weight="700" fill="#1F2937">Aggregated hash table</text>
+    <text x="40" y="40" font-size="12" fill="#6B7280">N entries (serialized)</text>
+  </g>
+  <g transform="translate(40, 175)" filter="url(#shadow)">
+    <rect x="0" y="0" width="240" height="360" rx="10" fill="#fff" stroke="#D1D5DB" stroke-width="1.5"/>
+    <g font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="14">
+      <text x="20" y="26" font-size="11" font-weight="700" fill="#6B7280">KEY</text>
+      <text x="220" y="26" font-size="11" font-weight="700" fill="#6B7280" text-anchor="end">COUNT</text>
+      <line x1="20" y1="34" x2="220" y2="34" stroke="#E5E7EB" stroke-width="1"/>
+
+      <rect x="20" y="46" width="46" height="22" rx="4" fill="#6366F1"/><text x="43" y="62" text-anchor="middle" fill="#fff" font-weight="700">k1</text>
+      <text x="220" y="62" text-anchor="end" fill="#111827" font-weight="700">42</text>
+
+      <rect x="20" y="76" width="46" height="22" rx="4" fill="#F97316"/><text x="43" y="92" text-anchor="middle" fill="#fff" font-weight="700">k2</text>
+      <text x="220" y="92" text-anchor="end" fill="#111827" font-weight="700">8</text>
+
+      <rect x="20" y="106" width="46" height="22" rx="4" fill="#10B981"/><text x="43" y="122" text-anchor="middle" fill="#fff" font-weight="700">k3</text>
+      <text x="220" y="122" text-anchor="end" fill="#111827" font-weight="700">91</text>
+
+      <rect x="20" y="136" width="46" height="22" rx="4" fill="#EC4899"/><text x="43" y="152" text-anchor="middle" fill="#fff" font-weight="700">k4</text>
+      <text x="220" y="152" text-anchor="end" fill="#111827" font-weight="700">15</text>
+
+      <rect x="20" y="166" width="46" height="22" rx="4" fill="#0EA5E9"/><text x="43" y="182" text-anchor="middle" fill="#fff" font-weight="700">k5</text>
+      <text x="220" y="182" text-anchor="end" fill="#111827" font-weight="700">4</text>
+
+      <rect x="20" y="196" width="46" height="22" rx="4" fill="#A78BFA"/><text x="43" y="212" text-anchor="middle" fill="#fff" font-weight="700">k6</text>
+      <text x="220" y="212" text-anchor="end" fill="#111827" font-weight="700">67</text>
+
+      <text x="43" y="246" text-anchor="middle" fill="#9CA3AF" font-size="18" font-weight="700">⋮</text>
+      <text x="220" y="246" text-anchor="end" fill="#9CA3AF" font-size="18" font-weight="700">⋮</text>
+
+      <rect x="20" y="266" width="46" height="22" rx="4" fill="#9CA3AF"/><text x="43" y="282" text-anchor="middle" fill="#fff" font-weight="700">kN</text>
+      <text x="220" y="282" text-anchor="end" fill="#111827" font-weight="700">?</text>
+    </g>
+    <text x="120" y="328" text-anchor="middle" font-size="12" font-style="italic" fill="#6B7280">N can be millions</text>
+  </g>
+
+  <!-- arrow + label between stage 1 and stage 2 -->
+  <g transform="translate(288, 340)">
+    <line x1="0" y1="14" x2="48" y2="14" stroke="#6B7280" stroke-width="2" marker-end="url(#arrowGray)"/>
+    <text x="26" y="-4" text-anchor="middle" font-size="12" font-weight="700" fill="#4F46E5">materialize</text>
+    <text x="26" y="34" text-anchor="middle" font-size="12" fill="#6B7280">only the</text>
+    <text x="26" y="50" text-anchor="middle" font-size="12" fill="#6B7280">ORDER BY</text>
+    <text x="26" y="66" text-anchor="middle" font-size="12" fill="#6B7280">column</text>
+  </g>
+
+  <!-- =============================== Stage 2: Materialize only COUNT =============================== -->
+  <g transform="translate(348, 120)">
+    <circle cx="14" cy="14" r="14" fill="#4F46E5"/>
+    <text x="14" y="19" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">2</text>
+    <text x="40" y="20" font-size="15" font-weight="700" fill="#1F2937">Materialize COUNT only</text>
+    <text x="40" y="40" font-size="12" fill="#6B7280">N rows × 1 column</text>
+  </g>
+  <g transform="translate(348, 175)" filter="url(#shadow)">
+    <rect x="0" y="0" width="170" height="360" rx="10" fill="url(#indigoBg)" stroke="#A5B4FC" stroke-width="1.5"/>
+    <text x="85" y="26" text-anchor="middle" font-size="11" font-weight="700" fill="#3730A3">COUNT</text>
+    <line x1="20" y1="36" x2="150" y2="36" stroke="#C7D2FE" stroke-width="1"/>
+
+    <g font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="14" fill="#1E1B4B" font-weight="700">
+      <text x="85" y="62"  text-anchor="middle">42</text>
+      <text x="85" y="92"  text-anchor="middle">8</text>
+      <text x="85" y="122" text-anchor="middle">91</text>
+      <text x="85" y="152" text-anchor="middle">15</text>
+      <text x="85" y="182" text-anchor="middle">4</text>
+      <text x="85" y="212" text-anchor="middle">67</text>
+      <text x="85" y="246" text-anchor="middle" font-size="18" fill="#6366F1">⋮</text>
+      <text x="85" y="282" text-anchor="middle">?</text>
+    </g>
+    <text x="85" y="328" text-anchor="middle" font-size="12" font-style="italic" fill="#4F46E5">cheap: 1 column for N rows</text>
+  </g>
+
+  <!-- arrow + label between stage 2 and stage 3 -->
+  <g transform="translate(526, 340)">
+    <line x1="0" y1="14" x2="46" y2="14" stroke="#6B7280" stroke-width="2" marker-end="url(#arrowGray)"/>
+    <text x="25" y="-4" text-anchor="middle" font-size="12" font-weight="700" fill="#4F46E5">heap</text>
+    <text x="25" y="34" text-anchor="middle" font-size="12" fill="#6B7280">top-10</text>
+    <text x="25" y="50" text-anchor="middle" font-size="12" fill="#6B7280">by COUNT</text>
+    <text x="25" y="66" text-anchor="middle" font-size="12" fill="#6B7280">DESC</text>
+  </g>
+
+  <!-- =============================== Stage 3: Top-10 heap =============================== -->
+  <g transform="translate(580, 120)">
+    <circle cx="14" cy="14" r="14" fill="#4F46E5"/>
+    <text x="14" y="19" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">3</text>
+    <text x="40" y="20" font-size="15" font-weight="700" fill="#1F2937">Top-10 heap</text>
+    <text x="40" y="40" font-size="12" fill="#6B7280">COUNT + index back to hash table</text>
+  </g>
+  <g transform="translate(580, 175)" filter="url(#shadow)">
+    <rect x="0" y="0" width="230" height="360" rx="10" fill="url(#indigoBg)" stroke="#A5B4FC" stroke-width="1.5"/>
+    <g font-size="11" font-weight="700" fill="#3730A3">
+      <text x="40"  y="26" text-anchor="middle">RANK</text>
+      <text x="110" y="26" text-anchor="middle">COUNT</text>
+      <text x="190" y="26" text-anchor="middle">idx</text>
+    </g>
+    <line x1="20" y1="36" x2="210" y2="36" stroke="#C7D2FE" stroke-width="1"/>
+
+    <g font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="13" fill="#1E1B4B">
+      <text x="40" y="58"  text-anchor="middle">#1</text><text x="110" y="58"  text-anchor="middle" font-weight="700">91</text><text x="190" y="58"  text-anchor="middle">3</text>
+      <text x="40" y="80"  text-anchor="middle">#2</text><text x="110" y="80"  text-anchor="middle" font-weight="700">87</text><text x="190" y="80"  text-anchor="middle">17</text>
+      <text x="40" y="102" text-anchor="middle">#3</text><text x="110" y="102" text-anchor="middle" font-weight="700">67</text><text x="190" y="102" text-anchor="middle">6</text>
+      <text x="40" y="124" text-anchor="middle">#4</text><text x="110" y="124" text-anchor="middle" font-weight="700">53</text><text x="190" y="124" text-anchor="middle">7</text>
+      <text x="40" y="146" text-anchor="middle">#5</text><text x="110" y="146" text-anchor="middle" font-weight="700">42</text><text x="190" y="146" text-anchor="middle">1</text>
+      <text x="40" y="168" text-anchor="middle">#6</text><text x="110" y="168" text-anchor="middle" font-weight="700">38</text><text x="190" y="168" text-anchor="middle">29</text>
+      <text x="40" y="190" text-anchor="middle">#7</text><text x="110" y="190" text-anchor="middle" font-weight="700">31</text><text x="190" y="190" text-anchor="middle">11</text>
+      <text x="40" y="212" text-anchor="middle">#8</text><text x="110" y="212" text-anchor="middle" font-weight="700">22</text><text x="190" y="212" text-anchor="middle">42</text>
+      <text x="40" y="234" text-anchor="middle">#9</text><text x="110" y="234" text-anchor="middle" font-weight="700">18</text><text x="190" y="234" text-anchor="middle">8</text>
+      <text x="40" y="256" text-anchor="middle">#10</text><text x="110" y="256" text-anchor="middle" font-weight="700">15</text><text x="190" y="256" text-anchor="middle">4</text>
+    </g>
+    <text x="115" y="328" text-anchor="middle" font-size="12" font-style="italic" fill="#4F46E5">10 entries, fixed size</text>
+  </g>
+
+  <!-- arrow + label between stage 3 and stage 4 -->
+  <g transform="translate(818, 340)">
+    <line x1="0" y1="14" x2="46" y2="14" stroke="#6B7280" stroke-width="2" marker-end="url(#arrowGray)"/>
+    <text x="25" y="-4" text-anchor="middle" font-size="12" font-weight="700" fill="#059669">materialize</text>
+    <text x="25" y="34" text-anchor="middle" font-size="12" fill="#6B7280">remaining</text>
+    <text x="25" y="50" text-anchor="middle" font-size="12" fill="#6B7280">columns,</text>
+    <text x="25" y="66" text-anchor="middle" font-size="12" fill="#6B7280">10 rows only</text>
+  </g>
+
+  <!-- =============================== Stage 4: Final 10 =============================== -->
+  <g transform="translate(874, 120)">
+    <circle cx="14" cy="14" r="14" fill="#059669"/>
+    <text x="14" y="19" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">4</text>
+    <text x="40" y="20" font-size="15" font-weight="700" fill="#1F2937">Top 10 rows</text>
+    <text x="40" y="40" font-size="12" fill="#6B7280">10 rows × 4 columns</text>
+  </g>
+  <g transform="translate(874, 175)" filter="url(#shadowStrong)">
+    <rect x="0" y="0" width="286" height="360" rx="10" fill="url(#greenBg)" stroke="#6EE7B7" stroke-width="2"/>
+    <g font-size="11" font-weight="700" fill="#065F46">
+      <text x="50"  y="26" text-anchor="middle">UID</text>
+      <text x="110" y="26" text-anchor="middle">m</text>
+      <text x="170" y="26" text-anchor="middle">sp</text>
+      <text x="240" y="26" text-anchor="middle">COUNT</text>
+    </g>
+    <line x1="16" y1="36" x2="270" y2="36" stroke="#A7F3D0" stroke-width="1"/>
+
+    <g font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="13" fill="#064E3B">
+      <text x="50" y="58"  text-anchor="middle">303</text><text x="110" y="58"  text-anchor="middle">9</text><text x="170" y="58"  text-anchor="middle">"ghi"</text><text x="240" y="58"  text-anchor="middle" font-weight="700">91</text>
+      <text x="50" y="80"  text-anchor="middle">…</text><text x="110" y="80"  text-anchor="middle">…</text><text x="170" y="80"  text-anchor="middle">"…"</text><text x="240" y="80"  text-anchor="middle" font-weight="700">87</text>
+      <text x="50" y="102" text-anchor="middle">606</text><text x="110" y="102" text-anchor="middle">5</text><text x="170" y="102" text-anchor="middle">"pqr"</text><text x="240" y="102" text-anchor="middle" font-weight="700">67</text>
+      <text x="50" y="124" text-anchor="middle">707</text><text x="110" y="124" text-anchor="middle">4</text><text x="170" y="124" text-anchor="middle">"stu"</text><text x="240" y="124" text-anchor="middle" font-weight="700">53</text>
+      <text x="50" y="146" text-anchor="middle">101</text><text x="110" y="146" text-anchor="middle">3</text><text x="170" y="146" text-anchor="middle">"abc"</text><text x="240" y="146" text-anchor="middle" font-weight="700">42</text>
+      <text x="50" y="168" text-anchor="middle">…</text><text x="110" y="168" text-anchor="middle">…</text><text x="170" y="168" text-anchor="middle">"…"</text><text x="240" y="168" text-anchor="middle" font-weight="700">38</text>
+      <text x="50" y="190" text-anchor="middle">…</text><text x="110" y="190" text-anchor="middle">…</text><text x="170" y="190" text-anchor="middle">"…"</text><text x="240" y="190" text-anchor="middle" font-weight="700">31</text>
+      <text x="50" y="212" text-anchor="middle">…</text><text x="110" y="212" text-anchor="middle">…</text><text x="170" y="212" text-anchor="middle">"…"</text><text x="240" y="212" text-anchor="middle" font-weight="700">22</text>
+      <text x="50" y="234" text-anchor="middle">…</text><text x="110" y="234" text-anchor="middle">…</text><text x="170" y="234" text-anchor="middle">"…"</text><text x="240" y="234" text-anchor="middle" font-weight="700">18</text>
+      <text x="50" y="256" text-anchor="middle">404</text><text x="110" y="256" text-anchor="middle">2</text><text x="170" y="256" text-anchor="middle">"jkl"</text><text x="240" y="256" text-anchor="middle" font-weight="700">15</text>
+    </g>
+
+    <text x="143" y="328" text-anchor="middle" font-size="13" font-weight="700" fill="#065F46">other columns materialized only here</text>
+  </g>
+
+  <!-- Bottom callout -->
+  <g transform="translate(40, 560)">
+    <rect x="0" y="0" width="1120" height="44" rx="10" fill="#ECFDF5" stroke="#A7F3D0" stroke-width="1.5"/>
+    <text x="20" y="28" font-size="14" fill="#065F46">
+      <tspan font-weight="700">Savings:</tspan>  N rows × 1 column + 10 rows × 3 remaining columns, instead of N rows × 4 columns.
+    </text>
+  </g>
+</svg>

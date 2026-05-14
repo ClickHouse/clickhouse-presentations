@@ -271,13 +271,129 @@ Peak memory usage: 1.42 MiB.</code>
     </section>
 
     <section class="slide">
-        <h2>String Physical Storage ClickHouse</h2>
+        <h2>String Physical Storage Ursa</h2>
 
         <img style="width: 100%;" src="pictures/clickbench_query_27_ursa.png"/>
     </section>
 
+    <section class="slide">
+        <h2>Partitioned GROUP BY</h2>
+        <img style="width: 75%;" src="pictures/partitioned_groupby_clickhouse.svg"/>
+    </section>
 
-    <!-- TODO: slides for remaining features (partitioned GROUP BY, ORDER BY LIMIT push-down, runtime bit indexes, interval indexes, index analysis cache, ORDER BY late materialization, cache in heavy functions, other) -->
+    <section class="slide">
+        <h2>Partitioned GROUP BY</h2>
+        <img style="width: 75%;" src="pictures/partitioned_groupby_ursa.svg"/>
+    </section>
+
+    <section class="slide">
+        <h2>Partitioned GROUP BY</h2>
+
+        <p>To properly dispatch between partitioned and ordinary GROUP BY, I used runtime statistics that are collected in ClickHouse during GROUP BY.</p>
+        <p>Using these statistics, it is possible to understand if aggregation is high-cardinality and dispatch to the necessary method.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Partitioned GROUP BY Example</h2>
+
+        <p>Query performance in ClickHouse:</p>
+
+<code style="font-size:14pt;">SELECT WatchID, ClientIP, COUNT(*) AS c, SUM(IsRefresh),
+AVG(ResolutionWidth) FROM hits
+GROUP BY WatchID, ClientIP ORDER BY c DESC LIMIT 10 FORMAT Null;
+
+0 rows in set. Elapsed: 4.061 sec. Processed 100.00 million rows, 1.60 GB
+Peak memory usage: 10.27 GiB.</code>
+
+        <p></p>
+
+        <p>Query performance in Ursa:</p>
+<code style="font-size:14pt;">SELECT WatchID, ClientIP, COUNT(*) AS c, SUM(IsRefresh),
+AVG(ResolutionWidth) FROM hits
+GROUP BY WatchID, ClientIP ORDER BY c DESC LIMIT 10 FORMAT Null;
+
+0 rows in set. Elapsed: 2.460 sec. Processed 100.00 million rows, 1.60 GB
+Peak memory usage: 10.06 GiB.</code>
+
+    </section>
+
+    <section class="slide">
+        <h2>Partitioned GROUP BY ClickHouse</h2>
+        <img style="width: 100%;" src="pictures/clickbench_query_32_clickhouse.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Partitioned GROUP BY Ursa</h2>
+        <img style="width: 100%;" src="pictures/clickbench_query_32_ursa.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Aggregation ORDER BY LIMIT</h2>
+
+        <p>Let's take a look at the following query:</p>
+        <code style="font-size:14pt;">SELECT
+    UserID,
+    extract(minute FROM EventTime) AS m,
+    SearchPhrase,
+    COUNT(*)
+FROM hits
+GROUP BY UserID, m, SearchPhrase ORDER BY COUNT(*) DESC LIMIT 10;
+
+0 rows in set. Elapsed: 3.484 sec. Processed 100.00 million rows, 2.84 GB
+Peak memory usage: 8.21 GiB.
+</code>
+    </section>
+
+    <section class="slide">
+        <h2>Aggregation ORDER BY LIMIT</h2>
+
+        <img style="width: 100%;" src="pictures/clickbench_query_18_clickhouse.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Aggregation ORDER BY LIMIT</h2>
+        <img style="width: 90%;" src="pictures/orderby_limit_pushdown_clickhouse.svg"/>
+    </section>
+
+    <section class="slide">
+        <h2>Aggregation ORDER BY LIMIT</h2>
+        <img style="width: 90%;" src="pictures/orderby_limit_pushdown_ursa.svg"/>
+    </section>
+
+    <section class="slide">
+        <h2>Aggregation ORDER BY LIMIT</h2>
+
+        <p>Query performance in Ursa:</p>
+<code style="font-size:14pt;">SELECT
+    UserID,
+    extract(minute FROM EventTime) AS m,
+    SearchPhrase,
+    COUNT(*)
+FROM hits
+GROUP BY UserID, m, SearchPhrase ORDER BY COUNT(*) DESC LIMIT 10;
+
+0 rows in set. Elapsed: 2.910 sec. Processed 100.00 million rows, 2.84 GB
+Peak memory usage: 8.15 GiB.</code>
+        <p></p>
+        <p>Around 16% speedup in Ursa for such query.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Aggregation ORDER BY LIMIT Ursa</h2>
+
+        <p>It is also possible to optimize with operator fusion a bit different queries, where ORDER BY after GROUP BY does not depend on any computed aggregate functions. For example, such query:</p>
+        <code style="font-size:14pt;">SELECT UserID, extract(minute FROM EventTime) AS m, SearchPhrase,
+COUNT(*) FROM hits
+GROUP BY UserID, m, SearchPhrase ORDER BY SearchPhrase DESC LIMIT 10;
+</code>
+
+        <p>Or if you have a query without ORDER BY only with LIMIT after GROUP BY:</p>
+        <code style="font-size:14pt;">SELECT UserID, SearchPhrase, COUNT(*) FROM hits
+GROUP BY UserID, SearchPhrase LIMIT 10;</code>
+Such queries are rare, but for such queries, you can fuse aggregation, ORDER BY, and LIMIT into a single operator.
+    </section>
+
+    <!-- TODO: slides for remaining features (runtime bit indexes, interval indexes, index analysis cache, ORDER BY late materialization, cache in heavy functions, other) -->
 
     <section class="slide">
         <h2>Conclusion</h2>

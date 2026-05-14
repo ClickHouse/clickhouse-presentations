@@ -1,0 +1,161 @@
+<svg viewBox="0 0 1200 620" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#000" flood-opacity="0.12"/>
+    </filter>
+    <filter id="shadowStrong" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.18"/>
+    </filter>
+    <marker id="arrowGray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6B7280"/>
+    </marker>
+    <linearGradient id="redBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FEF2F2"/>
+      <stop offset="1" stop-color="#FEE2E2"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Title -->
+  <text x="40" y="48" font-size="26" font-weight="700" fill="#111827">ClickHouse — full materialize, then ORDER BY LIMIT</text>
+  <text x="40" y="76" font-size="15" fill="#6B7280">convertToBlockImplFinal expands every hash-table entry into a block row before the sort</text>
+
+  <!-- =============================== Stage 1: Hash table =============================== -->
+  <g transform="translate(40, 120)">
+    <circle cx="14" cy="14" r="14" fill="#4F46E5"/>
+    <text x="14" y="19" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">1</text>
+    <text x="40" y="20" font-size="15" font-weight="700" fill="#1F2937">Aggregated hash table</text>
+    <text x="40" y="40" font-size="12" fill="#6B7280">N entries (serialized)</text>
+  </g>
+  <g transform="translate(40, 175)" filter="url(#shadow)">
+    <rect x="0" y="0" width="260" height="360" rx="10" fill="#fff" stroke="#D1D5DB" stroke-width="1.5"/>
+    <g font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="14">
+      <text x="20" y="26" font-size="11" font-weight="700" fill="#6B7280">KEY</text>
+      <text x="240" y="26" font-size="11" font-weight="700" fill="#6B7280" text-anchor="end">COUNT</text>
+      <line x1="20" y1="34" x2="240" y2="34" stroke="#E5E7EB" stroke-width="1"/>
+
+      <rect x="20" y="46" width="46" height="22" rx="4" fill="#6366F1"/><text x="43" y="62" text-anchor="middle" fill="#fff" font-weight="700">k1</text>
+      <text x="240" y="62" text-anchor="end" fill="#111827" font-weight="700">42</text>
+
+      <rect x="20" y="76" width="46" height="22" rx="4" fill="#F97316"/><text x="43" y="92" text-anchor="middle" fill="#fff" font-weight="700">k2</text>
+      <text x="240" y="92" text-anchor="end" fill="#111827" font-weight="700">8</text>
+
+      <rect x="20" y="106" width="46" height="22" rx="4" fill="#10B981"/><text x="43" y="122" text-anchor="middle" fill="#fff" font-weight="700">k3</text>
+      <text x="240" y="122" text-anchor="end" fill="#111827" font-weight="700">91</text>
+
+      <rect x="20" y="136" width="46" height="22" rx="4" fill="#EC4899"/><text x="43" y="152" text-anchor="middle" fill="#fff" font-weight="700">k4</text>
+      <text x="240" y="152" text-anchor="end" fill="#111827" font-weight="700">15</text>
+
+      <rect x="20" y="166" width="46" height="22" rx="4" fill="#0EA5E9"/><text x="43" y="182" text-anchor="middle" fill="#fff" font-weight="700">k5</text>
+      <text x="240" y="182" text-anchor="end" fill="#111827" font-weight="700">4</text>
+
+      <rect x="20" y="196" width="46" height="22" rx="4" fill="#A78BFA"/><text x="43" y="212" text-anchor="middle" fill="#fff" font-weight="700">k6</text>
+      <text x="240" y="212" text-anchor="end" fill="#111827" font-weight="700">67</text>
+
+      <text x="43" y="246" text-anchor="middle" fill="#9CA3AF" font-size="18" font-weight="700">⋮</text>
+      <text x="240" y="246" text-anchor="end" fill="#9CA3AF" font-size="18" font-weight="700">⋮</text>
+
+      <rect x="20" y="266" width="46" height="22" rx="4" fill="#9CA3AF"/><text x="43" y="282" text-anchor="middle" fill="#fff" font-weight="700">kN</text>
+      <text x="240" y="282" text-anchor="end" fill="#111827" font-weight="700">?</text>
+    </g>
+    <text x="130" y="328" text-anchor="middle" font-size="12" font-style="italic" fill="#6B7280">N can be millions of unique groups</text>
+  </g>
+
+  <!-- arrow + label between stage 1 and stage 2 -->
+  <g transform="translate(308, 340)">
+    <line x1="0" y1="14" x2="68" y2="14" stroke="#6B7280" stroke-width="2" marker-end="url(#arrowGray)"/>
+    <text x="36" y="-2" text-anchor="middle" font-size="12" font-weight="700" fill="#DC2626">materialize</text>
+    <text x="36" y="36" text-anchor="middle" font-size="12" fill="#6B7280">all N rows</text>
+    <text x="36" y="52" text-anchor="middle" font-size="11" fill="#9CA3AF" font-family="ui-monospace, monospace">convertTo</text>
+    <text x="36" y="66" text-anchor="middle" font-size="11" fill="#9CA3AF" font-family="ui-monospace, monospace">BlockImplFinal</text>
+  </g>
+
+  <!-- =============================== Stage 2: Materialized block =============================== -->
+  <g transform="translate(390, 120)">
+    <circle cx="14" cy="14" r="14" fill="#DC2626"/>
+    <text x="14" y="19" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">2</text>
+    <text x="40" y="20" font-size="15" font-weight="700" fill="#1F2937">Materialized block</text>
+    <text x="40" y="40" font-size="12" fill="#6B7280">N rows × 4 columns — every column converted for every entry</text>
+  </g>
+  <g transform="translate(390, 175)" filter="url(#shadowStrong)">
+    <rect x="0" y="0" width="460" height="360" rx="10" fill="url(#redBg)" stroke="#F87171" stroke-width="2"/>
+    <!-- column headers -->
+    <g font-size="11" font-weight="700" fill="#7F1D1D">
+      <text x="60"  y="26" text-anchor="middle">UserID</text>
+      <text x="170" y="26" text-anchor="middle">m</text>
+      <text x="280" y="26" text-anchor="middle">SearchPhrase</text>
+      <text x="400" y="26" text-anchor="middle">COUNT</text>
+    </g>
+    <line x1="20" y1="36" x2="440" y2="36" stroke="#FCA5A5" stroke-width="1"/>
+
+    <g font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="13" fill="#7F1D1D">
+      <!-- 7 visible rows -->
+      <text x="60"  y="58">101</text><text x="170" y="58">3</text><text x="280" y="58">"abc"</text><text x="400" y="58" font-weight="700">42</text>
+      <text x="60"  y="84">202</text><text x="170" y="84">7</text><text x="280" y="84">"def"</text><text x="400" y="84" font-weight="700">8</text>
+      <text x="60"  y="110">303</text><text x="170" y="110">9</text><text x="280" y="110">"ghi"</text><text x="400" y="110" font-weight="700">91</text>
+      <text x="60"  y="136">404</text><text x="170" y="136">2</text><text x="280" y="136">"jkl"</text><text x="400" y="136" font-weight="700">15</text>
+      <text x="60"  y="162">505</text><text x="170" y="162">1</text><text x="280" y="162">"mno"</text><text x="400" y="162" font-weight="700">4</text>
+      <text x="60"  y="188">606</text><text x="170" y="188">5</text><text x="280" y="188">"pqr"</text><text x="400" y="188" font-weight="700">67</text>
+      <text x="60"  y="214">707</text><text x="170" y="214">4</text><text x="280" y="214">"stu"</text><text x="400" y="214" font-weight="700">53</text>
+
+      <!-- ellipsis -->
+      <text x="60"  y="246" font-size="16" fill="#B91C1C">⋮</text>
+      <text x="170" y="246" font-size="16" fill="#B91C1C">⋮</text>
+      <text x="280" y="246" font-size="16" fill="#B91C1C">⋮</text>
+      <text x="400" y="246" font-size="16" fill="#B91C1C">⋮</text>
+
+      <text x="60"  y="274">?</text><text x="170" y="274">?</text><text x="280" y="274">"…"</text><text x="400" y="274" font-weight="700">?</text>
+    </g>
+
+    <text x="230" y="328" text-anchor="middle" font-size="13" font-weight="700" fill="#991B1B">all N rows materialized — wasted work</text>
+  </g>
+
+  <!-- arrow + label between stage 2 and stage 3 -->
+  <g transform="translate(858, 340)">
+    <line x1="0" y1="14" x2="68" y2="14" stroke="#6B7280" stroke-width="2" marker-end="url(#arrowGray)"/>
+    <text x="36" y="-2" text-anchor="middle" font-size="12" font-weight="700" fill="#1F2937">sort,</text>
+    <text x="36" y="36" text-anchor="middle" font-size="12" fill="#6B7280">keep top 10</text>
+    <text x="36" y="52" text-anchor="middle" font-size="11" fill="#9CA3AF" font-family="ui-monospace, monospace">ORDER BY</text>
+    <text x="36" y="66" text-anchor="middle" font-size="11" fill="#9CA3AF" font-family="ui-monospace, monospace">DESC LIMIT 10</text>
+  </g>
+
+  <!-- =============================== Stage 3: Final 10 =============================== -->
+  <g transform="translate(940, 120)">
+    <circle cx="14" cy="14" r="14" fill="#059669"/>
+    <text x="14" y="19" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">3</text>
+    <text x="40" y="20" font-size="15" font-weight="700" fill="#1F2937">Top 10 rows</text>
+    <text x="40" y="40" font-size="12" fill="#6B7280">10 rows × 4 columns</text>
+  </g>
+  <g transform="translate(940, 175)" filter="url(#shadow)">
+    <rect x="0" y="0" width="220" height="360" rx="10" fill="#fff" stroke="#D1D5DB" stroke-width="1.5"/>
+    <g font-size="11" font-weight="700" fill="#4B5563">
+      <text x="40"  y="26" text-anchor="middle">UID</text>
+      <text x="100" y="26" text-anchor="middle">m</text>
+      <text x="140" y="26" text-anchor="middle">sp</text>
+      <text x="190" y="26" text-anchor="middle">COUNT</text>
+    </g>
+    <line x1="16" y1="36" x2="204" y2="36" stroke="#E5E7EB" stroke-width="1"/>
+
+    <g font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="13" fill="#111827">
+      <text x="40" y="58" text-anchor="middle">303</text><text x="100" y="58" text-anchor="middle">9</text><text x="140" y="58" text-anchor="middle">…</text><text x="190" y="58" text-anchor="middle" font-weight="700">91</text>
+      <text x="40" y="84" text-anchor="middle">606</text><text x="100" y="84" text-anchor="middle">5</text><text x="140" y="84" text-anchor="middle">…</text><text x="190" y="84" text-anchor="middle" font-weight="700">67</text>
+      <text x="40" y="110" text-anchor="middle">707</text><text x="100" y="110" text-anchor="middle">4</text><text x="140" y="110" text-anchor="middle">…</text><text x="190" y="110" text-anchor="middle" font-weight="700">53</text>
+      <text x="40" y="136" text-anchor="middle">…</text><text x="100" y="136" text-anchor="middle">…</text><text x="140" y="136" text-anchor="middle">…</text><text x="190" y="136" text-anchor="middle" font-weight="700">…</text>
+      <text x="40" y="162" text-anchor="middle">…</text><text x="100" y="162" text-anchor="middle">…</text><text x="140" y="162" text-anchor="middle">…</text><text x="190" y="162" text-anchor="middle" font-weight="700">…</text>
+      <text x="40" y="188" text-anchor="middle">…</text><text x="100" y="188" text-anchor="middle">…</text><text x="140" y="188" text-anchor="middle">…</text><text x="190" y="188" text-anchor="middle" font-weight="700">…</text>
+      <text x="40" y="214" text-anchor="middle">…</text><text x="100" y="214" text-anchor="middle">…</text><text x="140" y="214" text-anchor="middle">…</text><text x="190" y="214" text-anchor="middle" font-weight="700">…</text>
+      <text x="40" y="240" text-anchor="middle">…</text><text x="100" y="240" text-anchor="middle">…</text><text x="140" y="240" text-anchor="middle">…</text><text x="190" y="240" text-anchor="middle" font-weight="700">…</text>
+      <text x="40" y="266" text-anchor="middle">…</text><text x="100" y="266" text-anchor="middle">…</text><text x="140" y="266" text-anchor="middle">…</text><text x="190" y="266" text-anchor="middle" font-weight="700">…</text>
+      <text x="40" y="292" text-anchor="middle">404</text><text x="100" y="292" text-anchor="middle">2</text><text x="140" y="292" text-anchor="middle">…</text><text x="190" y="292" text-anchor="middle" font-weight="700">15</text>
+    </g>
+
+    <text x="110" y="328" text-anchor="middle" font-size="12" font-style="italic" fill="#6B7280">10 surviving rows</text>
+  </g>
+
+  <!-- Bottom callout -->
+  <g transform="translate(40, 560)">
+    <rect x="0" y="0" width="1120" height="44" rx="10" fill="#FEF2F2" stroke="#FECACA" stroke-width="1.5"/>
+    <text x="20" y="28" font-size="14" fill="#7F1D1D">
+      <tspan font-weight="700">Bottleneck:</tspan>  all N hash-table entries are converted to full 4-column rows just to keep the top 10 after sort.
+    </text>
+  </g>
+</svg>
