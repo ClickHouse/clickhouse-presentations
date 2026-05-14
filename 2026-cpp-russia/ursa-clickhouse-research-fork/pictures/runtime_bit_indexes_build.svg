@@ -1,0 +1,125 @@
+<svg viewBox="0 0 1200 640" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#000" flood-opacity="0.12"/>
+    </filter>
+    <filter id="shadowStrong" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.18"/>
+    </filter>
+    <linearGradient id="amberBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FEF3C7"/>
+      <stop offset="1" stop-color="#FDE68A"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Title -->
+  <text x="40" y="48" font-size="26" font-weight="700" fill="#111827">Runtime bit indexes — building the cache</text>
+  <text x="40" y="76" font-size="15" fill="#6B7280">First query evaluates the filter per granule and stores which granules pass as a bitmap</text>
+
+  <!-- Query box -->
+  <g transform="translate(40, 100)">
+    <rect x="0" y="0" width="1120" height="44" rx="8" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1.5"/>
+    <text x="20" y="28" font-size="14" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#1F2937">SELECT UserID FROM hits WHERE UserID = 435090932899640449</text>
+  </g>
+
+  <!-- Step 1 -->
+  <g transform="translate(40, 170)">
+    <circle cx="14" cy="14" r="14" fill="#4F46E5"/>
+    <text x="14" y="19" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">1</text>
+    <text x="40" y="20" font-size="15" font-weight="700" fill="#1F2937">Apply filter to each granule (8192 rows each)</text>
+  </g>
+
+  <!-- Granules row -->
+  <g font-family="ui-monospace, 'SF Mono', Menlo, monospace">
+    <g transform="translate(96, 215)" filter="url(#shadow)">
+      <rect width="90" height="90" rx="8" fill="#fff" stroke="#9CA3AF" stroke-width="1.5"/>
+      <text x="45" y="40" text-anchor="middle" font-size="15" font-weight="700" fill="#374151">g1</text>
+      <text x="45" y="62" text-anchor="middle" font-size="10" fill="#9CA3AF">8192 rows</text>
+    </g>
+    <g transform="translate(198, 215)" filter="url(#shadow)">
+      <rect width="90" height="90" rx="8" fill="#fff" stroke="#9CA3AF" stroke-width="1.5"/>
+      <text x="45" y="40" text-anchor="middle" font-size="15" font-weight="700" fill="#374151">g2</text>
+      <text x="45" y="62" text-anchor="middle" font-size="10" fill="#9CA3AF">8192 rows</text>
+    </g>
+    <g transform="translate(300, 215)" filter="url(#shadow)">
+      <rect width="90" height="90" rx="8" fill="#fff" stroke="#9CA3AF" stroke-width="1.5"/>
+      <text x="45" y="40" text-anchor="middle" font-size="15" font-weight="700" fill="#374151">g3</text>
+      <text x="45" y="62" text-anchor="middle" font-size="10" fill="#9CA3AF">8192 rows</text>
+    </g>
+    <g transform="translate(402, 215)" filter="url(#shadow)">
+      <rect width="90" height="90" rx="8" fill="#fff" stroke="#9CA3AF" stroke-width="1.5"/>
+      <text x="45" y="40" text-anchor="middle" font-size="15" font-weight="700" fill="#374151">g4</text>
+      <text x="45" y="62" text-anchor="middle" font-size="10" fill="#9CA3AF">8192 rows</text>
+    </g>
+    <!-- MATCHING granule g5 -->
+    <g transform="translate(504, 215)" filter="url(#shadowStrong)">
+      <rect width="90" height="90" rx="8" fill="#D1FAE5" stroke="#10B981" stroke-width="2.5"/>
+      <text x="45" y="40" text-anchor="middle" font-size="15" font-weight="700" fill="#065F46">g5 ✓</text>
+      <text x="45" y="62" text-anchor="middle" font-size="10" fill="#047857">8192 rows</text>
+    </g>
+    <g transform="translate(606, 215)" filter="url(#shadow)">
+      <rect width="90" height="90" rx="8" fill="#fff" stroke="#9CA3AF" stroke-width="1.5"/>
+      <text x="45" y="40" text-anchor="middle" font-size="15" font-weight="700" fill="#374151">g6</text>
+      <text x="45" y="62" text-anchor="middle" font-size="10" fill="#9CA3AF">8192 rows</text>
+    </g>
+    <g transform="translate(708, 215)" filter="url(#shadow)">
+      <rect width="90" height="90" rx="8" fill="#fff" stroke="#9CA3AF" stroke-width="1.5"/>
+      <text x="45" y="40" text-anchor="middle" font-size="15" font-weight="700" fill="#374151">g7</text>
+      <text x="45" y="62" text-anchor="middle" font-size="10" fill="#9CA3AF">8192 rows</text>
+    </g>
+    <g transform="translate(810, 215)" filter="url(#shadow)">
+      <rect width="90" height="90" rx="8" fill="#fff" stroke="#9CA3AF" stroke-width="1.5"/>
+      <text x="45" y="40" text-anchor="middle" font-size="15" font-weight="700" fill="#374151">g8</text>
+      <text x="45" y="62" text-anchor="middle" font-size="10" fill="#9CA3AF">8192 rows</text>
+    </g>
+    <g transform="translate(912, 215)" filter="url(#shadow)">
+      <rect width="90" height="90" rx="8" fill="#fff" stroke="#9CA3AF" stroke-width="1.5"/>
+      <text x="45" y="40" text-anchor="middle" font-size="15" font-weight="700" fill="#374151">g9</text>
+      <text x="45" y="62" text-anchor="middle" font-size="10" fill="#9CA3AF">8192 rows</text>
+    </g>
+    <g transform="translate(1014, 215)" filter="url(#shadow)">
+      <rect width="90" height="90" rx="8" fill="#fff" stroke="#9CA3AF" stroke-width="1.5"/>
+      <text x="45" y="40" text-anchor="middle" font-size="15" font-weight="700" fill="#374151">g10</text>
+      <text x="45" y="62" text-anchor="middle" font-size="10" fill="#9CA3AF">8192 rows</text>
+    </g>
+  </g>
+
+  <!-- Step 2 -->
+  <g transform="translate(40, 340)">
+    <circle cx="14" cy="14" r="14" fill="#4F46E5"/>
+    <text x="14" y="19" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">2</text>
+    <text x="40" y="20" font-size="15" font-weight="700" fill="#1F2937">Record which granules passed the filter as a bitmap</text>
+  </g>
+
+  <!-- Bit cells -->
+  <g font-family="ui-monospace, 'SF Mono', Menlo, monospace">
+    <g transform="translate(96, 378)" filter="url(#shadow)"><rect width="90" height="42" rx="6" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1.5"/><text x="45" y="29" text-anchor="middle" font-size="22" font-weight="700" fill="#9CA3AF">0</text></g>
+    <g transform="translate(198, 378)" filter="url(#shadow)"><rect width="90" height="42" rx="6" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1.5"/><text x="45" y="29" text-anchor="middle" font-size="22" font-weight="700" fill="#9CA3AF">0</text></g>
+    <g transform="translate(300, 378)" filter="url(#shadow)"><rect width="90" height="42" rx="6" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1.5"/><text x="45" y="29" text-anchor="middle" font-size="22" font-weight="700" fill="#9CA3AF">0</text></g>
+    <g transform="translate(402, 378)" filter="url(#shadow)"><rect width="90" height="42" rx="6" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1.5"/><text x="45" y="29" text-anchor="middle" font-size="22" font-weight="700" fill="#9CA3AF">0</text></g>
+    <g transform="translate(504, 378)" filter="url(#shadow)"><rect width="90" height="42" rx="6" fill="#10B981" stroke="#059669" stroke-width="1.5"/><text x="45" y="29" text-anchor="middle" font-size="22" font-weight="700" fill="#fff">1</text></g>
+    <g transform="translate(606, 378)" filter="url(#shadow)"><rect width="90" height="42" rx="6" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1.5"/><text x="45" y="29" text-anchor="middle" font-size="22" font-weight="700" fill="#9CA3AF">0</text></g>
+    <g transform="translate(708, 378)" filter="url(#shadow)"><rect width="90" height="42" rx="6" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1.5"/><text x="45" y="29" text-anchor="middle" font-size="22" font-weight="700" fill="#9CA3AF">0</text></g>
+    <g transform="translate(810, 378)" filter="url(#shadow)"><rect width="90" height="42" rx="6" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1.5"/><text x="45" y="29" text-anchor="middle" font-size="22" font-weight="700" fill="#9CA3AF">0</text></g>
+    <g transform="translate(912, 378)" filter="url(#shadow)"><rect width="90" height="42" rx="6" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1.5"/><text x="45" y="29" text-anchor="middle" font-size="22" font-weight="700" fill="#9CA3AF">0</text></g>
+    <g transform="translate(1014, 378)" filter="url(#shadow)"><rect width="90" height="42" rx="6" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1.5"/><text x="45" y="29" text-anchor="middle" font-size="22" font-weight="700" fill="#9CA3AF">0</text></g>
+  </g>
+
+  <!-- Step 3 -->
+  <g transform="translate(40, 450)">
+    <circle cx="14" cy="14" r="14" fill="#D97706"/>
+    <text x="14" y="19" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">3</text>
+    <text x="40" y="20" font-size="15" font-weight="700" fill="#1F2937">Cache the bitmap keyed by (predicate, part)</text>
+  </g>
+
+  <!-- Cache box -->
+  <g transform="translate(40, 490)" filter="url(#shadowStrong)">
+    <rect x="0" y="0" width="1120" height="120" rx="12" fill="url(#amberBg)" stroke="#F59E0B" stroke-width="2"/>
+    <text x="20" y="30" font-size="15" font-weight="700" fill="#78350F">Bit index cache</text>
+    <g font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="13" fill="#78350F">
+      <text x="20" y="58"><tspan font-weight="700">key:    </tspan>(hash("UserID = 435090932899640449"), part_0001)</text>
+      <text x="20" y="82"><tspan font-weight="700">bitmap: </tspan>[ 0, 0, 0, 0, 1, 0, 0, 0, 0, 0 ]</text>
+      <text x="20" y="106" font-style="italic">1 / 10 granules pass — the next similar (or stricter) query can skip 9 of them.</text>
+    </g>
+  </g>
+</svg>

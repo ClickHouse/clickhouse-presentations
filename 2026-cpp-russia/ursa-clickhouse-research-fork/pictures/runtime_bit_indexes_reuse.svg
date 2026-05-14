@@ -1,0 +1,139 @@
+<svg viewBox="0 0 1200 660" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#000" flood-opacity="0.12"/>
+    </filter>
+    <filter id="shadowStrong" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.18"/>
+    </filter>
+    <linearGradient id="amberBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FEF3C7"/>
+      <stop offset="1" stop-color="#FDE68A"/>
+    </linearGradient>
+    <linearGradient id="greenBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ECFDF5"/>
+      <stop offset="1" stop-color="#D1FAE5"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Title -->
+  <text x="40" y="48" font-size="26" font-weight="700" fill="#111827">Runtime bit indexes — reusing the cache</text>
+  <text x="40" y="76" font-size="15" fill="#6B7280">A subsequent similar or stricter query looks up the bitmap and skips non-passing granules</text>
+
+  <!-- Query box -->
+  <g transform="translate(40, 100)">
+    <rect x="0" y="0" width="1120" height="44" rx="8" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1.5"/>
+    <text x="20" y="28" font-size="14" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#1F2937">SELECT UserID FROM hits WHERE UserID = 435090932899640449 AND URL LIKE '%google%'</text>
+  </g>
+
+  <!-- Step 1 -->
+  <g transform="translate(40, 170)">
+    <circle cx="14" cy="14" r="14" fill="#D97706"/>
+    <text x="14" y="19" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">1</text>
+    <text x="40" y="20" font-size="15" font-weight="700" fill="#1F2937">Look up the cached bitmap for the matching predicate</text>
+  </g>
+
+  <!-- Cache box -->
+  <g transform="translate(40, 210)" filter="url(#shadow)">
+    <rect x="0" y="0" width="1120" height="86" rx="12" fill="url(#amberBg)" stroke="#F59E0B" stroke-width="2"/>
+    <text x="20" y="30" font-size="15" font-weight="700" fill="#78350F">Bit index cache hit</text>
+    <g font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="13" fill="#78350F">
+      <text x="20" y="58"><tspan font-weight="700">predicate: </tspan>UserID = 435090932899640449    (subsumed by the new AND-filter)</text>
+      <text x="20" y="78"><tspan font-weight="700">bitmap:    </tspan>[ 0, 0, 0, 0, 1, 0, 0, 0, 0, 0 ]</text>
+    </g>
+  </g>
+
+  <!-- Step 2 -->
+  <g transform="translate(40, 320)">
+    <circle cx="14" cy="14" r="14" fill="#4F46E5"/>
+    <text x="14" y="19" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">2</text>
+    <text x="40" y="20" font-size="15" font-weight="700" fill="#1F2937">Read only granules with bit = 1; skip the rest entirely</text>
+  </g>
+
+  <!-- Granules row with skip/read styling -->
+  <g font-family="ui-monospace, 'SF Mono', Menlo, monospace">
+    <!-- g1 SKIP -->
+    <g transform="translate(96, 365)">
+      <rect width="90" height="90" rx="8" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1.5" opacity="0.7"/>
+      <line x1="14" y1="14" x2="76" y2="76" stroke="#CBD5E1" stroke-width="2.5"/>
+      <line x1="76" y1="14" x2="14" y2="76" stroke="#CBD5E1" stroke-width="2.5"/>
+      <text x="45" y="40" text-anchor="middle" font-size="13" font-weight="700" fill="#9CA3AF">g1</text>
+      <text x="45" y="60" text-anchor="middle" font-size="10" fill="#9CA3AF">skip</text>
+    </g>
+    <g transform="translate(198, 365)">
+      <rect width="90" height="90" rx="8" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1.5" opacity="0.7"/>
+      <line x1="14" y1="14" x2="76" y2="76" stroke="#CBD5E1" stroke-width="2.5"/>
+      <line x1="76" y1="14" x2="14" y2="76" stroke="#CBD5E1" stroke-width="2.5"/>
+      <text x="45" y="40" text-anchor="middle" font-size="13" font-weight="700" fill="#9CA3AF">g2</text>
+      <text x="45" y="60" text-anchor="middle" font-size="10" fill="#9CA3AF">skip</text>
+    </g>
+    <g transform="translate(300, 365)">
+      <rect width="90" height="90" rx="8" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1.5" opacity="0.7"/>
+      <line x1="14" y1="14" x2="76" y2="76" stroke="#CBD5E1" stroke-width="2.5"/>
+      <line x1="76" y1="14" x2="14" y2="76" stroke="#CBD5E1" stroke-width="2.5"/>
+      <text x="45" y="40" text-anchor="middle" font-size="13" font-weight="700" fill="#9CA3AF">g3</text>
+      <text x="45" y="60" text-anchor="middle" font-size="10" fill="#9CA3AF">skip</text>
+    </g>
+    <g transform="translate(402, 365)">
+      <rect width="90" height="90" rx="8" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1.5" opacity="0.7"/>
+      <line x1="14" y1="14" x2="76" y2="76" stroke="#CBD5E1" stroke-width="2.5"/>
+      <line x1="76" y1="14" x2="14" y2="76" stroke="#CBD5E1" stroke-width="2.5"/>
+      <text x="45" y="40" text-anchor="middle" font-size="13" font-weight="700" fill="#9CA3AF">g4</text>
+      <text x="45" y="60" text-anchor="middle" font-size="10" fill="#9CA3AF">skip</text>
+    </g>
+    <!-- g5 READ -->
+    <g transform="translate(504, 365)" filter="url(#shadowStrong)">
+      <rect width="90" height="90" rx="8" fill="#D1FAE5" stroke="#10B981" stroke-width="2.5"/>
+      <text x="45" y="40" text-anchor="middle" font-size="15" font-weight="700" fill="#065F46">g5 ✓</text>
+      <text x="45" y="62" text-anchor="middle" font-size="11" fill="#047857" font-weight="700">READ</text>
+    </g>
+    <g transform="translate(606, 365)">
+      <rect width="90" height="90" rx="8" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1.5" opacity="0.7"/>
+      <line x1="14" y1="14" x2="76" y2="76" stroke="#CBD5E1" stroke-width="2.5"/>
+      <line x1="76" y1="14" x2="14" y2="76" stroke="#CBD5E1" stroke-width="2.5"/>
+      <text x="45" y="40" text-anchor="middle" font-size="13" font-weight="700" fill="#9CA3AF">g6</text>
+      <text x="45" y="60" text-anchor="middle" font-size="10" fill="#9CA3AF">skip</text>
+    </g>
+    <g transform="translate(708, 365)">
+      <rect width="90" height="90" rx="8" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1.5" opacity="0.7"/>
+      <line x1="14" y1="14" x2="76" y2="76" stroke="#CBD5E1" stroke-width="2.5"/>
+      <line x1="76" y1="14" x2="14" y2="76" stroke="#CBD5E1" stroke-width="2.5"/>
+      <text x="45" y="40" text-anchor="middle" font-size="13" font-weight="700" fill="#9CA3AF">g7</text>
+      <text x="45" y="60" text-anchor="middle" font-size="10" fill="#9CA3AF">skip</text>
+    </g>
+    <g transform="translate(810, 365)">
+      <rect width="90" height="90" rx="8" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1.5" opacity="0.7"/>
+      <line x1="14" y1="14" x2="76" y2="76" stroke="#CBD5E1" stroke-width="2.5"/>
+      <line x1="76" y1="14" x2="14" y2="76" stroke="#CBD5E1" stroke-width="2.5"/>
+      <text x="45" y="40" text-anchor="middle" font-size="13" font-weight="700" fill="#9CA3AF">g8</text>
+      <text x="45" y="60" text-anchor="middle" font-size="10" fill="#9CA3AF">skip</text>
+    </g>
+    <g transform="translate(912, 365)">
+      <rect width="90" height="90" rx="8" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1.5" opacity="0.7"/>
+      <line x1="14" y1="14" x2="76" y2="76" stroke="#CBD5E1" stroke-width="2.5"/>
+      <line x1="76" y1="14" x2="14" y2="76" stroke="#CBD5E1" stroke-width="2.5"/>
+      <text x="45" y="40" text-anchor="middle" font-size="13" font-weight="700" fill="#9CA3AF">g9</text>
+      <text x="45" y="60" text-anchor="middle" font-size="10" fill="#9CA3AF">skip</text>
+    </g>
+    <g transform="translate(1014, 365)">
+      <rect width="90" height="90" rx="8" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1.5" opacity="0.7"/>
+      <line x1="14" y1="14" x2="76" y2="76" stroke="#CBD5E1" stroke-width="2.5"/>
+      <line x1="76" y1="14" x2="14" y2="76" stroke="#CBD5E1" stroke-width="2.5"/>
+      <text x="45" y="40" text-anchor="middle" font-size="13" font-weight="700" fill="#9CA3AF">g10</text>
+      <text x="45" y="60" text-anchor="middle" font-size="10" fill="#9CA3AF">skip</text>
+    </g>
+  </g>
+
+  <!-- Step 3: Result callout -->
+  <g transform="translate(40, 500)">
+    <circle cx="14" cy="14" r="14" fill="#059669"/>
+    <text x="14" y="19" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">3</text>
+    <text x="40" y="20" font-size="15" font-weight="700" fill="#1F2937">Result</text>
+  </g>
+  <g transform="translate(40, 540)" filter="url(#shadowStrong)">
+    <rect x="0" y="0" width="1120" height="100" rx="12" fill="url(#greenBg)" stroke="#6EE7B7" stroke-width="2"/>
+    <text x="20" y="34" font-size="14" fill="#064E3B"><tspan font-weight="700">1 granule × 8192 rows</tspan> read instead of 10 granules × 8192 rows.</text>
+    <text x="20" y="60" font-size="14" fill="#064E3B">Real ClickBench query: <tspan font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-weight="700">8.19K rows</tspan> processed instead of <tspan font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-weight="700">17.87M rows</tspan> — ~2200× less.</text>
+    <text x="20" y="86" font-size="13" fill="#065F46" font-style="italic">EXPLAIN indexes: PrimaryKey trims to 2237 / 12488 granules; Bit index then trims to 1 / 2237.</text>
+  </g>
+</svg>

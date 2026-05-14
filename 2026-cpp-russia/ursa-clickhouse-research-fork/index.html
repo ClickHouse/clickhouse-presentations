@@ -393,7 +393,61 @@ GROUP BY UserID, SearchPhrase LIMIT 10;</code>
 Such queries are rare, but for such queries, you can fuse aggregation, ORDER BY, and LIMIT into a single operator.
     </section>
 
-    <!-- TODO: slides for remaining features (runtime bit indexes, interval indexes, index analysis cache, ORDER BY late materialization, cache in heavy functions, other) -->
+    <section class="slide">
+        <h2>Runtime bit indexes</h2>
+        <img style="width: 90%;" src="pictures/runtime_bit_indexes_build.svg"/>
+    </section>
+
+    <section class="slide">
+        <h2>Runtime bit indexes</h2>
+        <img style="width: 90%;" src="pictures/runtime_bit_indexes_reuse.svg"/>
+    </section>
+
+    <section class="slide">
+        <h2>Runtime bit indexes</h2>
+
+        <p>Query performance in ClickHouse:</p>
+        <code style="font-size:14pt;">SELECT UserID FROM hits WHERE UserID = 435090932899640449 FORMAT Null;
+
+0 rows in set. Elapsed: 0.015 sec. Processed 17.87 million rows, 142.95 MB
+Peak memory usage: 562.28 KiB.</code>
+
+        <p></p>
+
+        <p>Query performance in Ursa:</p>
+<code style="font-size:14pt;">SELECT UserID FROM hits WHERE UserID = 435090932899640449 FORMAT Null;
+
+0 rows in set. Elapsed: 0.002 sec. Processed 8.19 thousand rows, 65.54 KB
+Peak memory usage: 5.38 KiB.</code>
+    </section>
+
+    <section class="slide">
+        <h2>Runtime bit indexes</h2>
+
+        <p>I also added introspection for this feature in EXPLAIN indexes = 1:</p>
+
+<code style="font-size:14pt;">EXPLAIN indexes = 1 SELECT UserID FROM hits WHERE UserID = 435090932899640449;
+
+┌─explain─────────────────────────────────────────────────────────────────┐
+│ Expression ((Project names + Projection))                               │
+│   Expression                                                            │
+│     ReadFromMergeTree (default.hits)                                    │
+│     Indexes:                                                            │
+│       PrimaryKey                                                        │
+│         Keys:                                                           │
+│           UserID                                                        │
+│         Condition: (UserID in [435090932899640449, 435090932899640449]) │
+│         Parts: 1/1                                                      │
+│         Granules: 2237/12488                                            │
+│       Bit                                                               │
+│         Parts: 1/1                                                      │
+│         Granules: 1/2237                                                │
+└─────────────────────────────────────────────────────────────────────────┘
+</code>
+    </section>
+
+
+    <!-- TODO: slides for remaining features (interval indexes, index analysis cache, ORDER BY late materialization, cache in heavy functions, other) -->
 
     <section class="slide">
         <h2>Conclusion</h2>
