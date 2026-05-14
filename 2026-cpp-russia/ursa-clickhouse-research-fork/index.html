@@ -524,7 +524,54 @@ Peak memory usage: 153.76 KiB.
 </code>
     </section>
 
-    <!-- TODO: slides for remaining features (index analysis cache, ORDER BY late materialization, cache in heavy functions, other) -->
+    <section class="slide">
+        <h2>Index Analysis Cache</h2>
+
+        <p>In ClickHouse, it is possible that for low-latency queries primary key index analysis or skipping index analysis will become a bottleneck.</p>
+        <p>To avoid this, we can cache index analysis results in memory for specific predicates inside parts. This optimization is implemented in Ursa.</p>
+        <p>Let’s take a look at this query in Ursa with disabled index analysis cache and bit indexes:</p>
+
+<code style="font-size:14pt;">SELECT UserID FROM hits WHERE UserID = 435090932899640449 FORMAT Null
+SETTINGS use_index_analysis_cache = 0, use_bit_indexes = 0;
+
+0 rows in set. Elapsed: 0.016 sec. Processed 17.66 million rows, 141.29 MB
+Peak memory usage: 41.05 KiB.</code>
+    </section>
+
+    <section class="slide">
+        <h2>Index Analysis Cache</h2>
+
+        <p>If we enable the index analysis cache, we will get around 40% performance improvement:</p>
+
+<code style="font-size:14pt;">SELECT UserID FROM hits WHERE UserID = 435090932899640449 FORMAT Null
+SETTINGS use_index_analysis_cache = 1, use_bit_indexes = 0;
+
+0 rows in set. Elapsed: 0.010 sec. Processed 17.66 million rows, 141.29 MB
+Peak memory usage: 40.18 KiB.</code>
+
+<p></p>
+<p>If we disable the index analysis cache and enable bit indexes:</p>
+
+<code style="font-size:14pt;">SELECT UserID FROM hits WHERE UserID = 435090932899640449 FORMAT Null
+SETTINGS use_index_analysis_cache = 0, use_bit_indexes = 1;
+
+0 rows in set. Elapsed: 0.007 sec. Processed 8.19 thousand rows, 65.54 KB
+Peak memory usage: 5.46 KiB.</code>
+    </section>
+
+    <section class="slide">
+        <h2>Index Analysis Cache</h2>
+
+        <p>Only if we enable both index analysis cache and bit indexes, we will get the most performance out of this query:</p>
+
+<code style="font-size:14pt;">SELECT UserID FROM hits WHERE UserID = 435090932899640449 FORMAT Null
+SETTINGS use_index_analysis_cache = 1, use_bit_indexes = 1;
+
+0 rows in set. Elapsed: 0.002 sec. Processed 8.19 thousand rows, 65.54 KB
+Peak memory usage: 5.46 KiB.</code>
+    </section>
+
+    <!-- TODO: slides for remaining features (ORDER BY late materialization, cache in heavy functions, other) -->
 
     <section class="slide">
         <h2>Conclusion</h2>
