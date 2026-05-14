@@ -446,8 +446,85 @@ Peak memory usage: 5.38 KiB.</code>
 </code>
     </section>
 
+    <section class="slide">
+        <h2>Interval indexes</h2>
+        <img style="width: 90%;" src="pictures/interval_indexes_structure.svg"/>
+    </section>
 
-    <!-- TODO: slides for remaining features (interval indexes, index analysis cache, ORDER BY late materialization, cache in heavy functions, other) -->
+    <section class="slide">
+        <h2>Interval indexes</h2>
+        <p>Such interval indexes help speed up a lot of queries. For example, let’s take a look at such query:</p>
+
+        <code style="font-size:14pt;">SELECT * FROM hits ORDER BY EventTime LIMIT 10;</code>
+        <p></p>
+        <p>For each MergeTree part during the read planning stage, we can sort min values for each granule and take the top 10. Then, we can read only 10 granules because the necessary rows will not be in any other granules.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Interval indexes</h2>
+        <p>Query performance in ClickHouse:</p>
+
+        <code style="font-size:14pt;">SELECT * FROM hits ORDER BY EventTime LIMIT 10 FORMAT Null;
+
+0 rows in set. Elapsed: 0.757 sec. Processed 100.00 million rows, 1.20 GB
+Peak memory usage: 16.75 MiB.</code>
+
+<p></p>
+<p>Query performance in Ursa:</p>
+
+<code style="font-size:14pt;">SELECT * FROM hits ORDER BY EventTime LIMIT 10 FORMAT Null;
+
+0 rows in set. Elapsed: 0.080 sec. Processed 75.37 thousand rows, 55.57 MB
+Peak memory usage: 38.18 MiB.</code>
+    </section>
+
+    <section class="slide">
+        <h2>Interval indexes</h2>
+        <p>I also added introspection for this feature in EXPLAIN indexes = 1:</p>
+
+<code style="font-size:10pt;">EXPLAIN indexes = 1 SELECT * FROM hits ORDER BY EventTime LIMIT 10;
+
+┌─explain─────────────────────────────────────────────────────────────────────────────────────────┐
+│ Expression (Project names)                                                                      │
+│   Limit (preliminary LIMIT (without OFFSET))                                                    │
+│     Sorting (Sorting for ORDER BY)                                                              │
+│       Expression ((Before ORDER BY + (Projection + Change column names to column identifiers))) │
+│         ReadFromMergeTree (default.hits)                                                        │
+│         Indexes:                                                                                │
+│           PrimaryKey                                                                            │
+│             Condition: true                                                                     │
+│             Parts: 1/1                                                                          │
+│             Granules: 12488/12488                                                               │
+│           Interval                                                                              │
+│             Parts: 1/1                                                                          │
+│             Granules: 10/12488                                                                  │
+└─────────────────────────────────────────────────────────────────────────────────────────────────┘
+</code>
+    </section>
+
+    <section class="slide">
+        <h2>Interval indexes</h2>
+
+        <p>I also used interval indexes for simple min/max query optimization, similar to optimize_trivial_count_query optimization in ClickHouse.</p>
+
+        <p>Query performance in ClickHouse:</p>
+
+<code style="font-size:14pt;">SELECT MIN(EventDate), MAX(EventDate) FROM hits FORMAT Null;
+
+1 row in set. Elapsed: 0.010 sec. Processed 100.00 million rows, 199.99 MB
+Peak memory usage: 153.76 KiB.
+</code>
+
+<p></p>
+<p>Query performance in Ursa:</p>
+
+<code style="font-size:14pt;">SELECT MIN(EventDate), MAX(EventDate) FROM hits FORMAT Null;
+
+1 row in set. Elapsed: 0.001 sec.
+</code>
+    </section>
+
+    <!-- TODO: slides for remaining features (index analysis cache, ORDER BY late materialization, cache in heavy functions, other) -->
 
     <section class="slide">
         <h2>Conclusion</h2>

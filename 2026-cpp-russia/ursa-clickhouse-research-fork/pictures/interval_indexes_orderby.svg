@@ -1,0 +1,148 @@
+<svg viewBox="0 0 1200 640" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#000" flood-opacity="0.12"/>
+    </filter>
+    <filter id="shadowStrong" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.18"/>
+    </filter>
+    <linearGradient id="greenBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ECFDF5"/>
+      <stop offset="1" stop-color="#D1FAE5"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Title -->
+  <text x="40" y="48" font-size="26" font-weight="700" fill="#111827">Interval indexes — ORDER BY LIMIT pruning</text>
+  <text x="40" y="76" font-size="15" fill="#6B7280">Per-granule min/max lets the planner skip granules that cannot contain the top-k</text>
+
+  <!-- Query box -->
+  <g transform="translate(40, 100)">
+    <rect x="0" y="0" width="1120" height="44" rx="8" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1.5"/>
+    <text x="20" y="28" font-size="14" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#1F2937">SELECT * FROM hits ORDER BY EventTime LIMIT 10</text>
+  </g>
+
+  <!-- Step 1 -->
+  <g transform="translate(40, 170)">
+    <circle cx="14" cy="14" r="14" fill="#4F46E5"/>
+    <text x="14" y="19" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">1</text>
+    <text x="40" y="20" font-size="15" font-weight="700" fill="#1F2937">Granules sorted by min(EventTime) — leftmost has the smallest min</text>
+  </g>
+
+  <!-- Cards (sorted: g5, g1, g7, g3, g8, g2, g6, g4) -->
+
+  <!-- Card g5 (READ) -->
+  <g transform="translate(45, 210)" filter="url(#shadowStrong)">
+    <rect width="130" height="130" rx="10" fill="url(#greenBg)" stroke="#10B981" stroke-width="2.5"/>
+    <text x="65" y="26" text-anchor="middle" font-size="16" font-weight="700" fill="#065F46">g5</text>
+    <text x="65" y="46" text-anchor="middle" font-size="11" font-weight="700" fill="#047857">✓ READ</text>
+    <line x1="14" y1="56" x2="116" y2="56" stroke="#A7F3D0"/>
+    <text x="14" y="74" font-size="10" font-weight="700" fill="#065F46">min</text>
+    <text x="65" y="90" text-anchor="middle" font-size="13" font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-weight="700" fill="#064E3B">2024-01-10</text>
+    <text x="14" y="108" font-size="10" font-weight="700" fill="#065F46">max</text>
+    <text x="65" y="124" text-anchor="middle" font-size="13" font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-weight="700" fill="#064E3B">2024-01-31</text>
+  </g>
+
+  <!-- Card g1 (skip) -->
+  <g transform="translate(185, 210)">
+    <rect width="130" height="130" rx="10" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1.5" opacity="0.85"/>
+    <text x="65" y="26" text-anchor="middle" font-size="16" font-weight="700" fill="#6B7280">g1</text>
+    <text x="65" y="46" text-anchor="middle" font-size="11" fill="#9CA3AF">skip</text>
+    <line x1="14" y1="56" x2="116" y2="56" stroke="#E5E7EB"/>
+    <text x="14" y="74" font-size="10" font-weight="700" fill="#9CA3AF">min</text>
+    <text x="65" y="90" text-anchor="middle" font-size="13" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#6B7280">2024-03-18</text>
+    <text x="14" y="108" font-size="10" font-weight="700" fill="#9CA3AF">max</text>
+    <text x="65" y="124" text-anchor="middle" font-size="13" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#6B7280">2024-04-05</text>
+  </g>
+
+  <!-- Card g7 (skip) -->
+  <g transform="translate(325, 210)">
+    <rect width="130" height="130" rx="10" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1.5" opacity="0.85"/>
+    <text x="65" y="26" text-anchor="middle" font-size="16" font-weight="700" fill="#6B7280">g7</text>
+    <text x="65" y="46" text-anchor="middle" font-size="11" fill="#9CA3AF">skip</text>
+    <line x1="14" y1="56" x2="116" y2="56" stroke="#E5E7EB"/>
+    <text x="14" y="74" font-size="10" font-weight="700" fill="#9CA3AF">min</text>
+    <text x="65" y="90" text-anchor="middle" font-size="13" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#6B7280">2024-04-22</text>
+    <text x="14" y="108" font-size="10" font-weight="700" fill="#9CA3AF">max</text>
+    <text x="65" y="124" text-anchor="middle" font-size="13" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#6B7280">2024-05-10</text>
+  </g>
+
+  <!-- Card g3 (skip) -->
+  <g transform="translate(465, 210)">
+    <rect width="130" height="130" rx="10" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1.5" opacity="0.85"/>
+    <text x="65" y="26" text-anchor="middle" font-size="16" font-weight="700" fill="#6B7280">g3</text>
+    <text x="65" y="46" text-anchor="middle" font-size="11" fill="#9CA3AF">skip</text>
+    <line x1="14" y1="56" x2="116" y2="56" stroke="#E5E7EB"/>
+    <text x="14" y="74" font-size="10" font-weight="700" fill="#9CA3AF">min</text>
+    <text x="65" y="90" text-anchor="middle" font-size="13" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#6B7280">2024-05-28</text>
+    <text x="14" y="108" font-size="10" font-weight="700" fill="#9CA3AF">max</text>
+    <text x="65" y="124" text-anchor="middle" font-size="13" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#6B7280">2024-06-15</text>
+  </g>
+
+  <!-- Card g8 (skip) -->
+  <g transform="translate(605, 210)">
+    <rect width="130" height="130" rx="10" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1.5" opacity="0.85"/>
+    <text x="65" y="26" text-anchor="middle" font-size="16" font-weight="700" fill="#6B7280">g8</text>
+    <text x="65" y="46" text-anchor="middle" font-size="11" fill="#9CA3AF">skip</text>
+    <line x1="14" y1="56" x2="116" y2="56" stroke="#E5E7EB"/>
+    <text x="14" y="74" font-size="10" font-weight="700" fill="#9CA3AF">min</text>
+    <text x="65" y="90" text-anchor="middle" font-size="13" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#6B7280">2024-07-03</text>
+    <text x="14" y="108" font-size="10" font-weight="700" fill="#9CA3AF">max</text>
+    <text x="65" y="124" text-anchor="middle" font-size="13" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#6B7280">2024-07-25</text>
+  </g>
+
+  <!-- Card g2 (skip) -->
+  <g transform="translate(745, 210)">
+    <rect width="130" height="130" rx="10" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1.5" opacity="0.85"/>
+    <text x="65" y="26" text-anchor="middle" font-size="16" font-weight="700" fill="#6B7280">g2</text>
+    <text x="65" y="46" text-anchor="middle" font-size="11" fill="#9CA3AF">skip</text>
+    <line x1="14" y1="56" x2="116" y2="56" stroke="#E5E7EB"/>
+    <text x="14" y="74" font-size="10" font-weight="700" fill="#9CA3AF">min</text>
+    <text x="65" y="90" text-anchor="middle" font-size="13" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#6B7280">2024-08-10</text>
+    <text x="14" y="108" font-size="10" font-weight="700" fill="#9CA3AF">max</text>
+    <text x="65" y="124" text-anchor="middle" font-size="13" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#6B7280">2024-09-02</text>
+  </g>
+
+  <!-- Card g6 (skip) -->
+  <g transform="translate(885, 210)">
+    <rect width="130" height="130" rx="10" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1.5" opacity="0.85"/>
+    <text x="65" y="26" text-anchor="middle" font-size="16" font-weight="700" fill="#6B7280">g6</text>
+    <text x="65" y="46" text-anchor="middle" font-size="11" fill="#9CA3AF">skip</text>
+    <line x1="14" y1="56" x2="116" y2="56" stroke="#E5E7EB"/>
+    <text x="14" y="74" font-size="10" font-weight="700" fill="#9CA3AF">min</text>
+    <text x="65" y="90" text-anchor="middle" font-size="13" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#6B7280">2024-09-15</text>
+    <text x="14" y="108" font-size="10" font-weight="700" fill="#9CA3AF">max</text>
+    <text x="65" y="124" text-anchor="middle" font-size="13" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#6B7280">2024-10-05</text>
+  </g>
+
+  <!-- Card g4 (skip) -->
+  <g transform="translate(1025, 210)">
+    <rect width="130" height="130" rx="10" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1.5" opacity="0.85"/>
+    <text x="65" y="26" text-anchor="middle" font-size="16" font-weight="700" fill="#6B7280">g4</text>
+    <text x="65" y="46" text-anchor="middle" font-size="11" fill="#9CA3AF">skip</text>
+    <line x1="14" y1="56" x2="116" y2="56" stroke="#E5E7EB"/>
+    <text x="14" y="74" font-size="10" font-weight="700" fill="#9CA3AF">min</text>
+    <text x="65" y="90" text-anchor="middle" font-size="13" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#6B7280">2024-11-28</text>
+    <text x="14" y="108" font-size="10" font-weight="700" fill="#9CA3AF">max</text>
+    <text x="65" y="124" text-anchor="middle" font-size="13" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#6B7280">2024-12-31</text>
+  </g>
+
+  <!-- Step 2 -->
+  <g transform="translate(40, 380)">
+    <circle cx="14" cy="14" r="14" fill="#059669"/>
+    <text x="14" y="19" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">2</text>
+    <text x="40" y="20" font-size="15" font-weight="700" fill="#1F2937">Read only the few leftmost granules — the smallest k rows cannot live anywhere else</text>
+  </g>
+
+  <!-- Result callout -->
+  <g transform="translate(40, 420)" filter="url(#shadowStrong)">
+    <rect width="1120" height="200" rx="12" fill="url(#greenBg)" stroke="#6EE7B7" stroke-width="2"/>
+    <text x="20" y="34" font-size="16" font-weight="700" fill="#065F46">Real ClickBench query — SELECT * FROM hits ORDER BY EventTime LIMIT 10</text>
+    <g font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="14" fill="#064E3B">
+      <text x="20" y="70">ClickHouse:  Elapsed 0.757 sec,  processed 100.00M rows, 1.20 GB</text>
+      <text x="20" y="98" font-weight="700">Ursa:        Elapsed 0.080 sec,  processed 75.37K rows, 55.57 MB    (~10× speedup)</text>
+    </g>
+    <text x="20" y="138" font-size="13" fill="#064E3B" font-style="italic">EXPLAIN indexes: PrimaryKey condition is true (12488/12488); Interval index trims down to 10/12488 granules.</text>
+    <text x="20" y="170" font-size="13" fill="#064E3B" font-style="italic">The index also stores the row number of each min/max — opens the door to filter-pushdown for queries like ORDER BY EventTime LIMIT 10 WHERE …</text>
+  </g>
+</svg>
