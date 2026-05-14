@@ -6,9 +6,47 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="shower/themes/yandex/styles/screen-16x9.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Share+Tech:wght@400&display=swap" rel="stylesheet">
 
     <style type="text/css">
-        code { display: block; white-space: pre; background-color: #EEE; }
+        * {
+            font-family: 'Roboto', sans-serif !important;
+        }
+
+        h1, h2 {
+            font-family: 'Share Tech', monospace !important;
+        }
+
+        ol li::marker {
+            color: #3763C9 !important;
+        }
+
+        ul li::marker {
+            color: #3763C9 !important;
+        }
+
+        .slide {
+            background-image: url('pictures/background.png') !important;
+            background-size: cover !important;
+            background-position: center !important;
+            background-repeat: no-repeat !important;
+        }
+
+        .slide#cover {
+            background-image: url('pictures/P99_power_of_small_optimization_slides_front_better_quality.png') !important;
+            background-size: cover !important;
+            background-position: center !important;
+            background-repeat: no-repeat !important;
+        }
+
+        code {
+            display: block;
+            white-space: pre;
+            background-color: #EEE;
+            font-family: 'Roboto Mono', monospace !important;
+        }
    </style>
 </head>
 <body class="shower list">
@@ -17,7 +55,6 @@
     </header>
 
     <section class="slide" id="cover">
-        <h1 style="margin-top: 150px">Power of Small Optimizations</h1>
     </section>
 
     <section class="slide">
@@ -29,10 +66,10 @@
     <section class="slide">
         <h2>Stories</h2>
 
-        <p>1. Concurrency.</p>
-        <p>2. High-level optimizations.</p>
-        <p>3. Low-level optimizations.</p>
-        <p>4. Algorithms.</p>
+        <p><span style="color: #3763C9">1.</span> Concurrency.</p>
+        <p><span style="color: #3763C9">2.</span> High-level optimizations.</p>
+        <p><span style="color: #3763C9">3.</span> Low-level optimizations.</p>
+        <p><span style="color: #3763C9">4.</span> Algorithms.</p>
     </section>
 
     <section class="slide">
@@ -148,9 +185,9 @@ GROUP BY UserID" --concurrency=200</code>
     FROM system.query_log WHERE lock_wait_milliseconds > 0
 )
 
-┌─<b>quantileExact(0.5)(lock_wait_milliseconds)</b>─┬─<b>max(lock_wait_milliseconds)</b>──┐
-│                                     <b>17.452</b> │                      <b>382.326</b> │
-└────────────────────────────────────────────┴──────────────────────────────┘</code>
+┌─quantileExact(0.5)(lock_wait_milliseconds)─┬─max(lock_wait_milliseconds)─┐
+│                                     17.452 │                     382.326 │
+└────────────────────────────────────────────┴─────────────────────────────┘</code>
     </section>
 
     <section class="slide">
