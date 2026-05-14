@@ -641,17 +641,137 @@ Peak memory usage: 120.91 MiB.</code>
         <p>There is around a 4x speedup in Ursa for such a query. </p>
     </section>
 
-    <!-- TODO: slides for remaining features (cache in heavy functions, other) -->
+    <section class="slide">
+        <h2>Cache in heavy functions</h2>
+
+        <p>Let's take a look at this query:</p>
+        <code style="font-size:14pt;">SELECT
+REGEXP_REPLACE(Referer, '^https?://(?:www\.)?([^/]+)/.*$', '\1') AS k,
+AVG(length(Referer)) AS l,
+COUNT(*) AS c,
+MIN(Referer)
+FROM hits WHERE Referer &lt;&gt; '' GROUP BY k HAVING COUNT(*) > 100000
+ORDER BY l DESC LIMIT 25;</code>
+    </section>
+
+    <section class="slide">
+        <h2>Cache in heavy functions</h2>
+        <p>I thought that it was impossible to improve anything. Let’s look at a flame graph of this query:</p>
+        <img style="width: 80%;" src="pictures/clickbench_query_28_clickhouse.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Cache in heavy functions</h2>
+
+        <p>In this particular case, we are working with a column that contains a lot of duplicate values.</p>
+        <p>It can be detected by statistics that are collected. In such a scenario for such heavy functions like REGEXP_REPLACE, it is possible to cache the results of this function in the hash table for values in the current block and then reuse it for other values inside the same block.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Cache in heavy functions</h2>
+        <img style="width: 80%;" src="pictures/cache_heavy_functions_clickhouse.svg"/>
+    </section>
+
+    <section class="slide">
+        <h2>Cache in heavy functions</h2>
+        <img style="width: 80%;" src="pictures/cache_heavy_functions_ursa.svg"/>
+    </section>
+
+    <section class="slide">
+        <h2>Cache in heavy functions</h2>
+
+        <p>Query performance in ClickHouse:</p>
+        <code style="font-size:14pt;">SELECT
+  REGEXP_REPLACE(Referer, '^https?://(?:www\.)?([^/]+)/.*$', '\1') AS k,
+  AVG(length(Referer)) AS l,
+  COUNT(*) AS c,
+  MIN(Referer)
+FROM hits WHERE Referer &lt;&gt; '' GROUP BY k HAVING COUNT(*) > 100000
+ORDER BY l DESC LIMIT 25 FORMAT Null;
+
+0 rows in set. Elapsed: 9.035 sec. Processed 100.00 million rows, 7.56 GB
+Peak memory usage: 2.08 GiB.</code>
+    </section>
+
+    <section class="slide">
+        <h2>Cache in heavy functions</h2>
+
+        <p>Query performance in Ursa:</p>
+        <code style="font-size:14pt;">SELECT
+  REGEXP_REPLACE(Referer, '^https?://(?:www\.)?([^/]+)/.*$', '\1') AS k,
+  AVG(length(Referer)) AS l,
+  COUNT(*) AS c,
+  MIN(Referer)
+FROM hits
+WHERE Referer &lt;&gt; '' GROUP BY k HAVING COUNT(*) > 100000
+ORDER BY l DESC LIMIT 25 FORMAT Null;
+
+0 rows in set. Elapsed: 5.016 sec. Processed 99.93 million rows, 7.56 GB
+Peak memory usage: 2.50 GiB.</code>
+    </section>
+
+    <section class="slide">
+        <h2>Cache in heavy functions</h2>
+
+        <p>Flame graph of this query in Ursa after optimization:</p>
+        <img style="width: 80%;" src="pictures/clickbench_query_28_ursa.png"/>
+    </section>
+
+    <section class="slide">
+        <h2>Other optimizations</h2>
+
+        <p>Additionally, I implemented a ton of small optimizations and improvements here and there that were found during performance analysis. Some of them are:</p>
+        <p>1. Improve merge performance using BatchHeap. This is my old pull request that I finished in Ursa.</p>
+        <p>2. Performance improvements of the IColumn::scatter method.</p>
+        <p>3. Improvement of such query <b>SELECT COUNT(*) FROM hits WHERE AdvEngineID &lt;&gt; 0;</b> using default values statistics.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Other optimizations</h2>
+
+        <p>Query performance in ClickHouse:</p>
+
+<code style="font-size:14pt;">SELECT COUNT(*) FROM hits WHERE AdvEngineID &lt;&gt; 0 FORMAT Null
+
+0 rows in set. Elapsed: 0.007 sec. Processed 100.00 million rows, 6.32 MB
+Peak memory usage: 150.41 KiB.
+</code>
+
+<p></p>
+<p>Query performance in Ursa:</p>
+
+<code style="font-size:14pt;">SELECT COUNT(*) FROM hits WHERE AdvEngineID &lt;&gt; 0 FORMAT Null
+
+0 rows in set. Elapsed: 0.001 sec.
+</code>
+
+<p></p>
+<p>Around 7x speedup in Ursa for such a query.</p>
+    </section>
+
+    <section class="slide">
+        <h2>Future potential improvements</h2>
+
+        <p>1. Statistics</p>
+        <p>2. Runtime indexes</p>
+        <p>3. Executor improvements</p>
+    </section>
 
     <section class="slide">
         <h2>Conclusion</h2>
 
-        <p>Sometimes, you can achieve significant performance improvement not only by using some high-level complex optimizations
-            but also by using better algorithms and data structures for your specific tasks or by small source code level optimizations.</p>
+        <p>Blog post <a href="https://maksimkita.com/blog/ursa-clickhouse-research-fork.html">https://maksimkita.com/blog/ursa-clickhouse-research-fork.html</a></p>
+        <p>YouTube playlist with deep-dive (more than 14 hours of content) into all details of Ursa optimizations <a href="https://www.youtube.com/playlist?list=PLzWf2xLEjn8bWGOtByCQi7qTHue9HQmKN">FORK CLickHouse: URSA</a></p>
+        <img style="width: 40%;" src="pictures/ursa_playlist.png"/>
+    </section>
 
-        <p>Blog post <a href="https://maksimkita.com/blog/power-of-small-optimizations.html">https://maksimkita.com/blog/power-of-small-optimizations.html</a></p>
-        <p>Talk about <a href="https://www.youtube.com/watch?v=timRXe7884I">ClickHouse performance optimization techniques</a> at C++ Russia 2023.</p>
-        <p>Talk about <a href="https://www.youtube.com/watch?v=KedCUDZE9N4">ClickHouse performance optimization practices</a> at C++ Russia 2022.</p>
+    <section class="slide">
+        <h2>MKAP Engineering</h2>
+
+        <p>If you are using/developing ClickHouse and need help with performance optimizations, features development,
+            private fork setup, private fork support or anything else contact us at <a href="mailto:support@mkap.engineering">contact@mkap.engineering</a>.</p>
+        <p>Currently have 2 available courses ClickHouse Developer and ClickHouse SRE <a href="https://mkap.engineering/courses/">https://mkap.engineering/courses/</a></p>
+        <p><a href="https://mkap.engineering/">https://mkap.engineering/</a></p>
     </section>
 
     <section class="slide">

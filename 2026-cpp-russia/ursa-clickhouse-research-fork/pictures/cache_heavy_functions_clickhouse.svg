@@ -1,0 +1,172 @@
+<svg viewBox="0 0 1200 700" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#000" flood-opacity="0.12"/>
+    </filter>
+    <linearGradient id="redBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FEF2F2"/>
+      <stop offset="1" stop-color="#FEE2E2"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Title -->
+  <text x="40" y="48" font-size="26" font-weight="700" fill="#111827">ClickHouse — REGEXP_REPLACE called once per row</text>
+  <text x="40" y="76" font-size="15" fill="#6B7280">Heavy work is repeated for every duplicate value in the block</text>
+
+  <!-- Query box -->
+  <g transform="translate(40, 100)">
+    <rect x="0" y="0" width="1120" height="44" rx="8" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1.5"/>
+    <text x="20" y="28" font-size="13" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#1F2937">SELECT REGEXP_REPLACE(Referer, '^https?://(?:www\.)?([^/]+)/.*$', '\1') AS k, … FROM hits …</text>
+  </g>
+
+  <!-- Step 1 -->
+  <g transform="translate(40, 170)">
+    <circle cx="14" cy="14" r="14" fill="#DC2626"/>
+    <text x="14" y="19" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">1</text>
+    <text x="40" y="20" font-size="15" font-weight="700" fill="#1F2937">REGEXP_REPLACE runs for every row — duplicates pay the full cost again</text>
+  </g>
+
+  <!-- Headers -->
+  <g font-size="11" font-weight="700" fill="#6B7280">
+    <text x="200" y="215" text-anchor="middle">#</text>
+    <text x="370" y="215" text-anchor="middle">Referer</text>
+    <text x="665" y="215" text-anchor="middle">REGEXP_REPLACE</text>
+    <text x="940" y="215" text-anchor="middle">result</text>
+  </g>
+  <line x1="175" y1="222" x2="1025" y2="222" stroke="#E5E7EB" stroke-width="1"/>
+
+  <!-- Row template positions:
+       row#: x_center=200
+       referer: x=240, w=260
+       function: x=525, w=280
+       arrow: x=815
+       result: x=855, w=170
+  -->
+
+  <!-- Row 1: google.com/ -->
+  <g transform="translate(0, 232)">
+    <text x="200" y="20" text-anchor="middle" font-size="12" font-weight="700" fill="#6B7280" font-family="ui-monospace, 'SF Mono', Menlo, monospace">1</text>
+    <rect x="240" y="2" width="260" height="28" rx="5" fill="#fff" stroke="#D1D5DB"/>
+    <text x="370" y="21" text-anchor="middle" font-size="12" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#111827">https://google.com/</text>
+    <rect x="525" y="2" width="280" height="28" rx="5" fill="url(#redBg)" stroke="#F87171" stroke-width="1.5"/>
+    <text x="665" y="21" text-anchor="middle" font-size="12" font-weight="700" fill="#991B1B" font-family="ui-monospace, 'SF Mono', Menlo, monospace">REGEXP_REPLACE call</text>
+    <text x="820" y="22" font-size="14" fill="#6B7280">→</text>
+    <rect x="855" y="2" width="170" height="28" rx="5" fill="#F9FAFB" stroke="#D1D5DB"/>
+    <text x="940" y="21" text-anchor="middle" font-size="12" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#111827">google.com</text>
+  </g>
+
+  <!-- Row 2: google.com/ -->
+  <g transform="translate(0, 266)">
+    <text x="200" y="20" text-anchor="middle" font-size="12" font-weight="700" fill="#6B7280" font-family="ui-monospace, 'SF Mono', Menlo, monospace">2</text>
+    <rect x="240" y="2" width="260" height="28" rx="5" fill="#fff" stroke="#D1D5DB"/>
+    <text x="370" y="21" text-anchor="middle" font-size="12" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#111827">https://google.com/</text>
+    <rect x="525" y="2" width="280" height="28" rx="5" fill="url(#redBg)" stroke="#F87171" stroke-width="1.5"/>
+    <text x="665" y="21" text-anchor="middle" font-size="12" font-weight="700" fill="#991B1B" font-family="ui-monospace, 'SF Mono', Menlo, monospace">REGEXP_REPLACE call</text>
+    <text x="820" y="22" font-size="14" fill="#6B7280">→</text>
+    <rect x="855" y="2" width="170" height="28" rx="5" fill="#F9FAFB" stroke="#D1D5DB"/>
+    <text x="940" y="21" text-anchor="middle" font-size="12" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#111827">google.com</text>
+  </g>
+
+  <!-- Row 3: yandex.ru/ -->
+  <g transform="translate(0, 300)">
+    <text x="200" y="20" text-anchor="middle" font-size="12" font-weight="700" fill="#6B7280" font-family="ui-monospace, 'SF Mono', Menlo, monospace">3</text>
+    <rect x="240" y="2" width="260" height="28" rx="5" fill="#fff" stroke="#D1D5DB"/>
+    <text x="370" y="21" text-anchor="middle" font-size="12" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#111827">https://yandex.ru/</text>
+    <rect x="525" y="2" width="280" height="28" rx="5" fill="url(#redBg)" stroke="#F87171" stroke-width="1.5"/>
+    <text x="665" y="21" text-anchor="middle" font-size="12" font-weight="700" fill="#991B1B" font-family="ui-monospace, 'SF Mono', Menlo, monospace">REGEXP_REPLACE call</text>
+    <text x="820" y="22" font-size="14" fill="#6B7280">→</text>
+    <rect x="855" y="2" width="170" height="28" rx="5" fill="#F9FAFB" stroke="#D1D5DB"/>
+    <text x="940" y="21" text-anchor="middle" font-size="12" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#111827">yandex.ru</text>
+  </g>
+
+  <!-- Row 4: google.com/ -->
+  <g transform="translate(0, 334)">
+    <text x="200" y="20" text-anchor="middle" font-size="12" font-weight="700" fill="#6B7280" font-family="ui-monospace, 'SF Mono', Menlo, monospace">4</text>
+    <rect x="240" y="2" width="260" height="28" rx="5" fill="#fff" stroke="#D1D5DB"/>
+    <text x="370" y="21" text-anchor="middle" font-size="12" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#111827">https://google.com/</text>
+    <rect x="525" y="2" width="280" height="28" rx="5" fill="url(#redBg)" stroke="#F87171" stroke-width="1.5"/>
+    <text x="665" y="21" text-anchor="middle" font-size="12" font-weight="700" fill="#991B1B" font-family="ui-monospace, 'SF Mono', Menlo, monospace">REGEXP_REPLACE call</text>
+    <text x="820" y="22" font-size="14" fill="#6B7280">→</text>
+    <rect x="855" y="2" width="170" height="28" rx="5" fill="#F9FAFB" stroke="#D1D5DB"/>
+    <text x="940" y="21" text-anchor="middle" font-size="12" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#111827">google.com</text>
+  </g>
+
+  <!-- Row 5: yandex.ru/ -->
+  <g transform="translate(0, 368)">
+    <text x="200" y="20" text-anchor="middle" font-size="12" font-weight="700" fill="#6B7280" font-family="ui-monospace, 'SF Mono', Menlo, monospace">5</text>
+    <rect x="240" y="2" width="260" height="28" rx="5" fill="#fff" stroke="#D1D5DB"/>
+    <text x="370" y="21" text-anchor="middle" font-size="12" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#111827">https://yandex.ru/</text>
+    <rect x="525" y="2" width="280" height="28" rx="5" fill="url(#redBg)" stroke="#F87171" stroke-width="1.5"/>
+    <text x="665" y="21" text-anchor="middle" font-size="12" font-weight="700" fill="#991B1B" font-family="ui-monospace, 'SF Mono', Menlo, monospace">REGEXP_REPLACE call</text>
+    <text x="820" y="22" font-size="14" fill="#6B7280">→</text>
+    <rect x="855" y="2" width="170" height="28" rx="5" fill="#F9FAFB" stroke="#D1D5DB"/>
+    <text x="940" y="21" text-anchor="middle" font-size="12" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#111827">yandex.ru</text>
+  </g>
+
+  <!-- Row 6: bing.com/ -->
+  <g transform="translate(0, 402)">
+    <text x="200" y="20" text-anchor="middle" font-size="12" font-weight="700" fill="#6B7280" font-family="ui-monospace, 'SF Mono', Menlo, monospace">6</text>
+    <rect x="240" y="2" width="260" height="28" rx="5" fill="#fff" stroke="#D1D5DB"/>
+    <text x="370" y="21" text-anchor="middle" font-size="12" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#111827">https://bing.com/</text>
+    <rect x="525" y="2" width="280" height="28" rx="5" fill="url(#redBg)" stroke="#F87171" stroke-width="1.5"/>
+    <text x="665" y="21" text-anchor="middle" font-size="12" font-weight="700" fill="#991B1B" font-family="ui-monospace, 'SF Mono', Menlo, monospace">REGEXP_REPLACE call</text>
+    <text x="820" y="22" font-size="14" fill="#6B7280">→</text>
+    <rect x="855" y="2" width="170" height="28" rx="5" fill="#F9FAFB" stroke="#D1D5DB"/>
+    <text x="940" y="21" text-anchor="middle" font-size="12" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#111827">bing.com</text>
+  </g>
+
+  <!-- Row 7: google.com/ -->
+  <g transform="translate(0, 436)">
+    <text x="200" y="20" text-anchor="middle" font-size="12" font-weight="700" fill="#6B7280" font-family="ui-monospace, 'SF Mono', Menlo, monospace">7</text>
+    <rect x="240" y="2" width="260" height="28" rx="5" fill="#fff" stroke="#D1D5DB"/>
+    <text x="370" y="21" text-anchor="middle" font-size="12" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#111827">https://google.com/</text>
+    <rect x="525" y="2" width="280" height="28" rx="5" fill="url(#redBg)" stroke="#F87171" stroke-width="1.5"/>
+    <text x="665" y="21" text-anchor="middle" font-size="12" font-weight="700" fill="#991B1B" font-family="ui-monospace, 'SF Mono', Menlo, monospace">REGEXP_REPLACE call</text>
+    <text x="820" y="22" font-size="14" fill="#6B7280">→</text>
+    <rect x="855" y="2" width="170" height="28" rx="5" fill="#F9FAFB" stroke="#D1D5DB"/>
+    <text x="940" y="21" text-anchor="middle" font-size="12" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#111827">google.com</text>
+  </g>
+
+  <!-- Row 8: duck.com/ -->
+  <g transform="translate(0, 470)">
+    <text x="200" y="20" text-anchor="middle" font-size="12" font-weight="700" fill="#6B7280" font-family="ui-monospace, 'SF Mono', Menlo, monospace">8</text>
+    <rect x="240" y="2" width="260" height="28" rx="5" fill="#fff" stroke="#D1D5DB"/>
+    <text x="370" y="21" text-anchor="middle" font-size="12" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#111827">https://duck.com/</text>
+    <rect x="525" y="2" width="280" height="28" rx="5" fill="url(#redBg)" stroke="#F87171" stroke-width="1.5"/>
+    <text x="665" y="21" text-anchor="middle" font-size="12" font-weight="700" fill="#991B1B" font-family="ui-monospace, 'SF Mono', Menlo, monospace">REGEXP_REPLACE call</text>
+    <text x="820" y="22" font-size="14" fill="#6B7280">→</text>
+    <rect x="855" y="2" width="170" height="28" rx="5" fill="#F9FAFB" stroke="#D1D5DB"/>
+    <text x="940" y="21" text-anchor="middle" font-size="12" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#111827">duck.com</text>
+  </g>
+
+  <!-- Row 9: yandex.ru/ -->
+  <g transform="translate(0, 504)">
+    <text x="200" y="20" text-anchor="middle" font-size="12" font-weight="700" fill="#6B7280" font-family="ui-monospace, 'SF Mono', Menlo, monospace">9</text>
+    <rect x="240" y="2" width="260" height="28" rx="5" fill="#fff" stroke="#D1D5DB"/>
+    <text x="370" y="21" text-anchor="middle" font-size="12" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#111827">https://yandex.ru/</text>
+    <rect x="525" y="2" width="280" height="28" rx="5" fill="url(#redBg)" stroke="#F87171" stroke-width="1.5"/>
+    <text x="665" y="21" text-anchor="middle" font-size="12" font-weight="700" fill="#991B1B" font-family="ui-monospace, 'SF Mono', Menlo, monospace">REGEXP_REPLACE call</text>
+    <text x="820" y="22" font-size="14" fill="#6B7280">→</text>
+    <rect x="855" y="2" width="170" height="28" rx="5" fill="#F9FAFB" stroke="#D1D5DB"/>
+    <text x="940" y="21" text-anchor="middle" font-size="12" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#111827">yandex.ru</text>
+  </g>
+
+  <!-- Row 10: bing.com/ -->
+  <g transform="translate(0, 538)">
+    <text x="200" y="20" text-anchor="middle" font-size="12" font-weight="700" fill="#6B7280" font-family="ui-monospace, 'SF Mono', Menlo, monospace">10</text>
+    <rect x="240" y="2" width="260" height="28" rx="5" fill="#fff" stroke="#D1D5DB"/>
+    <text x="370" y="21" text-anchor="middle" font-size="12" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#111827">https://bing.com/</text>
+    <rect x="525" y="2" width="280" height="28" rx="5" fill="url(#redBg)" stroke="#F87171" stroke-width="1.5"/>
+    <text x="665" y="21" text-anchor="middle" font-size="12" font-weight="700" fill="#991B1B" font-family="ui-monospace, 'SF Mono', Menlo, monospace">REGEXP_REPLACE call</text>
+    <text x="820" y="22" font-size="14" fill="#6B7280">→</text>
+    <rect x="855" y="2" width="170" height="28" rx="5" fill="#F9FAFB" stroke="#D1D5DB"/>
+    <text x="940" y="21" text-anchor="middle" font-size="12" font-family="ui-monospace, 'SF Mono', Menlo, monospace" fill="#111827">bing.com</text>
+  </g>
+
+  <!-- Callout -->
+  <g transform="translate(40, 600)">
+    <rect x="0" y="0" width="1120" height="64" rx="10" fill="#FEF2F2" stroke="#FECACA" stroke-width="1.5"/>
+    <text x="20" y="28" font-size="14" fill="#7F1D1D"><tspan font-weight="700">10 REGEXP_REPLACE calls for only 4 distinct Referer values</tspan> — duplicate work in a single block.</text>
+    <text x="20" y="52" font-size="13" font-style="italic" fill="#991B1B">ClickBench query 28: 9.035 sec, 100M rows, 7.56 GB.</text>
+  </g>
+</svg>
