@@ -1,0 +1,2153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 26.5 Call</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta property="og:image" content="pictures/preview.jpg">
+    <meta property="og:title" content="ClickHouse: Release 26.5 Call">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="pictures/preview.jpg">
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/themes/clickhouse/styles/styles.css">
+
+    <style>
+        code { display: block; white-space: pre; background-color: #EEE; }
+        p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+        p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+        .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+        .slide table tr:not(:last-of-type)>* { background: none; }
+        .cell { font-family: Monospace; width: 1.5em; height: 1.5em; display: inline-block; border: 3px solid white; background-color: lightblue; text-align: center; line-height: 1.3em; }
+        .cell-num { font-family: Monospace; width: 1.5em; height: 1.5em; display: inline-block; border: 3px solid white; background-color: lightgreen; text-align: center; line-height: 1.3em; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 26.5 Call</h1>
+        <p>Author: Alexey Milovidov, 2026-05-21.</p>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/back1.jpg); background-size: cover;">
+        <h1 style="margin-top: 25px; line-height: 110%; font-size: 56pt; color: #FF8; text-align: center;">ClickHouse Release<br/>26.5</h1>
+    </section>
+
+<section class="slide">
+<h2>ClickHouse release 26.5</h2>
+<p>1. (50 min) What's new in ClickHouse 26.5.</p>
+<p>2. (10 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back2.jpg); background-size: cover;">
+<h2><span class="hilite">Release 26.5</span></h2>
+<p><span class="hilite">ClickHouse "Spring" Release.</span></p>
+<p><span class="hilite">— 38 new features 🌹</span></p>
+<p><span class="hilite">— 51 performance optimizations 🦋</span></p>
+<p><span class="hilite">— 224 bug fixes 🐞</span></p>
+</section>
+<!--
+
+Small
+
+Table function filesystem
+tokenizeQuery and highlightQuery
+regexpPosition
+Bare function names in higher-order functions
+url_base for table function url
+Negative LIMIT BY and OFFSET
+json_value with construction
+system.zookeeper_watches
+CREATE OR REPLACE MATERIALIZED VIEW
+kafka_map_virtual_columns_on_write
+SYSTEM PAUSE VIEW
+Web UI improvements: syntax highlight
+isPrime, isProbablePrime
+prettyPrintJSON
+
+SQL compatibility
+
+STRING_AGG
+STDDEV stddevSamp
+array_to_string
+unnest
+
+Performance
+
+Faster Parquet
+Push `ORDER BY ... LIMIT n` through JOIN
+Speed up huge queries on `Merge` tables
+Lower memory usage for UNION ALL
+Add `max_threads_min_free_memory_per_thread` and `max_insert_threads_min_free_memory_per_thread`
+Auto-tune for low-memory systems (< 4 GiB)
+GROUP BY LIMIT no ORDER BY
+Prefetching in hash tables
+Faster MD5
+Enable JIT compilation on macOS.
+
+Main
+
+Query cache for subqueries
+Web Terminal
+Direct select from Kafka2
+
+Data Lakes
+
+Geo types for Iceberg
+Query condition cache for `Iceberg` tables
+Paimon
+
+Bonus
+
+
+OpenHouse
+
+Reading
+
+DE Shaw
+Postgres FDW: Pushdown is a negotiation
+ClickHouse vs Prometheus for High Cardinality
+ClickStack SQL Charting and Alerting
+Agentic analytics starts with query-ready data
+
+-->
+
+<section class="slide" style="background: url(pictures/back3.jpg); background-size: cover;">
+<h2 style="color: black;"><span class="hilite">Small And Nice Features</span></h2>
+</section>
+
+
+<section class="slide">
+<h2>The <b>filesystem</b> table function</h2>
+
+<p>List and analyze a directory as a queryable table:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT count(), sum(length(content)), sum(countMatches(content, '\n'))
+  FROM <b style="color: green;">filesystem('src')</b>
+  WHERE type = 'regular' AND match(name, '\.(cpp|h)$')
+</code></p>
+
+<p><b>filesystem()</b> - current path in clickhouse-local, user_files in clickhouse-server,
+<br/><b>filesystem('path/')</b> - a relative path.</p>
+
+<p>Can list all files recursively, select and search across all files content.</p>
+
+<!-- Demo:
+
+SELECT path, name, type FROM filesystem('src') LIMIT 10
+
+SELECT count(), sum(length(content)), sum(countMatches(content, '\n')) FROM filesystem('src/') WHERE type = 'regular' AND match(name, '\.(cpp|h)$');
+
+SELECT path, count(), sum(length(content)) AS bytes, sum(countMatches(content, '\n')) AS lines FROM filesystem('src/') WHERE type = 'regular' AND match(name, '\.(cpp|h)$') GROUP BY path ORDER BY lines DESC LIMIT 10
+
+SELECT path, count(), sum(length(content)) AS bytes, sum(countMatches(content, '\n')) AS lines FROM filesystem('src/') WHERE type = 'regular' AND match(name, '\.(cpp|h)$') AND content ILIKE '%trash%' GROUP BY path ORDER BY lines DESC LIMIT 10
+
+SELECT path, count(), sum(length(content)) AS bytes, sum(countMatches(content, '\n')) AS lines, highlight(argMin(content, length(content)), ['trash'], '\x1b[31;1m', '\x1b[0m') FROM filesystem('src/') WHERE type = 'regular' AND match(name, '\.(cpp|h)$') AND content ILIKE '%trash%' GROUP BY path ORDER BY lines DESC LIMIT 10
+
+-->
+
+<p>Demo</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developers: Ilya Perstenev, Ilya Yatsishin, Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2><b>tokenizeQuery</b> and <b>highlightQuery</b></h2>
+
+<p>Tokenize and classify any SQL string from inside SQL:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">tokenizeQuery</b>('SELECT a, b FROM t WHERE x > 1');
+<span style="color: gray;">-- [(0,6,'BareWord'),(6,7,'Whitespace'),(7,8,'BareWord'), ...]</span>
+
+SELECT <b style="color: green;">highlightQuery</b>('SELECT a, b FROM t WHERE x > 1');
+<span style="color: gray;">-- [(0,6,'keyword'),(7,8,'identifier'), ...]</span>
+</code></p>
+
+<p>Returns ranges with token kinds: <b>keyword</b>, <b>identifier</b>, <b>number</b>, ...
+<br/>&mdash; Analyze various query features in system.query_log.
+<br/>&mdash; Build query renderers, analyzers, IDE-style hints &mdash; all in SQL.</p>
+
+<!-- Demo:
+
+SELECT tokenizeQuery('SELECT a, b FROM t WHERE x > 1');
+SELECT highlightQuery('SELECT a, b FROM t WHERE x > 1');
+
+-->
+
+<p>Bonus: you can also use ClickHouse lexer from WebAssembly!</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>regexpPosition</h2>
+
+<p>Find where a regexp first matches inside a string:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">regexpPosition</b>('connection refused on port 5432', '[0-9]+')
+<span style="color: gray;">-- 28</span>
+
+SELECT <b style="color: green;">regexpPosition</b>('foo bar baz', 'ba\w+')
+<span style="color: gray;">-- 5</span>
+</code></p>
+
+<p>&mdash; Returns 1-based position of the first match, 0 if none.
+<br/>&mdash; Complements <b>position</b> / <b>positionCaseInsensitive</b> with regexp power.</p>
+
+<p>Bonus: <b>REGEXP_INSTR</b> - an alias for PostgreSQL compatibility.</p>
+
+<!-- Demo:
+
+SELECT regexpPosition('connection refused on port 5432', '[0-9]+');
+SELECT regexpPosition('foo bar baz', 'ba\w+');
+SELECT regexpPosition('no digits here', '[0-9]+');
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Abhinav Agarwal.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Bare function names in higher-order functions</h2>
+
+<p>Skip the lambda boilerplate for one-argument calls:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;"><span style="color: gray;">-- Before:</span>
+SELECT <b>arrayMap</b>(x -&gt; upper(x), ['ab', 'cd']);
+
+<span style="color: gray;">-- Now:</span>
+SELECT <b>arrayMap</b>(<b style="color: green;">upper</b>, ['ab', 'cd'])
+<span style="color: gray;">-- ['AB', 'CD']</span>
+
+SELECT <b>arrayMap</b>(<b style="color: green;">plus</b>, [1, 2, 3], [10, 20, 30])
+<span style="color: gray;">-- [11, 22, 33]</span>
+</code></p>
+
+<p>Works for any function with a matching arity:
+<br/><b>arrayMap</b>, <b>arrayFilter</b>, <b>arrayCount</b>, <b>arrayFirst</b>, etc.</p>
+
+<!-- Demo:
+
+SELECT arrayMap(upper, ['ab', 'cd']);
+SELECT arrayMap(plus, [1, 2, 3], [10, 20, 30]);
+SELECT arrayFilter(empty, ['', 'a', '', 'b']);
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2><b>url_base</b> for the url table function</h2>
+
+<p>Set a base URL once, then use relative paths everywhere:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SET <b style="color: green;">url_base</b> = 'https://datasets.clickhouse.com/hits/tsv/';
+
+SELECT count() FROM url('hits_v1.tsv.xz', TSV, 'URL String');
+<span style="color: gray;">-- resolved to https://datasets.clickhouse.com/hits/tsv/hits_v1.tsv.xz</span>
+</code></p>
+
+<p>Standard URL resolution per RFC 3986:
+<br/>&mdash; <b>data.csv</b> → base + path
+<br/>&mdash; <b>/test/data.csv</b> → host-relative
+<br/>&mdash; <b>//other.com/x.csv</b> → scheme-relative</p>
+
+<p style="margin-right: -3em;">Supported for the URL table engine - the resolved URL is materialized at creation.</p>
+
+<!-- Demo:
+
+SET url_base = 'https://datasets.clickhouse.com/hits/tsv/';
+SELECT * FROM url('hits_v1_1m_rows.tsv', TSV, 'WatchID UInt64') LIMIT 1;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Negative LIMIT BY</h2>
+
+<p>Pick rows from the <b>end</b> of each group, not the beginning:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT * FROM (SELECT number, number % 3 AS g FROM numbers(15))
+ORDER BY number <b style="color: green;">LIMIT -2 BY g</b>;
+<span style="color: gray;">-- last 2 rows per group g</span>
+
+ORDER BY number <b style="color: green;">LIMIT -1 OFFSET -1 BY g</b>;
+<span style="color: gray;">-- skip last row of each group, then take 1 from the end</span>
+
+ORDER BY number <b style="color: green;">LIMIT -2 OFFSET 1 BY g</b>;
+<span style="color: gray;">-- skip first row, then take last 2 of the remainder</span>
+</code></p>
+
+<p>&mdash; Negative limit, negative offset, and mixed signs all work.
+<br/>&mdash; "Most recent N per id" without rewriting the query with window functions.</p>
+
+<p style="float: right;">Demo</p>
+
+<!-- Demo:
+
+play.clickhouse.com
+
+SELECT toYear(date) AS y, town, median(price) AS p, count() AS c
+FROM uk_price_paid GROUP BY y, town HAVING c >= 100
+ORDER BY y DESC, p DESC
+LIMIT 5 BY y LIMIT 100
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Nihal Z. Miaji.</p>
+</section>
+
+<section class="slide">
+<h2>Multi-path SQL/JSON</h2>
+
+<p>Pass a <b>Tuple</b> or <b>Array</b> of paths &mdash; get a Tuple/Array of results,
+<br/>with the JSON parsed only once:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">JSON_VALUE</b>('{"a":1,"b":"x","c":3.14}', <b>('$.a', '$.b', '$.c')</b>);
+<span style="color: gray;">-- ('1', 'x', '3.14')   as Tuple(String, String, String)</span>
+
+SELECT <b style="color: green;">JSON_VALUE</b>('{"a":1,"b":"x"}', <b>['$.a', '$.missing', '$.b']</b>);
+<span style="color: gray;">-- ['1', '', 'x']</span>
+
+SELECT <b style="color: green;">JSON_EXISTS</b>('{"a":1,"b":"x"}', <b>('$.a', ['$.b', '$.c'])</b>);
+<span style="color: gray;">-- (1, [1, 0])</span>
+
+SELECT <b style="color: green;">JSON_QUERY</b>('{"a":[1,2],"b":{"x":1}}', <b>('$.a', '$.b')</b>);
+<span style="color: gray;">-- ('[[1,2]]', '[{"x":1}]')</span>
+</code></p>
+
+<!-- Demo:
+
+SELECT JSON_VALUE('{"a":1,"b":"x","c":3.14}', ('$.a','$.b','$.c'));
+SELECT JSON_VALUE('{"a":1,"b":"x"}', ['$.a','$.missing','$.b']);
+SELECT JSON_EXISTS('{"a":1,"b":"x"}', ('$.a','$.b','$.c'));
+SELECT JSON_QUERY('{"a":[1,2],"b":{"x":1}}', ('$.a','$.b'));
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Kevinyhzou, Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>system.zookeeper_watches</h2>
+
+<p>A new system table showing every active ZooKeeper watch:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT path, watch_type, op_num, create_time
+FROM <b style="color: green;">system.zookeeper_watches</b>
+ORDER BY create_time DESC LIMIT 10;
+</code></p>
+
+<p>&mdash; Columns: <b>zookeeper_name</b>, <b>path</b>, <b>session_id</b>, <b>op_num</b>,
+<br/>&emsp; <b>watch_type</b> (Children / Exists / Data), <b>create_time</b>.
+<br/>&mdash; Diagnose runaway watch counts, slow Keeper sessions.</p>
+
+<p>Complements <b>system.zookeeper_connection</b> and <b>system.zookeeper_log</b>.</p>
+
+<!-- Demo:
+
+SELECT path, watch_type, op_num FROM system.zookeeper_watches LIMIT 5;
+SELECT count() FROM system.zookeeper_watches GROUP BY watch_type;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Den Kalantaevskii.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">CREATE OR REPLACE MATERIALIZED VIEW</h2>
+
+<p>Atomically swap a materialized view definition:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;"><b style="color: green;">CREATE OR REPLACE MATERIALIZED VIEW</b> mv
+ENGINE = MergeTree ORDER BY date AS
+SELECT date, count() AS c FROM events GROUP BY date;
+</code></p>
+
+<p>&mdash; Replaces the SELECT and the inner target table atomically.
+<br/>&mdash; Works for refreshable and regular materialized views.
+<br/>&mdash; No more "drop + recreate" race windows.</p>
+
+<!-- Demo:
+
+CREATE TABLE t (x UInt32) ENGINE = MergeTree ORDER BY x;
+CREATE MATERIALIZED VIEW mv ENGINE = Memory AS SELECT x * 2 AS y FROM t;
+CREATE OR REPLACE MATERIALIZED VIEW mv ENGINE = Memory AS SELECT x * 3 AS y FROM t;
+INSERT INTO t VALUES (10), (20);
+SELECT * FROM mv ORDER BY y;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: DQ.</p>
+</section>
+
+<section class="slide">
+<h2>Write Kafka metadata from columns</h2>
+
+<p>A new Kafka engine setting <b style="color: green;">kafka_map_virtual_columns_on_write</b>:
+<br/>columns with special names map to Kafka message metadata on <b>INSERT</b>.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE kafka_sink
+(payload String, <b>_key</b> String, <b>_timestamp</b> DateTime,
+ <b>_headers</b> Array(Tuple(name String, value String)))
+ENGINE = Kafka(...) <b style="color: green;">SETTINGS kafka_map_virtual_columns_on_write = 1</b>;
+
+INSERT INTO kafka_sink
+VALUES ('hello', 'k1', now(), ['env'], ['prod']);
+<span style="color: gray;">-- _key, _timestamp, _headers go into Kafka message metadata,</span>
+<span style="color: gray;">-- not into the payload.</span>
+</code></p>
+
+<p>Symmetric with the existing virtual columns on read.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>SYSTEM PAUSE VIEW</h2>
+
+<p>Temporarily stop a <b>refreshable materialized view</b> without dropping it:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;"><b style="color: green;">SYSTEM PAUSE VIEW</b> daily_rollup;
+<span style="color: gray;">-- Skip refreshes, keep schedule and last state.</span>
+
+<b style="color: green;">SYSTEM START VIEW</b> daily_rollup;
+<span style="color: gray;">-- Resume on the next scheduled tick.</span>
+</code></p>
+
+<p>&mdash; Useful during maintenance windows.
+<br/>&mdash; Pause persists across server restarts.
+<br/>&mdash; Pair with <b>SYSTEM REFRESH VIEW</b> to trigger an immediate run.</p>
+
+<!-- Demo:
+
+SYSTEM PAUSE VIEW my_refreshable_mv;
+SYSTEM START VIEW my_refreshable_mv;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Nikita Mikhaylov.</p>
+</section>
+
+<section class="slide">
+<h2>isPrime, isProbablePrime</h2>
+
+<p>Primality testing in SQL:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">isPrime</b>(7), <b style="color: green;">isPrime</b>(8), <b style="color: green;">isPrime</b>(101);
+<span style="color: gray;">-- 1, 0, 1</span>
+
+SELECT <b style="color: green;">isProbablePrime</b>(1000000007);
+<span style="color: gray;">-- 1 (Miller-Rabin; fast for huge numbers)</span>
+</code></p>
+
+<p>&mdash; <b>isPrime</b>: deterministic, slower for very large values.
+<br/>&mdash; <b>isProbablePrime</b>: probabilistic, fast for cryptographic-size numbers.</p>
+
+<p>Bonus: <b>system.primes</b> table in 26.4.</p>
+
+<!-- Demo:
+
+SELECT number, isPrime(number) FROM numbers(20);
+SELECT isProbablePrime(1000000007);
+SELECT count() FROM numbers(1000) WHERE isPrime(number);
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developers: Nihal Z. Miaji.</p>
+</section>
+
+<section class="slide">
+<h2>prettyPrintJSON</h2>
+
+<p>Pretty-print a JSON string from inside SQL:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">prettyPrintJSON</b>('{"a":1,"b":[1,2,3],"c":{"x":"hi"}}')
+FORMAT Raw;
+
+<span style="color: gray;">{
+    "a": 1,
+    "b": [1, 2, 3],
+    "c": {"x": "hi"}
+}</span>
+</code></p>
+
+<p>&mdash; Useful for log inspection, debugging, and report generation.</p>
+
+<!-- Demo:
+
+SELECT prettyPrintJSON('{"a":1,"b":[1,2,3],"c":{"x":"hi"}}') FORMAT TSVRaw;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Dmitry Prokofyev.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back4.jpg); background-size: cover;">
+<h2><span class="hilite">SQL Compatibility</span></h2>
+</section>
+
+<section class="slide">
+<h2>STRING_AGG</h2>
+
+<p style="margin-top: -1em;">&mdash; Alias for the ClickHouse <b>groupConcat</b> aggregate.
+<br/>&mdash; Drop-in compatibility with PostgreSQL, Snowflake, BigQuery,
+<br/>&emsp; and other obscure databases...</p>
+
+<!-- Demo:
+
+SELECT STRING_AGG(name, ', ') FROM (SELECT 'b' AS name UNION ALL SELECT 'a' UNION ALL SELECT 'c');
+SELECT STRING_AGG(toString(number), ',') FROM numbers(5);
+
+-->
+
+<h2 style="margin-top: 0em;">STDDEV</h2>
+
+<p style="margin-top: -1em;">&mdash; Alias for <b>stddevSamp</b> aggregate for compatibility with PostgreSQL.
+<br/>&mdash; <b>stddevSamp</b> &mdash; explicit name (Bessel-corrected, divides by n&minus;1).
+<br/>&mdash; <b>stddevPop</b> &mdash; existing population variant (divides by n).</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>array_to_string</h2>
+
+<p style="margin-top: -1em;">&mdash; Alias for the existing <b>arrayStringConcat</b> function.
+<br/>&mdash; Compatibility with PostgreSQL and friends.</p>
+
+<h2 style="margin-top: -0.5em;">unnest</h2>
+
+<p style="margin-top: -1em;">An PostgreSQL compatible alias for <b>arrayJoin</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">unnest</b>([1, 2, 3]);
+<span style="color: gray;">-- 1, 2, 3 as separate rows</span>
+
+SELECT <b style="color: green;">unnest</b>([1, 2, 3]), <b style="color: green;">unnest</b>(['a', 'b']);
+<span style="color: gray;">-- cross product of array elements</span>
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
+<h2><span style="color: black;" class="hilite">Performance Improvements</span></h2>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Push ORDER BY &hellip; LIMIT through JOIN</h2>
+
+<p>A query plan optimization &mdash; <b style="color: green;">query_plan_top_k_through_join</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT *
+FROM big_left LEFT JOIN small_right USING (id)
+ORDER BY big_left.created_at DESC <b>LIMIT 100</b>;
+</code></p>
+
+<p>If the sort key references only the preserved side, ClickHouse now applies
+<br/><b>ORDER BY &hellip; LIMIT</b> <b>before</b> the join &mdash; only the top N rows
+<br/>are joined, not the whole table.</p>
+
+<p style="margin-right: -3em;">&mdash; Works for LEFT and RIGHT joins where the sorting is on the preserved side.
+<br/>&mdash; Enabled by default.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Speed up huge <b>Merge</b> table queries</h2>
+
+<code style="font-size: 12pt; line-height: 1.25; margin-top: -1em; overflow-y: scroll; height: 75%;">SELECT uniqExact(order_customer_id),
+    uniqExact(order_customer_id),
+    sum(toInt64(visit_count)),
+    uniqExact(order_multiorder_id),
+    sum(toInt64(visit_count)),
+    sum(toInt64(visit_count)) AS sum_visit_count_ok,
+    sum(item_price_rub_numeric),
+    uniqExact(order_multiorder_id),
+    uniqExact(order_customer_id)
+FROM cubes.cubes_clickhouse__cube_end2end_union
+WHERE (addDays(CAST(date, 'DATE'), -1 * (((7 + if(
+  toDayOfWeek(date) = 7, 1,
+  toDayOfWeek(date) + 1)) - 2) % 7)) >= toDateTime('2021-10-04 00:00:00'))
+  AND (addDays(CAST(date, 'DATE'), -1 * (((7 + if(
+  toDayOfWeek(date) = 7, 1,
+  toDayOfWeek(date) + 1)) - 2) % 7)) < toDateTime('2021-12-13 00:00:00'))
+  /* crazy category filtering starts here */
+  AND (((multiIf((position(multiIf(cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+           cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+           cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+         'ymp_main-cat_dp_auto') > 0) OR (position(multiIf(
+                    cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                    cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                    cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                  'ymp_cat_dp_auto') > 0) OR (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_offer_dp_auto') >
+                         0), 'Auto', (position(
+                               multiIf(
+                                 cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                 cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                 cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                               'ymp_main-cat_dp_bt') >
+                             0) OR
+                            (position(
+                               multiIf(
+                                 cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                 cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                 cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                               'ymp_cat_dp_bt') >
+                             0) OR
+                            (position(
+                               multiIf(
+                                 cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                 cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                 cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                               'ymp_offer_dp_bt') >
+                             0),
+     'Appliances', (position(multiIf(cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+             'ymp_main-cat_dp_dacha') > 0) OR (position(multiIf(
+                         cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                         cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                         cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                       'ymp_cat_dp_dacha') > 0) OR
+         (position(multiIf(cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+             'ymp_offer_dp_dacha') > 0), 'Garden', (position(multiIf(
+                             cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                             cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                             cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                           'ymp_main-cat_dp_dety') >
+                        0) OR (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_cat_dp_dety') >
+                            0) OR (position(
+                               multiIf(
+                                 cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                 cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                 cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                               'ymp_offer_dp_dety') >
+                             0),
+     'Kids', (position(multiIf(cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+            'ymp_main-cat_dp_dom') > 0) OR (position(multiIf(
+                         cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                         cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                         cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                       'ymp_cat_dp_dom') > 0) OR
+           (position(multiIf(cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+            'ymp_offer_dp_dom') > 0), 'Home', (position(multiIf(
+                           cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                           cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                           cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                         'ymp_main-cat_dp_dosug') >
+                         0) OR (position(multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_cat_dp_dosug') >
+                          0) OR (position(
+                             multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_offer_dp_dosug') >
+                           0),
+     'Hobbies', (position(multiIf(
+                cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+              'ymp_main-cat_dp_elektronika') > 0) OR (position(multiIf(
+                             cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                             cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                             cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                           'ymp_cat_dp_elektronika') >
+                        0) OR (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_offer_dp_elektronika') >
+                         0), 'Electronics',
+     (position(multiIf(cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+           cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+           cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+         'ymp_main-cat_dp_knigi') > 0) OR (position(multiIf(
+                     cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                     cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                     cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                   'ymp_cat_dp_knigi') > 0) OR (position(multiIf(
+                             cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                             cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                             cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                           'ymp_offer_dp_knigi') >
+                           0), 'Books',
+     (position(multiIf(cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+           cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+           cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+         'ymp_main-cat_dp_komputer') > 0) OR (position(multiIf(
+                     cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                     cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                     cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                   'ymp_cat_dp_komputer') > 0) OR (position(
+                             multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_offer_dp_komputer') >
+                           0),
+     'Computers', (position(multiIf(
+                 cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                 cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                 cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+               'ymp_main-cat_dp_krasota') > 0) OR (position(multiIf(
+                          cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                          cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                          cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                        'ymp_cat_dp_krasota') >
+                        0) OR (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_offer_dp_krasota') >
+                         0), 'Beauty', (position(
+                               multiIf(
+                                 cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                 cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                 cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                               'ymp_main-cat_dp_oborudovanie') >
+                             0) OR
+                            (position(
+                               multiIf(
+                                 cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                 cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                 cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                               'ymp_cat_dp_oborudovanie') >
+                             0) OR
+                            (position(
+                               multiIf(
+                                 cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                 cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                 cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                               'ymp_offer_dp_oborudovanie') >
+                             0),
+     'Equipment', (position(multiIf(cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+             'ymp_main-cat_dp_odezhda') > 0) OR (position(multiIf(
+                        cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                        cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                        cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                      'ymp_cat_dp_odezhda') > 0) OR
+         (position(multiIf(cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+             'ymp_offer_dp_odezhda') > 0), 'Clothing', (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_main-cat_dp_produkti') >
+                            0) OR (position(
+                               multiIf(
+                                 cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                 cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                 cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                               'ymp_cat_dp_produkti') >
+                             0) OR
+                           (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_offer_dp_produkti') >
+                            0),
+     'Food and drinks', (position(multiIf(
+               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+             'ymp_main-cat_dp_sport') > 0) OR (position(multiIf(
+                         cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                         cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                         cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                       'ymp_cat_dp_sport') > 0) OR
+            (position(multiIf(
+               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+             'ymp_offer_dp_sport') > 0), 'Sports', (position(multiIf(
+                            cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                            cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                            cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                          'ymp_main-cat_dp_stroika') >
+                          0) OR (position(multiIf(
+                                cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                              'ymp_cat_dp_stroika') >
+                           0) OR (position(
+                              multiIf(
+                                cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                              'ymp_offer_dp_stroika') >
+                            0),
+     'Construction', (position(multiIf(
+                cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+              'ymp_main-cat_dp_zdorovie') > 0) OR (position(multiIf(
+                             cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                             cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                             cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                           'ymp_cat_dp_zdorovie') >
+                        0) OR (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_offer_dp_zdorovie') >
+                         0), 'Health',
+     (position(multiIf(cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+           cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+           cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+         'ymp_main-cat_dp_zootovary') > 0) OR (position(multiIf(
+                      cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                      cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                      cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                    'ymp_cat_dp_zootovary') > 0) OR (position(
+                               multiIf(
+                                 cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                 cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                 cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                               'ymp_offer_dp_zootovary') >
+                             0),
+     'Pets', (position(multiIf(
+                cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+              'ymp_main-cat_dp_cvety') > 0) OR (position(multiIf(
+                          cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                          cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                          cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                        'ymp_cat_dp_cvety') > 0) OR
+          (position(multiIf(
+                cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+              'ymp_offer_dp_cvety') > 0), 'Flowers', ' No category') >=
+   ' No category') AND (multiIf((position(multiIf(
+                cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+              'ymp_main-cat_dp_auto') > 0) OR (position(multiIf(
+                         cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                         cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                         cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                       'ymp_cat_dp_auto') > 0) OR
+          (position(multiIf(
+                cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+              'ymp_offer_dp_auto') > 0), 'Auto', (position(multiIf(
+                            cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                            cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                            cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                          'ymp_main-cat_dp_bt') >
+                       0) OR (position(multiIf(
+                             cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                             cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                             cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                           'ymp_cat_dp_bt') >
+                        0) OR (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_offer_dp_bt') >
+                         0),
+          'Appliances', (position(multiIf(
+                    cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                    cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                    cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                  'ymp_main-cat_dp_dacha') > 0) OR (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_cat_dp_dacha') >
+                            0) OR (position(
+                               multiIf(
+                                 cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                 cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                 cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                               'ymp_offer_dp_dacha') >
+                             0),
+          'Garden', (position(multiIf(
+                      cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                      cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                      cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                    'ymp_main-cat_dp_dety') > 0) OR (position(
+                            multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_cat_dp_dety') >
+                          0) OR (position(
+                                multiIf(
+                                  cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                  cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                  cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                                'ymp_offer_dp_dety') >
+                              0),
+          'Kids', (position(multiIf(
+                   cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                   cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                   cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                 'ymp_main-cat_dp_dom') > 0) OR (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_cat_dp_dom') >
+                         0) OR (position(
+                               multiIf(
+                                 cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                 cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                 cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                               'ymp_offer_dp_dom') >
+                             0),
+          'Home', (position(multiIf(
+                    cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                    cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                    cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                  'ymp_main-cat_dp_dosug') > 0) OR (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_cat_dp_dosug') >
+                            0) OR (position(
+                               multiIf(
+                                 cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                 cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                 cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                               'ymp_offer_dp_dosug') >
+                             0),
+          'Hobbies', (position(multiIf(
+                     cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                     cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                     cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                   'ymp_main-cat_dp_elektronika') > 0) OR
+                  (position(multiIf(
+                     cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                     cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                     cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                   'ymp_cat_dp_elektronika') > 0) OR (position(
+                             multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_offer_dp_elektronika') >
+                           0),
+          'Electronics', (position(multiIf(
+                   cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                   cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                   cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                 'ymp_main-cat_dp_knigi') > 0) OR (position(multiIf(
+                             cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                             cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                             cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                           'ymp_cat_dp_knigi') >
+                           0) OR (position(
+                              multiIf(
+                                cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                              'ymp_offer_dp_knigi') >
+                            0), 'Books',
+          (position(multiIf(
+                cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+              'ymp_main-cat_dp_komputer') > 0) OR (position(multiIf(
+                          cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                          cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                          cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                        'ymp_cat_dp_komputer') >
+                        0) OR (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_offer_dp_komputer') >
+                         0),
+          'Computers', (position(multiIf(
+                      cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                      cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                      cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                    'ymp_main-cat_dp_krasota') > 0) OR (position(
+                               multiIf(
+                                 cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                 cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                 cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                               'ymp_cat_dp_krasota') >
+                             0) OR
+                (position(multiIf(
+                      cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                      cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                      cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                    'ymp_offer_dp_krasota') > 0), 'Beauty',
+          (position(multiIf(
+                cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+              'ymp_main-cat_dp_oborudovanie') > 0) OR (position(multiIf(
+                           cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                           cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                           cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                         'ymp_cat_dp_oborudovanie') >
+                         0) OR (position(multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_offer_dp_oborudovanie') >
+                          0), 'Equipment',
+          (position(multiIf(
+                cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+              'ymp_main-cat_dp_odezhda') > 0) OR (position(multiIf(
+                            cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                            cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                            cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                          'ymp_cat_dp_odezhda') >
+                       0) OR (position(multiIf(
+                             cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                             cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                             cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                           'ymp_offer_dp_odezhda') >
+                        0),
+          'Clothing', (position(multiIf(
+                        cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                        cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                        cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                      'ymp_main-cat_dp_produkti') > 0) OR
+                  (position(multiIf(
+                        cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                        cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                        cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                      'ymp_cat_dp_produkti') > 0) OR (position(
+                                multiIf(
+                                  cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                  cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                  cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                                'ymp_offer_dp_produkti') >
+                              0),
+          'Food and drinks', (position(multiIf(
+                    cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                    cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                    cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                  'ymp_main-cat_dp_sport') > 0) OR (position(
+                              multiIf(
+                                cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                              'ymp_cat_dp_sport') >
+                            0) OR
+                 (position(multiIf(
+                    cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                    cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                    cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                  'ymp_offer_dp_sport') > 0), 'Sports',
+          (position(multiIf(
+                cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+              'ymp_main-cat_dp_stroika') > 0) OR (position(multiIf(
+                            cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                            cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                            cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                          'ymp_cat_dp_stroika') >
+                       0) OR (position(multiIf(
+                             cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                             cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                             cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                           'ymp_offer_dp_stroika') >
+                        0),
+          'Construction', (position(multiIf(
+                     cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                     cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                     cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                   'ymp_main-cat_dp_zdorovie') > 0) OR
+                  (position(multiIf(
+                     cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                     cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                     cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                   'ymp_cat_dp_zdorovie') > 0) OR (position(
+                             multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_offer_dp_zdorovie') >
+                           0),
+          'Health', (position(multiIf(
+                   cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                   cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                   cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                 'ymp_main-cat_dp_zootovary') > 0) OR (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_cat_dp_zootovary') >
+                         0) OR (position(
+                               multiIf(
+                                 cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                 cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                 cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                               'ymp_offer_dp_zootovary') >
+                             0),
+          'Pets', (position(multiIf(
+                     cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                     cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                     cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                   'ymp_main-cat_dp_cvety') > 0) OR (position(
+                               multiIf(
+                                 cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                 cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                 cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                               'ymp_cat_dp_cvety') >
+                             0) OR
+                  (position(multiIf(
+                     cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                     cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                     cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                   'ymp_offer_dp_cvety') > 0), 'Flowers',
+          ' No category') <= 'Kids')) OR ((multiIf((position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_main-cat_dp_auto') >
+                         0) OR (position(multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_cat_dp_auto') >
+                          0) OR (position(
+                             multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_offer_dp_auto') >
+                           0), 'Auto',
+                        (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_main-cat_dp_bt') >
+                         0) OR (position(multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_cat_dp_bt') >
+                          0) OR (position(
+                             multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_offer_dp_bt') >
+                           0),
+                        'Appliances',
+                        (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_main-cat_dp_dacha') >
+                         0) OR (position(multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_cat_dp_dacha') >
+                          0) OR (position(
+                             multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_offer_dp_dacha') >
+                           0),
+                        'Garden',
+                        (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_main-cat_dp_dety') >
+                         0) OR (position(multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_cat_dp_dety') >
+                          0) OR (position(
+                             multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_offer_dp_dety') >
+                           0),
+                        'Kids',
+                        (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_main-cat_dp_dom') >
+                         0) OR (position(multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_cat_dp_dom') >
+                          0) OR (position(
+                             multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_offer_dp_dom') >
+                           0),
+                        'Home',
+                        (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_main-cat_dp_dosug') >
+                         0) OR (position(multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_cat_dp_dosug') >
+                          0) OR (position(
+                             multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_offer_dp_dosug') >
+                           0),
+                        'Hobbies',
+                        (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_main-cat_dp_elektronika') >
+                         0) OR (position(multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_cat_dp_elektronika') >
+                          0) OR (position(
+                             multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_offer_dp_elektronika') >
+                           0),
+                        'Electronics', (position(
+                              multiIf(
+                                cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                              'ymp_main-cat_dp_knigi') >
+                            0) OR
+                           (position(
+                              multiIf(
+                                cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                              'ymp_cat_dp_knigi') >
+                            0) OR
+                           (position(
+                              multiIf(
+                                cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                              'ymp_offer_dp_knigi') >
+                            0),
+                        'Books', (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_main-cat_dp_komputer') >
+                            0) OR (position(
+                               multiIf(
+                                 cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                 cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                 cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                               'ymp_cat_dp_komputer') >
+                             0) OR
+                           (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_offer_dp_komputer') >
+                            0),
+                        'Computers',
+                        (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_main-cat_dp_krasota') >
+                         0) OR (position(multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_cat_dp_krasota') >
+                          0) OR (position(
+                             multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_offer_dp_krasota') >
+                           0),
+                        'Beauty', (position(
+                             multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_main-cat_dp_oborudovanie') >
+                           0) OR
+                          (position(
+                             multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_cat_dp_oborudovanie') >
+                           0) OR
+                          (position(
+                             multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_offer_dp_oborudovanie') >
+                           0),
+                        'Equipment', (position(
+                               multiIf(
+                                 cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                 cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                 cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                               'ymp_main-cat_dp_odezhda') >
+                             0) OR
+                            (position(
+                               multiIf(
+                                 cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                 cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                 cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                               'ymp_cat_dp_odezhda') >
+                             0) OR
+                            (position(
+                               multiIf(
+                                 cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                 cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                 cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                               'ymp_offer_dp_odezhda') >
+                             0),
+                        'Clothing',
+                        (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_main-cat_dp_produkti') >
+                         0) OR (position(multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_cat_dp_produkti') >
+                          0) OR (position(
+                             multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_offer_dp_produkti') >
+                           0),
+                        'Food and drinks',
+                        (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_main-cat_dp_sport') >
+                         0) OR (position(multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_cat_dp_sport') >
+                          0) OR (position(
+                             multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_offer_dp_sport') >
+                           0),
+                        'Sports', (position(
+                                multiIf(
+                                  cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                  cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                  cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                                'ymp_main-cat_dp_stroika') >
+                              0) OR
+                             (position(
+                                multiIf(
+                                  cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                  cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                  cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                                'ymp_cat_dp_stroika') >
+                              0) OR
+                             (position(
+                                multiIf(
+                                  cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                  cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                  cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                                'ymp_offer_dp_stroika') >
+                              0),
+                        'Construction',
+                        (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_main-cat_dp_zdorovie') >
+                         0) OR (position(multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_cat_dp_zdorovie') >
+                          0) OR (position(
+                             multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_offer_dp_zdorovie') >
+                           0),
+                        'Health', (position(
+                              multiIf(
+                                cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                              'ymp_main-cat_dp_zootovary') >
+                            0) OR
+                           (position(
+                              multiIf(
+                                cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                              'ymp_cat_dp_zootovary') >
+                            0) OR
+                           (position(
+                              multiIf(
+                                cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                              'ymp_offer_dp_zootovary') >
+                            0),
+                        'Pets',
+                        (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_main-cat_dp_cvety') >
+                         0) OR (position(multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_cat_dp_cvety') >
+                          0) OR (position(
+                             multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_offer_dp_cvety') >
+                           0), 'Flowers',
+                        ' No category') >=
+                      'Computers') AND
+                     (multiIf((position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_main-cat_dp_auto') >
+                         0) OR (position(multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_cat_dp_auto') >
+                          0) OR (position(
+                             multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_offer_dp_auto') >
+                           0), 'Auto',
+                        (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_main-cat_dp_bt') >
+                         0) OR (position(multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_cat_dp_bt') >
+                          0) OR (position(
+                             multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_offer_dp_bt') >
+                           0),
+                        'Appliances',
+                        (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_main-cat_dp_dacha') >
+                         0) OR (position(multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_cat_dp_dacha') >
+                          0) OR (position(
+                             multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_offer_dp_dacha') >
+                           0),
+                        'Garden',
+                        (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_main-cat_dp_dety') >
+                         0) OR (position(multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_cat_dp_dety') >
+                          0) OR (position(
+                             multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_offer_dp_dety') >
+                           0),
+                        'Kids',
+                        (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_main-cat_dp_dom') >
+                         0) OR (position(multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_cat_dp_dom') >
+                          0) OR (position(
+                             multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_offer_dp_dom') >
+                           0),
+                        'Home',
+                        (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_main-cat_dp_dosug') >
+                         0) OR (position(multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_cat_dp_dosug') >
+                          0) OR (position(
+                             multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_offer_dp_dosug') >
+                           0),
+                        'Hobbies',
+                        (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_main-cat_dp_elektronika') >
+                         0) OR (position(multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_cat_dp_elektronika') >
+                          0) OR (position(
+                             multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_offer_dp_elektronika') >
+                           0),
+                        'Electronics', (position(
+                              multiIf(
+                                cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                              'ymp_main-cat_dp_knigi') >
+                            0) OR
+                           (position(
+                              multiIf(
+                                cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                              'ymp_cat_dp_knigi') >
+                            0) OR
+                           (position(
+                              multiIf(
+                                cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                              'ymp_offer_dp_knigi') >
+                            0),
+                        'Books', (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_main-cat_dp_komputer') >
+                            0) OR (position(
+                               multiIf(
+                                 cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                 cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                 cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                               'ymp_cat_dp_komputer') >
+                             0) OR
+                           (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_offer_dp_komputer') >
+                            0),
+                        'Computers',
+                        (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_main-cat_dp_krasota') >
+                         0) OR (position(multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_cat_dp_krasota') >
+                          0) OR (position(
+                             multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_offer_dp_krasota') >
+                           0),
+                        'Beauty', (position(
+                             multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_main-cat_dp_oborudovanie') >
+                           0) OR
+                          (position(
+                             multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_cat_dp_oborudovanie') >
+                           0) OR
+                          (position(
+                             multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_offer_dp_oborudovanie') >
+                           0),
+                        'Equipment', (position(
+                               multiIf(
+                                 cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                 cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                 cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                               'ymp_main-cat_dp_odezhda') >
+                             0) OR
+                            (position(
+                               multiIf(
+                                 cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                 cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                 cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                               'ymp_cat_dp_odezhda') >
+                             0) OR
+                            (position(
+                               multiIf(
+                                 cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                 cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                 cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                               'ymp_offer_dp_odezhda') >
+                             0),
+                        'Clothing',
+                        (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_main-cat_dp_produkti') >
+                         0) OR (position(multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_cat_dp_produkti') >
+                          0) OR (position(
+                             multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_offer_dp_produkti') >
+                           0),
+                        'Food and drinks',
+                        (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_main-cat_dp_sport') >
+                         0) OR (position(multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_cat_dp_sport') >
+                          0) OR (position(
+                             multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_offer_dp_sport') >
+                           0),
+                        'Sports', (position(
+                                multiIf(
+                                  cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                  cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                  cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                                'ymp_main-cat_dp_stroika') >
+                              0) OR
+                             (position(
+                                multiIf(
+                                  cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                  cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                  cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                                'ymp_cat_dp_stroika') >
+                              0) OR
+                             (position(
+                                multiIf(
+                                  cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                  cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                  cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                                'ymp_offer_dp_stroika') >
+                              0),
+                        'Construction',
+                        (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_main-cat_dp_zdorovie') >
+                         0) OR (position(multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_cat_dp_zdorovie') >
+                          0) OR (position(
+                             multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_offer_dp_zdorovie') >
+                           0),
+                        'Health', (position(
+                              multiIf(
+                                cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                              'ymp_main-cat_dp_zootovary') >
+                            0) OR
+                           (position(
+                              multiIf(
+                                cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                              'ymp_cat_dp_zootovary') >
+                            0) OR
+                           (position(
+                              multiIf(
+                                cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                                cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                                cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                              'ymp_offer_dp_zootovary') >
+                            0),
+                        'Pets',
+                        (position(multiIf(
+                              cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                              cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                              cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                            'ymp_main-cat_dp_cvety') >
+                         0) OR (position(multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_cat_dp_cvety') >
+                          0) OR (position(
+                             multiIf(
+                               cubes_clickhouse__cube_end2end_union.e2e_record_type = 'install',
+                               cubes_clickhouse__cube_end2end_union.installation_source_path_new_tree_5,
+                               cubes_clickhouse__cube_end2end_union.e2e_lsc_source_path_new_tree_5),
+                             'ymp_offer_dp_cvety') >
+                           0), 'Flowers',
+                        ' No category') &lt;=
+                      'Electronics')))
+  /* crazy category filtering ends here */
+GROUP BY addDays(CAST(date, 'DATE'), -1 * (((7 + if(
+  toDayOfWeek(date) = 7, 1,
+  toDayOfWeek(date) + 1)) - 2) % 7));</code></p>
+</section>
+
+<section class="slide">
+<h2>Speed up huge <b>Merge</b> table queries</h2>
+
+<p>Queries over a <b>Merge</b> table that spans many underlying tables
+<br/>used to spend a lot of CPU planning &mdash; each underlying table
+<br/>was analyzed sequentially.</p>
+
+<p>But if many tables are identical in the structure, we don't have to analyze them repeatedly!</p>
+
+<p>A test: a 78 KB query on a Merge table over 500 tables:</p>
+<p><b>26.4: <span style="color: red;">6.7</span> sec.</b>
+<br/><b>26.5: <span style="color: green;">0.25</span> sec.</b>
+</p>
+
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Alexey Milovidov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Lower memory usage for UNION ALL</h2>
+
+<p>A common pattern &mdash; UNION ALL across many tables (e.g., 1000)
+<br/>&mdash; used to allocate buffers for every branch up front.</p>
+
+<p><b>26.5</b> adds new settings with reasonable defaults:
+<br/>&mdash; <b>max_streams_for_union_step</b>,
+<br/>&mdash; <b>max_streams_for_union_step_to_max_threads_ratio</b>.
+</p>
+
+<p>Queries with huge UNION ALL will keep high parallelism
+<br/>but avoid running every branch at once.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Memory-aware <b>max_threads</b></h2>
+
+<p>Two new settings clamp parallelism under memory pressure:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;"><b style="color: green;">max_threads_min_free_memory_per_thread</b>        <span style="color: gray;">-- default 1 GiB</span>
+<b style="color: green;">max_insert_threads_min_free_memory_per_thread</b> <span style="color: gray;">-- default 4 GiB</span>
+</code></p>
+
+<p>&mdash; Reduces <b>max_threads</b> and <b>max_insert_threads</b> when free memory is low.
+<br/>&mdash; With 32 GiB free and 1 GiB/thread - up to 32 threads.
+<br/>&mdash; With 1 GiB free - falls back to 1 thread.</p>
+
+<p>Big concurrent workloads no longer fail with "Memory limit exceeded"
+<br/>just because the parallelism was too aggressive.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Auto-tune for low-memory systems</h2>
+
+<p>If the server detects less than <b>4 GiB</b> of memory available,
+<br/>26.5 automatically dials back the defaults:</p>
+
+<p style="color: gray;">&mdash; input_format_parquet_memory_high_watermark,
+<br/>&mdash; min_insert_block_size_bytes,
+<br/>&mdash; zero jemalloc's dirty_decay_ms,
+<br/>&mdash; ...</p>
+
+<p>Run ClickHouse on a tiny VPS &mdash; without a stack of overrides.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 4em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">GROUP BY &hellip; LIMIT with no ORDER BY</h2>
+
+<p>The simplest possible distinct-keys query:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT user_id FROM events <b>GROUP BY user_id</b> <b style="color: green;">LIMIT 10</b>;
+</code></p>
+
+<p>&mdash; Aggregation now <b>stops</b> after collecting <b>LIMIT + OFFSET</b> distinct keys.
+<br/>&mdash; Controlled by <b style="color: green;">optimize_trivial_group_by_limit_query</b> (on by default).
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Amos Bird.</p>
+</section>
+
+<section class="slide">
+<h2>Prefetching in hash tables</h2>
+
+<p>Hash-based aggregations and joins probe random memory addresses &mdash;
+<br/>and modern CPUs pay tens of cycles each time the cache misses.</p>
+
+<p>26.5 adds <b style="color: green;">precomputation of hashes</b> and <b style="color: green;">software prefetching</b> to the hash table probes.</p>
+
+<img style="width: 100%;" src="pictures/prefetch.png"/>
+
+<p style="color: gray; -webkit-text-stroke: 5px white; paint-order: stroke fill; font-size: 14pt; margin-top: -5em; z-index: 100">Developer: Amos Bird.</p>
+</section>
+
+<section class="slide">
+<h2>Faster MD5</h2>
+
+<p style="color: gray;">MD5 - an obsolete hash function, that you should not use.</p>
+<p>But often you have to use it for compatibility with external systems.</p>
+
+<p>Now we have data-parallel implementation, hashing multiple values at once!</p>
+
+<img style="width: 100%;" src="pictures/md5.png"/>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Joanna Hulboj.</p>
+</section>
+
+<section class="slide">
+<h2>JIT compilation on macOS</h2>
+
+<p>ClickHouse uses LLVM to <b style="color: green;">JIT-compile</b> hot expressions and aggregations.
+<br/>For years, this only worked on Linux.</p>
+
+<p>26.5 enables JIT on <b>macOS</b> too:</p>
+
+<p>&mdash; <b>compile_expressions</b>, <b>compile_aggregate_expressions</b>,
+<br/>&emsp; <b>compile_sort_description</b> &mdash; all functional.
+<br/>&mdash; Same speedups you've been seeing on Linux for years.</p>
+
+<p>Local development on a Mac now matches production performance characteristics.</p>
+
+<!-- Demo (macOS, transparent):
+
+SET compile_expressions = 1, min_count_to_compile_expression = 0;
+SELECT sum(a * b + c) FROM (SELECT number AS a, number + 1 AS b, number + 2 AS c FROM numbers_mt(100000000));
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
+<h2 style="font-size: 32pt; position: absolute; bottom: 0em; right: 1em;"><span class="hilite">Something Interesting</span></h2>
+</section>
+
+<section class="slide">
+<h2>Query cache for subqueries</h2>
+
+<p style="margin-top: -1em;">You can control query caching on a per-subquery basis:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -2em;"><span style="color: gray;">-- Enable query cache only for outmost query, as usual:</span>
+SELECT * FROM (SELECT * FROM table) SETTINGS <b style="color: green;">use_query_cache = 1</b>;
+
+<span style="color: gray;">-- Enable query cache for subquery (new in 26.5):</span>
+SELECT * FROM (SELECT * FROM table SETTINGS <b style="color: green;">use_query_cache = 1</b>);
+
+<span style="color: gray;">-- Enable propagation of query cache into all subqueries (new in 26.5):</span>
+SELECT * FROM (SELECT * FROM table)
+  SETTINGS <b style="color: green;">use_query_cache_for_subqueries = 1</b>;
+
+<span style="color: gray;">-- Enable propagation of query cache into all subqueries but disable in one:</span>
+SELECT * FROM (SELECT * FROM table1) t1
+  NATURAL JOIN (SELECT * FROM table2 <b style="color: green;">SETTINGS use_query_cache = 0</b>) t2
+  <b style="color: green;">SETTINGS use_query_cache_for_subqueries = 1</b>;
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Nikita Barannik, Vincent Voyer.</p>
+</section>
+
+<section class="slide">
+<h2>Web Terminal 🧪</h2>
+
+<p>An in-browser <b>clickhouse-client</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;"><span style="color: gray;">$ cat config.d/webterminal.yaml</span>
+
+<b><span style="color: green;">allow_experimental_webterminal</span>: true</b>
+</code></p>
+
+<p>Then point your browser at <b>http://localhost:8123/webterminal</b>:</p>
+
+<p><a href="https://play.clickhouse.com/webterminal?user=play">Demo</a></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Direct SELECT from Kafka 🧪</h2>
+
+<p style="margin-top: -1em;">The Keeper-backed Kafka engine now supports <b>direct SELECT</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE my_kafka (raw String) ENGINE = Kafka(...)
+SETTINGS
+  kafka_keeper_path = '/clickhouse/{database}/{uuid}',
+  kafka_replica_name = '{replica}',
+  <b>allow_experimental_kafka_offsets_storage_in_keeper = 1</b>;
+
+<b style="color: green;">SELECT count() FROM my_kafka;</b>
+<span style="color: gray;">-- Reads available messages without committing offsets by default.</span>
+</code></p>
+
+<p>Control it with the <b>kafka_commit_on_select</b> setting.</p>
+
+<p>&mdash; Inspect a topic from the SQL prompt.
+<br/>&mdash; Perform INSERT SELECT manually.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexey Milovidov.</p>
+</section>
+
+
+
+
+<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
+<h2 style="font-size: 32pt; margin-left: -1em;"><span class="hilite">Data Lakes</span></h2>
+</section>
+
+
+
+
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Iceberg: <b>geometry</b> and <b>geography</b> types 🧪</h2>
+
+<p>The Iceberg v3 spec introduces native <b>geometry</b> and <b>geography</b> field types.
+<br/>26.5 reads them &mdash; mapped to ClickHouse's <b>Geometry</b> (Variant of Point,
+<br/>Ring, Polygon, &hellip;) type:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SET <b style="color: green;">allow_experimental_geo_types_in_iceberg</b> = 1;
+
+SELECT WKT(geom) FROM iceberg('s3://bucket/places/');
+</code></p>
+
+<p>Plays nicely with existing ClickHouse geo functions.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 4em;">Developer: Konstantin Vedernikov.</p>
+</section>
+
+<section class="slide">
+<h2>Query condition cache for Iceberg</h2>
+
+<p>The <b>query condition cache</b> &mdash; the ephemeral index that remembers which
+<br/>granules don't satisfy a WHERE clause &mdash; now works for <b>Iceberg</b> tables too:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SET use_query_condition_cache = 1;
+
+SELECT count() FROM iceberg('s3://bucket/events/')
+WHERE event_date = today() AND user_id = 42;
+<span style="color: gray;">-- Subsequent queries with the same predicate skip irrelevant data files.</span>
+</code></p>
+
+<p>&mdash; Especially useful for repeated dashboard queries.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Konstantin Vedernikov.</p>
+</section>
+
+<section class="slide">
+<h2>Apache Paimon: incremental reads 🧪</h2>
+
+<p style="margin-top: -1em;">The <b>Paimon</b>, <b>PaimonS3</b>, <b>PaimonAzure</b>, <b>PaimonHDFS</b>, <b>PaimonLocal</b>
+<br/>table engines now support <b style="color: green;">incremental reads</b> &mdash;
+<br/>return only new rows since the last committed snapshot.</p>
+
+<p>Progress tracking is stored in <b>Keeper</b>, so consumers don't lose place
+<br/>across restarts:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;"><span style="color: gray;">-- Targeted snapshot delta:</span>
+SELECT * FROM paimon_table SETTINGS <b style="color: green;">paimon_target_snapshot_id</b> = 42;
+
+<span style="color: gray;">-- Cap snapshots consumed in one query:</span>
+SELECT * FROM paimon_table SETTINGS <b style="color: green;">max_consume_snapshots</b> = 10;
+</code></p>
+
+<p>&mdash; Background metadata refresh: <b>paimon_metadata_refresh_interval_sec</b>.
+<br/>&mdash; Gated by <b>allow_experimental_paimon_storage_engine</b>.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: -0.5em;">Developer: XiaoBinMu.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back8.jpg); background-size: cover;">
+<h2><span class="hilite">Bonus</span></h2>
+</section>
+
+
+<section class="slide" style="background: url(pictures/openhouse.png) center / contain no-repeat;">
+</section>
+
+
+<section class="slide" style="background: url(pictures/wing.jpg); background-size: cover;">
+<h2>Meetups</h2>
+<p style="line-height: 1.25; margin-top: -2em;">
+<br/><span class="hilite">&mdash; 🇺🇸 New York: AI Demo Night, May 21</span>
+<br/><span class="hilite">&mdash; 🇯🇵 Tokyo: Findy VPoE Summit, May 22</span>
+<br/><span class="hilite">&mdash; 🇺🇸 San Francisco: Open House, May 26</span>
+<br/><span class="hilite">&mdash; 🌐 Virtual: AI Agents with Langfuse, May 27</span>
+<br/><span class="hilite">&mdash; 🇪🇸 Madrid: Google Summit, May 28</span>
+<br/><span class="hilite">&mdash; 🇮🇳 Mumbai: AWS Summit, May 28</span>
+<br/><span class="hilite">&mdash; 🇨🇦 Toronto Meetup, Jun 2</span>
+<br/><span class="hilite">&mdash; 🇨🇴 Bogotá Meetup, Jun 2</span>
+<br/><span class="hilite">&mdash; 🇺🇸 SF: ClickHouse Café @ Snowflake Summit, Jun 3</span>
+<br/><span class="hilite">&mdash; 🇯🇵 Tokyo: AI Engineering Summit, Jun 8</span>
+<br/><span class="hilite">&mdash; 🇸🇬 SuperAI Singapore, Jun 10</span>
+<br/><span class="hilite">&mdash; 🇧🇷 São Paulo Meetup, Jun 11</span>
+<br/><span class="hilite">&mdash; 🇳🇱 Amsterdam: The Agentic Data Stack, Jun 18</span>
+</p>
+</section>
+
+<section class="slide">
+<h2>Reading Corner 📖</h2>
+
+<a href="https://clickhouse.com/blog/agentic-coding"><img style="float: right; width: 30%; margin-right: -3em; image-rendering: pixelated; margin-top: -1em;" src="pictures/qr_agentic.png" alt="QR: clickhouse.com/blog/agentic-coding"/></a>
+<p><a href="https://clickhouse.com/blog/">https://clickhouse.com/blog/</a></p>
+
+<p style="line-height: 1.5; margin-right: -5em;">
+&mdash; ClickHouse vs. Prometheus for high cardinality
+<br/>&mdash; How D. E. Shaw uses ClickHouse
+<br/>&mdash; Do you still need Elasticsearch for log analytics?
+<br/>&mdash; What's New in pg_clickhouse
+<br/>&mdash; clickhousectl v0.2
+<br/>&mdash; Postgres FDW: Pushdown is a negotiation
+<br/>&mdash; SQL charting and alerting in ClickStack
+<br/>&mdash; Agentic analytics starts with query-ready data
+<br/>&mdash; Agentic coding at ClickHouse
+</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back9.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
+<h2 style="color: white; margin-left: -1em;">Q&amp;A</h2>
+</section>
+
+<section class="slide" style="background: black; padding: 0;">
+<iframe style="width: 100%; height: 100%; position: absolute; top: 0; left: 0;" src="https://www.youtube.com/embed/P1IDAvsi7p8" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</section>
+
+    <div class="progress"></div>
+    <script src="https://presentations.clickhouse.com/shower/shower.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/shower-video.css">
+    <script src="https://presentations.clickhouse.com/shower/shower-video.js"></script>
+    <!--/Video plugin-->
+<footer class="badge">
+    <a href="https://presentations.clickhouse.com/">ClickHouse Theater</a>
+</footer>
+</body>
+</html>
