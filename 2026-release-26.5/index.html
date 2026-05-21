@@ -240,10 +240,10 @@ SELECT arrayFilter(empty, ['', 'a', '', 'b']);
 
 <p>Set a base URL once, then use relative paths everywhere:</p>
 
-<p><code style="font-size: 14pt; line-height: 1.25;">SET <b style="color: green;">url_base</b> = 'https://datasets.clickhouse.com/hits/tsv/';
+<p><code style="font-size: 14pt; line-height: 1.25;">SET <b style="color: green;">url_base</b> = 'https://datasets.clickhouse.com/';
 
-SELECT count() FROM url('hits_v1.tsv.xz', TSV, 'URL String');
-<span style="color: gray;">-- resolved to https://datasets.clickhouse.com/hits/tsv/hits_v1.tsv.xz</span>
+SELECT count() FROM url('hits_compatible/hits.csv.gz', TSV, 'URL String');
+<span style="color: gray;">-- resolved to https://datasets.clickhouse.com/hits_compatible/hits.csv.gz</span>
 </code></p>
 
 <p>Standard URL resolution per RFC 3986:
