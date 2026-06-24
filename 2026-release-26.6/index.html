@@ -200,15 +200,17 @@ SELECT view, status FROM system.view_refreshes ORDER BY view;
 
 <p style="margin-top: -0.5em;">Two new <b>MergeTree</b> settings decouple projection building from <b>INSERT</b>:</p>
 
-<p><code style="font-size: 14pt; line-height: 1.25;">SET <b style="color: green;">materialize_projections_on_insert</b> = 0
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE ...
+SETTINGS <b style="color: green;">materialize_projections_on_insert</b> = 0;
 <span style="color: gray;">-- INSERTs skip building projection parts → faster ingestion</span>
 
-SET <b style="color: green;">materialize_projections_on_merge</b> = 1
+CREATE TABLE ...
+SETTINGS <b style="color: green;">materialize_projections_on_merge</b> = 1;
 <span style="color: gray;">-- a merge rebuilds a projection missing from all its source parts</span>
 </code></p>
 
-<p>&mdash; Tables with many projections ingest faster; projections are built during merges instead.
-<br/>&mdash; Merges still combine only parts that share the same set of projections.</p>
+<p>&mdash; Tables with many projections ingest faster;
+<br/>&emsp; projections are built during merges instead.</p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 1.5em;">Developer: Christoph Wurm.</p>
 </section>
@@ -226,7 +228,9 @@ CREATE QUOTA q6 KEYED BY ip_address <b style="color: green;">IPV6_PREFIX_BITS 64
 </code></p>
 
 <p>&mdash; Rate-limit a whole network range at once.
-<br/>&mdash; Works with <b>IP_ADDRESS</b> and <b>FORWARDED_IP_ADDRESS</b> keys.</p>
+<br/>&mdash; Works with <b>IP_ADDRESS</b> and <b>FORWARDED_IP_ADDRESS</b> keys.
+<br/>&mdash; Especially useful for IPv6.
+</p>
 
 <!-- Demo:
 
@@ -242,6 +246,47 @@ SHOW CREATE QUOTA q;
 
 <section class="slide" style="background: url(pictures/back2.jpg); background-size: cover;">
 <h2><span class="hilite">Usability</span></h2>
+</section>
+
+<section class="slide">
+<h2>help in the CLI</h2>
+
+<p>Type <b style="color: green;">help &lt;name&gt;</b> in clickhouse-client / clickhouse-local to read the docs
+<br/>right in the terminal &mdash; backed by <b>system.documentation</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">:) <b style="color: green;">help</b> MergeTree
+</code></p>
+
+<p>&mdash; Also <b>/help</b>, <b>man</b>, <b>/man</b>. Resolves ambiguity and typos.
+<br/>&mdash; Markdown rendered in the terminal, with syntax-highlighted SQL.</p>
+
+<p>Demo</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Docs embedded in every system table</h2>
+
+<p>System tables that describe the system now describe themselves &mdash; with
+<br/><b>description</b>, <b>syntax</b>, <b>examples</b>, <b>introduced_in</b> and <b>related</b> columns:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.25;">SELECT name, introduced_in
+FROM <b style="color: green;">system.table_engines</b> WHERE name ILIKE '%kafka%';
+
+SELECT name, description FROM <b style="color: green;">system.data_type_families</b>;
+</code></p>
+
+<p style="margin-top: 0.2em;">Now self-documenting: <b>table_engines</b>, <b>database_engines</b>, <b>data_type_families</b>, <b>formats</b>, <b>aggregate_function_combinators</b>, <b>dictionary_layouts</b>,
+<b>dictionary_sources</b>, <b>data_skipping_index_types</b>, <b>disk_types</b>.</p>
+
+<!-- Demo:
+
+SELECT name, introduced_in, substring(description, 1, 80) FROM system.table_engines WHERE name = 'MergeTree' FORMAT Vertical;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Alexey Milovidov.</p>
 </section>
 
 <section class="slide">
@@ -261,62 +306,12 @@ SHOW CREATE QUOTA q;
 </table>
 
 <p style="margin-top: 0.3em;">&mdash; The same docs as the website &mdash; queryable, greppable, offline.
-<br/>&mdash; Perfect fuel for AI agents writing ClickHouse SQL.</p>
+<br/>&mdash; Good for integration with tools.</p>
 
 <!-- Demo:
 
 SELECT type, count() AS c FROM system.documentation GROUP BY type ORDER BY c DESC LIMIT 6;
 SELECT description FROM system.documentation WHERE name = 'bitCount' AND type = 'Function' FORMAT TSVRaw;
-
--->
-
-<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Alexey Milovidov.</p>
-</section>
-
-<section class="slide">
-<h2>help in the CLI</h2>
-
-<p>Type <b style="color: green;">help &lt;name&gt;</b> in clickhouse-client / clickhouse-local to read the docs
-<br/>right in the terminal &mdash; backed by <b>system.documentation</b>:</p>
-
-<p><code style="font-size: 14pt; line-height: 1.25;">:) <b style="color: green;">help</b> length
-
-length (Function)
-================================================================
-Calculates the length of a string or array.
-&hellip;
-</code></p>
-
-<p>&mdash; Also <b>/help</b>, <b>man</b>, <b>/man</b>. Ambiguous names list all matches; typos get suggestions.
-<br/>&mdash; Markdown rendered in the terminal, with syntax-highlighted SQL.</p>
-
-<!-- Demo:
-
-printf 'help length\n' | clickhouse local
-
--->
-
-<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexey Milovidov.</p>
-</section>
-
-<section class="slide">
-<h2 style="font-size: 30pt;">Docs embedded in every system table</h2>
-
-<p>System tables that describe the system now describe themselves &mdash; with
-<br/><b>description</b>, <b>syntax</b>, <b>examples</b>, <b>introduced_in</b> and <b>related</b> columns:</p>
-
-<p><code style="font-size: 13pt; line-height: 1.25;">SELECT name, introduced_in FROM <b style="color: green;">system.table_engines</b> WHERE name ILIKE '%kafka%';
-
-SELECT name, description FROM <b style="color: green;">system.data_type_families</b>;
-</code></p>
-
-<p style="margin-top: 0.2em;">Now self-documenting: <b>table_engines</b>, <b>database_engines</b>, <b>data_type_families</b>,
-<br/><b>formats</b>, <b>aggregate_function_combinators</b>, <b>dictionary_layouts</b>,
-<br/><b>dictionary_sources</b>, <b>data_skipping_index_types</b>, <b>disk_types</b>.</p>
-
-<!-- Demo:
-
-SELECT name, introduced_in, substring(description, 1, 80) FROM system.table_engines WHERE name = 'MergeTree' FORMAT Vertical;
 
 -->
 
@@ -331,10 +326,14 @@ SELECT name, introduced_in, substring(description, 1, 80) FROM system.table_engi
 <p><code style="font-size: 14pt; line-height: 1.25;">SELECT table, name, type, expression FROM <b style="color: green;">system.constraints</b>;
 </code></p>
 
-<p>&mdash; <b style="color: green;">system.constraints</b> &mdash; every CHECK / ASSUME constraint, with its expression.
-<br/>&mdash; <b>system.iceberg_files</b>, <b>system.keeper_snapshots</b>, <b>system.keeper_changelogs</b>,
-<br/>&emsp; <b>system.keeper_cluster</b>.
-<br/>&mdash; <b>basic</b> statistics: compact per-column min/max, avg length, NULL counts.</p>
+<p>&mdash; <b>system.constraints</b> &mdash; every table's CHECK / ASSUME constraints.
+<br/>&mdash; <b>system.iceberg_files</b> &mdash; introspection of files in Iceberg tables.</p>
+
+<p>Keeper related tables (available on clickhouse-keeper):
+<br/>&mdash; <b>system.keeper_snapshots</b>
+<br/>&mdash; <b>system.keeper_changelogs</b>
+<br/>&mdash; <b>system.keeper_cluster</b>.
+</p>
 
 <!-- Demo:
 
@@ -352,8 +351,7 @@ SELECT table, name, type, expression FROM system.constraints WHERE database = cu
 <p>ClickHouse now detects the AI coding agent that launched the client,
 <br/>from its environment, and records it in a new <b style="color: green;">client_agent</b> column:</p>
 
-<p><code style="font-size: 14pt; line-height: 1.25;">SELECT query_id, <b style="color: green;">client_agent</b>, interface
-FROM system.processes;
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT query_id, <b style="color: green;">client_agent</b>, interface FROM system.processes;
 </code></p>
 
 <table style="font-size: 14pt; width: 80%;">
@@ -363,7 +361,7 @@ FROM system.processes;
 
 <p style="margin-top: 0.5em;">&mdash; Recognizes Claude Code, Cursor, Codex, Gemini CLI, Goose, &hellip;
 <br/>&mdash; Also in <b>system.query_log</b> and <b>system.query_thread_log</b>.
-<br/>&mdash; How much of your workload is now written by agents? Now you can measure it.</p>
+</p>
 
 <!-- Demo:
 
@@ -376,7 +374,7 @@ SELECT query_id, client_agent, interface FROM system.processes WHERE query_id = 
 </section>
 
 <section class="slide">
-<h2>clickhouse-local becomes a server</h2>
+<h2>Transform clickhouse-local to a server</h2>
 
 <p><b>clickhouse-local</b> can now start listening for connections on the fly:</p>
 
@@ -387,8 +385,7 @@ SELECT query_id, client_agent, interface FROM system.processes WHERE query_id = 
 </code></p>
 
 <p>&mdash; Turn an ad-hoc analysis session into a shareable endpoint.
-<br/>&mdash; <b>SYSTEM STOP LISTEN</b> to close it again.
-<br/>&mdash; The line between <b>local</b> and <b>server</b> keeps blurring.</p>
+<br/>&mdash; <b>SYSTEM STOP LISTEN</b> to close it again.</p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Alexey Milovidov.</p>
 </section>
@@ -403,9 +400,7 @@ SELECT query_id, client_agent, interface FROM system.processes WHERE query_id = 
 <p style="margin-top: 0.5em;">&mdash; Tables, materialized views, refreshable MVs, dictionaries,
 <br/>&emsp; distributed tables and views &mdash; and the arrows between them.
 <br/>&mdash; See at a glance how data flows from ingestion to rollups.
-<br/>&mdash; Ships with the server, no setup, no external tools.</p>
-
-<p style="margin-top: 1em;">Pairs nicely with the existing <b>/dashboard</b> and <b>/play</b> UIs.</p>
+<br/>&mdash; Embedded in the server.</p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Nikita Mikhaylov.</p>
 </section>
@@ -413,22 +408,54 @@ SELECT query_id, client_agent, interface FROM system.processes WHERE query_id = 
 <section class="slide">
 <h2>PNG output format</h2>
 
-<p>Render query results <b>as an image</b>. One row per pixel (<b>r</b>, <b>g</b>, <b>b</b> or <b>v</b>):</p>
+<p>Render query results <b>as an image</b>. One row per pixel (<b>r</b>, <b>g</b>, <b>b</b> or <b>v</b>),
+<br/>with implicit or explicitly defined pixel coordinates (<b>x</b>, <b>y</b>):</p>
 
-<p><code style="font-size: 12pt; line-height: 1.2;">SELECT toUInt8(128 + 127 * sin(x/16)) AS r,
-       toUInt8(128 + 127 * sin(y/16)) AS g,
-       toUInt8(128 + 127 * sin((x+y)/16)) AS b
-FROM (SELECT number % 256 AS x, number DIV 256 AS y FROM numbers(256*256))
-<b style="color: green;">FORMAT PNG</b> SETTINGS output_format_image_width = 256, output_format_image_height = 256;</code></p>
-
-<img src="pictures/png_demo.png" style="float: right; width: 24%; margin-top: -10.5em; margin-right: 1em; border: 2px solid #888;" alt="PNG generated from SQL"/>
+<p><code style="font-size: 12pt; line-height: 1.2;">WITH number DIV 1024 AS y, number MOD 1024 AS x,
+  L2Norm((x - 512, y - 512)) / 512 AS radius, 60 AS stripe_size,
+  round((atan2(x - 512, y - 512) / pi() * 180 + exp(radius) * 90)
+    / stripe_size) * stripe_size AS alpha,
+  radius &lt;= 1 ? abs(1 - (radius - 0.5) * (radius - 0.5) * 4) : 0 AS a,
+  colorOKLCHToSRGB((0.7, 0.15, alpha)) AS rgb
+SELECT rgb.1::UInt8 AS r, rgb.2::UInt8 AS g, rgb.3::UInt8 AS b, a
+FROM numbers(1048576) <b style="color: green;">FORMAT PNG</b>
+SETTINGS output_format_image_terminal_mode = 'kitty'</code></p>
 
 <p style="margin-top: 0.3em; margin-right: 26%;">&mdash; The Web UI shows the image directly.
-<br/>&mdash; Great for heatmaps, sparklines, generated art &mdash; or just for fun.</p>
+<br/>&mdash; Great for heatmaps, sparklines, generated art.</p>
 
 <!-- Demo (rendered server-side over HTTP, viewed in the browser / Web UI):
 
-curl "http://localhost:8123/?output_format_image_width=256&output_format_image_height=256" --data-binary "SELECT toUInt8(128+127*sin(x/16)) r, toUInt8(128+127*sin(y/16)) g, toUInt8(128+127*sin((x+y)/16)) b FROM (SELECT number%256 x, number DIV 256 y FROM numbers(65536)) FORMAT PNG" > out.png
+WITH number / 1000 AS a, cos(a * 1.111) AS fx, sin(a * 1.112) AS fy, 511 * sin(a * 5) AS radius, round(512 + fx * radius)::UInt16 AS x, round(512 + fy * radius)::UInt16 AS y, number / 1000 AS hue, colorOKLCHToSRGB((0.5, 0.15, hue)) AS rgb SELECT x, y, rgb.1::UInt8 AS r, rgb.2::UInt8 AS g, rgb.3::UInt8 AS b FROM numbers(1000000) FORMAT PNG;
+
+WITH RECURSIVE 1400 AS width, 800 AS height, 256 AS max_iterations,
+    pixels AS (
+    SELECT
+        arrayJoin(range(width)) AS x,
+        arrayJoin(range(height)) AS y,
+        -2.5 + (x * 3.5 / (width - 1)) AS cx,
+        -1.0 + (y * 2.0 / (height - 1)) AS cy
+    ),
+    mandelbrot_iterations AS (
+    SELECT x, y, cx, cy, 0.0 AS zx, 0.0 AS zy, 0 AS iteration
+    FROM pixels
+
+    UNION ALL
+
+    SELECT
+        x, y, cx, cy,
+        zx * zx - zy * zy + cx,
+        2.0 * zx * zy + cy,
+        iteration + 1
+    FROM mandelbrot_iterations
+    WHERE iteration < max_iterations
+        AND (zx * zx + zy * zy) <= 4.0
+    ),
+max(iteration) AS it,
+log2(0 + it) / 8 AS v
+SELECT v < 0.25 ? least(v, 0.25) * 4 : 0 AS b, least(greatest(v, 0.25) - 0.25, 0.5) * 2 AS r, (greatest(v, 0.75) - 0.75) * 4 AS g
+FROM mandelbrot_iterations GROUP BY x, y ORDER BY y, x
+FORMAT PNG SETTINGS output_format_image_width = 1400, output_format_image_height = 800
 
 -->
 
@@ -443,7 +470,8 @@ curl "http://localhost:8123/?output_format_image_width=256&output_format_image_h
 <section class="slide">
 <h2>date_part and EXTRACT</h2>
 
-<p><b style="color: green;">date_part('unit', expr)</b> &mdash; PostgreSQL-style sugar for <b>EXTRACT(unit FROM expr)</b>:</p>
+<p><b style="color: green;">date_part('unit', expr)</b>
+<br/>&mdash; PostgreSQL-style sugar for <b>EXTRACT(unit FROM expr)</b>:</p>
 
 <p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">date_part</b>('year', toDateTime('2026-06-25 10:30:00'));  <span style="color: gray;">-- 2026</span>
 SELECT <b style="color: green;">date_part</b>('doy', toDate('2026-06-25'));   <span style="color: gray;">-- 176 (day of year)</span>
@@ -464,7 +492,7 @@ SELECT date_part('year', toDateTime('2026-06-25 10:30:00')) AS y, date_part('doy
 </section>
 
 <section class="slide">
-<h2>LOCALTIME, LOCALTIMESTAMP, SESSION_USER</h2>
+<h2 style="font-size: 32pt;">Miscellaneous functions and names</h2>
 
 <p>More SQL-standard / PostgreSQL spellings:</p>
 
@@ -489,30 +517,25 @@ SELECT currentUser() AS cu, SESSION_USER AS su;
 <section class="slide">
 <h2>More compatibility aliases</h2>
 
+<p style="margin-top: -1em;"><b>min_by</b> / <b>max_by</b> &mdash; aliases for argMin, argMax for PostgreSQL, BigQuery:
 <p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">min_by</b>(user, score), <b style="color: green;">max_by</b>(user, score) FROM t;
 <span style="color: gray;">-- aliases of argMin / argMax</span>
-
-SELECT <b style="color: green;">REGEXP_SUBSTR</b>('order 12345 shipped', '[0-9]+');
-<span style="color: gray;">-- 12345   (alias of regexpExtract, for Oracle/MySQL/Snowflake)</span>
 </code></p>
 
-<p style="margin-top: -0.5em;">&mdash; <b>min_by</b> / <b>max_by</b> &mdash; for PostgreSQL, BigQuery, DuckDB, &hellip;
-<br/>&emsp;<span style="color: gray;">("These aliases are stupid, real engineers use the original ClickHouse names." &mdash; the changelog)</span>
-<br/>&mdash; Also new: <b>REGEXP_SUBSTR</b>, trailing <b>NULL</b> / <b>NOT NULL</b> in <b>ALTER &hellip; ADD/MODIFY COLUMN</b>,
-<br/>&emsp; and a C# PostgreSQL client now works over the wire protocol.</p>
+<p><b>REGEXP_SUBSTR</b> &mdash; alias of regexpExtract, for Oracle/MySQL/Snowflake:</p>
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">REGEXP_SUBSTR</b>('order 12345 shipped', '[0-9]+');
+<span style="color: gray;">-- 12345</span>
+</code></p>
 
-<!-- Demo:
+<p><span style="color: gray;">"These aliases are stupid, real engineers use the original ClickHouse names." &mdash; the changelog</span></p>
 
-SELECT min_by(number, number % 5), max_by(number, number % 5) FROM numbers(20);
-SELECT REGEXP_SUBSTR('order 12345 shipped', '[0-9]+');
+<p><code style="font-size: 14pt; line-height: 1.25;">ALTER TABLE MODIFY COLUMN x UInt32 <b style="color: green">NULL</b>; <span style="color: gray;">-- same as Nullable(UInt32)</span></code></p>
 
--->
-
-<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Joey Yu, Alexey Milovidov, Takumi Hara, Konstantin Vedernikov.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Joey Yu, Alexey Milovidov, Takumi Hara.</p>
 </section>
 
 <section class="slide">
-<h2>expr OP SOME / ALL (array)</h2>
+<h2>SOME / ALL for arrays</h2>
 
 <p>PostgreSQL array quantifiers with a literal array on the right:</p>
 
@@ -521,9 +544,7 @@ SELECT 5 <b style="color: green;">&gt; ALL</b>([1, 2, 3]);     <span style="colo
 SELECT 2 <b style="color: green;">&lt;&gt; ALL</b>([1, 3, 5]);    <span style="color: gray;">-- 1</span>
 </code></p>
 
-<p>&mdash; <b>=</b> / <b>&lt;&gt;</b> become <b>has</b> / <b>NOT has</b>; other operators become <b>arrayExists</b> / <b>arrayAll</b>.
-<br/>&mdash; Use <b>SOME</b> (not <b>ANY</b>) for the array form &mdash; <b>any</b> is also an aggregate function.
-<br/>&mdash; The subquery form of <b>ANY</b> / <b>SOME</b> / <b>ALL</b> still lowers to <b>IN</b> / <b>NOT IN</b>.</p>
+<p>The subquery form of <b>ANY</b> / <b>SOME</b> / <b>ALL</b> still lowers to <b>IN</b> / <b>NOT IN</b>.</p>
 
 <!-- Demo:
 
@@ -542,23 +563,12 @@ SELECT 3 = SOME([1,2,3]) AS some_eq, 5 > ALL([1,2,3]) AS gt_all, 2 != ALL([1,3,5
 <p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">* ILIKE '%user%'</b> FROM events;
 <span style="color: gray;">-- user_id, user_name, ... (case-insensitive)</span>
 
-SELECT <b style="color: green;">* LIKE 'metric\_%'</b> FROM telemetry;
-<span style="color: gray;">-- metric_cpu, metric_mem, ... (case-sensitive)</span>
-
 SELECT t.<b style="color: green;">* ILIKE '%id'</b>, count() FROM t GROUP BY ALL;
 <span style="color: gray;">-- qualified form works too</span>
 </code></p>
 
-<p>&mdash; <b>LIKE</b> matches column names case-sensitively, <b>ILIKE</b> case-insensitively.
-<br/>&mdash; A nice middle ground between <b>*</b> and <b>COLUMNS('regexp')</b>.</p>
-
-<!-- Demo:
-
-CREATE TABLE t (user_id UInt32, user_name String, event_time DateTime, EventType String) ENGINE=Memory;
-INSERT INTO t VALUES (1,'a','2026-01-01 00:00:00','x');
-SELECT * ILIKE '%user%' FROM t FORMAT Vertical;
-
--->
+<p>Similar to <b>* MATCH 'regexp'</b> and <b>COLUMNS('regexp')</b>,
+<br/>but with SQL-style LIKE patterns instead of a regular expression.</p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Yue Ni.</p>
 </section>
@@ -575,8 +585,7 @@ SELECT 'a_b' <b style="color: green;">LIKE</b> 'a!_b' <b style="color: green;">E
 <span style="color: gray;">-- 1   (the !_ matches a literal underscore)</span>
 </code></p>
 
-<p>&mdash; SQL-standard syntax, also accepted by PostgreSQL, MySQL, &hellip;
-<br/>&mdash; No more wrestling with backslash quoting rules.</p>
+<p>&mdash; SQL-standard syntax, also accepted by PostgreSQL, MySQL, &hellip;</p>
 
 <!-- Demo:
 
@@ -603,7 +612,7 @@ FROM file('places.geojson', <b style="color: green;">GeoJSON</b>);
 
 <table style="font-size: 14pt; width: 90%;">
 <tr><th>id</th><th>properties.name</th><th>geometry</th></tr>
-<tr><td>1</td><td>Kyiv</td><td>Geometry (Point)</td></tr>
+<tr><td>1</td><td>London</td><td>Geometry (Point)</td></tr>
 <tr><td>2</td><td>square</td><td>Geometry (Polygon)</td></tr>
 </table>
 
@@ -648,40 +657,13 @@ SELECT MVTBoundingBox(12, 1205, 2557);
 <p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Saarthak Gupta.</p>
 </section>
 
-<section class="slide">
-<h2 style="font-size: 30pt;">h3PolygonToCellsWithContainment</h2>
-
-<p>H3's newer polygon-to-cells algorithm with selectable containment mode:</p>
-
-<p><code style="font-size: 13pt; line-height: 1.25;">SELECT length(<b style="color: green;">h3PolygonToCellsWithContainment</b>(poly, 7, <b>mode</b>));
-
-<span style="color: gray;">-- mode 0  CONTAINMENT_CENTER       → 58 cells  (cell center inside)</span>
-<span style="color: gray;">-- mode 1  CONTAINMENT_FULL         → 40 cells  (cell fully inside)</span>
-<span style="color: gray;">-- mode 2  CONTAINMENT_OVERLAPPING  → 77 cells  (any overlap)</span>
-</code></p>
-
-<p>&mdash; Finally, control over how boundary hexagons are treated.
-<br/>&mdash; Mode 3: <b>CONTAINMENT_OVERLAPPING_BBOX</b> &mdash; cheaper bounding-box overlap.</p>
-
-<!-- Demo:
-
-SELECT length(h3PolygonToCellsWithContainment(p, 7, toUInt32(0))) AS center,
-       length(h3PolygonToCellsWithContainment(p, 7, toUInt32(1))) AS full,
-       length(h3PolygonToCellsWithContainment(p, 7, toUInt32(2))) AS overlapping
-FROM (SELECT [[(37.5,55.6),(37.7,55.6),(37.7,55.8),(37.5,55.8),(37.5,55.6)]]::Polygon AS p);
-
--->
-
-<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Youssef Kadry.</p>
-</section>
-
 
 <section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
 <h2><span style="color: black;" class="hilite">Performance Improvements</span></h2>
 </section>
 
 <section class="slide">
-<h2>ClickHouse Keeper: ~2x faster</h2>
+<h2>ClickHouse Keeper is 2x faster</h2>
 
 <p>A round of Keeper improvements makes it roughly <b>twice as fast</b> overall:</p>
 
@@ -693,8 +675,7 @@ FROM (SELECT [[(37.5,55.6),(37.7,55.6),(37.7,55.8),(37.5,55.8),(37.5,55.6)]]::Po
 
 <p style="margin-top: 0.7em;">Faster coordination &rarr; faster DDL, inserts, replication, and merges.</p>
 
-<p style="margin-top: 0.5em;"><b style="color: green;">Measured</b> &mdash; with <b>keeper-bench</b> on a 3-node ensemble: ~2x request
-<br/>throughput (a cluster benchmark, not a single-process micro-benchmark).</p>
+<p style="margin-top: 0.5em;">With <b>keeper-bench</b> on a 3-node ensemble: ~2x request throughput.</p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developers: Michael Kolupaev, Antonio Andelic.</p>
 </section>
