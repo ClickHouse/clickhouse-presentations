@@ -574,7 +574,10 @@ SELECT name, introduced_in, substring(description, 1, 80) FROM system.table_engi
 <p style="margin-top: 1em;">Faster coordination &rarr; faster DDL, inserts, replication, and merges
 <br/>across the whole cluster.</p>
 
-<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developers: Michael Kolupaev, Antonio Andelic.</p>
+<p style="margin-top: 0.5em;"><b style="color: green;">Measured</b> &mdash; with <b>keeper-bench</b> on a 3-node ensemble: ~2x request throughput
+<br/>(needs a real cluster; not a single-process micro-benchmark).</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Michael Kolupaev, Antonio Andelic.</p>
 </section>
 
 <section class="slide">
@@ -593,9 +596,16 @@ SELECT name, introduced_in, substring(description, 1, 80) FROM system.table_engi
 <br/>&mdash; Faster resolution for deeply nested function calls.
 <br/>&mdash; No more multi-minute stalls when many access entities change at once.</p>
 
-<!-- Demo:
+<p style="margin-top: 0.3em;"><b style="color: green;">Measured</b> &mdash; nested <b>SELECT *</b> over a 1200-column table:
+<br/>&emsp; analysis <b>1.46 s &rarr; 0.023 s</b> &nbsp;(~64x), 26.5 vs 26.6.</p>
 
-clickhouse benchmark -c 1 <<< "SELECT count() FROM hits"
+<!-- Demo / proof:
+
+# 1200-column table, four-level nested SELECT * — pure analysis cost:
+python3 -c "print('CREATE TABLE wide (' + ', '.join(f'c{i} UInt32' for i in range(1200)) + ') ENGINE=Memory;')" > wide.sql
+echo "INSERT INTO wide SELECT * FROM (SELECT $(python3 -c \"print(','.join(['number']*1200))\") FROM numbers(1));" >> wide.sql
+echo "SELECT count() FROM (SELECT * FROM (SELECT * FROM (SELECT * FROM (SELECT * FROM wide))));" >> wide.sql
+clickhouse local --time --queries-file wide.sql   # 26.5: 1.464s   26.6: 0.023s
 
 -->
 
@@ -614,9 +624,11 @@ clickhouse benchmark -c 1 <<< "SELECT count() FROM hits"
 <br/>&mdash; For a <b>high-cardinality</b> key, analysis works on just the selective
 <br/>&emsp; in-memory prefix instead of loading the whole key.</p>
 
-<p style="margin-top: 1em;">Closes a long-standing issue with wide sorting keys.</p>
+<p style="margin-top: 0.7em;">The win is a <b>scaling property</b>: index-analysis cost stops growing with key
+<br/>length &mdash; most visible on pathologically long or wide sorting keys (closes #65103).
+<br/>Toggle with <b style="color: green;">use_lightweight_primary_key_index_analysis</b>.</p>
 
-<p style="color: gray; font-size: 14pt; margin-top: 1.5em;">Developer: Nihal Z. Miaji.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Nihal Z. Miaji.</p>
 </section>
 
 <section class="slide">
@@ -629,9 +641,13 @@ clickhouse benchmark -c 1 <<< "SELECT count() FROM hits"
 <br/>&mdash; Removes a worst case on already reverse-sorted input.
 <br/>&mdash; State-of-the-art, adaptive, and battle-tested algorithms.</p>
 
-<!-- Demo:
+<p style="margin-top: 0.5em;"><b style="color: green;">Measured</b> &mdash; <b>ORDER BY</b> 20M strings, single thread:
+<br/>&emsp; <b>7.1 s &rarr; 5.9 s</b> &nbsp;(~1.2x), 26.5 vs 26.6.</p>
 
-SELECT * FROM (SELECT toString(number) AS s FROM numbers(50000000)) ORDER BY s FORMAT Null;
+<!-- Demo / proof (single thread isolates the comparison sort):
+
+S="SELECT s FROM (SELECT reverse(toString(number)) AS s FROM numbers(20000000)) ORDER BY s FORMAT Null"
+clickhouse local --time --max_threads=1 -q "$S"   # 26.5: 7.14s   26.6: 5.93s
 
 -->
 
@@ -650,7 +666,18 @@ SELECT * FROM (SELECT toString(number) AS s FROM numbers(50000000)) ORDER BY s F
 <br/>&mdash; More optimal handling of <b>Nullable</b> columns in aggregation.
 <br/>&mdash; Packed <b>keys32</b> / <b>keys64</b> methods in <b>HashJoin</b> and <b>Set</b>.</p>
 
-<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developers: Nihal Z. Miaji, Le Zhang, Yuri Fedoseev, Nikita Taranov.</p>
+<p style="margin-top: 0.5em;"><b style="color: green;">Measured</b> &mdash; 300M-row high-cardinality <b>GROUP BY</b>, 16 threads:
+<br/>&emsp; <b>enable_sharding_aggregator</b>: <b>2.31 s &rarr; 1.87 s</b>.</p>
+
+<!-- Demo / proof:
+
+A="SELECT k, count() c FROM (SELECT number AS k FROM numbers_mt(300000000)) GROUP BY k FORMAT Null"
+clickhouse local --time --max_threads=16 --enable_sharding_aggregator=0 -q "$A"   # 2.31s
+clickhouse local --time --max_threads=16 --enable_sharding_aggregator=1 -q "$A"   # 1.87s
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developers: Nihal Z. Miaji, Le Zhang, Yuri Fedoseev, Nikita Taranov.</p>
 </section>
 
 <section class="slide">
@@ -658,31 +685,42 @@ SELECT * FROM (SELECT toString(number) AS s FROM numbers(50000000)) ORDER BY s F
 
 <p>The in-memory representation of the <b>Enum</b> data type was optimized:</p>
 
-<p style="margin-top: 0.5em;">&mdash; Tables with <b>Enum</b> columns can shrink that column's footprint by up to <b>10x</b>.
-<br/>&mdash; Value &rarr; name lookups are similar or faster.
-<br/>&mdash; Name &rarr; value is slightly slower &mdash; but it's the rarer direction.</p>
+<p style="margin-top: 0.5em;">&mdash; The optimization is in the in-memory value&harr;name representation of the
+<br/>&emsp; <b>Enum</b> <b>DataType</b> &mdash; the per-column metadata, not the row data.
+<br/>&mdash; Value &rarr; name lookups are similar or faster; name &rarr; value is slightly slower
+<br/>&emsp; &mdash; but it's the rarer direction.</p>
 
-<p style="margin-top: 1em;">If you use <b>Enum</b>s for low-cardinality strings (and you should), you get the
-<br/>savings for free.</p>
+<p style="margin-top: 0.7em;">If you use <b>Enum</b>s for low-cardinality strings (and you should), you get the
+<br/>savings for free &mdash; biggest impact with wide enums and many enum columns.</p>
 
-<p style="color: gray; font-size: 14pt; margin-top: 2.5em;">Developer: Ilya Yatsishin.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 1.5em;">Developer: Ilya Yatsishin.</p>
 </section>
 
 <section class="slide">
 <h2>Vector search &amp; crypto speedups</h2>
 
-<p style="margin-top: -0.5em;">Vector distance functions are heavily vectorized (AVX-512 / NEON / multi-target):</p>
-
-<p style="margin-top: -0.3em;">&mdash; <b style="color: green;">L2Distance</b>, <b>L2SquaredDistance</b>, <b>cosineDistance</b>, <b>L1</b>/<b>Linf</b>, <b>dotProduct</b>, <b>arrayNorm</b>.
-<br/>&mdash; <b>L2DistanceTransposed</b> / <b>cosineDistanceTransposed</b> for the <b>QBit</b> type.
-<br/>&mdash; New <b>quantizeBFloat16ToInt8</b> / <b>dequantizeInt8ToBFloat16</b> embedding codec.</p>
-
-<p style="margin-top: 0.5em;">Cryptography recovers the performance lost in the OpenSSL 3.x migration:</p>
+<p style="margin-top: -0.5em;">Cryptography recovers the performance lost in the OpenSSL 3.x migration (24.4):</p>
 
 <p style="margin-top: -0.3em;">&mdash; <b style="color: green;">encrypt</b> / <b>decrypt</b> / <b>aes_*_mysql</b> &mdash; up to an <b>order of magnitude</b> faster.
-<br/>&mdash; SIMD <b>SHA1</b> (AVX-512) and a NEON backend for multi-buffer <b>MD5</b>.</p>
+<br/>&mdash; <b>halfMD5</b> avoids per-row provider lookups; SIMD <b>SHA1</b>; NEON multi-buffer <b>MD5</b>.</p>
 
-<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Nikita Taranov, Peng, Konstantin Bogdanov, Joanna Hulboj, Alexey Milovidov.</p>
+<p style="margin-top: 0.3em;"><b style="color: green;">Measured</b> &mdash; <b>encrypt</b>, 10M rows, single thread:
+<br/>&emsp; <b>3.86 s &rarr; 0.29 s</b> &nbsp;(~13x), 26.5 vs 26.6.</p>
+
+<p style="margin-top: 0.5em;">Vector distance functions are heavily vectorized:</p>
+
+<p style="margin-top: -0.3em;">&mdash; <b>L2Distance</b>, <b>cosineDistance</b>, <b>dotProduct</b>, <b>arrayNorm</b> &mdash; auto-vectorized on
+<br/>&emsp; <b>x86-64-v3 / v4</b> and <b>AVX-512</b>; plus a <b>QBit</b> transposed-distance path.
+<br/>&mdash; New <b>quantizeBFloat16ToInt8</b> / <b>dequantizeInt8ToBFloat16</b> embedding codec.</p>
+
+<!-- Demo / proof (crypto win is CPU-agnostic; vector SIMD is x86-specific):
+
+Q="SELECT count(ignore(encrypt('aes-128-cbc', toString(number), '0123456789012345', '0123456789012345'))) FROM numbers(10000000)"
+clickhouse local --time -q "$Q"   # 26.5: 3.86s   26.6: 0.29s
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developers: Konstantin Bogdanov, Nikita Taranov, Peng, Joanna Hulboj, Alexey Milovidov.</p>
 </section>
 
 <section class="slide">
@@ -698,7 +736,20 @@ SELECT * FROM (SELECT toString(number) AS s FROM numbers(50000000)) ORDER BY s F
 <br/>&mdash; Drop redundant / injective key expressions
 <br/>&emsp; (<b>LIMIT 5 BY toString(x)</b> &rarr; <b>LIMIT 5 BY x</b>).</p>
 
-<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Nihal Z. Miaji.</p>
+<p style="margin-top: 0.4em;"><b style="color: green;">Measured</b> &mdash; <b>LIMIT 3 BY g</b> over a 50M-row MergeTree (g is in the sort key):
+<br/>&emsp; memory <b>86 MiB &rarr; 22 MiB</b> (~4x), time <b>0.15 s &rarr; 0.09 s</b>.</p>
+
+<!-- Demo / proof (optimize_limit_by_in_order streams in PK order, O(1) memory):
+
+clickhouse local --path db -q "CREATE TABLE t (g UInt32, id UInt64) ENGINE=MergeTree ORDER BY (g,id);
+  INSERT INTO t SELECT number%100000, number FROM numbers(50000000);"
+Q="SELECT g, id FROM t LIMIT 3 BY g FORMAT Null"
+clickhouse local --path db --memory-usage --optimize_limit_by_in_order=0 -q "$Q"   # 86 MiB
+clickhouse local --path db --memory-usage --optimize_limit_by_in_order=1 -q "$Q"   # 22 MiB
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Nihal Z. Miaji.</p>
 </section>
 
 
