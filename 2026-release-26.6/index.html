@@ -39,7 +39,7 @@
 
 <section class="slide" style="background: url(pictures/back2.jpg); background-size: cover;">
 <h2><span class="hilite">Release 26.6</span></h2>
-<p><span class="hilite">ClickHouse "Summer" Release.</span></p>
+<p><span class="hilite">ClickHouse "10 Year Anniversary" Release.</span></p>
 <p><span class="hilite">— 56 new features 🌞</span></p>
 <p><span class="hilite">— 79 performance optimizations 🏖️</span></p>
 <p><span class="hilite">— 366 bug fixes 🍦</span></p>
@@ -124,7 +124,7 @@ ALTER TABLE events MODIFY COLUMN x <b style="color: green;">ADD ENUM VALUES('c' 
 </code></p>
 
 <p>&mdash; A pure metadata change &mdash; instant, no data rewrite.
-<br/>&mdash; Forgetting an existing value (and silently dropping it) is no longer possible.</p>
+<br/>&mdash; Forgetting an existing value is no longer possible.</p>
 
 <!-- Demo:
 
@@ -168,7 +168,7 @@ SELECT 5.0 SETTINGS output_format_always_write_decimal_point_in_float_and_decima
 <section class="slide">
 <h2 style="font-size: 30pt;">Cascading refreshable materialized views</h2>
 
-<p style="margin-top: -0.5em;">A refreshable MV can now trigger off <b>another</b> RMV's refresh &mdash; not just a clock:</p>
+<p style="margin-top: -0.5em;">A refreshable MV can now trigger off <b>another</b> RMV's refresh:</p>
 
 <p><code style="font-size: 14pt; line-height: 1.25;">CREATE MATERIALIZED VIEW base
 <b style="color: green;">REFRESH EVERY 1 HOUR</b> ENGINE = MergeTree ORDER BY day AS &hellip;;
@@ -200,10 +200,10 @@ SELECT view, status FROM system.view_refreshes ORDER BY view;
 
 <p style="margin-top: -0.5em;">Two new <b>MergeTree</b> settings decouple projection building from <b>INSERT</b>:</p>
 
-<p><code style="font-size: 14pt; line-height: 1.25;"><b style="color: green;">materialize_projections_on_insert = 0</b>
+<p><code style="font-size: 14pt; line-height: 1.25;">SET <b style="color: green;">materialize_projections_on_insert</b> = 0
 <span style="color: gray;">-- INSERTs skip building projection parts → faster ingestion</span>
 
-<b style="color: green;">materialize_projections_on_merge = 1</b>
+SET <b style="color: green;">materialize_projections_on_merge</b> = 1
 <span style="color: gray;">-- a merge rebuilds a projection missing from all its source parts</span>
 </code></p>
 
