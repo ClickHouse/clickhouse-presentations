@@ -40,21 +40,30 @@
 <section class="slide" style="background: url(pictures/back2.jpg); background-size: cover;">
 <h2><span class="hilite">Release 26.6</span></h2>
 <p><span class="hilite">ClickHouse "Summer" Release.</span></p>
-<p><span class="hilite">— 47 new features ☀️</span></p>
-<p><span class="hilite">— 75 performance optimizations 🏄</span></p>
-<p><span class="hilite">— 345 bug fixes 🐞</span></p>
+<p><span class="hilite">— 56 new features 🌞</span></p>
+<p><span class="hilite">— 79 performance optimizations 🏖️</span></p>
+<p><span class="hilite">— 366 bug fixes 🍦</span></p>
 </section>
 <!--
 
 Small And Nice
 
-Column selection by pattern: * LIKE / * ILIKE
-ESCAPE in LIKE
 ALTER TABLE ... ADD ENUM VALUES
-arrayTopK / arrayBottomK
 Number formatting: precision controls
-Client niceties: --chime, paste, pager
+Cascading refreshable materialized views
+Control over projections materialization
+IP prefix bits for quotas
+
+Usability
+
+Documentation in every system table
+system.documentation
+help in CLI
 New system tables: constraints, basic statistics
+AI coding agent detection
+clickhouse-local becomes a server
+Schema page
+PNG output format
 
 SQL Compatibility
 
@@ -62,18 +71,14 @@ date_part and EXTRACT extensions
 LOCALTIME / LOCALTIMESTAMP / SESSION_USER
 min_by / max_by / REGEXP_SUBSTR
 expr OP SOME / ALL (array)
+Column selection by pattern: * LIKE / * ILIKE
+ESCAPE in LIKE
 
 Geospatial
 
 GeoJSON input format
 Mapbox Vector Tiles (MVT)
 h3PolygonToCellsWithContainment
-
-Introspection
-
-system.documentation
-AI coding agent detection
-Embedded docs in every system table
 
 Performance
 
@@ -82,29 +87,19 @@ Simple SELECT 50% faster
 Lightweight primary key index analysis
 ipnsort / driftsort
 Sharded aggregation
-Enum memory up to 10x
-Vector distance + encryption speedups
 LIMIT BY optimizations
+JOIN optimizations
 
-Something Interesting
+Main
 
 Continuous queries (STREAM)
-Hypothetical indexes + EXPLAIN WHATIF
-Schema Visualizer (/schema)
-PNG output format
-Web Terminal is production
-aiEmbed
 Multi-stage distributed query execution
-WebAssembly UDFs: AssemblyScript
-clickhouse-local becomes a server
+Memory reservations
+Hypothetical indexes + EXPLAIN WHATIF
+aiEmbed
+quantization functions
 
-Data Lakes
-
-Writing to Azure Data Lake Gen2
-system.iceberg_files
-Iceberg correctness + OneLake
-
-Bonus
+Bonus - CostBench
 Meetups
 Reading Corner
 
