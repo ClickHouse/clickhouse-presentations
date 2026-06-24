@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 26.6 Call</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta property="og:image" content="pictures/preview.jpg">
+    <meta property="og:title" content="ClickHouse: Release 26.6 Call">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="pictures/preview.jpg">
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/themes/clickhouse/styles/styles.css">
+
+    <style>
+        code { display: block; white-space: pre; background-color: #EEE; }
+        p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+        p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+        .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+        .slide table tr:not(:last-of-type)>* { background: none; }
+        .cell { font-family: Monospace; width: 1.5em; height: 1.5em; display: inline-block; border: 3px solid white; background-color: lightblue; text-align: center; line-height: 1.3em; }
+        .cell-num { font-family: Monospace; width: 1.5em; height: 1.5em; display: inline-block; border: 3px solid white; background-color: lightgreen; text-align: center; line-height: 1.3em; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 26.6 Call</h1>
+        <p>Author: Alexey Milovidov, 2026-06-25.</p>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/back1.jpg); background-size: cover;">
+        <h1 style="margin-top: 25px; line-height: 110%; font-size: 56pt; color: #FF8; text-align: center;">ClickHouse Release<br/>26.6</h1>
+    </section>
+
+<section class="slide">
+<h2>ClickHouse release 26.6</h2>
+<p>1. (50 min) What's new in ClickHouse 26.6.</p>
+<p>2. (10 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back2.jpg); background-size: cover;">
+<h2><span class="hilite">Release 26.6</span></h2>
+<p><span class="hilite">ClickHouse "Summer" Release.</span></p>
+<p><span class="hilite">— 47 new features ☀️</span></p>
+<p><span class="hilite">— 75 performance optimizations 🏄</span></p>
+<p><span class="hilite">— 345 bug fixes 🐞</span></p>
+</section>
+<!--
+
+Small And Nice
+
+Column selection by pattern: * LIKE / * ILIKE
+ESCAPE in LIKE
+ALTER TABLE ... ADD ENUM VALUES
+arrayTopK / arrayBottomK
+Number formatting: precision controls
+Client niceties: --chime, paste, pager
+New system tables: constraints, basic statistics
+
+SQL Compatibility
+
+date_part and EXTRACT extensions
+LOCALTIME / LOCALTIMESTAMP / SESSION_USER
+min_by / max_by / REGEXP_SUBSTR
+expr OP SOME / ALL (array)
+
+Geospatial
+
+GeoJSON input format
+Mapbox Vector Tiles (MVT)
+h3PolygonToCellsWithContainment
+
+Introspection
+
+system.documentation
+AI coding agent detection
+Embedded docs in every system table
+
+Performance
+
+Keeper 2x faster
+Simple SELECT 50% faster
+Lightweight primary key index analysis
+ipnsort / driftsort
+Sharded aggregation
+Enum memory up to 10x
+Vector distance + encryption speedups
+LIMIT BY optimizations
+
+Something Interesting
+
+Continuous queries (STREAM)
+Hypothetical indexes + EXPLAIN WHATIF
+Schema Visualizer (/schema)
+PNG output format
+Web Terminal is production
+aiEmbed
+Multi-stage distributed query execution
+WebAssembly UDFs: AssemblyScript
+clickhouse-local becomes a server
+
+Data Lakes
+
+Writing to Azure Data Lake Gen2
+system.iceberg_files
+Iceberg correctness + OneLake
+
+Bonus
+Meetups
+Reading Corner
+
+-->
+
+<section class="slide" style="background: url(pictures/back3.jpg); background-size: cover;">
+<h2 style="color: black;"><span class="hilite">Small And Nice Features</span></h2>
+</section>
+
+
+<section class="slide">
+<h2>Select columns by name pattern</h2>
+
+<p>Pick columns with <b style="color: green;">* LIKE</b> and <b style="color: green;">* ILIKE</b> instead of listing them:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">* ILIKE '%user%'</b> FROM events;
+<span style="color: gray;">-- user_id, user_name, ... (case-insensitive)</span>
+
+SELECT <b style="color: green;">* LIKE 'metric\_%'</b> FROM telemetry;
+<span style="color: gray;">-- metric_cpu, metric_mem, ... (case-sensitive)</span>
+
+SELECT t.<b style="color: green;">* ILIKE '%id'</b>, count() FROM t GROUP BY ALL;
+<span style="color: gray;">-- qualified form works too</span>
+</code></p>
+
+<p>&mdash; <b>LIKE</b> matches column names case-sensitively, <b>ILIKE</b> case-insensitively.
+<br/>&mdash; A nice middle ground between <b>*</b> and <b>COLUMNS('regexp')</b>.</p>
+
+<!-- Demo:
+
+CREATE TABLE t (user_id UInt32, user_name String, event_time DateTime, EventType String) ENGINE=Memory;
+INSERT INTO t VALUES (1,'a','2026-01-01 00:00:00','x');
+SELECT * ILIKE '%user%' FROM t FORMAT Vertical;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Yue Ni.</p>
+</section>
+
+<section class="slide">
+<h2>ESCAPE in LIKE</h2>
+
+<p>Define a custom escape character so <b>%</b> and <b>_</b> can be literal:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT '50% off' <b style="color: green;">LIKE</b> '50!% off' <b style="color: green;">ESCAPE '!'</b>;
+<span style="color: gray;">-- 1   (the !% matches a literal percent sign)</span>
+
+SELECT 'a_b' <b style="color: green;">LIKE</b> 'a!_b' <b style="color: green;">ESCAPE '!'</b>;
+<span style="color: gray;">-- 1   (the !_ matches a literal underscore)</span>
+</code></p>
+
+<p>&mdash; SQL-standard syntax, also accepted by PostgreSQL, MySQL, &hellip;
+<br/>&mdash; No more wrestling with backslash quoting rules.</p>
+
+<!-- Demo:
+
+SELECT '50% off' LIKE '50!% off' ESCAPE '!' AS pct, 'a_b' LIKE 'a!_b' ESCAPE '!' AS underscore;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Ilya Yatsishin.</p>
+</section>
+
+<section class="slide">
+<h2>ALTER TABLE &hellip; ADD ENUM VALUES</h2>
+
+<p>Append new <b>Enum</b> values without re-typing all the existing ones:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE events (x <b>Enum8</b>('a' = 1, 'b' = 2)) ...;
+
+<span style="color: gray;">-- Before: ALTER ... MODIFY COLUMN x Enum8('a'=1,'b'=2,'c'=3,'d'=4)</span>
+
+ALTER TABLE events MODIFY COLUMN x <b style="color: green;">ADD ENUM VALUES('c' = 3, 'd' = 4)</b>;
+<span style="color: gray;">-- x is now Enum8('a' = 1, 'b' = 2, 'c' = 3, 'd' = 4)</span>
+</code></p>
+
+<p>&mdash; A pure metadata change &mdash; instant, no data rewrite.
+<br/>&mdash; Forgetting an existing value (and silently dropping it) is no longer possible.</p>
+
+<!-- Demo:
+
+CREATE TABLE events (x Enum8('a' = 1, 'b' = 2)) ENGINE = MergeTree ORDER BY tuple();
+ALTER TABLE events MODIFY COLUMN x ADD ENUM VALUES('c' = 3, 'd' = 4);
+SHOW CREATE TABLE events FORMAT TSVRaw;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Ilya Golshtein.</p>
+</section>
+
+<section class="slide">
+<h2>arrayTopK and arrayBottomK</h2>
+
+<p>The K largest or smallest array elements, already sorted:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">arrayTopK</b>(3, [5, 1, 9, 3, 7, 2]);
+<span style="color: gray;">-- [9, 7, 5]</span>
+
+SELECT <b style="color: green;">arrayBottomK</b>(3, [5, 1, 9, 3, 7, 2]);
+<span style="color: gray;">-- [1, 2, 3]</span>
+
+SELECT <b style="color: green;">arrayTopK</b>(2, ['banana', 'apple', 'cherry', 'date']);
+<span style="color: gray;">-- ['date', 'cherry']</span>
+</code></p>
+
+<p>&mdash; Works for numbers, strings, and any comparable type.
+<br/>&mdash; Cheaper than <b>arraySort</b> + <b>arraySlice</b> when you only need a few.</p>
+
+<!-- Demo:
+
+SELECT arrayTopK(3, [5,1,9,3,7,2]), arrayBottomK(3, [5,1,9,3,7,2]);
+SELECT arrayTopK(2, ['banana','apple','cherry','date']);
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Vitaly Baranov.</p>
+</section>
+
+<section class="slide">
+<h2>Number formatting controls</h2>
+
+<p>Precision arguments and decimal-point control for text output:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">formatReadableSize</b>(1234567890, <b>4</b>);
+<span style="color: gray;">-- 1.1498 GiB   (default precision is 2: 1.15 GiB)</span>
+
+SELECT 1/3 <b style="color: green;">SETTINGS output_format_float_precision = 4</b>;
+<span style="color: gray;">-- 0.3333</span>
+
+SELECT 5.0 <b style="color: green;">SETTINGS output_format_always_write_decimal_point&hellip; = 1</b>;
+<span style="color: gray;">-- 5.   (keep the decimal point even for whole numbers)</span>
+</code></p>
+
+<p>&mdash; <b>formatReadableSize</b> / <b>formatReadableQuantity</b> / <b>formatReadableDecimalSize</b> take an optional precision.</p>
+
+<!-- Demo:
+
+SELECT formatReadableSize(1234567890), formatReadableSize(1234567890, 4);
+SELECT 1/3 SETTINGS output_format_float_precision = 4;
+SELECT 5.0 SETTINGS output_format_always_write_decimal_point_in_float_and_decimal = 1;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Antonio Filipovic, phulv94, Ilya Yatsishin.</p>
+</section>
+
+<section class="slide">
+<h2>clickhouse-client niceties</h2>
+
+<p style="margin-top: -0.5em;">&mdash; <b style="color: green;">--chime</b>: ring the terminal bell when a query finishes after N seconds
+<br/>&emsp; (on by default, 5s threshold). Walk away, get notified when it's done.
+<br/>&mdash; Multi-line <b>paste</b> now stays under a single prompt even without bracketed paste.
+<br/>&mdash; MySQL-style runtime <b>pager</b> control (<b>PAGER 'less -SR'</b>).
+<br/>&mdash; Granular query echo: <b>--echo-formatted</b>, <b>--echo-query-id</b>.
+<br/>&mdash; Non-UTF-8 terminals fall back to ASCII grid borders automatically.</p>
+
+<h2 style="margin-top: 0.5em;">New system tables</h2>
+
+<p style="margin-top: -0.5em;">&mdash; <b style="color: green;">system.constraints</b> &mdash; all CHECK / ASSUME constraints.
+<br/>&mdash; <b>system.iceberg_files</b>, <b>system.keeper_snapshots</b>, <b>system.keeper_cluster</b>, &hellip;
+<br/>&mdash; <b>basic</b> statistics: compact per-column min/max, avg length, NULL counts.</p>
+
+<!-- Demo:
+
+CREATE TABLE accounts (id UInt32, balance Int64, CONSTRAINT non_negative CHECK balance >= 0) ENGINE = MergeTree ORDER BY id;
+SELECT table, name, type, expression FROM system.constraints WHERE database = currentDatabase() FORMAT Vertical;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Groene AI, Azat Khuzhin, Pedro Ferreira, Han Fei, Alexey Milovidov.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back4.jpg); background-size: cover;">
+<h2><span class="hilite">SQL Compatibility</span></h2>
+</section>
+
+<section class="slide">
+<h2>date_part and EXTRACT</h2>
+
+<p><b style="color: green;">date_part('unit', expr)</b> &mdash; PostgreSQL-style sugar for <b>EXTRACT(unit FROM expr)</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">date_part</b>('year', toDateTime('2026-06-25 10:30:00'));  <span style="color: gray;">-- 2026</span>
+SELECT <b style="color: green;">date_part</b>('doy', toDate('2026-06-25'));   <span style="color: gray;">-- 176 (day of year)</span>
+SELECT <b style="color: green;">date_part</b>('dow', toDate('2026-06-25'));   <span style="color: gray;">-- 4   (day of week)</span>
+</code></p>
+
+<p>&mdash; All the PostgreSQL extras: <b>epoch</b>, <b>dow</b>, <b>doy</b>, <b>isodow</b>, <b>isoyear</b>, <b>century</b>, <b>decade</b>, <b>millennium</b>.
+<br/>&mdash; Also: <b>EXTRACT(TIMEZONE_HOUR / TIMEZONE_MINUTE FROM dt)</b>
+<br/>&emsp; and <b>EXTRACT(&hellip; FROM INTERVAL n &hellip;)</b>.</p>
+
+<!-- Demo:
+
+SELECT date_part('year', toDateTime('2026-06-25 10:30:00')) AS y, date_part('doy', toDate('2026-06-25')) AS doy, date_part('dow', toDate('2026-06-25')) AS dow;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Alexey Milovidov, Vinayak Joshi.</p>
+</section>
+
+<section class="slide">
+<h2>LOCALTIME, LOCALTIMESTAMP, SESSION_USER</h2>
+
+<p>More SQL-standard / PostgreSQL spellings:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">LOCALTIMESTAMP</b>;   <span style="color: gray;">-- now()  → DateTime</span>
+SELECT <b style="color: green;">LOCALTIME</b>;        <span style="color: gray;">-- current time of day → Time</span>
+SELECT <b style="color: green;">SESSION_USER</b>;     <span style="color: gray;">-- alias of currentUser()</span>
+</code></p>
+
+<p>&mdash; No parentheses needed &mdash; they are reserved-word constants.
+<br/>&mdash; Makes more ported queries and BI-tool SQL just work.</p>
+
+<!-- Demo:
+
+SELECT LOCALTIMESTAMP, toTypeName(LOCALTIMESTAMP), toTypeName(LOCALTIME);
+SELECT currentUser() AS cu, SESSION_USER AS su;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developers: Thomas Cabral, Takumi Hara.</p>
+</section>
+
+<section class="slide">
+<h2>More compatibility aliases</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">min_by</b>(user, score), <b style="color: green;">max_by</b>(user, score) FROM t;
+<span style="color: gray;">-- aliases of argMin / argMax</span>
+
+SELECT <b style="color: green;">REGEXP_SUBSTR</b>('order 12345 shipped', '[0-9]+');
+<span style="color: gray;">-- 12345   (alias of regexpExtract, for Oracle/MySQL/Snowflake)</span>
+</code></p>
+
+<p style="margin-top: -0.5em;">&mdash; <b>min_by</b> / <b>max_by</b> &mdash; for PostgreSQL, BigQuery, DuckDB, &hellip;
+<br/>&emsp;<span style="color: gray;">("These aliases are stupid, real engineers use the original ClickHouse names." &mdash; the changelog)</span>
+<br/>&mdash; Also new: <b>REGEXP_SUBSTR</b>, trailing <b>NULL</b> / <b>NOT NULL</b> in <b>ALTER &hellip; ADD/MODIFY COLUMN</b>,
+<br/>&emsp; and a C# PostgreSQL client now works over the wire protocol.</p>
+
+<!-- Demo:
+
+SELECT min_by(number, number % 5), max_by(number, number % 5) FROM numbers(20);
+SELECT REGEXP_SUBSTR('order 12345 shipped', '[0-9]+');
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Joey Yu, Alexey Milovidov, Takumi Hara, Konstantin Vedernikov.</p>
+</section>
+
+<section class="slide">
+<h2>expr OP SOME / ALL (array)</h2>
+
+<p>PostgreSQL array quantifiers with a literal array on the right:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT 3 <b style="color: green;">= SOME</b>([1, 2, 3]);    <span style="color: gray;">-- 1  → rewritten to has(...)</span>
+SELECT 5 <b style="color: green;">&gt; ALL</b>([1, 2, 3]);     <span style="color: gray;">-- 1  → arrayAll lambda</span>
+SELECT 2 <b style="color: green;">&lt;&gt; ALL</b>([1, 3, 5]);    <span style="color: gray;">-- 1</span>
+</code></p>
+
+<p>&mdash; <b>=</b> / <b>&lt;&gt;</b> become <b>has</b> / <b>NOT has</b>; other operators become <b>arrayExists</b> / <b>arrayAll</b>.
+<br/>&mdash; Use <b>SOME</b> (not <b>ANY</b>) for the array form &mdash; <b>any</b> is also an aggregate function.
+<br/>&mdash; The subquery form of <b>ANY</b> / <b>SOME</b> / <b>ALL</b> still lowers to <b>IN</b> / <b>NOT IN</b>.</p>
+
+<!-- Demo:
+
+SELECT 3 = SOME([1,2,3]) AS some_eq, 5 > ALL([1,2,3]) AS gt_all, 2 != ALL([1,3,5]) AS ne_all;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexey Milovidov.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
+<h2 style="color: black;"><span class="hilite">Geospatial</span></h2>
+</section>
+
+<section class="slide">
+<h2>GeoJSON input format</h2>
+
+<p>Read a GeoJSON <b>FeatureCollection</b> &mdash; one row per feature:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT id, properties.name, toTypeName(geometry)
+FROM file('places.geojson', <b style="color: green;">GeoJSON</b>);
+</code></p>
+
+<table style="font-size: 14pt; width: 90%;">
+<tr><th>id</th><th>properties.name</th><th>geometry</th></tr>
+<tr><td>1</td><td>Kyiv</td><td>Geometry (Point)</td></tr>
+<tr><td>2</td><td>square</td><td>Geometry (Polygon)</td></tr>
+</table>
+
+<p style="margin-top: 0.5em;">&mdash; Columns: <b>id</b> String, <b>geometry</b> Geometry, <b>properties</b> Nullable(JSON).
+<br/>&mdash; Point, LineString, MultiLineString, Polygon, MultiPolygon supported natively.</p>
+
+<!-- Demo: places.geojson is a standard FeatureCollection
+
+SELECT id, properties.name, toTypeName(geometry) FROM file('/tmp/test.geojson', GeoJSON) FORMAT Vertical;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Mark Needham.</p>
+</section>
+
+<section class="slide">
+<h2>Mapbox Vector Tiles from SQL</h2>
+
+<p>Serve map tiles straight out of ClickHouse with the new <b style="color: green;">MVT</b> functions:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;"><span style="color: gray;">-- Project lon/lat into a tile's pixel space:</span>
+SELECT <b style="color: green;">MVTEncodeGeom</b>((13.37, 52.52)::Point, 10, 550, 335);
+<span style="color: gray;">-- (124, 3384)</span>
+
+<span style="color: gray;">-- Aggregate a group's geometries into one binary tile:</span>
+SELECT <b style="color: green;">MVTEncode</b>(geom_in_tile_space) FROM ...;
+
+<span style="color: gray;">-- Tile bounding box for the WHERE clause:</span>
+SELECT <b style="color: green;">MVTBoundingBox</b>(12, 1205, 2557);
+</code></p>
+
+<p>&mdash; Point, line and polygon geometry.
+<br/>&mdash; Also available as PostGIS aliases <b>ST_AsMVTGeom</b> and <b>ST_AsMVT</b>.</p>
+
+<!-- Demo:
+
+SELECT MVTEncodeGeom((13.37, 52.52)::Point, 10, 550, 335);
+SELECT MVTBoundingBox(12, 1205, 2557);
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Saarthak Gupta.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">h3PolygonToCellsWithContainment</h2>
+
+<p>H3's newer polygon-to-cells algorithm with selectable containment mode:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.25;">SELECT length(<b style="color: green;">h3PolygonToCellsWithContainment</b>(poly, 7, <b>mode</b>));
+
+<span style="color: gray;">-- mode 0  CONTAINMENT_CENTER       → 58 cells  (cell center inside)</span>
+<span style="color: gray;">-- mode 1  CONTAINMENT_FULL         → 40 cells  (cell fully inside)</span>
+<span style="color: gray;">-- mode 2  CONTAINMENT_OVERLAPPING  → 77 cells  (any overlap)</span>
+</code></p>
+
+<p>&mdash; Finally, control over how boundary hexagons are treated.
+<br/>&mdash; Mode 3: <b>CONTAINMENT_OVERLAPPING_BBOX</b> &mdash; cheaper bounding-box overlap.</p>
+
+<!-- Demo:
+
+SELECT length(h3PolygonToCellsWithContainment(p, 7, toUInt32(0))) AS center,
+       length(h3PolygonToCellsWithContainment(p, 7, toUInt32(1))) AS full,
+       length(h3PolygonToCellsWithContainment(p, 7, toUInt32(2))) AS overlapping
+FROM (SELECT [[(37.5,55.6),(37.7,55.6),(37.7,55.8),(37.5,55.8),(37.5,55.6)]]::Polygon AS p);
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Youssef Kadry.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back2.jpg); background-size: cover;">
+<h2><span class="hilite">Introspection</span></h2>
+</section>
+
+<section class="slide">
+<h2>system.documentation</h2>
+
+<p>The whole reference manual, as a table, inside the server:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT type, count() FROM <b style="color: green;">system.documentation</b> GROUP BY type;
+</code></p>
+
+<table style="font-size: 13pt; width: 70%;">
+<tr><th>type</th><th>count</th></tr>
+<tr><td>Function</td><td>1592</td></tr>
+<tr><td>Setting</td><td>1548</td></tr>
+<tr><td>Server Setting</td><td>412</td></tr>
+<tr><td>MergeTree Setting</td><td>316</td></tr>
+<tr><td>Aggregate Function</td><td>197</td></tr>
+<tr><td>Data Type, Format, Table Engine, &hellip;</td><td>&hellip;</td></tr>
+</table>
+
+<p style="margin-top: 0.5em;">&mdash; The same docs as the website, rendered as Markdown &mdash; queryable, greppable, offline.
+<br/>&mdash; Perfect fuel for AI agents writing ClickHouse SQL.</p>
+
+<!-- Demo:
+
+SELECT type, count() AS c FROM system.documentation GROUP BY type ORDER BY c DESC LIMIT 6;
+SELECT description FROM system.documentation WHERE name = 'bitCount' AND type = 'Function' FORMAT TSVRaw;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Which AI agent is querying you?</h2>
+
+<p>ClickHouse now detects the AI coding agent that launched the client,
+<br/>from its environment, and records it in a new <b style="color: green;">client_agent</b> column:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT query_id, <b style="color: green;">client_agent</b>, interface
+FROM system.processes;
+</code></p>
+
+<table style="font-size: 14pt; width: 80%;">
+<tr><th>query_id</th><th>client_agent</th><th>interface</th></tr>
+<tr><td>ai_demo</td><td><b style="color: green;">claude-code</b></td><td>1</td></tr>
+</table>
+
+<p style="margin-top: 0.5em;">&mdash; Recognizes Claude Code, Cursor, Codex, Gemini CLI, Goose, &hellip;
+<br/>&mdash; Also in <b>system.query_log</b> and <b>system.query_thread_log</b>.
+<br/>&mdash; How much of your workload is now written by agents? Now you can measure it.</p>
+
+<!-- Demo:
+
+CLAUDECODE=1 clickhouse client -q "SELECT sleep(3) FROM numbers(4) SETTINGS function_sleep_max_microseconds_per_block=20000000" --query_id ai_demo &
+SELECT query_id, client_agent, interface FROM system.processes WHERE query_id = 'ai_demo';
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Docs embedded in every system table</h2>
+
+<p>System tables that describe the system now describe themselves &mdash; with
+<br/><b>description</b>, <b>syntax</b>, <b>examples</b>, <b>introduced_in</b> and <b>related</b> columns:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.25;">SELECT name, introduced_in FROM <b style="color: green;">system.table_engines</b> WHERE name ILIKE '%kafka%';
+
+SELECT name, description FROM <b style="color: green;">system.data_type_families</b>;
+</code></p>
+
+<p style="margin-top: 0.2em;">Now self-documenting:
+<br/><b>system.table_engines</b>, <b>system.database_engines</b>, <b>system.data_type_families</b>,
+<br/><b>system.formats</b>, <b>system.aggregate_function_combinators</b>,
+<br/><b>system.dictionary_layouts</b>, <b>system.dictionary_sources</b>,
+<br/><b>system.data_skipping_index_types</b>, <b>system.disk_types</b>.</p>
+
+<!-- Demo:
+
+SELECT name, introduced_in, substring(description, 1, 80) FROM system.table_engines WHERE name = 'MergeTree' FORMAT Vertical;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Alexey Milovidov.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
+<h2><span style="color: black;" class="hilite">Performance Improvements</span></h2>
+</section>
+
+<section class="slide">
+<h2>ClickHouse Keeper: ~2x faster</h2>
+
+<p>A round of Keeper improvements makes it roughly <b>twice as fast</b> overall:</p>
+
+<p style="margin-top: 0.5em;">&mdash; Better request <b>batching</b>.
+<br/>&mdash; <b>Pipelining</b> messages to the leader.
+<br/>&mdash; <b>Pipelining</b> log appends.
+<br/>&mdash; Snapshot I/O moved to a background thread (<b>nuraft_use_bg_thread_for_snapshot_io</b>).
+<br/>&mdash; Lower peak memory when applying received snapshots.</p>
+
+<p style="margin-top: 1em;">Faster coordination &rarr; faster DDL, inserts, replication, and merges
+<br/>across the whole cluster.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developers: Michael Kolupaev, Antonio Andelic.</p>
+</section>
+
+<section class="slide">
+<h2>Lighter, faster query startup</h2>
+
+<p>Per-query overhead for simple queries is significantly reduced:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT count() FROM hits;
+<span style="color: gray;">-- parsing + analysis + planning ~50% faster from a single connection</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">More analysis wins, all enabled by default:</p>
+
+<p style="margin-top: -0.3em;">&mdash; Identifier-resolution caching during analysis.
+<br/>&mdash; Nested <b>SELECT *</b> over a ~1200-column table: analysis <b>~50x</b> faster.
+<br/>&mdash; Faster resolution for deeply nested function calls.
+<br/>&mdash; No more multi-minute stalls when many access entities change at once.</p>
+
+<!-- Demo:
+
+clickhouse benchmark -c 1 <<< "SELECT count() FROM hits"
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Raúl Marín, Dmitry Novik, Max Justus Spransy, Azat Khuzhin.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Lightweight primary key index analysis</h2>
+
+<p>Long or high-cardinality primary keys used to make index analysis slow.
+<br/>Now (<b style="color: green;">use_lightweight_primary_key_index_analysis</b>, on by default):</p>
+
+<p style="margin-top: 0.5em;">&mdash; For a <b>long</b> primary key, analysis time depends on the columns the query
+<br/>&emsp; actually filters on &mdash; <b>not</b> on the length of the key.
+<br/>&emsp; Extending the sorting key is now nearly free for index analysis.
+<br/>&mdash; For a <b>high-cardinality</b> key, analysis works on just the selective
+<br/>&emsp; in-memory prefix instead of loading the whole key.</p>
+
+<p style="margin-top: 1em;">Closes a long-standing issue with wide sorting keys.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1.5em;">Developer: Nihal Z. Miaji.</p>
+</section>
+
+<section class="slide">
+<h2>New comparison sorts: ipnsort &amp; driftsort</h2>
+
+<p>The general-purpose comparison sorts are now C++ ports of the Rust standard
+<br/>library's <b style="color: green;">ipnsort</b> (unstable) and <b style="color: green;">driftsort</b> (stable):</p>
+
+<p style="margin-top: 0.5em;">&mdash; Faster <b>ORDER BY</b> on non-numeric columns and for stable sorts.
+<br/>&mdash; Removes a worst case on already reverse-sorted input.
+<br/>&mdash; State-of-the-art, adaptive, and battle-tested algorithms.</p>
+
+<!-- Demo:
+
+SELECT * FROM (SELECT toString(number) AS s FROM numbers(50000000)) ORDER BY s FORMAT Null;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2.5em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Faster aggregation</h2>
+
+<p style="margin-top: -0.5em;">&mdash; <b style="color: green;">Sharded aggregation</b> for high-cardinality, evenly-distributed keys
+<br/>&emsp; (<b>enable_sharding_aggregator = 1</b>): hash the key to scatter rows across
+<br/>&emsp; threads, so each thread aggregates a disjoint subset &mdash; <b>no merge phase</b>.
+<br/>&mdash; Hash-table <b>prefetching</b> for string-key <b>GROUP BY</b>: ~8% faster.
+<br/>&mdash; Lower peak memory when merging large two-level aggregation states
+<br/>&emsp; (e.g. <b>groupArray</b>).
+<br/>&mdash; More optimal handling of <b>Nullable</b> columns in aggregation.
+<br/>&mdash; Packed <b>keys32</b> / <b>keys64</b> methods in <b>HashJoin</b> and <b>Set</b>.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developers: Nihal Z. Miaji, Le Zhang, Yuri Fedoseev, Nikita Taranov.</p>
+</section>
+
+<section class="slide">
+<h2>Enum memory: up to 10x smaller</h2>
+
+<p>The in-memory representation of the <b>Enum</b> data type was optimized:</p>
+
+<p style="margin-top: 0.5em;">&mdash; Tables with <b>Enum</b> columns can shrink that column's footprint by up to <b>10x</b>.
+<br/>&mdash; Value &rarr; name lookups are similar or faster.
+<br/>&mdash; Name &rarr; value is slightly slower &mdash; but it's the rarer direction.</p>
+
+<p style="margin-top: 1em;">If you use <b>Enum</b>s for low-cardinality strings (and you should), you get the
+<br/>savings for free.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2.5em;">Developer: Ilya Yatsishin.</p>
+</section>
+
+<section class="slide">
+<h2>Vector search &amp; crypto speedups</h2>
+
+<p style="margin-top: -0.5em;">Vector distance functions are heavily vectorized (AVX-512 / NEON / multi-target):</p>
+
+<p style="margin-top: -0.3em;">&mdash; <b style="color: green;">L2Distance</b>, <b>L2SquaredDistance</b>, <b>cosineDistance</b>, <b>L1</b>/<b>Linf</b>, <b>dotProduct</b>, <b>arrayNorm</b>.
+<br/>&mdash; <b>L2DistanceTransposed</b> / <b>cosineDistanceTransposed</b> for the <b>QBit</b> type.
+<br/>&mdash; New <b>quantizeBFloat16ToInt8</b> / <b>dequantizeInt8ToBFloat16</b> embedding codec.</p>
+
+<p style="margin-top: 0.5em;">Cryptography recovers the performance lost in the OpenSSL 3.x migration:</p>
+
+<p style="margin-top: -0.3em;">&mdash; <b style="color: green;">encrypt</b> / <b>decrypt</b> / <b>aes_*_mysql</b> &mdash; up to an <b>order of magnitude</b> faster.
+<br/>&mdash; SIMD <b>SHA1</b> (AVX-512) and a NEON backend for multi-buffer <b>MD5</b>.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Nikita Taranov, Peng, Konstantin Bogdanov, Joanna Hulboj, Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>LIMIT BY, optimized many ways</h2>
+
+<p>A whole family of new optimizations for <b>LIMIT BY</b> (all on by default):</p>
+
+<p style="margin-top: 0.3em;">&mdash; Run <b>LIMIT BY</b> inside each parallel sorted stream during <b>ORDER BY</b>
+<br/>&emsp; when its keys are a prefix of the sort key.
+<br/>&mdash; Stream <b>LIMIT N BY cols</b> in primary-key order with O(1) memory per stream.
+<br/>&mdash; Apply <b>LIMIT BY</b> per partition in parallel when the partition is a
+<br/>&emsp; function of the keys.
+<br/>&mdash; Drop redundant / injective key expressions
+<br/>&emsp; (<b>LIMIT 5 BY toString(x)</b> &rarr; <b>LIMIT 5 BY x</b>).</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Nihal Z. Miaji.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
+<h2 style="font-size: 32pt; position: absolute; bottom: 0em; right: 1em;"><span class="hilite">Something Interesting</span></h2>
+</section>
+
+<section class="slide">
+<h2>Continuous queries 🧪</h2>
+
+<p>A <b>SELECT</b> that never ends &mdash; the first step toward streaming queries.
+<br/>Append <b style="color: green;">STREAM</b> and the query keeps emitting new rows as they are inserted:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SET <b style="color: green;">enable_streaming_queries</b> = 1;
+
+SELECT id, msg FROM live_events <b style="color: green;">STREAM</b>;
+<span style="color: gray;">-- blocks and keeps streaming...</span>
+</code></p>
+
+<p>Insert <b>(1,'hello'), (2,'world')</b> &hellip; then <b>(3,'streaming'), (4,'rocks')</b> &mdash;
+<br/>the running query prints each row in commit order, live:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.2;">1	hello
+2	world
+3	streaming
+4	rocks</code></p>
+
+<p style="margin-top: -0.3em;">&mdash; Implemented via a series of snapshot reads over <b>MergeTree</b>.</p>
+
+<!-- Demo:
+
+CREATE TABLE live_events (id UInt64, msg String) ENGINE = MergeTree ORDER BY id
+SETTINGS enable_block_number_column = 1, enable_block_offset_column = 1,
+  add_minmax_index_for_block_number_column = 1, add_minmax_index_for_block_offset_column = 1,
+  part_minmax_index_columns = 'with_block_number_offset';
+
+-- terminal 1:
+clickhouse client --enable_streaming_queries=1 --use_skip_indexes_on_data_read=0 -q "SELECT id, msg FROM live_events STREAM"
+
+-- terminal 2:
+INSERT INTO live_events VALUES (1,'hello'),(2,'world');
+INSERT INTO live_events VALUES (3,'streaming'),(4,'rocks');
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Mikhail Artemenko.</p>
+</section>
+
+<section class="slide">
+<h2>Hypothetical indexes + EXPLAIN WHATIF</h2>
+
+<p>Ask "what if I had this skip index?" &mdash; <b>without</b> building it:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.2;"><b style="color: green;">CREATE HYPOTHETICAL INDEX</b> idx_level ON logs (level) TYPE set(2) GRANULARITY 4;
+
+<b style="color: green;">EXPLAIN WHATIF</b> SELECT count() FROM logs WHERE level = 'error';
+</code></p>
+
+<p><code style="font-size: 12pt; line-height: 1.15;">Baseline (PK + partition + existing indexes):  marks: 612, 19.56 MiB
+With idx_level (set, hypothetical):
+  status:      applicable
+  marks:       200      <span style="color: gray;">(was 612)</span>
+  est_bytes:   6.39 MiB
+  <b style="color: green;">skip_ratio:  67.3%</b>
+Estimation: empirical, sampled 5/5 parts</code></p>
+
+<p style="margin-top: -0.3em;">&mdash; Session-scoped, visible in <b>system.hypothetical_indexes</b>. Tune indexes data-driven.</p>
+
+<!-- Demo:
+
+CREATE TABLE logs (id UInt64, level String, msg String) ENGINE = MergeTree ORDER BY id;
+INSERT INTO logs SELECT number, if(number % 100000 = 0, 'error', 'info'), 'm' FROM numbers(5000000);
+CREATE HYPOTHETICAL INDEX idx_level ON logs (level) TYPE set(2) GRANULARITY 4;
+EXPLAIN WHATIF SELECT count() FROM logs WHERE level = 'error';
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Yarik Briukhovetskyi.</p>
+</section>
+
+<section class="slide">
+<h2>Schema Visualizer</h2>
+
+<p>A new built-in web UI that draws the dependency graph of your database:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">http://localhost:8123<b style="color: green;">/schema</b></code></p>
+
+<p style="margin-top: 0.5em;">&mdash; Tables, materialized views, refreshable MVs, dictionaries,
+<br/>&emsp; distributed tables and views &mdash; and the arrows between them.
+<br/>&mdash; See at a glance how data flows from ingestion to rollups.
+<br/>&mdash; Ships with the server, no setup, no external tools.</p>
+
+<p style="margin-top: 1em;">Pairs nicely with the existing <b>/dashboard</b> and <b>/play</b> UIs.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Nikita Mikhaylov.</p>
+</section>
+
+<section class="slide">
+<h2>PNG output format</h2>
+
+<p>Render query results <b>as an image</b>. One row per pixel (<b>r</b>, <b>g</b>, <b>b</b> or <b>v</b>):</p>
+
+<p><code style="font-size: 12pt; line-height: 1.2;">SELECT toUInt8(128 + 127 * sin(x/16)) AS r,
+       toUInt8(128 + 127 * sin(y/16)) AS g,
+       toUInt8(128 + 127 * sin((x+y)/16)) AS b
+FROM (SELECT number % 256 AS x, number DIV 256 AS y FROM numbers(256*256))
+<b style="color: green;">FORMAT PNG</b> SETTINGS output_format_image_width = 256, output_format_image_height = 256;</code></p>
+
+<img src="pictures/png_demo.png" style="float: right; width: 24%; margin-top: -10.5em; margin-right: 1em; border: 2px solid #888;" alt="PNG generated from SQL"/>
+
+<p style="margin-top: 0.3em; margin-right: 26%;">&mdash; The Web UI shows the image directly.
+<br/>&mdash; Great for heatmaps, sparklines, generated art &mdash; or just for fun.</p>
+
+<!-- Demo (rendered server-side over HTTP, viewed in the browser / Web UI):
+
+curl "http://localhost:8123/?output_format_image_width=256&output_format_image_height=256" --data-binary "SELECT toUInt8(128+127*sin(x/16)) r, toUInt8(128+127*sin(y/16)) g, toUInt8(128+127*sin((x+y)/16)) b FROM (SELECT number%256 x, number DIV 256 y FROM numbers(65536)) FORMAT PNG" > out.png
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Maksim Dergousov.</p>
+</section>
+
+<section class="slide">
+<h2>Web Terminal is now production</h2>
+
+<p>The in-browser <b>clickhouse-client</b> graduates from experimental:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">http://localhost:8123<b style="color: green;">/webterminal</b></code></p>
+
+<p style="margin-top: 0.5em;">&mdash; Enabled by default; controlled by the new <b style="color: green;">enable_webterminal</b> server setting.
+<br/>&mdash; The old <b>allow_experimental_webterminal</b> is deprecated but still honored.
+<br/>&mdash; A full terminal experience &mdash; history, highlighting &mdash; with nothing to install.</p>
+
+<p><a href="https://play.clickhouse.com/webterminal?user=play">Demo</a></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1.5em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>aiEmbed 🧪</h2>
+
+<p>Generate text embeddings from inside ClickHouse, via an LLM API:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">aiEmbed</b>(review_text) AS embedding
+FROM reviews
+LIMIT 10;
+<span style="color: gray;">-- Array(Float32) per row, ready for cosineDistance / vector search</span>
+</code></p>
+
+<p>&mdash; Build a semantic-search or RAG pipeline without leaving SQL.
+<br/>&mdash; Combines naturally with the faster vector distance functions in 26.6.
+<br/>&mdash; Experimental &mdash; configure your embedding provider and model.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2.5em;">Developer: George Larionov.</p>
+</section>
+
+<section class="slide">
+<h2>Multi-stage distributed query execution 🧪</h2>
+
+<p>The experimental distributed planner splits a query plan into <b>stages</b>
+<br/>connected by exchanges &mdash; and ships fragments to worker nodes:</p>
+
+<p style="margin-top: 0.5em;">&mdash; <b style="color: green;">scatter</b> / <b style="color: green;">broadcast</b> / <b style="color: green;">gather</b> / <b style="color: green;">shuffle</b> exchanges.
+<br/>&mdash; Distributed <b>shuffle</b> and <b>broadcast hash joins</b>, shuffle aggregation, distributed sort.
+<br/>&mdash; Data between stages streamed over TCP or via temporary files in object storage.
+<br/>&mdash; Several workers per host (per-replica <b>stateless_worker_port</b> / <b>streaming_exchange_port</b>).</p>
+
+<p style="margin-top: 0.5em;">A foundation for true MPP-style execution. Disabled by default
+<br/>(<b>make_distributed_plan</b>).</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexander Gololobov.</p>
+</section>
+
+<section class="slide">
+<h2>WebAssembly UDFs: AssemblyScript 🧪</h2>
+
+<p>WebAssembly UDFs now speak the <b style="color: green;">AssemblyScript</b> ABI &mdash; write UDFs in a
+<br/>TypeScript-like language and compile to Wasm:</p>
+
+<p style="margin-top: 0.5em;">&mdash; Try it with no local toolchain: the browser playground compiles
+<br/>&emsp; AssemblyScript and loads the module into local ClickHouse.
+<br/>&mdash; <b>Buffers</b> serialization (<b>ABI BUFFERED_V1</b>) and a <b>webassembly_udf_enable_fuel</b> guard.</p>
+
+<p style="margin-top: 1em;">Sandboxed, portable, language-agnostic user-defined functions &mdash;
+<br/>safer than executable UDFs, faster than per-row processes.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1.5em;">Developers: Vladimir Cherkasov, Antonio Andelic.</p>
+</section>
+
+<section class="slide">
+<h2>clickhouse-local becomes a server</h2>
+
+<p><b>clickhouse-local</b> can now start listening for connections on the fly:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">clickhouse-local
+:) <b style="color: green;">SYSTEM START LISTEN TCP</b>;
+:) <b style="color: green;">SYSTEM START LISTEN HTTP</b>;
+<span style="color: gray;">-- now other clients can connect to your local session</span>
+</code></p>
+
+<p>&mdash; Turn an ad-hoc analysis session into a shareable endpoint.
+<br/>&mdash; <b>SYSTEM STOP LISTEN</b> to close it again.
+<br/>&mdash; The line between <b>local</b> and <b>server</b> keeps blurring.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Alexey Milovidov.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
+<h2 style="font-size: 32pt; margin-left: -1em;"><span class="hilite">Data Lakes</span></h2>
+</section>
+
+<section class="slide">
+<h2>Writing to Azure Data Lake Gen2</h2>
+
+<p>ClickHouse can now <b>write</b> into Azure Data Lake Storage Gen2,
+<br/>not just read from it.</p>
+
+<p style="margin-top: 0.5em;">Plus broader data-lake improvements:</p>
+
+<p style="margin-top: -0.3em;">&mdash; <b style="color: green;">Schema evolution</b> together with concurrent consistency checks for catalogs.
+<br/>&mdash; A <b>cache disk</b> can now be used for data-lake table engines.
+<br/>&mdash; <b>OneLake</b> catalogs read via the Blob endpoint by default (<b>onelake_use_blob_endpoint</b>).
+<br/>&mdash; <b>S3</b> role assumption with an optional <b>external_id</b> credential.
+<br/>&mdash; <b>used_storages</b> in <b>system.query_log</b> populated for catalog tables.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1.5em;">Developers: Konstantin Vedernikov, RinChanNOW, Melvyn Peignon.</p>
+</section>
+
+<section class="slide">
+<h2>system.iceberg_files</h2>
+
+<p>Per-file metadata for Iceberg tables &mdash; one row per data or delete file
+<br/>in the current snapshot:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT file_path, file_format, record_count, file_size_in_bytes
+FROM <b style="color: green;">system.iceberg_files</b>;
+</code></p>
+
+<p>&mdash; See exactly which files back a table, and how big they are.
+<br/>&mdash; Companion to inspecting snapshot <b>operation</b> and <b>summary</b>.
+<br/>&mdash; The <b>query condition cache</b> and <b>schema evolution</b> keep getting better for Iceberg.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Asya Shneerson.</p>
+</section>
+
+<section class="slide">
+<h2>Iceberg correctness</h2>
+
+<p>Sharper edges for safer data lakes:</p>
+
+<p style="margin-top: 0.5em;">&mdash; <b style="color: green;">icebergHash</b> and <b style="color: green;">icebergBucket</b> now <b>reject</b> 128/256-bit integers and
+<br/>&emsp; <b>Decimal256</b> instead of silently truncating and producing colliding hashes.
+<br/>&emsp; The Iceberg spec only defines hashing for 32/64-bit ints and decimals
+<br/>&emsp; up to precision 38 &mdash; cast explicitly to keep the old behavior.
+<br/>&mdash; Smaller default Iceberg metadata cache (1 GB &rarr; 128 MB).</p>
+
+<p style="margin-top: 1em;">Correctness over silent surprises.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1.5em;">Developers: Raúl Marín, Konstantin Vedernikov.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back8.jpg); background-size: cover;">
+<h2><span class="hilite">Bonus</span></h2>
+</section>
+
+
+<section class="slide" style="background: url(pictures/openhouse.png) center / contain no-repeat;">
+</section>
+
+
+<section class="slide" style="background: url(pictures/wing.jpg); background-size: cover;">
+<h2>Meetups</h2>
+<p style="line-height: 1.25; margin-top: -2em;">
+<br/><span class="hilite">&mdash; 🇫🇷 Paris Meetup, Jun 24</span>
+<br/><span class="hilite">&mdash; 🇩🇪 Munich Meetup, Jun 25</span>
+<br/><span class="hilite">&mdash; 🌐 Virtual: Building Agentic Analytics, Jul 1</span>
+<br/><span class="hilite">&mdash; 🇬🇧 London Meetup, Jul 8</span>
+<br/><span class="hilite">&mdash; 🇺🇸 New York Meetup, Jul 9</span>
+<br/><span class="hilite">&mdash; 🇮🇳 Bangalore Meetup, Jul 12</span>
+<br/><span class="hilite">&mdash; 🇸🇪 Stockholm Meetup, Jul 15</span>
+<br/><span class="hilite">&mdash; 🇺🇸 Seattle Meetup, Jul 16</span>
+<br/><span class="hilite">&mdash; 🇯🇵 Tokyo Meetup, Jul 22</span>
+<br/><span class="hilite">&mdash; 🇧🇷 São Paulo Meetup, Jul 23</span>
+<br/><span class="hilite">&mdash; 🇦🇺 Sydney Meetup, Jul 29</span>
+<br/><span class="hilite">&mdash; 🇪🇸 Madrid Meetup, Jul 30</span>
+</p>
+</section>
+
+<section class="slide">
+<h2>Reading Corner 📖</h2>
+
+<p><a href="https://clickhouse.com/blog/">https://clickhouse.com/blog/</a></p>
+
+<p style="line-height: 1.5; margin-right: -5em;">
+&mdash; What's new in ClickHouse 26.6
+<br/>&mdash; Continuous queries: the road to streaming SQL
+<br/>&mdash; Tuning skip indexes with EXPLAIN WHATIF
+<br/>&mdash; Detecting AI agents in your query workload
+<br/>&mdash; Serving map tiles directly from ClickHouse
+<br/>&mdash; Inside ClickHouse Keeper: making coordination 2x faster
+<br/>&mdash; ipnsort and driftsort: sorting at the speed of Rust
+<br/>&mdash; Writing to Azure Data Lake Storage Gen2
+</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back9.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
+<h2 style="color: white; margin-left: -1em;">Q&amp;A</h2>
+</section>
+
+    <div class="progress"></div>
+    <script src="https://presentations.clickhouse.com/shower/shower.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/shower-video.css">
+    <script src="https://presentations.clickhouse.com/shower/shower-video.js"></script>
+    <!--/Video plugin-->
+<footer class="badge">
+    <a href="https://presentations.clickhouse.com/">ClickHouse Theater</a>
+</footer>
+</body>
+</html>
