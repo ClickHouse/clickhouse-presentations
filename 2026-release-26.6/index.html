@@ -171,28 +171,31 @@ SELECT 5.0 SETTINGS output_format_always_write_decimal_point_in_float_and_decima
 <p style="margin-top: -0.5em;">A refreshable MV can now trigger off <b>another</b> RMV's refresh:</p>
 
 <p><code style="font-size: 14pt; line-height: 1.25;">CREATE MATERIALIZED VIEW base
-<b style="color: green;">REFRESH EVERY 1 HOUR</b> ENGINE = MergeTree ORDER BY day AS &hellip;;
+<b style="color: green;">REFRESH EVERY 1 HOUR</b> ENGINE = MergeTree ORDER BY day AS &hellip;;   <span style="color: gray;">-- runs hourly</span>
 
 CREATE MATERIALIZED VIEW rollup
-<b style="color: green;">REFRESH EVERY 1 HOUR DEPENDS ON base</b> ENGINE = &hellip; AS
+<b style="color: green;">REFRESH DEPENDS ON base</b> ENGINE = &hellip; AS                       <span style="color: gray;">-- no schedule</span>
 SELECT day, sum(x) FROM base GROUP BY day;
 </code></p>
 
-<p>&mdash; <b>rollup</b> waits for <b>base</b> to finish, then refreshes &mdash; build dependency chains.
-<br/>&mdash; In <b>system.view_refreshes</b> it shows as <b>WaitingForDependencies</b> until base completes.</p>
+<p>&mdash; <b>rollup</b> has no timer of its own &mdash; it refreshes whenever <b>base</b> finishes
+<br/>&emsp; (shorthand for <b>REFRESH AFTER 0 SECOND DEPENDS ON base</b>). Build cascades.
+<br/>&mdash; Sits in <b>WaitingForDependencies</b> (system.view_refreshes) until base completes.
+<br/>&mdash; <span style="color: gray;">The older <b>REFRESH EVERY &hellip; DEPENDS ON</b> keeps its own timer and only orders same-period runs.</span></p>
 
 <!-- Demo (Atomic database, on a server or local with an Atomic db):
 
 CREATE DATABASE r ENGINE = Atomic;
 CREATE TABLE r.src (x UInt32) ENGINE = MergeTree ORDER BY x;
 CREATE MATERIALIZED VIEW r.base REFRESH EVERY 1 HOUR ENGINE = MergeTree ORDER BY x AS SELECT x FROM r.src;
-CREATE MATERIALIZED VIEW r.child REFRESH EVERY 1 HOUR DEPENDS ON r.base ENGINE = MergeTree ORDER BY x AS SELECT x FROM r.base;
-SELECT view, status FROM system.view_refreshes ORDER BY view;
--- base: Running    child: WaitingForDependencies
+CREATE MATERIALIZED VIEW r.child REFRESH DEPENDS ON r.base ENGINE = MergeTree ORDER BY x AS SELECT x FROM r.base;
+SELECT view, status, next_refresh_time FROM system.view_refreshes ORDER BY view;
+-- base:  Running                  (next_refresh_time set)
+-- child: WaitingForDependencies   (next_refresh_time NULL — no clock of its own)
 
 -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: Michael Kolupaev.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0.2em;">Developer: Michael Kolupaev.</p>
 </section>
 
 <section class="slide">
@@ -200,15 +203,15 @@ SELECT view, status FROM system.view_refreshes ORDER BY view;
 
 <p style="margin-top: -0.5em;">Two new <b>MergeTree</b> settings decouple projection building from <b>INSERT</b>:</p>
 
-<p><code style="font-size: 14pt; line-height: 1.25;">SET <b style="color: green;">materialize_projections_on_insert</b> = 0
-<span style="color: gray;">-- INSERTs skip building projection parts → faster ingestion</span>
-
-SET <b style="color: green;">materialize_projections_on_merge</b> = 1
-<span style="color: gray;">-- a merge rebuilds a projection missing from all its source parts</span>
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE events (&hellip;) ENGINE = MergeTree ORDER BY &hellip; SETTINGS
+  <b style="color: green;">materialize_projections_on_insert</b> = 0,   <span style="color: gray;">-- INSERTs skip projections → faster</span>
+  <b style="color: green;">materialize_projections_on_merge</b>  = 1;   <span style="color: gray;">-- a merge builds a missing one</span>
 </code></p>
 
-<p>&mdash; Tables with many projections ingest faster; projections are built during merges instead.
-<br/>&mdash; Merges still combine only parts that share the same set of projections.</p>
+<p>&mdash; Tables with many projections ingest faster; projections are filled in during merges.
+<br/>&mdash; A part either has a projection materialized or it doesn't. ClickHouse only merges
+<br/>&emsp; parts with the <b>same</b> set of projections &mdash; so a no-projection part isn't merged
+<br/>&emsp; with one that has it; the projection is (re)built when such no-projection parts merge.</p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 1.5em;">Developer: Christoph Wurm.</p>
 </section>
