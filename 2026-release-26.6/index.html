@@ -111,59 +111,6 @@ Reading Corner
 
 
 <section class="slide">
-<h2>Select columns by name pattern</h2>
-
-<p>Pick columns with <b style="color: green;">* LIKE</b> and <b style="color: green;">* ILIKE</b> instead of listing them:</p>
-
-<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">* ILIKE '%user%'</b> FROM events;
-<span style="color: gray;">-- user_id, user_name, ... (case-insensitive)</span>
-
-SELECT <b style="color: green;">* LIKE 'metric\_%'</b> FROM telemetry;
-<span style="color: gray;">-- metric_cpu, metric_mem, ... (case-sensitive)</span>
-
-SELECT t.<b style="color: green;">* ILIKE '%id'</b>, count() FROM t GROUP BY ALL;
-<span style="color: gray;">-- qualified form works too</span>
-</code></p>
-
-<p>&mdash; <b>LIKE</b> matches column names case-sensitively, <b>ILIKE</b> case-insensitively.
-<br/>&mdash; A nice middle ground between <b>*</b> and <b>COLUMNS('regexp')</b>.</p>
-
-<!-- Demo:
-
-CREATE TABLE t (user_id UInt32, user_name String, event_time DateTime, EventType String) ENGINE=Memory;
-INSERT INTO t VALUES (1,'a','2026-01-01 00:00:00','x');
-SELECT * ILIKE '%user%' FROM t FORMAT Vertical;
-
--->
-
-<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Yue Ni.</p>
-</section>
-
-<section class="slide">
-<h2>ESCAPE in LIKE</h2>
-
-<p>Define a custom escape character so <b>%</b> and <b>_</b> can be literal:</p>
-
-<p><code style="font-size: 14pt; line-height: 1.25;">SELECT '50% off' <b style="color: green;">LIKE</b> '50!% off' <b style="color: green;">ESCAPE '!'</b>;
-<span style="color: gray;">-- 1   (the !% matches a literal percent sign)</span>
-
-SELECT 'a_b' <b style="color: green;">LIKE</b> 'a!_b' <b style="color: green;">ESCAPE '!'</b>;
-<span style="color: gray;">-- 1   (the !_ matches a literal underscore)</span>
-</code></p>
-
-<p>&mdash; SQL-standard syntax, also accepted by PostgreSQL, MySQL, &hellip;
-<br/>&mdash; No more wrestling with backslash quoting rules.</p>
-
-<!-- Demo:
-
-SELECT '50% off' LIKE '50!% off' ESCAPE '!' AS pct, 'a_b' LIKE 'a!_b' ESCAPE '!' AS underscore;
-
--->
-
-<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Ilya Yatsishin.</p>
-</section>
-
-<section class="slide">
 <h2>ALTER TABLE &hellip; ADD ENUM VALUES</h2>
 
 <p>Append new <b>Enum</b> values without re-typing all the existing ones:</p>
@@ -188,34 +135,6 @@ SHOW CREATE TABLE events FORMAT TSVRaw;
 -->
 
 <p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Ilya Golshtein.</p>
-</section>
-
-<section class="slide">
-<h2>arrayTopK and arrayBottomK</h2>
-
-<p>The K largest or smallest array elements, already sorted:</p>
-
-<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">arrayTopK</b>(3, [5, 1, 9, 3, 7, 2]);
-<span style="color: gray;">-- [9, 7, 5]</span>
-
-SELECT <b style="color: green;">arrayBottomK</b>(3, [5, 1, 9, 3, 7, 2]);
-<span style="color: gray;">-- [1, 2, 3]</span>
-
-SELECT <b style="color: green;">arrayTopK</b>(2, ['banana', 'apple', 'cherry', 'date']);
-<span style="color: gray;">-- ['date', 'cherry']</span>
-</code></p>
-
-<p>&mdash; Works for numbers, strings, and any comparable type.
-<br/>&mdash; Cheaper than <b>arraySort</b> + <b>arraySlice</b> when you only need a few.</p>
-
-<!-- Demo:
-
-SELECT arrayTopK(3, [5,1,9,3,7,2]), arrayBottomK(3, [5,1,9,3,7,2]);
-SELECT arrayTopK(2, ['banana','apple','cherry','date']);
-
--->
-
-<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Vitaly Baranov.</p>
 </section>
 
 <section class="slide">
@@ -247,17 +166,174 @@ SELECT 5.0 SETTINGS output_format_always_write_decimal_point_in_float_and_decima
 </section>
 
 <section class="slide">
-<h2>clickhouse-client niceties</h2>
+<h2 style="font-size: 30pt;">Cascading refreshable materialized views</h2>
 
-<p style="margin-top: -0.5em;">&mdash; <b style="color: green;">--chime</b>: ring the terminal bell when a long query finishes (5s default).
-<br/>&mdash; Multi-line <b>paste</b> stays under one prompt, even without bracketed paste.
-<br/>&mdash; Runtime <b>pager</b> control; granular <b>--echo-formatted</b> / <b>--echo-query-id</b>.
-<br/>&mdash; Non-UTF-8 terminals fall back to ASCII grid borders.</p>
+<p style="margin-top: -0.5em;">A refreshable MV can now trigger off <b>another</b> RMV's refresh &mdash; not just a clock:</p>
 
-<h2 style="margin-top: -0.3em;">New system tables</h2>
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE MATERIALIZED VIEW base
+<b style="color: green;">REFRESH EVERY 1 HOUR</b> ENGINE = MergeTree ORDER BY day AS &hellip;;
 
-<p style="margin-top: -0.5em;">&mdash; <b style="color: green;">system.constraints</b> &mdash; all CHECK / ASSUME constraints.
-<br/>&mdash; <b>system.iceberg_files</b>, <b>system.keeper_snapshots</b>, <b>system.keeper_cluster</b>, &hellip;
+CREATE MATERIALIZED VIEW rollup
+<b style="color: green;">REFRESH EVERY 1 HOUR DEPENDS ON base</b> ENGINE = &hellip; AS
+SELECT day, sum(x) FROM base GROUP BY day;
+</code></p>
+
+<p>&mdash; <b>rollup</b> waits for <b>base</b> to finish, then refreshes &mdash; build dependency chains.
+<br/>&mdash; In <b>system.view_refreshes</b> it shows as <b>WaitingForDependencies</b> until base completes.</p>
+
+<!-- Demo (Atomic database, on a server or local with an Atomic db):
+
+CREATE DATABASE r ENGINE = Atomic;
+CREATE TABLE r.src (x UInt32) ENGINE = MergeTree ORDER BY x;
+CREATE MATERIALIZED VIEW r.base REFRESH EVERY 1 HOUR ENGINE = MergeTree ORDER BY x AS SELECT x FROM r.src;
+CREATE MATERIALIZED VIEW r.child REFRESH EVERY 1 HOUR DEPENDS ON r.base ENGINE = MergeTree ORDER BY x AS SELECT x FROM r.base;
+SELECT view, status FROM system.view_refreshes ORDER BY view;
+-- base: Running    child: WaitingForDependencies
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: Michael Kolupaev.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Control over projection materialization</h2>
+
+<p style="margin-top: -0.5em;">Two new <b>MergeTree</b> settings decouple projection building from <b>INSERT</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;"><b style="color: green;">materialize_projections_on_insert = 0</b>
+<span style="color: gray;">-- INSERTs skip building projection parts → faster ingestion</span>
+
+<b style="color: green;">materialize_projections_on_merge = 1</b>
+<span style="color: gray;">-- a merge rebuilds a projection missing from all its source parts</span>
+</code></p>
+
+<p>&mdash; Tables with many projections ingest faster; projections are built during merges instead.
+<br/>&mdash; Merges still combine only parts that share the same set of projections.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1.5em;">Developer: Christoph Wurm.</p>
+</section>
+
+<section class="slide">
+<h2>IP-prefix quotas</h2>
+
+<p>Key a quota by a <b>subnet</b>, not just a single address:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE QUOTA q <b style="color: green;">KEYED BY ip_address IPV4_PREFIX_BITS 24</b>
+  FOR INTERVAL 1 hour MAX queries = 1000;
+<span style="color: gray;">-- every client in a /24 shares one quota bucket</span>
+
+CREATE QUOTA q6 KEYED BY ip_address <b style="color: green;">IPV6_PREFIX_BITS 64</b> &hellip;;
+</code></p>
+
+<p>&mdash; Rate-limit a whole network range at once.
+<br/>&mdash; Works with <b>IP_ADDRESS</b> and <b>FORWARDED_IP_ADDRESS</b> keys.</p>
+
+<!-- Demo:
+
+CREATE QUOTA q KEYED BY ip_address IPV4_PREFIX_BITS 24 FOR INTERVAL 1 hour MAX queries = 1000;
+SHOW CREATE QUOTA q;
+-- CREATE QUOTA q KEYED BY ip_address IPV4_PREFIX_BITS 24 FOR INTERVAL 1 hour MAX queries = 1000
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1.5em;">Developer: Aditya Chopra.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back2.jpg); background-size: cover;">
+<h2><span class="hilite">Usability</span></h2>
+</section>
+
+<section class="slide">
+<h2>system.documentation</h2>
+
+<p>The whole reference manual, as a table, inside the server:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT type, count() FROM <b style="color: green;">system.documentation</b> GROUP BY type;
+</code></p>
+
+<table style="font-size: 13pt; width: 72%; margin-top: 0.3em;">
+<tr><th>type</th><th>count</th></tr>
+<tr><td>Function</td><td>1592</td></tr>
+<tr><td>Setting</td><td>1548</td></tr>
+<tr><td>Server Setting / MergeTree Setting</td><td>412 / 316</td></tr>
+<tr><td>Aggregate Function, Data Type, Format, &hellip;</td><td>&hellip;</td></tr>
+</table>
+
+<p style="margin-top: 0.3em;">&mdash; The same docs as the website &mdash; queryable, greppable, offline.
+<br/>&mdash; Perfect fuel for AI agents writing ClickHouse SQL.</p>
+
+<!-- Demo:
+
+SELECT type, count() AS c FROM system.documentation GROUP BY type ORDER BY c DESC LIMIT 6;
+SELECT description FROM system.documentation WHERE name = 'bitCount' AND type = 'Function' FORMAT TSVRaw;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>help in the CLI</h2>
+
+<p>Type <b style="color: green;">help &lt;name&gt;</b> in clickhouse-client / clickhouse-local to read the docs
+<br/>right in the terminal &mdash; backed by <b>system.documentation</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">:) <b style="color: green;">help</b> length
+
+length (Function)
+================================================================
+Calculates the length of a string or array.
+&hellip;
+</code></p>
+
+<p>&mdash; Also <b>/help</b>, <b>man</b>, <b>/man</b>. Ambiguous names list all matches; typos get suggestions.
+<br/>&mdash; Markdown rendered in the terminal, with syntax-highlighted SQL.</p>
+
+<!-- Demo:
+
+printf 'help length\n' | clickhouse local
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Docs embedded in every system table</h2>
+
+<p>System tables that describe the system now describe themselves &mdash; with
+<br/><b>description</b>, <b>syntax</b>, <b>examples</b>, <b>introduced_in</b> and <b>related</b> columns:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.25;">SELECT name, introduced_in FROM <b style="color: green;">system.table_engines</b> WHERE name ILIKE '%kafka%';
+
+SELECT name, description FROM <b style="color: green;">system.data_type_families</b>;
+</code></p>
+
+<p style="margin-top: 0.2em;">Now self-documenting: <b>table_engines</b>, <b>database_engines</b>, <b>data_type_families</b>,
+<br/><b>formats</b>, <b>aggregate_function_combinators</b>, <b>dictionary_layouts</b>,
+<br/><b>dictionary_sources</b>, <b>data_skipping_index_types</b>, <b>disk_types</b>.</p>
+
+<!-- Demo:
+
+SELECT name, introduced_in, substring(description, 1, 80) FROM system.table_engines WHERE name = 'MergeTree' FORMAT Vertical;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>New system tables</h2>
+
+<p style="margin-top: -0.3em;">More of ClickHouse, introspectable as tables:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT table, name, type, expression FROM <b style="color: green;">system.constraints</b>;
+</code></p>
+
+<p>&mdash; <b style="color: green;">system.constraints</b> &mdash; every CHECK / ASSUME constraint, with its expression.
+<br/>&mdash; <b>system.iceberg_files</b>, <b>system.keeper_snapshots</b>, <b>system.keeper_changelogs</b>,
+<br/>&emsp; <b>system.keeper_cluster</b>.
 <br/>&mdash; <b>basic</b> statistics: compact per-column min/max, avg length, NULL counts.</p>
 
 <!-- Demo:
@@ -267,7 +343,96 @@ SELECT table, name, type, expression FROM system.constraints WHERE database = cu
 
 -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Groene AI, Azat Khuzhin, Pedro Ferreira, Han Fei, Alexey Milovidov.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Pedro Ferreira, Miсhael Stetsyuk, Han Fei.</p>
+</section>
+
+<section class="slide">
+<h2>Which AI agent is querying you?</h2>
+
+<p>ClickHouse now detects the AI coding agent that launched the client,
+<br/>from its environment, and records it in a new <b style="color: green;">client_agent</b> column:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT query_id, <b style="color: green;">client_agent</b>, interface
+FROM system.processes;
+</code></p>
+
+<table style="font-size: 14pt; width: 80%;">
+<tr><th>query_id</th><th>client_agent</th><th>interface</th></tr>
+<tr><td>ai_demo</td><td><b style="color: green;">claude-code</b></td><td>1</td></tr>
+</table>
+
+<p style="margin-top: 0.5em;">&mdash; Recognizes Claude Code, Cursor, Codex, Gemini CLI, Goose, &hellip;
+<br/>&mdash; Also in <b>system.query_log</b> and <b>system.query_thread_log</b>.
+<br/>&mdash; How much of your workload is now written by agents? Now you can measure it.</p>
+
+<!-- Demo:
+
+CLAUDECODE=1 clickhouse client -q "SELECT sleep(3) FROM numbers(4) SETTINGS function_sleep_max_microseconds_per_block=20000000" --query_id ai_demo &
+SELECT query_id, client_agent, interface FROM system.processes WHERE query_id = 'ai_demo';
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>clickhouse-local becomes a server</h2>
+
+<p><b>clickhouse-local</b> can now start listening for connections on the fly:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">clickhouse-local
+:) <b style="color: green;">SYSTEM START LISTEN TCP</b>;
+:) <b style="color: green;">SYSTEM START LISTEN HTTP</b>;
+<span style="color: gray;">-- now other clients can connect to your local session</span>
+</code></p>
+
+<p>&mdash; Turn an ad-hoc analysis session into a shareable endpoint.
+<br/>&mdash; <b>SYSTEM STOP LISTEN</b> to close it again.
+<br/>&mdash; The line between <b>local</b> and <b>server</b> keeps blurring.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Schema Visualizer</h2>
+
+<p>A new built-in web UI that draws the dependency graph of your database:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">http://localhost:8123<b style="color: green;">/schema</b></code></p>
+
+<p style="margin-top: 0.5em;">&mdash; Tables, materialized views, refreshable MVs, dictionaries,
+<br/>&emsp; distributed tables and views &mdash; and the arrows between them.
+<br/>&mdash; See at a glance how data flows from ingestion to rollups.
+<br/>&mdash; Ships with the server, no setup, no external tools.</p>
+
+<p style="margin-top: 1em;">Pairs nicely with the existing <b>/dashboard</b> and <b>/play</b> UIs.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Nikita Mikhaylov.</p>
+</section>
+
+<section class="slide">
+<h2>PNG output format</h2>
+
+<p>Render query results <b>as an image</b>. One row per pixel (<b>r</b>, <b>g</b>, <b>b</b> or <b>v</b>):</p>
+
+<p><code style="font-size: 12pt; line-height: 1.2;">SELECT toUInt8(128 + 127 * sin(x/16)) AS r,
+       toUInt8(128 + 127 * sin(y/16)) AS g,
+       toUInt8(128 + 127 * sin((x+y)/16)) AS b
+FROM (SELECT number % 256 AS x, number DIV 256 AS y FROM numbers(256*256))
+<b style="color: green;">FORMAT PNG</b> SETTINGS output_format_image_width = 256, output_format_image_height = 256;</code></p>
+
+<img src="pictures/png_demo.png" style="float: right; width: 24%; margin-top: -10.5em; margin-right: 1em; border: 2px solid #888;" alt="PNG generated from SQL"/>
+
+<p style="margin-top: 0.3em; margin-right: 26%;">&mdash; The Web UI shows the image directly.
+<br/>&mdash; Great for heatmaps, sparklines, generated art &mdash; or just for fun.</p>
+
+<!-- Demo (rendered server-side over HTTP, viewed in the browser / Web UI):
+
+curl "http://localhost:8123/?output_format_image_width=256&output_format_image_height=256" --data-binary "SELECT toUInt8(128+127*sin(x/16)) r, toUInt8(128+127*sin(y/16)) g, toUInt8(128+127*sin((x+y)/16)) b FROM (SELECT number%256 x, number DIV 256 y FROM numbers(65536)) FORMAT PNG" > out.png
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Maksim Dergousov.</p>
 </section>
 
 
@@ -369,6 +534,59 @@ SELECT 3 = SOME([1,2,3]) AS some_eq, 5 > ALL([1,2,3]) AS gt_all, 2 != ALL([1,3,5
 <p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexey Milovidov.</p>
 </section>
 
+<section class="slide">
+<h2>Select columns by name pattern</h2>
+
+<p>Pick columns with <b style="color: green;">* LIKE</b> and <b style="color: green;">* ILIKE</b> instead of listing them:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">* ILIKE '%user%'</b> FROM events;
+<span style="color: gray;">-- user_id, user_name, ... (case-insensitive)</span>
+
+SELECT <b style="color: green;">* LIKE 'metric\_%'</b> FROM telemetry;
+<span style="color: gray;">-- metric_cpu, metric_mem, ... (case-sensitive)</span>
+
+SELECT t.<b style="color: green;">* ILIKE '%id'</b>, count() FROM t GROUP BY ALL;
+<span style="color: gray;">-- qualified form works too</span>
+</code></p>
+
+<p>&mdash; <b>LIKE</b> matches column names case-sensitively, <b>ILIKE</b> case-insensitively.
+<br/>&mdash; A nice middle ground between <b>*</b> and <b>COLUMNS('regexp')</b>.</p>
+
+<!-- Demo:
+
+CREATE TABLE t (user_id UInt32, user_name String, event_time DateTime, EventType String) ENGINE=Memory;
+INSERT INTO t VALUES (1,'a','2026-01-01 00:00:00','x');
+SELECT * ILIKE '%user%' FROM t FORMAT Vertical;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Yue Ni.</p>
+</section>
+
+<section class="slide">
+<h2>ESCAPE in LIKE</h2>
+
+<p>Define a custom escape character so <b>%</b> and <b>_</b> can be literal:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT '50% off' <b style="color: green;">LIKE</b> '50!% off' <b style="color: green;">ESCAPE '!'</b>;
+<span style="color: gray;">-- 1   (the !% matches a literal percent sign)</span>
+
+SELECT 'a_b' <b style="color: green;">LIKE</b> 'a!_b' <b style="color: green;">ESCAPE '!'</b>;
+<span style="color: gray;">-- 1   (the !_ matches a literal underscore)</span>
+</code></p>
+
+<p>&mdash; SQL-standard syntax, also accepted by PostgreSQL, MySQL, &hellip;
+<br/>&mdash; No more wrestling with backslash quoting rules.</p>
+
+<!-- Demo:
+
+SELECT '50% off' LIKE '50!% off' ESCAPE '!' AS pct, 'a_b' LIKE 'a!_b' ESCAPE '!' AS underscore;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Ilya Yatsishin.</p>
+</section>
+
 
 <section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
 <h2 style="color: black;"><span class="hilite">Geospatial</span></h2>
@@ -458,93 +676,6 @@ FROM (SELECT [[(37.5,55.6),(37.7,55.6),(37.7,55.8),(37.5,55.8),(37.5,55.6)]]::Po
 </section>
 
 
-<section class="slide" style="background: url(pictures/back2.jpg); background-size: cover;">
-<h2><span class="hilite">Introspection</span></h2>
-</section>
-
-<section class="slide">
-<h2>system.documentation</h2>
-
-<p>The whole reference manual, as a table, inside the server:</p>
-
-<p><code style="font-size: 14pt; line-height: 1.25;">SELECT type, count() FROM <b style="color: green;">system.documentation</b> GROUP BY type;
-</code></p>
-
-<table style="font-size: 13pt; width: 72%; margin-top: 0.3em;">
-<tr><th>type</th><th>count</th></tr>
-<tr><td>Function</td><td>1592</td></tr>
-<tr><td>Setting</td><td>1548</td></tr>
-<tr><td>Server Setting / MergeTree Setting</td><td>412 / 316</td></tr>
-<tr><td>Aggregate Function, Data Type, Format, &hellip;</td><td>&hellip;</td></tr>
-</table>
-
-<p style="margin-top: 0.3em;">&mdash; The same docs as the website &mdash; queryable, greppable, offline.
-<br/>&mdash; Perfect fuel for AI agents writing ClickHouse SQL.</p>
-
-<!-- Demo:
-
-SELECT type, count() AS c FROM system.documentation GROUP BY type ORDER BY c DESC LIMIT 6;
-SELECT description FROM system.documentation WHERE name = 'bitCount' AND type = 'Function' FORMAT TSVRaw;
-
--->
-
-<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Alexey Milovidov.</p>
-</section>
-
-<section class="slide">
-<h2>Which AI agent is querying you?</h2>
-
-<p>ClickHouse now detects the AI coding agent that launched the client,
-<br/>from its environment, and records it in a new <b style="color: green;">client_agent</b> column:</p>
-
-<p><code style="font-size: 14pt; line-height: 1.25;">SELECT query_id, <b style="color: green;">client_agent</b>, interface
-FROM system.processes;
-</code></p>
-
-<table style="font-size: 14pt; width: 80%;">
-<tr><th>query_id</th><th>client_agent</th><th>interface</th></tr>
-<tr><td>ai_demo</td><td><b style="color: green;">claude-code</b></td><td>1</td></tr>
-</table>
-
-<p style="margin-top: 0.5em;">&mdash; Recognizes Claude Code, Cursor, Codex, Gemini CLI, Goose, &hellip;
-<br/>&mdash; Also in <b>system.query_log</b> and <b>system.query_thread_log</b>.
-<br/>&mdash; How much of your workload is now written by agents? Now you can measure it.</p>
-
-<!-- Demo:
-
-CLAUDECODE=1 clickhouse client -q "SELECT sleep(3) FROM numbers(4) SETTINGS function_sleep_max_microseconds_per_block=20000000" --query_id ai_demo &
-SELECT query_id, client_agent, interface FROM system.processes WHERE query_id = 'ai_demo';
-
--->
-
-<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Alexey Milovidov.</p>
-</section>
-
-<section class="slide">
-<h2 style="font-size: 30pt;">Docs embedded in every system table</h2>
-
-<p>System tables that describe the system now describe themselves &mdash; with
-<br/><b>description</b>, <b>syntax</b>, <b>examples</b>, <b>introduced_in</b> and <b>related</b> columns:</p>
-
-<p><code style="font-size: 13pt; line-height: 1.25;">SELECT name, introduced_in FROM <b style="color: green;">system.table_engines</b> WHERE name ILIKE '%kafka%';
-
-SELECT name, description FROM <b style="color: green;">system.data_type_families</b>;
-</code></p>
-
-<p style="margin-top: 0.2em;">Now self-documenting: <b>table_engines</b>, <b>database_engines</b>, <b>data_type_families</b>,
-<br/><b>formats</b>, <b>aggregate_function_combinators</b>, <b>dictionary_layouts</b>,
-<br/><b>dictionary_sources</b>, <b>data_skipping_index_types</b>, <b>disk_types</b>.</p>
-
-<!-- Demo:
-
-SELECT name, introduced_in, substring(description, 1, 80) FROM system.table_engines WHERE name = 'MergeTree' FORMAT Vertical;
-
--->
-
-<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Alexey Milovidov.</p>
-</section>
-
-
 <section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
 <h2><span style="color: black;" class="hilite">Performance Improvements</span></h2>
 </section>
@@ -613,8 +744,7 @@ clickhouse local --time --queries-file wide.sql   # 26.5: 1.464s   26.6: 0.023s
 <br/>&emsp; in-memory prefix instead of loading the whole key.</p>
 
 <p style="margin-top: 0.7em;">The win is a <b>scaling property</b>: index-analysis cost stops growing with key
-<br/>length &mdash; most visible on pathologically long or wide sorting keys (closes #65103).
-<br/>Toggle with <b style="color: green;">use_lightweight_primary_key_index_analysis</b>.</p>
+<br/>length &mdash; most visible on pathologically long or wide sorting keys (closes #65103).</p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Nihal Z. Miaji.</p>
 </section>
@@ -669,47 +799,6 @@ clickhouse local --time --max_threads=16 --enable_sharding_aggregator=1 -q "$A" 
 </section>
 
 <section class="slide">
-<h2>Enum memory: up to 10x smaller</h2>
-
-<p>The in-memory representation of the <b>Enum</b> data type was optimized:</p>
-
-<p style="margin-top: 0.5em;">&mdash; The optimization is in the in-memory value&harr;name representation of the
-<br/>&emsp; <b>Enum</b> <b>DataType</b> &mdash; the per-column metadata, not the row data.
-<br/>&mdash; Value &rarr; name lookups are similar or faster; name &rarr; value is slightly slower
-<br/>&emsp; &mdash; but it's the rarer direction.</p>
-
-<p style="margin-top: 0.7em;">If you use <b>Enum</b>s for low-cardinality strings (and you should), you get the
-<br/>savings for free &mdash; biggest impact with wide enums and many enum columns.</p>
-
-<p style="color: gray; font-size: 14pt; margin-top: 1.5em;">Developer: Ilya Yatsishin.</p>
-</section>
-
-<section class="slide">
-<h2>Vector search &amp; crypto speedups</h2>
-
-<p style="margin-top: -0.5em;">Cryptography recovers the performance lost in the OpenSSL 3.x migration (24.4):</p>
-
-<p style="margin-top: -0.3em;">&mdash; <b style="color: green;">encrypt</b> / <b>decrypt</b> / <b>aes_*_mysql</b> &mdash; up to an <b>order of magnitude</b> faster.
-<br/>&mdash; <b>halfMD5</b> avoids per-row provider lookups; SIMD <b>SHA1</b>; NEON multi-buffer <b>MD5</b>.</p>
-
-<p style="margin-top: 0.3em;"><b style="color: green;">Measured</b> &mdash; <b>encrypt</b>, 10M rows, single thread:
-<br/>&emsp; <b>3.86 s &rarr; 0.29 s</b> &nbsp;(~13x), 26.5 vs 26.6.</p>
-
-<p style="margin-top: 0.4em;">Vector distance functions are heavily vectorized &mdash; <b>L2Distance</b>,
-<br/><b>cosineDistance</b>, <b>dotProduct</b>, <b>arrayNorm</b> on <b>x86-64-v3 / v4</b> + <b>AVX-512</b>;
-<br/>new <b>quantizeBFloat16ToInt8</b> embedding codec.</p>
-
-<!-- Demo / proof (crypto win is CPU-agnostic; vector SIMD is x86-specific):
-
-Q="SELECT count(ignore(encrypt('aes-128-cbc', toString(number), '0123456789012345', '0123456789012345'))) FROM numbers(10000000)"
-clickhouse local --time -q "$Q"   # 26.5: 3.86s   26.6: 0.29s
-
--->
-
-<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developers: Konstantin Bogdanov, Nikita Taranov, Peng, Joanna Hulboj, Alexey Milovidov.</p>
-</section>
-
-<section class="slide">
 <h2>LIMIT BY, optimized many ways</h2>
 
 <p>A whole family of new optimizations for <b>LIMIT BY</b> (all on by default):</p>
@@ -736,6 +825,23 @@ clickhouse local --path db --memory-usage --optimize_limit_by_in_order=1 -q "$Q"
 -->
 
 <p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Nihal Z. Miaji.</p>
+</section>
+
+<section class="slide">
+<h2>JOIN optimizations</h2>
+
+<p style="margin-top: -0.3em;">A batch of JOIN planner and runtime improvements, mostly on by default:</p>
+
+<p style="margin-top: 0.3em;">&mdash; <b style="color: green;">enable_join_transitive_predicates</b> on by default &mdash; push derived
+<br/>&emsp; predicates across the join (filter both sides for free).
+<br/>&mdash; Build-side <b>FixedHashMap</b> doubles as the probe-side runtime filter.
+<br/>&mdash; <b>Lazy</b> selector / replication indexes when a JOIN is followed by a
+<br/>&emsp; selective <b>LIMIT</b> / <b>TopN</b> / another JOIN.
+<br/>&mdash; <b>parallel_hash</b> is now allowed for <b>ASOF JOIN</b>.
+<br/>&mdash; Packed <b>keys32</b> / <b>keys64</b> in HashJoin; fast path for single-row probes.
+<br/>&mdash; DP join reordering now works with parallel replicas.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developers: A. Gololobov, N. Taranov, H. Selmi, Xiaozhe Yu, G. Maher.</p>
 </section>
 
 
@@ -782,6 +888,42 @@ INSERT INTO live_events VALUES (3,'streaming'),(4,'rocks');
 </section>
 
 <section class="slide">
+<h2 style="font-size: 30pt;">Multi-stage distributed query execution 🧪</h2>
+
+<p style="margin-top: -0.5em;">The experimental distributed planner splits a query plan into <b>stages</b>
+<br/>connected by exchanges &mdash; and ships fragments to worker nodes:</p>
+
+<p style="margin-top: 0.5em;">&mdash; <b style="color: green;">scatter</b> / <b style="color: green;">broadcast</b> / <b style="color: green;">gather</b> / <b style="color: green;">shuffle</b> exchanges.
+<br/>&mdash; Distributed <b>shuffle</b> and <b>broadcast hash joins</b>, shuffle aggregation, distributed sort.
+<br/>&mdash; Data between stages streamed over TCP or temp files in object storage.
+<br/>&mdash; Several workers per host (<b>stateless_worker_port</b> / <b>streaming_exchange_port</b>).</p>
+
+<p style="margin-top: 0.5em;">A foundation for true MPP-style execution &mdash; disabled by default (<b>make_distributed_plan</b>).</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: Alexander Gololobov.</p>
+</section>
+
+<section class="slide">
+<h2>Memory reservations for workloads</h2>
+
+<p style="margin-top: -0.5em;">The workload scheduler &mdash; which already manages CPU, I/O and concurrency &mdash;
+<br/>now manages <b>memory</b> too, so an important workload always has headroom:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE WORKLOAD all;
+CREATE WORKLOAD prod IN all SETTINGS <b style="color: green;">max_memory = 100000000000</b>;    <span style="color: gray;">-- 100 GB</span>
+CREATE WORKLOAD reports IN all SETTINGS <b style="color: green;">max_memory = 20000000000</b>;  <span style="color: gray;">-- 20 GB</span>
+
+<span style="color: gray;">-- route a query to a workload:</span>
+SELECT &hellip; SETTINGS <b style="color: green;">workload = 'prod'</b>;
+</code></p>
+
+<p>&mdash; Isolate memory between tenants / pipelines; a noisy workload can't starve the rest.
+<br/>&mdash; See the <b>workload scheduling</b> documentation.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Sergei Trifonov.</p>
+</section>
+
+<section class="slide">
 <h2 style="font-size: 30pt;">Hypothetical indexes + EXPLAIN WHATIF</h2>
 
 <p style="margin-top: -0.5em;">Ask "what if I had this skip index?" &mdash; <b>without</b> building it:</p>
@@ -814,64 +956,6 @@ EXPLAIN WHATIF SELECT count() FROM logs WHERE level = 'error';
 </section>
 
 <section class="slide">
-<h2>Schema Visualizer</h2>
-
-<p>A new built-in web UI that draws the dependency graph of your database:</p>
-
-<p><code style="font-size: 14pt; line-height: 1.25;">http://localhost:8123<b style="color: green;">/schema</b></code></p>
-
-<p style="margin-top: 0.5em;">&mdash; Tables, materialized views, refreshable MVs, dictionaries,
-<br/>&emsp; distributed tables and views &mdash; and the arrows between them.
-<br/>&mdash; See at a glance how data flows from ingestion to rollups.
-<br/>&mdash; Ships with the server, no setup, no external tools.</p>
-
-<p style="margin-top: 1em;">Pairs nicely with the existing <b>/dashboard</b> and <b>/play</b> UIs.</p>
-
-<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Nikita Mikhaylov.</p>
-</section>
-
-<section class="slide">
-<h2>PNG output format</h2>
-
-<p>Render query results <b>as an image</b>. One row per pixel (<b>r</b>, <b>g</b>, <b>b</b> or <b>v</b>):</p>
-
-<p><code style="font-size: 12pt; line-height: 1.2;">SELECT toUInt8(128 + 127 * sin(x/16)) AS r,
-       toUInt8(128 + 127 * sin(y/16)) AS g,
-       toUInt8(128 + 127 * sin((x+y)/16)) AS b
-FROM (SELECT number % 256 AS x, number DIV 256 AS y FROM numbers(256*256))
-<b style="color: green;">FORMAT PNG</b> SETTINGS output_format_image_width = 256, output_format_image_height = 256;</code></p>
-
-<img src="pictures/png_demo.png" style="float: right; width: 24%; margin-top: -10.5em; margin-right: 1em; border: 2px solid #888;" alt="PNG generated from SQL"/>
-
-<p style="margin-top: 0.3em; margin-right: 26%;">&mdash; The Web UI shows the image directly.
-<br/>&mdash; Great for heatmaps, sparklines, generated art &mdash; or just for fun.</p>
-
-<!-- Demo (rendered server-side over HTTP, viewed in the browser / Web UI):
-
-curl "http://localhost:8123/?output_format_image_width=256&output_format_image_height=256" --data-binary "SELECT toUInt8(128+127*sin(x/16)) r, toUInt8(128+127*sin(y/16)) g, toUInt8(128+127*sin((x+y)/16)) b FROM (SELECT number%256 x, number DIV 256 y FROM numbers(65536)) FORMAT PNG" > out.png
-
--->
-
-<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Maksim Dergousov.</p>
-</section>
-
-<section class="slide">
-<h2>Web Terminal is now production</h2>
-
-<p>The in-browser <b>clickhouse-client</b> graduates from experimental:</p>
-
-<p><code style="font-size: 14pt; line-height: 1.25;">http://localhost:8123<b style="color: green;">/webterminal</b></code></p>
-
-<p style="margin-top: 0.5em;">&mdash; Enabled by default; controlled by the new <b style="color: green;">enable_webterminal</b> server setting.
-<br/>&mdash; The old <b>allow_experimental_webterminal</b> is deprecated but still honored.
-<br/>&mdash; A full terminal experience &mdash; history, highlighting &mdash; with nothing to install.</p>
-
-<p><a href="https://play.clickhouse.com/webterminal?user=play">Demo</a></p>
-
-<p style="color: gray; font-size: 14pt; margin-top: 1.5em;">Developer: Alexey Milovidov.</p>
-</section>
-
-<section class="slide">
 <h2>aiEmbed 🧪</h2>
 
 <p>Generate text embeddings from inside ClickHouse, via an LLM API:</p>
@@ -883,120 +967,59 @@ LIMIT 10;
 </code></p>
 
 <p>&mdash; Build a semantic-search or RAG pipeline without leaving SQL.
-<br/>&mdash; Combines naturally with the faster vector distance functions in 26.6.
+<br/>&mdash; Pairs with the new quantization functions for compact vector indexes.
 <br/>&mdash; Experimental &mdash; configure your embedding provider and model.</p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 2.5em;">Developer: George Larionov.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Multi-stage distributed query execution 🧪</h2>
+<h2>Embedding quantization functions</h2>
 
-<p style="margin-top: -0.5em;">The experimental distributed planner splits a query plan into <b>stages</b>
-<br/>connected by exchanges &mdash; and ships fragments to worker nodes:</p>
+<p style="margin-top: -0.3em;">A scalar codec that compresses embedding components to 8 bits &mdash; and below:</p>
 
-<p style="margin-top: 0.5em;">&mdash; <b style="color: green;">scatter</b> / <b style="color: green;">broadcast</b> / <b style="color: green;">gather</b> / <b style="color: green;">shuffle</b> exchanges.
-<br/>&mdash; Distributed <b>shuffle</b> and <b>broadcast hash joins</b>, shuffle aggregation, distributed sort.
-<br/>&mdash; Data between stages streamed over TCP or temp files in object storage.
-<br/>&mdash; Several workers per host (<b>stateless_worker_port</b> / <b>streaming_exchange_port</b>).</p>
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">quantizeBFloat16ToInt8</b>(1.5::BFloat16);
+<span style="color: gray;">-- 107</span>
 
-<p style="margin-top: 0.5em;">A foundation for true MPP-style execution &mdash; disabled by default (<b>make_distributed_plan</b>).</p>
-
-<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: Alexander Gololobov.</p>
-</section>
-
-<section class="slide">
-<h2>WebAssembly UDFs: AssemblyScript 🧪</h2>
-
-<p>WebAssembly UDFs now speak the <b style="color: green;">AssemblyScript</b> ABI &mdash; write UDFs in a
-<br/>TypeScript-like language and compile to Wasm:</p>
-
-<p style="margin-top: 0.5em;">&mdash; Try it with no local toolchain: the browser playground compiles
-<br/>&emsp; AssemblyScript and loads the module into local ClickHouse.
-<br/>&mdash; <b>Buffers</b> serialization (<b>ABI BUFFERED_V1</b>) and a <b>webassembly_udf_enable_fuel</b> guard.</p>
-
-<p style="margin-top: 1em;">Sandboxed, portable, language-agnostic user-defined functions &mdash;
-<br/>safer than executable UDFs, faster than per-row processes.</p>
-
-<p style="color: gray; font-size: 14pt; margin-top: 1.5em;">Developers: Vladimir Cherkasov, Antonio Andelic.</p>
-</section>
-
-<section class="slide">
-<h2>clickhouse-local becomes a server</h2>
-
-<p><b>clickhouse-local</b> can now start listening for connections on the fly:</p>
-
-<p><code style="font-size: 14pt; line-height: 1.25;">clickhouse-local
-:) <b style="color: green;">SYSTEM START LISTEN TCP</b>;
-:) <b style="color: green;">SYSTEM START LISTEN HTTP</b>;
-<span style="color: gray;">-- now other clients can connect to your local session</span>
+SELECT <b style="color: green;">dequantizeInt8ToBFloat16</b>(quantizeBFloat16ToInt8(1.5::BFloat16));
+<span style="color: gray;">-- 1.5   (near-lossless round-trip)</span>
 </code></p>
 
-<p>&mdash; Turn an ad-hoc analysis session into a shareable endpoint.
-<br/>&mdash; <b>SYSTEM STOP LISTEN</b> to close it again.
-<br/>&mdash; The line between <b>local</b> and <b>server</b> keeps blurring.</p>
+<p>&mdash; 256-level Gaussian Lloyd&ndash;Max quantizer; one byte per component.
+<br/>&mdash; Int4 / Int2 / binary codes fall out by bit-truncation &mdash; trade size for recall.
+<br/>&mdash; Shrinks vector indexes 4x (or more) for cheaper similarity search.</p>
 
-<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Alexey Milovidov.</p>
-</section>
+<!-- Demo:
 
+SELECT quantizeBFloat16ToInt8(1.5::BFloat16);                                       -- 107
+SELECT dequantizeInt8ToBFloat16(quantizeBFloat16ToInt8(1.5::BFloat16));            -- 1.5
 
-<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
-<h2 style="font-size: 32pt; margin-left: -1em;"><span class="hilite">Data Lakes</span></h2>
-</section>
+-->
 
-<section class="slide">
-<h2>Writing to Azure Data Lake Gen2</h2>
-
-<p>ClickHouse can now <b>write</b> into Azure Data Lake Storage Gen2,
-<br/>not just read from it.</p>
-
-<p style="margin-top: 0.5em;">Plus broader data-lake improvements:</p>
-
-<p style="margin-top: -0.3em;">&mdash; <b style="color: green;">Schema evolution</b> together with concurrent consistency checks for catalogs.
-<br/>&mdash; A <b>cache disk</b> can now be used for data-lake table engines.
-<br/>&mdash; <b>OneLake</b> catalogs read via the Blob endpoint by default (<b>onelake_use_blob_endpoint</b>).
-<br/>&mdash; <b>S3</b> role assumption with an optional <b>external_id</b> credential.
-<br/>&mdash; <b>used_storages</b> in <b>system.query_log</b> populated for catalog tables.</p>
-
-<p style="color: gray; font-size: 14pt; margin-top: 1.5em;">Developers: Konstantin Vedernikov, RinChanNOW, Melvyn Peignon.</p>
-</section>
-
-<section class="slide">
-<h2>system.iceberg_files</h2>
-
-<p>Per-file metadata for Iceberg tables &mdash; one row per data or delete file
-<br/>in the current snapshot:</p>
-
-<p><code style="font-size: 14pt; line-height: 1.25;">SELECT file_path, file_format, record_count, file_size_in_bytes
-FROM <b style="color: green;">system.iceberg_files</b>;
-</code></p>
-
-<p>&mdash; See exactly which files back a table, and how big they are.
-<br/>&mdash; Companion to inspecting snapshot <b>operation</b> and <b>summary</b>.
-<br/>&mdash; The <b>query condition cache</b> and <b>schema evolution</b> keep getting better for Iceberg.</p>
-
-<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Asya Shneerson.</p>
-</section>
-
-<section class="slide">
-<h2>Iceberg correctness</h2>
-
-<p>Sharper edges for safer data lakes:</p>
-
-<p style="margin-top: 0.5em;">&mdash; <b style="color: green;">icebergHash</b> and <b style="color: green;">icebergBucket</b> now <b>reject</b> 128/256-bit integers and
-<br/>&emsp; <b>Decimal256</b> instead of silently truncating and producing colliding hashes.
-<br/>&emsp; The Iceberg spec only defines hashing for 32/64-bit ints and decimals
-<br/>&emsp; up to precision 38 &mdash; cast explicitly to keep the old behavior.
-<br/>&mdash; Smaller default Iceberg metadata cache (1 GB &rarr; 128 MB).</p>
-
-<p style="margin-top: 1em;">Correctness over silent surprises.</p>
-
-<p style="color: gray; font-size: 14pt; margin-top: 1.5em;">Developers: Raúl Marín, Konstantin Vedernikov.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: Alexey Milovidov.</p>
 </section>
 
 
 <section class="slide" style="background: url(pictures/back8.jpg); background-size: cover;">
 <h2><span class="hilite">Bonus</span></h2>
+</section>
+
+<section class="slide">
+<h2>Bonus: CostBench</h2>
+
+<p>An open, reproducible benchmark for data-warehouse <b>cost-performance</b> &mdash;
+<br/>not just speed, but <b>performance per dollar</b>:</p>
+
+<p style="margin-top: 0.3em;">&mdash; 43 production-derived analytical queries on a real, anonymized dataset.
+<br/>&mdash; Applies each system's <b>real compute billing model</b> to raw runtimes.
+<br/>&mdash; Compares ClickHouse Cloud, Snowflake, Databricks, BigQuery, Redshift.</p>
+
+<p style="margin-top: 0.5em;"><b style="color: green;">ClickHouse Cloud</b>: ~23x better cost-performance than the nearest warehouse;
+<br/>3&ndash;5x more cost-effective than Snowflake in production, &gt;2x faster querying.</p>
+
+<p style="margin-top: 0.5em;"><a href="https://clickhouse.com/blog/costbench-data-warehouse-cost-performance">clickhouse.com/blog/costbench-data-warehouse-cost-performance</a></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">An open benchmark from ClickHouse.</p>
 </section>
 
 
