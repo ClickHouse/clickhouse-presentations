@@ -254,14 +254,12 @@ SELECT 5.0 SETTINGS output_format_always_write_decimal_point_in_float_and_decima
 <section class="slide">
 <h2>clickhouse-client niceties</h2>
 
-<p style="margin-top: -0.5em;">&mdash; <b style="color: green;">--chime</b>: ring the terminal bell when a query finishes after N seconds
-<br/>&emsp; (on by default, 5s threshold). Walk away, get notified when it's done.
-<br/>&mdash; Multi-line <b>paste</b> now stays under a single prompt even without bracketed paste.
-<br/>&mdash; MySQL-style runtime <b>pager</b> control (<b>PAGER 'less -SR'</b>).
-<br/>&mdash; Granular query echo: <b>--echo-formatted</b>, <b>--echo-query-id</b>.
-<br/>&mdash; Non-UTF-8 terminals fall back to ASCII grid borders automatically.</p>
+<p style="margin-top: -0.5em;">&mdash; <b style="color: green;">--chime</b>: ring the terminal bell when a long query finishes (5s default).
+<br/>&mdash; Multi-line <b>paste</b> stays under one prompt, even without bracketed paste.
+<br/>&mdash; Runtime <b>pager</b> control; granular <b>--echo-formatted</b> / <b>--echo-query-id</b>.
+<br/>&mdash; Non-UTF-8 terminals fall back to ASCII grid borders.</p>
 
-<h2 style="margin-top: 0.5em;">New system tables</h2>
+<h2 style="margin-top: -0.3em;">New system tables</h2>
 
 <p style="margin-top: -0.5em;">&mdash; <b style="color: green;">system.constraints</b> &mdash; all CHECK / ASSUME constraints.
 <br/>&mdash; <b>system.iceberg_files</b>, <b>system.keeper_snapshots</b>, <b>system.keeper_cluster</b>, &hellip;
@@ -477,17 +475,15 @@ FROM (SELECT [[(37.5,55.6),(37.7,55.6),(37.7,55.8),(37.5,55.8),(37.5,55.6)]]::Po
 <p><code style="font-size: 14pt; line-height: 1.25;">SELECT type, count() FROM <b style="color: green;">system.documentation</b> GROUP BY type;
 </code></p>
 
-<table style="font-size: 13pt; width: 70%;">
+<table style="font-size: 13pt; width: 72%; margin-top: 0.3em;">
 <tr><th>type</th><th>count</th></tr>
 <tr><td>Function</td><td>1592</td></tr>
 <tr><td>Setting</td><td>1548</td></tr>
-<tr><td>Server Setting</td><td>412</td></tr>
-<tr><td>MergeTree Setting</td><td>316</td></tr>
-<tr><td>Aggregate Function</td><td>197</td></tr>
-<tr><td>Data Type, Format, Table Engine, &hellip;</td><td>&hellip;</td></tr>
+<tr><td>Server Setting / MergeTree Setting</td><td>412 / 316</td></tr>
+<tr><td>Aggregate Function, Data Type, Format, &hellip;</td><td>&hellip;</td></tr>
 </table>
 
-<p style="margin-top: 0.5em;">&mdash; The same docs as the website, rendered as Markdown &mdash; queryable, greppable, offline.
+<p style="margin-top: 0.3em;">&mdash; The same docs as the website &mdash; queryable, greppable, offline.
 <br/>&mdash; Perfect fuel for AI agents writing ClickHouse SQL.</p>
 
 <!-- Demo:
@@ -530,7 +526,7 @@ SELECT query_id, client_agent, interface FROM system.processes WHERE query_id = 
 </section>
 
 <section class="slide">
-<h2>Docs embedded in every system table</h2>
+<h2 style="font-size: 30pt;">Docs embedded in every system table</h2>
 
 <p>System tables that describe the system now describe themselves &mdash; with
 <br/><b>description</b>, <b>syntax</b>, <b>examples</b>, <b>introduced_in</b> and <b>related</b> columns:</p>
@@ -540,11 +536,9 @@ SELECT query_id, client_agent, interface FROM system.processes WHERE query_id = 
 SELECT name, description FROM <b style="color: green;">system.data_type_families</b>;
 </code></p>
 
-<p style="margin-top: 0.2em;">Now self-documenting:
-<br/><b>system.table_engines</b>, <b>system.database_engines</b>, <b>system.data_type_families</b>,
-<br/><b>system.formats</b>, <b>system.aggregate_function_combinators</b>,
-<br/><b>system.dictionary_layouts</b>, <b>system.dictionary_sources</b>,
-<br/><b>system.data_skipping_index_types</b>, <b>system.disk_types</b>.</p>
+<p style="margin-top: 0.2em;">Now self-documenting: <b>table_engines</b>, <b>database_engines</b>, <b>data_type_families</b>,
+<br/><b>formats</b>, <b>aggregate_function_combinators</b>, <b>dictionary_layouts</b>,
+<br/><b>dictionary_sources</b>, <b>data_skipping_index_types</b>, <b>disk_types</b>.</p>
 
 <!-- Demo:
 
@@ -571,13 +565,12 @@ SELECT name, introduced_in, substring(description, 1, 80) FROM system.table_engi
 <br/>&mdash; Snapshot I/O moved to a background thread (<b>nuraft_use_bg_thread_for_snapshot_io</b>).
 <br/>&mdash; Lower peak memory when applying received snapshots.</p>
 
-<p style="margin-top: 1em;">Faster coordination &rarr; faster DDL, inserts, replication, and merges
-<br/>across the whole cluster.</p>
+<p style="margin-top: 0.7em;">Faster coordination &rarr; faster DDL, inserts, replication, and merges.</p>
 
-<p style="margin-top: 0.5em;"><b style="color: green;">Measured</b> &mdash; with <b>keeper-bench</b> on a 3-node ensemble: ~2x request throughput
-<br/>(needs a real cluster; not a single-process micro-benchmark).</p>
+<p style="margin-top: 0.5em;"><b style="color: green;">Measured</b> &mdash; with <b>keeper-bench</b> on a 3-node ensemble: ~2x request
+<br/>throughput (a cluster benchmark, not a single-process micro-benchmark).</p>
 
-<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Michael Kolupaev, Antonio Andelic.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developers: Michael Kolupaev, Antonio Andelic.</p>
 </section>
 
 <section class="slide">
@@ -651,7 +644,7 @@ clickhouse local --time --max_threads=1 -q "$S"   # 26.5: 7.14s   26.6: 5.93s
 
 -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 2.5em;">Developer: Alexey Milovidov.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
 </section>
 
 <section class="slide">
@@ -707,11 +700,9 @@ clickhouse local --time --max_threads=16 --enable_sharding_aggregator=1 -q "$A" 
 <p style="margin-top: 0.3em;"><b style="color: green;">Measured</b> &mdash; <b>encrypt</b>, 10M rows, single thread:
 <br/>&emsp; <b>3.86 s &rarr; 0.29 s</b> &nbsp;(~13x), 26.5 vs 26.6.</p>
 
-<p style="margin-top: 0.5em;">Vector distance functions are heavily vectorized:</p>
-
-<p style="margin-top: -0.3em;">&mdash; <b>L2Distance</b>, <b>cosineDistance</b>, <b>dotProduct</b>, <b>arrayNorm</b> &mdash; auto-vectorized on
-<br/>&emsp; <b>x86-64-v3 / v4</b> and <b>AVX-512</b>; plus a <b>QBit</b> transposed-distance path.
-<br/>&mdash; New <b>quantizeBFloat16ToInt8</b> / <b>dequantizeInt8ToBFloat16</b> embedding codec.</p>
+<p style="margin-top: 0.4em;">Vector distance functions are heavily vectorized &mdash; <b>L2Distance</b>,
+<br/><b>cosineDistance</b>, <b>dotProduct</b>, <b>arrayNorm</b> on <b>x86-64-v3 / v4</b> + <b>AVX-512</b>;
+<br/>new <b>quantizeBFloat16ToInt8</b> embedding codec.</p>
 
 <!-- Demo / proof (crypto win is CPU-agnostic; vector SIMD is x86-specific):
 
@@ -760,24 +751,21 @@ clickhouse local --path db --memory-usage --optimize_limit_by_in_order=1 -q "$Q"
 <section class="slide">
 <h2>Continuous queries 🧪</h2>
 
-<p>A <b>SELECT</b> that never ends &mdash; the first step toward streaming queries.
-<br/>Append <b style="color: green;">STREAM</b> and the query keeps emitting new rows as they are inserted:</p>
+<p style="margin-top: -0.5em;">A <b>SELECT</b> that never ends &mdash; the first step toward streaming queries.
+Append <b style="color: green;">STREAM</b> and it keeps emitting new rows as they are inserted:</p>
 
 <p><code style="font-size: 14pt; line-height: 1.25;">SET <b style="color: green;">enable_streaming_queries</b> = 1;
-
-SELECT id, msg FROM live_events <b style="color: green;">STREAM</b>;
-<span style="color: gray;">-- blocks and keeps streaming...</span>
+SELECT id, msg FROM live_events <b style="color: green;">STREAM</b>;  <span style="color: gray;">-- blocks, keeps streaming</span>
 </code></p>
 
-<p>Insert <b>(1,'hello'), (2,'world')</b> &hellip; then <b>(3,'streaming'), (4,'rocks')</b> &mdash;
-<br/>the running query prints each row in commit order, live:</p>
+<p style="margin-top: -0.3em;">Insert two rows, then two more &mdash; the running query prints each in commit order, live:</p>
 
 <p><code style="font-size: 13pt; line-height: 1.2;">1	hello
-2	world
+2	world      <span style="color: gray;">-- first INSERT</span>
 3	streaming
-4	rocks</code></p>
+4	rocks      <span style="color: gray;">-- second INSERT, streamed live</span></code></p>
 
-<p style="margin-top: -0.3em;">&mdash; Implemented via a series of snapshot reads over <b>MergeTree</b>.</p>
+<p style="margin-top: 0em;">&mdash; Implemented via a series of snapshot reads over <b>MergeTree</b>.</p>
 
 <!-- Demo:
 
@@ -799,9 +787,9 @@ INSERT INTO live_events VALUES (3,'streaming'),(4,'rocks');
 </section>
 
 <section class="slide">
-<h2>Hypothetical indexes + EXPLAIN WHATIF</h2>
+<h2 style="font-size: 30pt;">Hypothetical indexes + EXPLAIN WHATIF</h2>
 
-<p>Ask "what if I had this skip index?" &mdash; <b>without</b> building it:</p>
+<p style="margin-top: -0.5em;">Ask "what if I had this skip index?" &mdash; <b>without</b> building it:</p>
 
 <p><code style="font-size: 13pt; line-height: 1.2;"><b style="color: green;">CREATE HYPOTHETICAL INDEX</b> idx_level ON logs (level) TYPE set(2) GRANULARITY 4;
 
@@ -907,20 +895,19 @@ LIMIT 10;
 </section>
 
 <section class="slide">
-<h2>Multi-stage distributed query execution 🧪</h2>
+<h2 style="font-size: 30pt;">Multi-stage distributed query execution 🧪</h2>
 
-<p>The experimental distributed planner splits a query plan into <b>stages</b>
+<p style="margin-top: -0.5em;">The experimental distributed planner splits a query plan into <b>stages</b>
 <br/>connected by exchanges &mdash; and ships fragments to worker nodes:</p>
 
 <p style="margin-top: 0.5em;">&mdash; <b style="color: green;">scatter</b> / <b style="color: green;">broadcast</b> / <b style="color: green;">gather</b> / <b style="color: green;">shuffle</b> exchanges.
 <br/>&mdash; Distributed <b>shuffle</b> and <b>broadcast hash joins</b>, shuffle aggregation, distributed sort.
-<br/>&mdash; Data between stages streamed over TCP or via temporary files in object storage.
-<br/>&mdash; Several workers per host (per-replica <b>stateless_worker_port</b> / <b>streaming_exchange_port</b>).</p>
+<br/>&mdash; Data between stages streamed over TCP or temp files in object storage.
+<br/>&mdash; Several workers per host (<b>stateless_worker_port</b> / <b>streaming_exchange_port</b>).</p>
 
-<p style="margin-top: 0.5em;">A foundation for true MPP-style execution. Disabled by default
-<br/>(<b>make_distributed_plan</b>).</p>
+<p style="margin-top: 0.5em;">A foundation for true MPP-style execution &mdash; disabled by default (<b>make_distributed_plan</b>).</p>
 
-<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexander Gololobov.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: Alexander Gololobov.</p>
 </section>
 
 <section class="slide">
@@ -1024,19 +1011,20 @@ FROM <b style="color: green;">system.iceberg_files</b>;
 
 <section class="slide" style="background: url(pictures/wing.jpg); background-size: cover;">
 <h2>Meetups</h2>
-<p style="line-height: 1.25; margin-top: -2em;">
-<br/><span class="hilite">&mdash; 🇫🇷 Paris Meetup, Jun 24</span>
-<br/><span class="hilite">&mdash; 🇩🇪 Munich Meetup, Jun 25</span>
-<br/><span class="hilite">&mdash; 🌐 Virtual: Building Agentic Analytics, Jul 1</span>
-<br/><span class="hilite">&mdash; 🇬🇧 London Meetup, Jul 8</span>
-<br/><span class="hilite">&mdash; 🇺🇸 New York Meetup, Jul 9</span>
-<br/><span class="hilite">&mdash; 🇮🇳 Bangalore Meetup, Jul 12</span>
-<br/><span class="hilite">&mdash; 🇸🇪 Stockholm Meetup, Jul 15</span>
-<br/><span class="hilite">&mdash; 🇺🇸 Seattle Meetup, Jul 16</span>
-<br/><span class="hilite">&mdash; 🇯🇵 Tokyo Meetup, Jul 22</span>
-<br/><span class="hilite">&mdash; 🇧🇷 São Paulo Meetup, Jul 23</span>
-<br/><span class="hilite">&mdash; 🇦🇺 Sydney Meetup, Jul 29</span>
-<br/><span class="hilite">&mdash; 🇪🇸 Madrid Meetup, Jul 30</span>
+<p style="line-height: 1.2; margin-top: -2.2em; font-size: 19pt;">
+<br/><span class="hilite">&mdash; 🇦🇺 Sydney: Agentic AI Unplugged, Jun 24</span>
+<br/><span class="hilite">&mdash; 🇺🇸 Seattle Iceberg Meetup, Jun 25</span>
+<br/><span class="hilite">&mdash; 🇲🇾 Kuala Lumpur Meetup, Jun 26</span>
+<br/><span class="hilite">&mdash; 🇰🇷 Seoul: ClickHouse + Confluent, Jun 30</span>
+<br/><span class="hilite">&mdash; 🇺🇸 San Francisco: AI Demo Night, Jul 1</span>
+<br/><span class="hilite">&mdash; 🇮🇳 Mumbai: Lakes to Queries, Jul 4</span>
+<br/><span class="hilite">&mdash; 🇳🇱 Amsterdam: Data at Scale, Jul 7</span>
+<br/><span class="hilite">&mdash; 🇺🇸 New York: AI Builders Night, Jul 8</span>
+<br/><span class="hilite">&mdash; 🇩🇪 Berlin: WeAreDevelopers, Jul 8</span>
+<br/><span class="hilite">&mdash; 🇨🇦 Montreal: OSS Happy Hour, Jul 9</span>
+<br/><span class="hilite">&mdash; 🇮🇳 Bangalore: Fast Data at Scale, Jul 11</span>
+<br/><span class="hilite">&mdash; 🇦🇺 Melbourne Meetup, Jul 16</span>
+<br/><span class="hilite">&mdash; 🇯🇵 Tokyo: Google Cloud Next, Jul 30</span>
 </p>
 </section>
 
@@ -1046,14 +1034,14 @@ FROM <b style="color: green;">system.iceberg_files</b>;
 <p><a href="https://clickhouse.com/blog/">https://clickhouse.com/blog/</a></p>
 
 <p style="line-height: 1.5; margin-right: -5em;">
-&mdash; What's new in ClickHouse 26.6
-<br/>&mdash; Continuous queries: the road to streaming SQL
-<br/>&mdash; Tuning skip indexes with EXPLAIN WHATIF
-<br/>&mdash; Detecting AI agents in your query workload
-<br/>&mdash; Serving map tiles directly from ClickHouse
-<br/>&mdash; Inside ClickHouse Keeper: making coordination 2x faster
-<br/>&mdash; ipnsort and driftsort: sorting at the speed of Rust
-<br/>&mdash; Writing to Azure Data Lake Storage Gen2
+&mdash; The end-to-end cost-performance of real-time analytics: Snowflake vs. ClickHouse Cloud
+<br/>&mdash; Ten years of open source: a stained-glass view
+<br/>&mdash; 92x faster queries: how Open Electricity tracks Australia's energy transition
+<br/>&mdash; The open ecosystem around ClickHouse
+<br/>&mdash; What's new in ClickStack &mdash; May 2026
+<br/>&mdash; What's new in pg_clickhouse v0.3.2: Postgres 19, TLS, Regex, and Memory
+<br/>&mdash; How METRO Markets built a do-it-all data platform on ClickHouse Cloud
+<br/>&mdash; The future of observability: thousands of agents, not one proprietary AI
 </p>
 </section>
 
