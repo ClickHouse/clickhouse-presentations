@@ -668,7 +668,7 @@ SELECT MVTBoundingBox(12, 1205, 2557);
 <section class="slide">
 <h2>ClickHouse Keeper is 2x faster</h2>
 
-<p>A round of Keeper improvements makes it roughly <b>twice as fast</b> overall:</p>
+<p>A round of Keeper improvements makes it more <b>twice as fast</b> overall:</p>
 
 <p style="margin-top: 0.5em;">&mdash; Better request <b>batching</b>.
 <br/>&mdash; <b>Pipelining</b> messages to the leader.
@@ -676,9 +676,10 @@ SELECT MVTBoundingBox(12, 1205, 2557);
 <br/>&mdash; Snapshot I/O moved to a background thread (<b>nuraft_use_bg_thread_for_snapshot_io</b>).
 <br/>&mdash; Lower peak memory when applying received snapshots.</p>
 
-<p style="margin-top: 0.6em;">With <b>keeper-bench</b> (latency-bounded), vs the previous master (PR #101757):
-<br/>&emsp; <b>2899 &rarr; 7230 RPS</b> (~2.5x), median latency <b>41.4 &rarr; 18.3 ms</b>
-<br/>&emsp; &mdash; closing the gap to ZooKeeper 3.9 (7615 RPS, 18.0 ms).</p>
+<p>On a realistic workload with keeper-bench:</p>
+<p style="margin-top: 0.6em;"><b>26.5</b>: <b style="color: red;">2899</b> RPS, <b style="color: red;">41.4</b> ms latency
+<br/><b>26.6</b>: <b style="color: green;">7230</b> RPS, <b style="color: green;">18.3</b> ms latency
+</p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developers: Michael Kolupaev, Antonio Andelic.</p>
 </section>
@@ -695,12 +696,12 @@ SELECT MVTBoundingBox(12, 1205, 2557);
 <p style="margin-top: 0.3em;">More analysis wins, all enabled by default:</p>
 
 <p style="margin-top: -0.3em;">&mdash; Identifier-resolution caching during analysis.
-<br/>&mdash; Nested <b>SELECT *</b> over a ~1200-column table: analysis <b>~50x</b> faster.
+<br/>&mdash; Fast analysis of deeply nested subqueries.
 <br/>&mdash; Faster resolution for deeply nested function calls.
-<br/>&mdash; No more multi-minute stalls when many access entities change at once.</p>
+<br/>&mdash; Faster processing of changing access control entities.</p>
 
-<p style="margin-top: 0.3em;"><b style="color: green;">Measured</b> &mdash; nested <b>SELECT *</b> over a 1200-column table:
-<br/>&emsp; analysis <b>1.46 s &rarr; 0.023 s</b> &nbsp;(~64x), 26.5 vs 26.6.</p>
+<p style="margin-top: 0.3em;">Deeply nested <b>SELECT *</b> over a 1200-column table:
+<br/>&emsp; analysis <b>1.46 s &rarr; <b style="color: green;">0.023</b> s</b> &nbsp;(~64x), 26.5 vs 26.6.</p>
 
 <!-- Demo / proof:
 
@@ -716,34 +717,32 @@ clickhouse local --time --queries-file wide.sql   # 26.5: 1.464s   26.6: 0.023s
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Lightweight primary key index analysis</h2>
+<h2>Primary key analysis is faster</h2>
 
-<p>Long or high-cardinality primary keys used to make index analysis slow.
-<br/>Now (<b style="color: green;">use_lightweight_primary_key_index_analysis</b>, on by default):</p>
+<p>Long or high-cardinality primary keys used to make index analysis slow.</p>
+<p>Now (<b style="color: green;">use_lightweight_primary_key_index_analysis</b>, on by default):</p>
 
 <p style="margin-top: 0.5em;">&mdash; For a <b>long</b> primary key, analysis time depends on the columns the query
 <br/>&emsp; actually filters on &mdash; <b>not</b> on the length of the key.
 <br/>&emsp; Extending the sorting key is now nearly free for index analysis.
-<br/>&mdash; For a <b>high-cardinality</b> key, analysis works on just the selective
+</p>
+<p>&mdash; For a <b>high-cardinality</b> key, analysis works on just the selective
 <br/>&emsp; in-memory prefix instead of loading the whole key.</p>
-
-<p style="margin-top: 0.7em;">The win is a <b>scaling property</b>: index-analysis cost stops growing with key
-<br/>length &mdash; most visible on pathologically long or wide sorting keys (closes #65103).</p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Nihal Z. Miaji.</p>
 </section>
 
 <section class="slide">
-<h2>New comparison sorts: ipnsort &amp; driftsort</h2>
+<h2>Faster sorting</h2>
 
-<p>The general-purpose comparison sorts are now C++ ports of the Rust standard
-<br/>library's <b style="color: green;">ipnsort</b> (unstable) and <b style="color: green;">driftsort</b> (stable):</p>
+<p>The general-purpose comparison sorts are now C++ ports
+<br/>of <b style="color: green;">ipnsort</b> and <b style="color: green;">driftsort</b>:</p>
 
 <p style="margin-top: 0.5em;">&mdash; Faster <b>ORDER BY</b> on non-numeric columns and for stable sorts.
 <br/>&mdash; Removes a worst case on already reverse-sorted input.
 <br/>&mdash; State-of-the-art, adaptive, and battle-tested algorithms.</p>
 
-<p style="margin-top: 0.5em;"><b style="color: green;">Measured</b> &mdash; <b>ORDER BY</b> 20M strings, single thread:
+<p style="margin-top: 0.5em;"><b>ORDER BY</b> 20M strings, single thread:
 <br/>&emsp; <b>7.1 s &rarr; 5.9 s</b> &nbsp;(~1.2x), 26.5 vs 26.6.</p>
 
 <!-- Demo / proof (single thread isolates the comparison sort):
@@ -757,7 +756,7 @@ clickhouse local --time --max_threads=1 -q "$S"   # 26.5: 7.14s   26.6: 5.93s
 </section>
 
 <section class="slide">
-<h2>Faster aggregation</h2>
+<h2>Faster GROUP BY and JOIN</h2>
 
 <p style="margin-top: -0.5em;">&mdash; <b style="color: green;">Sharded aggregation</b> for high-cardinality, evenly-distributed keys
 <br/>&emsp; (<b>enable_sharding_aggregator = 1</b>): hash the key to scatter rows across
@@ -823,7 +822,7 @@ clickhouse local --path db --memory-usage --optimize_limit_by_in_order=1 -q "$Q"
 <br/>&emsp; selective <b>LIMIT</b> / <b>TopN</b> / another JOIN.
 <br/>&mdash; <b>parallel_hash</b> is now allowed for <b>ASOF JOIN</b>.
 <br/>&mdash; Packed <b>keys32</b> / <b>keys64</b> in HashJoin; fast path for single-row probes.
-<br/>&mdash; DP join reordering now works with parallel replicas.</p>
+<br/>&mdash; Dynamic Programming join reordering now works with parallel replicas.</p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developers: A. Gololobov, N. Taranov, H. Selmi, Xiaozhe Yu, G. Maher.</p>
 </section>
@@ -843,14 +842,11 @@ Append <b style="color: green;">STREAM</b> and it keeps emitting new rows as the
 SELECT id, msg FROM live_events <b style="color: green;">STREAM</b>;  <span style="color: gray;">-- blocks, keeps streaming</span>
 </code></p>
 
-<p style="margin-top: -0.3em;">Insert two rows, then two more &mdash; the running query prints each in commit order, live:</p>
-
-<p><code style="font-size: 13pt; line-height: 1.2;">1	hello
-2	world      <span style="color: gray;">-- first INSERT</span>
-3	streaming
-4	rocks      <span style="color: gray;">-- second INSERT, streamed live</span></code></p>
+<p>Applications: filtering and real-time alterting on a stream of events.</p>
 
 <p style="margin-top: 0em;">&mdash; Implemented via a series of snapshot reads over <b>MergeTree</b>.</p>
+
+<p>Next: persistent cursors for resumable consumption.</p>
 
 <!-- Demo:
 
@@ -882,7 +878,7 @@ INSERT INTO live_events VALUES (3,'streaming'),(4,'rocks');
 <br/>&mdash; Data between stages streamed over TCP or temp files in object storage.
 <br/>&mdash; Several workers per host (<b>stateless_worker_port</b> / <b>streaming_exchange_port</b>).</p>
 
-<p style="margin-top: 0.5em;">A foundation for true MPP-style execution &mdash; disabled by default (<b>make_distributed_plan</b>).</p>
+<p style="margin-top: 0.5em;">Controlled by a new setting, <b>make_distributed_plan</b>.</p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: Alexander Gololobov.</p>
 </section>
@@ -891,18 +887,21 @@ INSERT INTO live_events VALUES (3,'streaming'),(4,'rocks');
 <h2>Memory reservations for workloads</h2>
 
 <p style="margin-top: -0.5em;">The workload scheduler &mdash; which already manages CPU, I/O and concurrency &mdash;
-<br/>now manages <b>memory</b> too, so an important workload always has headroom:</p>
+now manages <b>memory</b> too:</p>
 
-<p><code style="font-size: 14pt; line-height: 1.25;">CREATE WORKLOAD all;
-CREATE WORKLOAD prod IN all SETTINGS <b style="color: green;">max_memory = 100000000000</b>;    <span style="color: gray;">-- 100 GB</span>
-CREATE WORKLOAD reports IN all SETTINGS <b style="color: green;">max_memory = 20000000000</b>;  <span style="color: gray;">-- 20 GB</span>
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE RESOURCE memory (MEMORY RESERVATION);
+CREATE WORKLOAD all;
+CREATE WORKLOAD prod IN all SETTINGS <b style="color: green;">max_memory = '100G'</b>;</span>
+CREATE WORKLOAD reports IN all SETTINGS <b style="color: green;">max_memory = '20G'</b>;</span>
+CREATE WORKLOAD vasya IN reports SETTINGS <b style="color: green;">weight = 1</b>;</span>
+CREATE WORKLOAD petya IN reports SETTINGS <b style="color: green;">weight = 2</b>;</span>
 
 <span style="color: gray;">-- route a query to a workload:</span>
 SELECT &hellip; SETTINGS <b style="color: green;">workload = 'prod'</b>;
-</code></p>
 
-<p>&mdash; Isolate memory between tenants / pipelines; a noisy workload can't starve the rest.
-<br/>&mdash; See the <b>workload scheduling</b> documentation.</p>
+<span style="color: gray;">-- reserve memory before processing:</span>
+SET reserve_memory = '5G';</span>
+</code></p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Sergei Trifonov.</p>
 </section>
@@ -925,7 +924,8 @@ With idx_level (set, hypothetical):
   <b style="color: green;">skip_ratio:  67.3%</b>
 Estimation: empirical, sampled 5/5 parts</code></p>
 
-<p style="margin-top: -0.3em;">&mdash; Session-scoped, visible in <b>system.hypothetical_indexes</b>. Tune indexes data-driven.</p>
+<p style="margin-top: -0.3em;">&mdash; Session-scoped, visible in <b>system.hypothetical_indexes</b>.
+<br/>Tune indexes data-driven.</p>
 
 <!-- Demo:
 
@@ -944,7 +944,7 @@ EXPLAIN WHATIF SELECT count() FROM logs WHERE level = 'error';
 
 <p>Generate text embeddings from inside ClickHouse, via an LLM API:</p>
 
-<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">aiEmbed</b>(review_text) AS embedding
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">aiEmbed</b>('qwen3-8b', review_text) AS embedding
 FROM reviews
 LIMIT 10;
 <span style="color: gray;">-- Array(Float32) per row, ready for cosineDistance / vector search</span>
@@ -988,22 +988,8 @@ SELECT dequantizeInt8ToBFloat16(quantizeBFloat16ToInt8(1.5::BFloat16));         
 <h2><span class="hilite">Bonus</span></h2>
 </section>
 
-<section class="slide">
-<h2>Bonus: CostBench</h2>
-
-<p>An open, reproducible benchmark for data-warehouse <b>cost-performance</b> &mdash;
-<br/>not just speed, but <b>performance per dollar</b>:</p>
-
-<p style="margin-top: 0.3em;">&mdash; 43 production-derived analytical queries on a real, anonymized dataset.
-<br/>&mdash; Applies each system's <b>real compute billing model</b> to raw runtimes.
-<br/>&mdash; Compares ClickHouse Cloud, Snowflake, Databricks, BigQuery, Redshift.</p>
-
-<p style="margin-top: 0.5em;"><b style="color: green;">ClickHouse Cloud</b>: ~23x better cost-performance than the nearest warehouse;
-<br/>3&ndash;5x more cost-effective than Snowflake in production, &gt;2x faster querying.</p>
-
-<p style="margin-top: 0.5em;"><a href="https://clickhouse.com/blog/costbench-data-warehouse-cost-performance">clickhouse.com/blog/costbench-data-warehouse-cost-performance</a></p>
-
-<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">An open benchmark from ClickHouse.</p>
+<section class="slide" style="background: url(pictures/costbench.png) center / contain no-repeat;">
+<a href="https://clickhouse.com/benchmarks/costbench">https://clickhouse.com/benchmarks/costbench</a>
 </section>
 
 
@@ -1036,13 +1022,14 @@ SELECT dequantizeInt8ToBFloat16(quantizeBFloat16ToInt8(1.5::BFloat16));         
 <p><a href="https://clickhouse.com/blog/">https://clickhouse.com/blog/</a></p>
 
 <p style="line-height: 1.5; margin-right: -5em;">
-&mdash; The end-to-end cost-performance of real-time analytics: Snowflake vs. ClickHouse Cloud
-<br/>&mdash; Ten years of open source: a stained-glass view
-<br/>&mdash; 92x faster queries: how Open Electricity tracks Australia's energy transition
-<br/>&mdash; The open ecosystem around ClickHouse
-<br/>&mdash; What's new in ClickStack &mdash; May 2026
-<br/>&mdash; What's new in pg_clickhouse v0.3.2: Postgres 19, TLS, Regex, and Memory
-<br/>&mdash; How METRO Markets built a do-it-all data platform on ClickHouse Cloud
+&mdash; Ten years of open source
+<br/>&mdash; How ClickHouse became fast at joins
+<br/>&mdash; Integrating the Rust Delta Kernel into ClickHouse
+<br/>&mdash; Introducing multi-stage distributed query execution
+<br/>&mdash; CostBench: an open benchmark for data warehouse cost-performance
+<br/>&mdash; TPC-H for less than a cent: ClickHouse Cloud
+<br/>&emsp; vs. Snowflake, Databricks, BigQuery, and Redshift
+<br/>&mdash; The end-to-end cost-performance: Snowflake vs. ClickHouse Cloud
 <br/>&mdash; The future of observability: thousands of agents, not one proprietary AI
 </p>
 </section>
