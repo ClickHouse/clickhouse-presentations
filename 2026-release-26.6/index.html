@@ -171,17 +171,12 @@ SELECT 5.0 SETTINGS output_format_always_write_decimal_point_in_float_and_decima
 <p style="margin-top: -0.5em;">A refreshable MV can now trigger off <b>another</b> RMV's refresh:</p>
 
 <p><code style="font-size: 14pt; line-height: 1.25;">CREATE MATERIALIZED VIEW base
-<b style="color: green;">REFRESH EVERY 1 HOUR</b> ENGINE = MergeTree ORDER BY day AS &hellip;;   <span style="color: gray;">-- runs hourly</span>
+<b style="color: green;">REFRESH EVERY 1 HOUR</b> ENGINE = MergeTree ORDER BY day AS &hellip;;</span>
 
 CREATE MATERIALIZED VIEW rollup
-<b style="color: green;">REFRESH DEPENDS ON base</b> ENGINE = &hellip; AS                       <span style="color: gray;">-- no schedule</span>
+<b style="color: green;">REFRESH DEPENDS ON base</b> ENGINE = &hellip; AS
 SELECT day, sum(x) FROM base GROUP BY day;
 </code></p>
-
-<p>&mdash; <b>rollup</b> has no timer of its own &mdash; it refreshes whenever <b>base</b> finishes
-<br/>&emsp; (shorthand for <b>REFRESH AFTER 0 SECOND DEPENDS ON base</b>). Build cascades.
-<br/>&mdash; Sits in <b>WaitingForDependencies</b> (system.view_refreshes) until base completes.
-<br/>&mdash; <span style="color: gray;">The older <b>REFRESH EVERY &hellip; DEPENDS ON</b> keeps its own timer and only orders same-period runs.</span></p>
 
 <!-- Demo (Atomic database, on a server or local with an Atomic db):
 
