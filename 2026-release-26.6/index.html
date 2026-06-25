@@ -28,7 +28,7 @@
         <p>Author: Alexey Milovidov, 2026-06-25.</p>
     </header>
     <section class="slide" id="cover" style="background: url(pictures/back1.jpg); background-size: cover;">
-        <h1 style="margin-top: 25px; line-height: 110%; font-size: 56pt; color: #FF8; text-align: center;">ClickHouse Release<br/>26.6</h1>
+        <h1 style="margin-top: 15px; line-height: 110%; font-size: 56pt; color: #FF0; text-align: center;">ClickHouse Release 26.6</h1>
     </section>
 
 <section class="slide">
@@ -247,7 +247,7 @@ SHOW CREATE QUOTA q;
 </section>
 
 
-<section class="slide" style="background: url(pictures/back2.jpg); background-size: cover;">
+<section class="slide" style="background: url(pictures/back4.jpg); background-size: cover;">
 <h2><span class="hilite">Usability</span></h2>
 </section>
 
@@ -466,7 +466,7 @@ FORMAT PNG SETTINGS output_format_image_width = 1400, output_format_image_height
 </section>
 
 
-<section class="slide" style="background: url(pictures/back4.jpg); background-size: cover;">
+<section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
 <h2><span class="hilite">SQL Compatibility</span></h2>
 </section>
 
@@ -661,7 +661,7 @@ SELECT MVTBoundingBox(12, 1205, 2557);
 </section>
 
 
-<section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
+<section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
 <h2><span style="color: black;" class="hilite">Performance Improvements</span></h2>
 </section>
 
@@ -828,8 +828,8 @@ clickhouse local --path db --memory-usage --optimize_limit_by_in_order=1 -q "$Q"
 </section>
 
 
-<section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
-<h2 style="font-size: 32pt; position: absolute; bottom: 0em; right: 1em;"><span class="hilite">Something Interesting</span></h2>
+<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
+<h2><span class="hilite">Something Interesting</span></h2>
 </section>
 
 <section class="slide">
@@ -844,9 +844,9 @@ SELECT id, msg FROM live_events <b style="color: green;">STREAM</b>;  <span styl
 
 <p>Applications: filtering and real-time alterting on a stream of events.</p>
 
-<p style="margin-top: 0em;">&mdash; Implemented via a series of snapshot reads over <b>MergeTree</b>.</p>
-
-<p>Next: persistent cursors for resumable consumption.</p>
+<p>Advanced usage with cursors:</p>
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT _block_number AS bn, _block_offset AS bo, id, msg
+FROM events <b style="color: green;">STREAM CURSOR {'all': {'block_number': 2, 'block_offset': 0}}</b></code></p>
 
 <!-- Demo:
 
@@ -958,9 +958,9 @@ LIMIT 10;
 </section>
 
 <section class="slide">
-<h2>Embedding quantization functions</h2>
+<h2>Quantization functions</h2>
 
-<p style="margin-top: -0.3em;">A scalar codec that compresses embedding components to 8 bits &mdash; and below:</p>
+<p style="margin-top: -0.3em;">A scalar codec that compresses embedding components to 8bit and below:</p>
 
 <p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">quantizeBFloat16ToInt8</b>(1.5::BFloat16);
 <span style="color: gray;">-- 107</span>
