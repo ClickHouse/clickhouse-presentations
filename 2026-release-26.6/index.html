@@ -203,29 +203,14 @@ SELECT view, status, next_refresh_time FROM system.view_refreshes ORDER BY view;
 
 <p style="margin-top: -0.5em;">Two new <b>MergeTree</b> settings decouple projection building from <b>INSERT</b>:</p>
 
-<<<<<<< HEAD
-<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE ...
-SETTINGS <b style="color: green;">materialize_projections_on_insert</b> = 0;
-<span style="color: gray;">-- INSERTs skip building projection parts → faster ingestion</span>
-
-CREATE TABLE ...
-SETTINGS <b style="color: green;">materialize_projections_on_merge</b> = 1;
-<span style="color: gray;">-- a merge rebuilds a projection missing from all its source parts</span>
-</code></p>
-
-<p>&mdash; Tables with many projections ingest faster;
-<br/>&emsp; projections are built during merges instead.</p>
-=======
 <p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE events (&hellip;) ENGINE = MergeTree ORDER BY &hellip; SETTINGS
   <b style="color: green;">materialize_projections_on_insert</b> = 0,   <span style="color: gray;">-- INSERTs skip projections → faster</span>
   <b style="color: green;">materialize_projections_on_merge</b>  = 1;   <span style="color: gray;">-- a merge builds a missing one</span>
 </code></p>
 
-<p>&mdash; Tables with many projections ingest faster; projections are filled in during merges.
-<br/>&mdash; A part either has a projection materialized or it doesn't. ClickHouse only merges
-<br/>&emsp; parts with the <b>same</b> set of projections &mdash; so a no-projection part isn't merged
-<br/>&emsp; with one that has it; the projection is (re)built when such no-projection parts merge.</p>
->>>>>>> f40c80228e98b52a3f1b88f37cdeb841207d3e66
+<p>&mdash; Tables with many projections ingest faster; projections are built during merges instead.
+<br/>&mdash; A part either has a projection or it doesn't; parts with and without it aren't merged
+<br/>&emsp; together, and a missing projection is (re)built when such parts merge.</p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 1.5em;">Developer: Christoph Wurm.</p>
 </section>
@@ -532,7 +517,7 @@ SELECT currentUser() AS cu, SESSION_USER AS su;
 <section class="slide">
 <h2>More compatibility aliases</h2>
 
-<p style="margin-top: -1em;"><b>min_by</b> / <b>max_by</b> &mdash; aliases for argMin, argMax for PostgreSQL, BigQuery:
+<p style="margin-top: -1em;"><b>min_by</b> / <b>max_by</b> &mdash; aliases for argMin, argMax for PostgreSQL, BigQuery:</p>
 <p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">min_by</b>(user, score), <b style="color: green;">max_by</b>(user, score) FROM t;
 <span style="color: gray;">-- aliases of argMin / argMax</span>
 </code></p>
@@ -688,9 +673,9 @@ SELECT MVTBoundingBox(12, 1205, 2557);
 <br/>&mdash; Snapshot I/O moved to a background thread (<b>nuraft_use_bg_thread_for_snapshot_io</b>).
 <br/>&mdash; Lower peak memory when applying received snapshots.</p>
 
-<p style="margin-top: 0.7em;">Faster coordination &rarr; faster DDL, inserts, replication, and merges.</p>
-
-<p style="margin-top: 0.5em;">With <b>keeper-bench</b> on a 3-node ensemble: ~2x request throughput.</p>
+<p style="margin-top: 0.6em;">With <b>keeper-bench</b> (latency-bounded), vs the previous master (PR #101757):
+<br/>&emsp; <b>2899 &rarr; 7230 RPS</b> (~2.5x), median latency <b>41.4 &rarr; 18.3 ms</b>
+<br/>&emsp; &mdash; closing the gap to ZooKeeper 3.9 (7615 RPS, 18.0 ms).</p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developers: Michael Kolupaev, Antonio Andelic.</p>
 </section>
