@@ -520,7 +520,7 @@ SELECT currentUser() AS cu, SESSION_USER AS su;
 <section class="slide">
 <h2>More compatibility aliases</h2>
 
-<p style="margin-top: -1em;"><b>min_by</b> / <b>max_by</b> &mdash; aliases for argMin, argMax for PostgreSQL, BigQuery:
+<p style="margin-top: -1em;"><b>min_by</b> / <b>max_by</b> &mdash; aliases for argMin, argMax for PostgreSQL, BigQuery:</p>
 <p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">min_by</b>(user, score), <b style="color: green;">max_by</b>(user, score) FROM t;
 <span style="color: gray;">-- aliases of argMin / argMax</span>
 </code></p>
@@ -676,9 +676,9 @@ SELECT MVTBoundingBox(12, 1205, 2557);
 <br/>&mdash; Snapshot I/O moved to a background thread (<b>nuraft_use_bg_thread_for_snapshot_io</b>).
 <br/>&mdash; Lower peak memory when applying received snapshots.</p>
 
-<p style="margin-top: 0.7em;">Faster coordination &rarr; faster DDL, inserts, replication, and merges.</p>
-
-<p style="margin-top: 0.5em;">With <b>keeper-bench</b> on a 3-node ensemble: ~2x request throughput.</p>
+<p style="margin-top: 0.6em;">With <b>keeper-bench</b> (latency-bounded), vs the previous master (PR #101757):
+<br/>&emsp; <b>2899 &rarr; 7230 RPS</b> (~2.5x), median latency <b>41.4 &rarr; 18.3 ms</b>
+<br/>&emsp; &mdash; closing the gap to ZooKeeper 3.9 (7615 RPS, 18.0 ms).</p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developers: Michael Kolupaev, Antonio Andelic.</p>
 </section>
