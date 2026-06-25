@@ -203,7 +203,6 @@ SELECT view, status, next_refresh_time FROM system.view_refreshes ORDER BY view;
 
 <p style="margin-top: -0.5em;">Two new <b>MergeTree</b> settings decouple projection building from <b>INSERT</b>:</p>
 
-<<<<<<< HEAD
 <p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE ...
 SETTINGS <b style="color: green;">materialize_projections_on_insert</b> = 0;
 <span style="color: gray;">-- INSERTs skip building projection parts → faster ingestion</span>
@@ -215,17 +214,6 @@ SETTINGS <b style="color: green;">materialize_projections_on_merge</b> = 1;
 
 <p>&mdash; Tables with many projections ingest faster;
 <br/>&emsp; projections are built during merges instead.</p>
-=======
-<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE events (&hellip;) ENGINE = MergeTree ORDER BY &hellip; SETTINGS
-  <b style="color: green;">materialize_projections_on_insert</b> = 0,   <span style="color: gray;">-- INSERTs skip projections → faster</span>
-  <b style="color: green;">materialize_projections_on_merge</b>  = 1;   <span style="color: gray;">-- a merge builds a missing one</span>
-</code></p>
-
-<p>&mdash; Tables with many projections ingest faster; projections are filled in during merges.
-<br/>&mdash; A part either has a projection materialized or it doesn't. ClickHouse only merges
-<br/>&emsp; parts with the <b>same</b> set of projections &mdash; so a no-projection part isn't merged
-<br/>&emsp; with one that has it; the projection is (re)built when such no-projection parts merge.</p>
->>>>>>> f40c80228e98b52a3f1b88f37cdeb841207d3e66
 
 <p style="color: gray; font-size: 14pt; margin-top: 1.5em;">Developer: Christoph Wurm.</p>
 </section>
