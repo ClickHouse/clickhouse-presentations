@@ -79,6 +79,16 @@
             box-shadow: 0 0 20px rgba(249, 199, 79, 0.3);
         }
 
+        .count {
+            color: #777;
+            margin-top: 12px;
+            font-size: 0.9em;
+        }
+
+        .count:empty {
+            display: none;
+        }
+
         .container {
             max-width: 1800px;
             margin: 0 auto;
@@ -138,6 +148,42 @@
             display: none;
         }
 
+        .slide-matches {
+            border-top: 1px solid #333;
+            padding: 4px 0;
+        }
+
+        .slide-match {
+            padding: 6px 12px;
+            font-size: 0.78em;
+            line-height: 1.45;
+            color: #999;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .slide-match:hover,
+        .slide-match:focus {
+            background: rgba(255, 255, 255, 0.08);
+            color: #ddd;
+            outline: none;
+        }
+
+        .slide-match mark {
+            background: #ff0;
+            color: #000;
+            padding: 0 2px;
+            border-radius: 2px;
+        }
+
+        .more-slides {
+            padding: 4px 12px 6px 12px;
+            font-size: 0.75em;
+            color: #666;
+            text-align: left;
+            font-style: italic;
+        }
+
         @media (max-width: 768px) {
             h1 {
                 font-size: 2em;
@@ -157,7 +203,8 @@
     <div class="header">
         <h1>ClickHouse Theater</h1>
         <div class="search-container">
-            <input type="text" id="search" placeholder="Search presentations..." autocomplete="off">
+            <input type="text" id="search" placeholder="Search presentations and slides..." autocomplete="off">
+            <div class="count" id="count"></div>
         </div>
         <div class="links">
             <a href="https://github.com/ClickHouse/ClickHouse">Source code</a>
@@ -972,27 +1019,163 @@
 
     <script>
         const searchInput = document.getElementById('search');
-        const cards = document.querySelectorAll('.card');
+        const cards = Array.from(document.querySelectorAll('.card'));
         const countEl = document.getElementById('count');
         const total = cards.length;
+        const MAX_SNIPPETS = 3;
 
-        searchInput.addEventListener('input', function() {
-            const query = this.value.toLowerCase().trim();
+        const cardsByPath = new Map(cards.map(card => [card.getAttribute('href'), card]));
+
+        // Full-text slide index (search-index.js, built by scripts/build-search-index.py).
+        // Loaded lazily as a script tag (not fetch) so it also works from file://.
+        // Until then the search falls back to titles only.
+        const slideData = new Map(); // card -> {slides: [[id, text]], lower: [text.toLowerCase()]}
+        let indexState = 'loading'; // 'loading' | 'ready' | 'failed'
+        let indexRequested = false;
+
+        function indexLoaded() {
+            (window.SEARCH_INDEX.presentations || []).forEach(p => {
+                const card = cardsByPath.get(p.path);
+                if (card) {
+                    slideData.set(card, {
+                        slides: p.slides,
+                        lower: p.slides.map(s => s[1].toLowerCase())
+                    });
+                }
+            });
+            indexState = 'ready';
+            applySearch();
+        }
+
+        function loadIndex() {
+            if (indexRequested) return;
+            indexRequested = true;
+            const script = document.createElement('script');
+            script.src = 'search-index.js';
+            script.onload = () => {
+                if (window.SEARCH_INDEX) {
+                    indexLoaded();
+                } else {
+                    indexState = 'failed';
+                    applySearch();
+                }
+            };
+            script.onerror = () => { indexState = 'failed'; applySearch(); };
+            document.head.appendChild(script);
+        }
+
+        function makeSnippet(text, lower, words) {
+            const pos = lower.indexOf(words[0]);
+            let start = Math.max(0, pos - 50);
+            const end = Math.min(text.length, pos + 110);
+            if (start > 0) {
+                const space = lower.indexOf(' ', start);
+                if (space !== -1 && space < pos) start = space + 1;
+            }
+
+            const ranges = [];
+            for (const word of words) {
+                let i = lower.indexOf(word, start);
+                while (i !== -1 && i < end) {
+                    ranges.push([i, Math.min(i + word.length, end)]);
+                    i = lower.indexOf(word, i + word.length);
+                }
+            }
+            ranges.sort((a, b) => a[0] - b[0]);
+
+            const fragment = document.createDocumentFragment();
+            if (start > 0) fragment.append('…');
+            let cursor = start;
+            for (const [s, e] of ranges) {
+                if (s < cursor) continue;
+                if (s > cursor) fragment.append(text.slice(cursor, s));
+                const mark = document.createElement('mark');
+                mark.textContent = text.slice(s, e);
+                fragment.append(mark);
+                cursor = e;
+            }
+            if (cursor < end) fragment.append(text.slice(cursor, end));
+            if (end < text.length) fragment.append('…');
+            return fragment;
+        }
+
+        function renderSlideMatches(card, data, hits, words) {
+            const old = card.querySelector('.slide-matches');
+            if (old) old.remove();
+            if (!hits || !hits.length) return;
+
+            const panel = document.createElement('div');
+            panel.className = 'slide-matches';
+            hits.slice(0, MAX_SNIPPETS).forEach(i => {
+                const [id, text] = data.slides[i];
+                const item = document.createElement('div');
+                item.className = 'slide-match';
+                item.setAttribute('role', 'link');
+                item.tabIndex = 0;
+                // The card itself is an <a>, so slide links can't be nested <a> elements.
+                const url = card.getAttribute('href') + '#' + id;
+                const go = e => { e.preventDefault(); e.stopPropagation(); window.location.href = url; };
+                item.addEventListener('click', go);
+                item.addEventListener('keydown', e => { if (e.key === 'Enter') go(e); });
+                item.appendChild(makeSnippet(text, data.lower[i], words));
+                panel.appendChild(item);
+            });
+            if (hits.length > MAX_SNIPPETS) {
+                const more = document.createElement('div');
+                more.className = 'more-slides';
+                more.textContent = `+ ${hits.length - MAX_SNIPPETS} more slides`;
+                panel.appendChild(more);
+            }
+            card.appendChild(panel);
+        }
+
+        function applySearch() {
+            const query = searchInput.value.toLowerCase().trim();
+            const words = query.split(/\s+/).filter(Boolean);
             let visible = 0;
+            let matchingSlides = 0;
 
             cards.forEach(card => {
                 const title = card.getAttribute('data-title');
-                const matches = !query || title.includes(query);
+                const titleMatch = !query || title.includes(query);
+                const data = slideData.get(card);
+                let hits = null;
+                if (words.length && data) {
+                    hits = [];
+                    for (let i = 0; i < data.lower.length; i++) {
+                        if (words.every(word => data.lower[i].includes(word))) hits.push(i);
+                    }
+                    matchingSlides += hits.length;
+                }
+                const matches = titleMatch || (hits && hits.length > 0);
                 card.classList.toggle('hidden', !matches);
                 if (matches) visible++;
+                renderSlideMatches(card, data, hits, words);
             });
 
             if (query) {
-                countEl.textContent = `Showing ${visible} of ${total} presentations`;
+                let message = `Showing ${visible} of ${total} presentations`;
+                if (indexState === 'ready') {
+                    message += ` · ${matchingSlides} matching slides`;
+                } else if (indexState === 'loading') {
+                    message += ' · loading slide index…';
+                } else {
+                    message += ' · slide search unavailable';
+                }
+                countEl.textContent = message;
             } else {
-                countEl.textContent = `Showing all ${total} presentations`;
+                countEl.textContent = '';
             }
-        });
+        }
+
+        searchInput.addEventListener('input', () => { loadIndex(); applySearch(); });
+        searchInput.addEventListener('focus', loadIndex);
+        if ('requestIdleCallback' in window) {
+            requestIdleCallback(loadIndex);
+        } else {
+            setTimeout(loadIndex, 2000);
+        }
+        applySearch();
 
         // Focus search on key press
         document.addEventListener('keydown', function(e) {
