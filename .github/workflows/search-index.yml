@@ -4,7 +4,7 @@ on:
   push:
     branches: [master]
     paths-ignore:
-      - 'search-index.json'
+      - 'search-index.js'
       - 'scripts/ocr-cache.json'
   workflow_dispatch:
 
@@ -31,13 +31,13 @@ jobs:
 
       - name: Commit and push if changed
         run: |
-          if [ -z "$(git status --porcelain -- search-index.json scripts/ocr-cache.json)" ]; then
+          if [ -z "$(git status --porcelain -- search-index.js scripts/ocr-cache.json)" ]; then
             echo "Search index is up to date."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add search-index.json scripts/ocr-cache.json
+          git add search-index.js scripts/ocr-cache.json
           git commit -m "Update search index"
           git pull --rebase origin master
           git push origin master

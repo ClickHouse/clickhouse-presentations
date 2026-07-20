@@ -1023,30 +1023,42 @@
 
         const cardsByPath = new Map(cards.map(card => [card.getAttribute('href'), card]));
 
-        // Full-text slide index (search-index.json, built by scripts/build-search-index.py).
-        // Loaded lazily; until then the search falls back to titles only.
+        // Full-text slide index (search-index.js, built by scripts/build-search-index.py).
+        // Loaded lazily as a script tag (not fetch) so it also works from file://.
+        // Until then the search falls back to titles only.
         const slideData = new Map(); // card -> {slides: [[id, text]], lower: [text.toLowerCase()]}
-        let indexPromise = null;
+        let indexState = 'loading'; // 'loading' | 'ready' | 'failed'
+        let indexRequested = false;
+
+        function indexLoaded() {
+            (window.SEARCH_INDEX.presentations || []).forEach(p => {
+                const card = cardsByPath.get(p.path);
+                if (card) {
+                    slideData.set(card, {
+                        slides: p.slides,
+                        lower: p.slides.map(s => s[1].toLowerCase())
+                    });
+                }
+            });
+            indexState = 'ready';
+            applySearch();
+        }
 
         function loadIndex() {
-            if (!indexPromise) {
-                indexPromise = fetch('search-index.json')
-                    .then(r => r.ok ? r.json() : Promise.reject(r.status))
-                    .then(data => {
-                        data.presentations.forEach(p => {
-                            const card = cardsByPath.get(p.path);
-                            if (card) {
-                                slideData.set(card, {
-                                    slides: p.slides,
-                                    lower: p.slides.map(s => s[1].toLowerCase())
-                                });
-                            }
-                        });
-                        applySearch();
-                    })
-                    .catch(() => {}); // title-only search still works
-            }
-            return indexPromise;
+            if (indexRequested) return;
+            indexRequested = true;
+            const script = document.createElement('script');
+            script.src = 'search-index.js';
+            script.onload = () => {
+                if (window.SEARCH_INDEX) {
+                    indexLoaded();
+                } else {
+                    indexState = 'failed';
+                    applySearch();
+                }
+            };
+            script.onerror = () => { indexState = 'failed'; applySearch(); };
+            document.head.appendChild(script);
         }
 
         function makeSnippet(text, lower, words) {
@@ -1140,7 +1152,13 @@
 
             if (query) {
                 let message = `Showing ${visible} of ${total} presentations`;
-                if (slideData.size) message += ` · ${matchingSlides} matching slides`;
+                if (indexState === 'ready') {
+                    message += ` · ${matchingSlides} matching slides`;
+                } else if (indexState === 'loading') {
+                    message += ' · loading slide index…';
+                } else {
+                    message += ' · slide search unavailable';
+                }
                 countEl.textContent = message;
             } else {
                 countEl.textContent = `${total} presentations`;

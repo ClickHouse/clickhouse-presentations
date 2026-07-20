@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Build search-index.json for the ClickHouse Theater main page (index.html).
+"""Build search-index.js for the ClickHouse Theater main page (index.html).
 
 For every presentation card linked from index.html, extracts the visible text
 of each slide so the main page can offer instant full-text search with links
-to individual slides.
+to individual slides. The index is a JS file assigning window.SEARCH_INDEX
+(not JSON + fetch) so that the page also works when opened from file://.
 
 Slide ids replicate shower.js behavior (see shower/shower.js, _initSlides):
 a slide keeps its explicit id attribute; a slide without one gets its 1-based
@@ -30,7 +31,7 @@ from html.parser import HTMLParser
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 INDEX_HTML = os.path.join(REPO_ROOT, 'index.html')
-OUTPUT_JSON = os.path.join(REPO_ROOT, 'search-index.json')
+OUTPUT_JS = os.path.join(REPO_ROOT, 'search-index.js')
 OCR_CACHE_JSON = os.path.join(REPO_ROOT, 'scripts', 'ocr-cache.json')
 
 # A slide with less text than this that shows an SVG is considered image-only.
@@ -200,18 +201,19 @@ def main():
         if entry:
             presentations.append(entry)
 
-    with open(OUTPUT_JSON, 'w', encoding='utf-8') as f:
+    with open(OUTPUT_JS, 'w', encoding='utf-8') as f:
+        f.write('window.SEARCH_INDEX=')
         json.dump({'presentations': presentations}, f,
                   ensure_ascii=False, separators=(',', ':'))
-        f.write('\n')
+        f.write(';\n')
     with open(OCR_CACHE_JSON, 'w', encoding='utf-8') as f:
         json.dump(used_cache, f, ensure_ascii=False, indent=1, sort_keys=True)
         f.write('\n')
 
     total_slides = sum(len(p['slides']) for p in presentations)
-    size_mb = os.path.getsize(OUTPUT_JSON) / 1e6
+    size_mb = os.path.getsize(OUTPUT_JS) / 1e6
     print(f'{len(presentations)} presentations, {total_slides} slides, '
-          f'{len(used_cache)} OCRed SVGs, search-index.json {size_mb:.1f} MB')
+          f'{len(used_cache)} OCRed SVGs, search-index.js {size_mb:.1f} MB')
 
 
 if __name__ == '__main__':
