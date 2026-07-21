@@ -2,8 +2,7 @@ name: Build search index
 
 on:
   push:
-    # TEMPORARY: search-in-presentations added to test the pipeline from the PR
-    branches: [master, search-in-presentations]
+    branches: [master]
     paths-ignore:
       - 'search-index.js'
       - 'scripts/ocr-cache.json'
