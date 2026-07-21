@@ -48,7 +48,9 @@ TRANSCRIBE_PROMPT = (
     'Transcribe all text visible in this slide image, in reading order. '
     'Output only the transcribed plain text, with no commentary and no markdown. '
     'Include code, URLs, and numbers verbatim. '
-    'If the slide contains no text, output nothing.'
+    'Never describe pictures, logos, charts, or visual layout — output only '
+    'text that is literally visible. '
+    'If the slide contains no readable text, output exactly: (no text)'
 )
 
 SVG_URL_RE = re.compile(r'''url\(\s*['"]?([^'")]+\.svg)['"]?\s*\)''', re.I)
@@ -174,7 +176,10 @@ def transcribe_with_claude(png_path):
     )
     if response.stop_reason == 'refusal':
         raise RuntimeError('transcription refused')
-    return ' '.join(' '.join(b.text for b in response.content if b.type == 'text').split())
+    text = ' '.join(' '.join(b.text for b in response.content if b.type == 'text').split())
+    if text.strip('.').lower() == '(no text)':
+        return ''
+    return text
 
 
 def transcribe_with_tesseract(png_path, rel_path):
