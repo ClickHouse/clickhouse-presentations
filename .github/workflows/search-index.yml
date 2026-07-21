@@ -21,12 +21,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install SVG rendering and OCR tools
+      - name: Install SVG rendering and transcription tools
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends librsvg2-bin tesseract-ocr
+          pip install anthropic
 
       - name: Build search index
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python3 scripts/build-search-index.py
 
       - name: Commit and push if changed
