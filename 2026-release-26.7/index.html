@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 26.7 Call</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta property="og:image" content="pictures/preview.jpg">
+    <meta property="og:title" content="ClickHouse: Release 26.7 Call">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="pictures/preview.jpg">
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/themes/clickhouse/styles/styles.css">
+
+    <style>
+        code { display: block; white-space: pre; background-color: #EEE; }
+        p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+        p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+        .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+        .slide table tr:not(:last-of-type)>* { background: none; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 26.7 Call</h1>
+        <p>Author: Alexey Milovidov, 2026-07-23.</p>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/back1.jpg); background-size: cover;">
+        <h1 style="margin-top: 15px; line-height: 110%; font-size: 56pt; color: #FF0; text-align: center;">ClickHouse Release 26.7</h1>
+    </section>
+
+<section class="slide">
+<h2>ClickHouse release 26.7</h2>
+<p>1. (50 min) What's new in ClickHouse 26.7.</p>
+<p>2. (10 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back2.jpg); background-size: cover;">
+<h2><span class="hilite">Release 26.7</span></h2>
+<p><span class="hilite">&mdash; 61 new features 🌻</span></p>
+<p><span class="hilite">&mdash; 112 performance optimizations ⛱️</span></p>
+<p><span class="hilite">&mdash; 329 bug fixes 🍉</span></p>
+</section>
+<!--
+
+Small And Nice
+
+groupFormat
+-Tuple combinator
+WHERE in projections
+Unification of URL
+eval table function
+
+Data Federation
+
+Remote and RemoteSecure table engines
+mysql, postgresql, sqlite query forwarding
+Wildcards over HTTP index pages
+
+Vector Search
+
+QBit: Int8 and strides
+Randomized Hadamard rotations
+Quantization codecs
+
+Text Search
+
+Positions for phrase matching
+
+Geo
+
+Universal Transverse Mercator
+GeoJSON output
+Geometry intersection functions
+
+Data Lakes
+
+Manifest compaction
+OneLake bearer token
+Delta Lake writes in Beta
+
+Web UI
+
+Tabs
+Color coding, pinned columns
+Autocompletion, keyboard navigation, database panel
+Instant reference docs
+
+JOIN Performance
+
+The right table is an index
+Packed row references
+DPsub
+
+Performance
+
+JIT-compiled regexp
+GROUP BY + ORDER BY LIMIT fusion
+DISTINCT and LIMIT BY in order
+Query condition cache: TopK, Parquet
+Faster formats and compression
+ClickHouse is fast on macOS
+Faster everything
+
+Main
+
+Drivers for UDFs
+DateTime64: years 0 to 9999
+EXPLAIN ANALYZE
+ZXC, SZ3, ALP codecs
+QueryRunner
+
+Meetups
+Reading Corner
+
+-->
+
+<section class="slide" style="background: url(pictures/back3.jpg); background-size: cover;">
+<h2 style="color: black;"><span class="hilite">Small And Nice Features</span></h2>
+</section>
+
+
+<section class="slide">
+<h2>groupFormat</h2>
+
+<p>An aggregate function that formats each group's rows
+<br/>with <b>any output format</b> and returns the result as a string:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT user, <b style="color: green;">groupFormat('Markdown')</b>(action, ts) AS history
+FROM events GROUP BY user;
+<span style="color: gray;">-- a rendered Markdown table per user</span>
+
+SELECT id, <b style="color: green;">groupFormat('JSONEachRow')</b>(*) FROM t GROUP BY id;
+</code></p>
+
+<p>&mdash; Works with all output formats: CSV, JSON, Vertical, XML, &hellip;
+<br/>&mdash; Perfect for feeding grouped data to LLMs, webhooks, and reports.</p>
+
+<!-- Demo:
+
+CREATE TABLE events (user String, action String, ts DateTime) ENGINE = Memory;
+INSERT INTO events VALUES ('alice','login','2026-07-01 10:00:00'),('alice','click','2026-07-01 10:00:05'),('bob','login','2026-07-01 11:00:00');
+SELECT user, groupFormat('Markdown')(action, ts) AS history FROM events GROUP BY user ORDER BY user FORMAT Vertical;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Yang Hu.</p>
+</section>
+
+<section class="slide">
+<h2>-Tuple combinator</h2>
+
+<p>Apply an aggregate function to every element of a <b>Tuple</b> at once:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">sumTuple</b>((clicks, views, purchases)) FROM events;
+<span style="color: gray;">-- (1234, 56789, 42) — one sum per element</span>
+
+SELECT <b style="color: green;">corrTuple</b>((a1, a2), (b1, b2));
+<span style="color: gray;">-- (corr(a1, b1), corr(a2, b2)) — arguments paired by position</span>
+</code></p>
+
+<p>&mdash; Unlike <b>-ForEach</b> (for Arrays), elements may have <b>different types</b>.
+<br/>&mdash; Element <b>names</b> and types are preserved in the result.</p>
+
+<!-- Demo:
+
+SELECT sumTuple((number, number*2)) FROM numbers(5);                     -- (10,20)
+WITH CAST((number, number*2), 'Tuple(clicks UInt64, views UInt64)') AS m SELECT sumTuple(m), toTypeName(sumTuple(m)) FROM numbers(100) FORMAT Vertical;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1.5em;">Developer: RinChanNOW.</p>
+</section>
+
+<section class="slide">
+<h2>WHERE in projections</h2>
+
+<p>A projection can now materialize <b>only the rows matching a predicate</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">ALTER TABLE hits ADD PROJECTION errors (
+    SELECT ts, status, url <b style="color: green;">WHERE status >= 400</b> ORDER BY status);
+
+SELECT count() FROM hits WHERE status >= 400;
+<span style="color: gray;">-- reads the tiny projection: 4 granules instead of 10M rows</span>
+</code></p>
+
+<p>&mdash; The optimizer uses it (cost-based) when the query's <b>WHERE</b>
+<br/>&emsp; implies the projection's <b>WHERE</b>.
+<br/>&mdash; Ideal for rare classes of records: errors, anomalies, VIP users.</p>
+
+<!-- Demo:
+
+CREATE TABLE hits (ts DateTime, status UInt16, url String) ENGINE = MergeTree ORDER BY ts;
+INSERT INTO hits SELECT toDateTime('2026-07-01') + number, 200 + 200 * (number % 100000 = 0), 'url' || toString(number % 1000) FROM numbers(10000000);
+ALTER TABLE hits ADD PROJECTION errors (SELECT ts, status, url WHERE status >= 400 ORDER BY status);
+ALTER TABLE hits MATERIALIZE PROJECTION errors SETTINGS mutations_sync = 1;
+EXPLAIN indexes = 1 SELECT count() FROM hits WHERE status >= 400;
+-- ReadFromMergeTree (errors), Granules: 4/4
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: S Bala Vignesh.</p>
+</section>
+
+<section class="slide">
+<h2>Unification of URL</h2>
+
+<p>The <b>url</b> table function and <b>URL</b> engine now dispatch
+<br/>to the right backend <b>based on the URL scheme</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT * FROM url('<b style="color: green;">file://</b>data/hits.csv');       <span style="color: gray;">-- File</span>
+SELECT * FROM url('<b style="color: green;">s3://</b>bucket/data/*.parquet');   <span style="color: gray;">-- S3</span>
+SELECT * FROM url('<b style="color: green;">gs://</b>bucket/table.parquet');    <span style="color: gray;">-- S3 (GCS)</span>
+SELECT * FROM url('<b style="color: green;">az://</b>container/blob.csv');      <span style="color: gray;">-- Azure</span>
+SELECT * FROM url('<b style="color: green;">hdfs://</b>nn:8020/path');          <span style="color: gray;">-- HDFS</span>
+</code></p>
+
+<p>&mdash; One function to read them all &mdash; no need to remember which engine to use.
+<br/>&mdash; <b>http(s)://</b> works as before.</p>
+
+<!-- Demo:
+
+SELECT * FROM url('file:///tmp/test_url.csv', CSV);
+SELECT count() FROM url('s3://datasets-documentation/hackernews/hacknernews.csv.gz', CSVWithNames);   -- 28737557
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>eval 🧪</h2>
+
+<p>A table function that builds a query string <b>from an expression</b> and runs it:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SET allow_experimental_eval_table_function = 1;
+
+SELECT * FROM <b style="color: green;">eval</b>('SELECT number FROM numbers(' || toString(2 + 1) || ')');
+<span style="color: gray;">-- 0, 1, 2</span>
+
+<span style="color: gray;">-- e.g., read from a table whose name is computed from the date:</span>
+SELECT * FROM <b style="color: green;">eval</b>('SELECT * FROM logs_' ||
+    replaceAll(substring(toString(today()), 1, 7), '-', '_'));
+</code></p>
+
+<p>&mdash; Dynamic SQL without external scripting.</p>
+
+<!-- Demo:
+
+SET allow_experimental_eval_table_function = 1;
+CREATE TABLE t_2026_07 (x UInt8) ENGINE = Memory; INSERT INTO t_2026_07 VALUES (42);
+SELECT * FROM eval('SELECT x FROM t_' || replaceAll(substring(toString(today()), 1, 7), '-', '_'));
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Yue Ni, Alexey Milovidov.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back4.jpg); background-size: cover;">
+<h2><span class="hilite">Data Federation</span></h2>
+</section>
+
+<section class="slide">
+<h2>Remote and RemoteSecure engines</h2>
+
+<p>The <b>remote</b> table function now has persistent counterparts:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE events_on_prod
+<b style="color: green;">ENGINE = Remote</b>('prod:9000', default, events);
+<span style="color: gray;">-- no column list needed: the structure is inferred from the remote table</span>
+
+SELECT count() FROM events_on_prod;    <span style="color: gray;">-- reads remotely</span>
+INSERT INTO events_on_prod VALUES &hellip;;  <span style="color: gray;">-- writes remotely</span>
+</code></p>
+
+<p>&mdash; A permanent "symlink" to a table on another server.
+<br/>&mdash; <b>RemoteSecure</b> &mdash; the same over TLS.
+<br/>&mdash; Supports cluster addresses: <b>Remote('host{1..3}:9000', &hellip;)</b>.</p>
+
+<!-- Demo:
+
+CREATE TABLE metrics_remote ENGINE = Remote('localhost:9000', default, metrics_local);
+SHOW CREATE TABLE metrics_remote;   -- columns inferred
+INSERT INTO metrics_remote VALUES ('2026-07-02 00:00:00', 123.0);
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Forward queries to external databases</h2>
+
+<p style="margin-top: -0.3em;"><b>mysql</b>, <b>postgresql</b>, and <b>sqlite</b> accept a <b>query</b> instead of a table name
+<br/>and pass it to the external database <b>as is</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT * FROM postgresql('host:5432', 'db',
+    <b style="color: green;">query('SELECT date_trunc(''week'', day) AS w, count(*)
+           FROM pageviews GROUP BY w')</b>, 'user', 'pass');
+<span style="color: gray;">-- runs inside PostgreSQL, with PostgreSQL functions</span>
+
+SELECT * FROM sqlite('db.sqlite', <b style="color: green;">(SELECT customer, sum(amount)
+    FROM orders GROUP BY customer)</b>);  <span style="color: gray;">-- subquery form</span>
+</code></p>
+
+<p>&mdash; The result structure is inferred from the query. Read-only.
+<br/>&mdash; Aggregate remotely, transfer only the result.</p>
+
+<!-- Demo:
+
+SELECT * FROM sqlite('/tmp/demo.sqlite', query('SELECT customer, sum(amount) AS total FROM orders GROUP BY customer'));
+SELECT * FROM postgresql('localhost:5432', 'demo', query('SELECT path, sum(hits) AS total FROM pageviews GROUP BY path ORDER BY total DESC'), 'demo', 'demo');
+SELECT * FROM mysql('127.0.0.1:3306', 'demo', query('SELECT country, count(*) AS n, sum(ltv) AS total FROM customers GROUP BY country'), 'demo', 'demo');
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Wildcards over HTTP index pages 🧪</h2>
+
+<p>The <b>url</b> table function expands wildcards by <b>crawling index pages</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SET allow_experimental_url_wildcard_from_index_pages = 1;
+
+SELECT * FROM url('https://example.com/data/<b style="color: green;">*</b>/stats.csv');
+<span style="color: gray;">-- lists the HTML/plaintext directory pages, follows matching links</span>
+</code></p>
+
+<p>&mdash; Works with autogenerated directory listings (nginx, S3 websites,
+<br/>&emsp; python -m http.server, &hellip;).
+<br/>&mdash; With limits on the index page size and the number of directories read.</p>
+
+<!-- Demo (python3 -m http.server 8090 in a dir with data/2026-07-0{1,2,3}/stats.csv):
+
+SET allow_experimental_url_wildcard_from_index_pages = 1;
+SELECT _file, * FROM url('http://localhost:8090/data/*/stats.csv', CSVWithNames) ORDER BY day;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1.5em;">Developer: Yue Ni.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
+<h2><span class="hilite">Vector Search</span></h2>
+</section>
+
+<section class="slide">
+<h2>QBit: Int8 and strides</h2>
+
+<p style="margin-top: -0.3em;">The <b>QBit</b> data type (transposed vector storage) learned new tricks:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE vecs (id UInt32, v <b style="color: green;">QBit(Int8, 384)</b>) &hellip;;
+<span style="color: gray;">-- quantized 8-bit vectors, stored bit-plane by bit-plane</span>
+
+CREATE TABLE mat (id UInt32, v <b style="color: green;">QBit(Float32, 1024, 256)</b>) &hellip;;
+<span style="color: gray;">-- stride 256: dimensions stored in groups — for Matryoshka embeddings</span>
+
+SELECT id FROM mat ORDER BY
+    L2DistanceTransposed(v, [&hellip;256-dim query&hellip;], 16, <b style="color: green;">256</b>) LIMIT 10;
+<span style="color: gray;">-- reads only the first 256 dimensions from disk</span>
+</code></p>
+
+<p style="margin-top: -0.2em;">&mdash; Also new: <b>dotProductTransposed</b>, <b>*TransposedQuantized</b> functions,
+<br/>&emsp; <b>CAST</b> between QBit types, <b>length()</b> for QBit.</p>
+
+<!-- Demo:
+
+CREATE TABLE mat (id UInt32, v QBit(Float32, 64, 16)) ENGINE = Memory;
+INSERT INTO mat SELECT number, arrayMap(x -> toFloat32(x + number), range(64)) FROM numbers(3);
+SELECT id, L2DistanceTransposed(v, arrayMap(x -> toFloat32(x), range(16)), 32, 16) AS d_16 FROM mat ORDER BY d_16;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.2em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Randomized Hadamard rotations</h2>
+
+<p>A building block for vector quantization pipelines:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">randomHadamardTransform</b>([1., 2., 3., 4.]::Array(Float32));
+<span style="color: gray;">-- [0, 2, 1, -5] — an orthogonal, norm-preserving rotation</span>
+
+SELECT randomHadamardTransform(v, <b style="color: green;">seed</b>);        <span style="color: gray;">-- different rotation</span>
+SELECT randomHadamardTransform(v, seed, <b style="color: green;">256</b>);   <span style="color: gray;">-- truncate to 256 dims</span>
+</code></p>
+
+<p>&mdash; Spreads the information evenly across dimensions,
+<br/>&emsp; so scalar quantization loses less &mdash; rotate, then quantize.
+<br/>&mdash; Truncated form = Johnson&ndash;Lindenstrauss random projection.
+<br/>&mdash; Deterministic: the same seed gives the same rotation.</p>
+
+<!-- Demo:
+
+WITH [1., 2., 3., 4.]::Array(Float32) AS v SELECT randomHadamardTransform(v) AS rotated, round(L2Norm(v), 6) AS norm_before, round(L2Norm(randomHadamardTransform(v)), 6) AS norm_after;
+-- norms are equal: 5.477226
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Quantization codecs 🧪</h2>
+
+<p style="margin-top: -0.3em;">Store a compact <b>quantized companion</b> next to full-precision vectors:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE vecs (id UInt32,
+    v Array(Float32) <b style="color: green;">CODEC(Quantized('rabitq', 384))</b>) &hellip;;
+<span style="color: gray;">-- methods: int8, rabitq (1-bit), turboquant (2-bit), mrl, pq</span>
+
+SET <b style="color: green;">vector_search_use_quantized_codes</b> = 1;
+SELECT id FROM vecs ORDER BY L2Distance(v, [&hellip;]) LIMIT 10;
+</code></p>
+
+<p>&mdash; Two-stage brute-force search without an index: scan the small
+<br/>&emsp; quantized stream, then <b>rescore</b> the candidates at full precision.
+<br/>&mdash; Up to 8x less I/O in the first stage (1-bit codes: 32x smaller).</p>
+
+<!-- Demo:
+
+SET allow_experimental_codecs = 1;
+CREATE TABLE qv (id UInt32, v Array(Float32) CODEC(Quantized('rabitq', 384))) ENGINE = MergeTree ORDER BY id;
+INSERT INTO qv SELECT number, arrayMap(x -> (rand(number * 1000 + x) / 4294967296.0 - 0.5) * 2, range(384)) FROM numbers(1000000);
+SET vector_search_use_quantized_codes = 1;
+SELECT id FROM qv ORDER BY L2Distance(v, (SELECT v FROM qv WHERE id = 42)::Array(Float32)) LIMIT 3;
+-- ReadCompressedBytes: 1.54 GB -> 190 MB (single thread)
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Shankar Iyer.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
+<h2><span class="hilite" style="color: black;">Text Search &amp; Geo</span></h2>
+</section>
+
+<section class="slide">
+<h2>Positions for phrase matching</h2>
+
+<p>Text indexes can now store <b>token positions</b> &mdash; for exact phrase search:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE docs (&hellip;, INDEX idx body TYPE text(
+    tokenizer = 'splitByNonAlpha', <b style="color: green;">support_phrase_search = 1</b>))
+&hellip; SETTINGS allow_experimental_text_index_phrase_search = 1;
+
+SELECT count() FROM docs WHERE <b style="color: green;">hasPhrase</b>(body, 'quick brown fox');
+<span style="color: gray;">-- 1 — but hasPhrase(body, 'brown quick fox') = 0: order matters</span>
+</code></p>
+
+<p>&mdash; The phrase test is answered <b>directly from the index</b>:
+<br/>&emsp; in our test, 124 granules &rarr; 1, and no column data was read at all.</p>
+
+<!-- Demo:
+
+CREATE TABLE docs (id UInt64, body String, INDEX idx body TYPE text(tokenizer = 'splitByNonAlpha', support_phrase_search = 1) GRANULARITY 1) ENGINE = MergeTree ORDER BY id SETTINGS allow_experimental_text_index_phrase_search = 1;
+INSERT INTO docs SELECT number, arrayStringConcat(arrayMap(x -> ['red','green','blue','fast','slow','fox','dog','cat','runs','sleeps'][(number * 7 + x * 3) % 10 + 1], range(20)), ' ') FROM numbers(1000000);
+INSERT INTO docs VALUES (9999999, 'the quick brown fox jumps over the lazy dog');
+SELECT count() FROM docs WHERE hasPhrase(body, 'quick brown fox');
+EXPLAIN indexes = 1 SELECT count() FROM docs WHERE hasPhrase(body, 'quick brown fox');
+-- Skip index: Granules: 1/124; filter column __text_index_idx_hasPhrase_... (direct read)
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Elmi Ahmadov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Universal Transverse Mercator</h2>
+
+<p>Convert between WGS84 coordinates and the <b>UTM</b> / <b>MGRS</b> systems
+<br/>used in surveying, mapping, and military grids:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">geoToUTM</b>(13.4050, 52.5200) AS berlin;
+<span style="color: gray;">-- (391779.26, 5820072.16, 33, 'U') — easting, northing, zone, band</span>
+
+SELECT <b style="color: green;">UTMToGeo</b>(391779.26, 5820072.16, 33, true);
+<span style="color: gray;">-- (13.405, 52.52) — and back</span>
+
+SELECT <b style="color: green;">geoToMGRS</b>(13.4050, 52.5200);   <span style="color: gray;">-- '33UUU9177920072'</span>
+</code></p>
+
+<p>&mdash; <b>MGRSToGeo</b> completes the quartet.</p>
+
+<!-- Demo:
+
+WITH geoToUTM(13.4050, 52.5200) AS utm SELECT utm, UTMToGeo(utm.easting, utm.northing, utm.zone, true) AS back FORMAT Vertical;
+SELECT geoToMGRS(13.4050, 52.5200) AS mgrs, MGRSToGeo(geoToMGRS(13.4050, 52.5200)) AS back;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>GeoJSON output</h2>
+
+<p>26.6 added GeoJSON input. 26.7 <b>writes</b> it, too:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.25;">SELECT id, (13.4050, 52.5200)::Point AS geometry, 'Berlin' AS name
+<b style="color: green;">FORMAT GeoJSON</b>
+</code></p>
+
+<p><code style="font-size: 12pt; line-height: 1.25;">{"type":"FeatureCollection","features":[
+  {"type":"Feature","id":1,
+   "geometry":{"type":"Point","coordinates":[13.405,52.52]},
+   "properties":{"name":"Berlin"}}, &hellip;]}
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; The geo column &rarr; <b>geometry</b>, the <b>id</b> column &rarr; feature id,
+<br/>&emsp; everything else &rarr; <b>properties</b>.
+<br/>&mdash; Feed query results straight to Leaflet, Mapbox, deck.gl, QGIS.</p>
+
+<!-- Demo:
+
+SELECT * FROM (SELECT 1 AS id, (13.4050, 52.5200)::Point AS geometry, 'Berlin' AS name UNION ALL SELECT 2, (2.3522, 48.8566)::Point, 'Paris') ORDER BY id FORMAT GeoJSON;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Nihal Z. Miaji.</p>
+</section>
+
+<section class="slide">
+<h2>Geometry intersection functions</h2>
+
+<p>Do two shapes intersect &mdash; whatever their types are?</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">geometryIntersectCartesian</b>(
+    [[(0., 0.), (10., 0.), (10., 10.), (0., 10.)]]::Polygon,
+    [(5., 5.), (15., 15.)]::LineString);       <span style="color: gray;">-- 1</span>
+
+SELECT <b style="color: green;">geometryIntersectSpherical</b>(route, restricted_zone);
+</code></p>
+
+<p>&mdash; Unlike <b>polygonsIntersect*</b>, they accept <b>any</b> geometry type:
+<br/>&emsp; Point, LineString, MultiLineString, Ring, Polygon, MultiPolygon &mdash;
+<br/>&emsp; including the umbrella <b>Geometry</b> type, and the arguments may differ.</p>
+
+<!-- Demo:
+
+SELECT geometryIntersectCartesian([[(0., 0.), (10., 0.), (10., 10.), (0., 10.)]]::Polygon, [(5., 5.), (15., 15.)]::LineString) AS poly_line, geometryIntersectCartesian((100., 100.)::Point, [[(0., 0.), (10., 0.), (10., 10.), (0., 10.)]]::Polygon) AS point_poly;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1.5em;">Developer: Alexey Milovidov.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
+<h2><span class="hilite">Data Lakes</span></h2>
+</section>
+
+<section class="slide">
+<h2>Iceberg manifest compaction</h2>
+
+<p>Frequent inserts produce many small manifest files.
+<br/>Now ClickHouse can <b>compact the metadata</b> &mdash; without rewriting data:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SET allow_experimental_iceberg_compaction = 1;
+
+<b style="color: green;">OPTIMIZE TABLE ice MANIFEST;</b>
+<span style="color: gray;">-- 13 manifests merged into 1; a new 'replace' snapshot is committed</span>
+</code></p>
+
+<p>&mdash; Faster planning for every subsequent query on the table.
+<br/>&mdash; Triggered when the manifest list exceeds
+<br/>&emsp; <b>iceberg_manifest_min_count_to_compact</b> (default 30).
+<br/>&mdash; Data files are untouched; time travel keeps working.</p>
+
+<!-- Demo:
+
+-- IcebergLocal table with 13 single-insert snapshots:
+SET allow_experimental_iceberg_compaction = 1, iceberg_manifest_min_count_to_compact = 5;
+OPTIMIZE TABLE ice MANIFEST;
+-- new snapshot with operation = 'replace'; its manifest list references ONE manifest with existing_files_count = 13
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Smita Kulkarni.</p>
+</section>
+
+<section class="slide">
+<h2>Data lakes, elsewhere</h2>
+
+<p><b style="color: green;">Delta Lake writes are now Beta</b> (were experimental):</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SET allow_experimental_delta_lake_writes = 1;
+INSERT INTO delta_table VALUES (3, 'written'), (4, 'by clickhouse');
+<span style="color: gray;">-- commits a new Delta log version; readable by Spark, DuckDB, python</span>
+</code></p>
+
+<p><b style="color: green;">OneLake: authentication with a bearer token</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE DATABASE onelake ENGINE = DataLakeCatalog('https://onelake.&hellip;')
+SETTINGS catalog_type = 'onelake', <b style="color: green;">onelake_bearer_token</b> = '&hellip;';
+</code></p>
+
+<p>&mdash; No need to share a long-lived client secret.</p>
+
+<!-- Demo:
+
+SET allow_experimental_delta_lake_writes = 1;
+CREATE TABLE dl (id Int32, msg String) ENGINE = DeltaLakeLocal('/path/to/existing/delta/table/');
+INSERT INTO dl VALUES (3, 'written'), (4, 'by clickhouse');
+-- verified: python deltalake reads version 1 with the new rows
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developers: Kseniia Sumarokova, Asya Shneerson.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back8.jpg); background-size: cover;">
+<h2><span class="hilite">Web UI</span></h2>
+</section>
+
+<section class="slide">
+<h2>Tabs in the Web UI</h2>
+
+<p>The built-in <b>/play</b> UI now has <b style="color: green;">tabs</b> for working with multiple queries:</p>
+
+<p style="margin-top: 0.5em;">&mdash; Tabs, titles, parameters, and small result snapshots
+<br/>&emsp; are <b>persisted across reloads</b>.
+<br/>&mdash; Integrated with browser history and the URL.
+<br/>&mdash; Middle-click a tab to duplicate it; switch tabs with the mouse wheel.
+<br/>&mdash; Middle-click a table in the database panel to open it in a new tab.
+<br/>&mdash; Connection credentials are tucked behind a key button.</p>
+
+<p style="margin-top: 0.7em;">Demo</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/play_ui.png) center / contain no-repeat; background-color: #f4f4f4;">
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Color coding, pins, autocompletion</h2>
+
+<p style="margin-top: -0.3em;">The result table became much more powerful:</p>
+
+<p style="margin-top: 0.3em;">&mdash; <b style="color: green;">Color coding</b> per column (the 🌈 toggle in the header):
+<br/>&emsp; bar / heatmap / categorical &mdash; remembered in the URL.
+<br/>&mdash; <b style="color: green;">Pinned columns</b> (📌): keep key columns visible while scrolling.
+<br/>&mdash; <b style="color: green;">Autocompletion</b> from <b>system.completions</b> + a WASM SQL lexer.
+<br/>&mdash; <b style="color: green;">Full keyboard navigation</b>: arrows in the database panel and
+<br/>&emsp; the result table, focus outlines, accessible toolbar.
+<br/>&mdash; Rainbow parentheses, digit-group highlighting, Tab indentation,
+<br/>&emsp; syntax errors highlighted in place.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Database panel improvements</h2>
+
+<p>The left panel of the Web UI grew up:</p>
+
+<p style="margin-top: 0.5em;">&mdash; Table count next to each expanded database.
+<br/>&mdash; A refresh button to reload the table list.
+<br/>&mdash; Expanded databases are restored when the panel reopens.
+<br/>&mdash; Click a table's icon to see its <b>columns</b> &mdash; with type icons,
+<br/>&emsp; a size bar per column, and compression ratios in tooltips.
+<br/>&mdash; Selecting a database makes it the default for queries.</p>
+
+<p style="margin-top: 0.7em;">Demo</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Instant reference docs</h2>
+
+<p>A new documentation page, embedded in the server:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">http://localhost:8123<b style="color: green;">/docs</b></code></p>
+
+<p style="margin-top: 0.5em;">&mdash; Instant search over <b>system.documentation</b> &mdash;
+<br/>&emsp; functions, settings, table engines, data types, formats, &hellip;
+<br/>&mdash; Rendered reference docs with syntax highlighting, math,
+<br/>&emsp; and cross-links. Works offline, always matches your server version.</p>
+
+<p style="margin-top: 0.7em;">Demo</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/docs_ui.png) center / contain no-repeat; background-color: #f4f4f4;">
+</section>
+
+
+<section class="slide" style="background: url(pictures/back3.jpg); background-size: cover;">
+<h2 style="color: black;"><span class="hilite">JOIN Performance</span></h2>
+</section>
+
+<section class="slide">
+<h2>The right table is an index</h2>
+
+<p>A JOIN can use the values of the right-hand side to <b>prune granules</b>
+<br/>of the left table via its primary key or skip indexes:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SET <b style="color: green;">enable_join_runtime_filters_index_analysis</b> = 1;
+
+SELECT &hellip; FROM facts JOIN lookup ON facts.id = lookup.id;
+<span style="color: gray;">-- the ids from `lookup` become an index condition on `facts`</span>
+</code></p>
+
+<p><b style="color: green;">Measured</b> &mdash; 100M-row table joined with a 100-row table:
+<br/>&emsp; granules read: <b>12216 &rarr; <b style="color: green;">100</b></b> (122x),
+<br/>&emsp; time: <b>0.177 s &rarr; <b style="color: green;">0.022 s</b></b> (8x).</p>
+
+<!-- Demo:
+
+CREATE TABLE facts (id UInt64, payload String) ENGINE = MergeTree ORDER BY id;
+INSERT INTO facts SELECT number, randomPrintableASCII(50) FROM numbers(100000000);
+CREATE TABLE lookup (id UInt64) ENGINE = MergeTree ORDER BY id;
+INSERT INTO lookup SELECT (rand64() % 100000000) FROM numbers(100);
+SELECT count(), max(length(payload)) FROM facts JOIN lookup ON facts.id = lookup.id SETTINGS enable_join_runtime_filters_index_analysis = 1;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: Shankar Iyer.</p>
+</section>
+
+<section class="slide">
+<h2>Packed row references</h2>
+
+<p>The right-hand side of a hash join now uses a compact
+<br/><b>8-byte index-based row reference</b> &mdash; for every key type:</p>
+
+<p style="margin-top: 0.5em;">&mdash; Hash-table entries of <b>ALL</b> joins are now as small as those of <b>ANY</b> joins.
+<br/>&mdash; Benchmarked on 100&ndash;300M row joins: median <b>12%</b> faster,
+<br/>&emsp; <b>15%</b> less peak memory; <b>INNER</b> on UInt64 keys: 21% faster, 38% less memory.</p>
+
+<p style="margin-top: 0.5em;"><b style="color: green;">Measured</b> &mdash; 100M &times; 150M parallel_hash INNER JOIN:
+<br/>&emsp; memory <b>14.4 GB &rarr; <b style="color: green;">8.0 GB</b></b>, time <b>0.84 s &rarr; <b style="color: green;">0.66 s</b></b>, 26.6 vs 26.7.</p>
+
+<!-- Demo / proof:
+
+Q="SELECT count() FROM (SELECT number AS k, number AS v FROM numbers_mt(100000000)) AS l JOIN (SELECT intDiv(number, 3) AS k, number AS w FROM numbers_mt(150000000)) AS r ON l.k = r.k FORMAT Null SETTINGS join_algorithm = 'parallel_hash'"
+clickhouse local --time --memory-usage -q "$Q"   # 26.6: 0.84s / 14.4 GB   26.7: 0.66s / 8.0 GB
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Harikrishnan Prabakaran.</p>
+</section>
+
+<section class="slide">
+<h2>DPsub join reordering</h2>
+
+<p>A new join-order optimization algorithm &mdash;
+<br/><b>dynamic programming over subsets</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SET query_plan_optimize_join_order_algorithm = '<b style="color: green;">dpsub</b>';
+</code></p>
+
+<p>&mdash; Considers <b>all</b> join orders &mdash; finds the optimal plan.
+<br/>&mdash; Lower optimization overhead than <b>dpsize</b>.
+<br/>&mdash; Supports <b>non-inner</b> joins, unlike dpsize and dphyp.
+<br/>&mdash; Algorithms can be chained: <b>'dpsub,greedy'</b> &mdash; tried in order,
+<br/>&emsp; with fallback for queries an algorithm cannot handle.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1.5em;">Developer: Fisnik Kastrati.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
+<h2><span style="color: black;" class="hilite">Performance Improvements</span></h2>
+</section>
+
+<section class="slide">
+<h2>A JIT-compiled regexp engine</h2>
+
+<p>Simple regular expressions are now <b>compiled to native code</b> with LLVM:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT count() FROM logs
+WHERE <b style="color: green;">match</b>(line, '^[a-z]+[0-9]+@example[0-9]+\\.com$');
+</code></p>
+
+<p>&mdash; Applies to <b>match</b>, <b>extract</b>, <b>extractAll</b>, <b>replaceRegexpOne/All</b>, LIKE.
+<br/>&mdash; <b>compile_regular_expressions</b> &mdash; on by default; unsupported patterns
+<br/>&emsp; transparently fall back to RE2.</p>
+
+<p style="margin-top: 0.5em;"><b style="color: green;">Measured</b> &mdash; match() over 20M strings:
+<br/>&emsp; <b>2.7 s &rarr; <b style="color: green;">1.1 s</b></b> (2.5x), 26.6 vs 26.7.</p>
+
+<!-- Demo / proof:
+
+Q="SELECT count() FROM (SELECT concat('user', toString(number), '@example', toString(number % 100), '.com') AS s FROM numbers(20000000)) WHERE match(s, '^[a-z]+[0-9]+@example[0-9]+\\.com$') FORMAT Null"
+clickhouse local --time -q "$Q"                                     # 26.7: 1.07s
+clickhouse local --time --compile_regular_expressions=0 -q "$Q"     # 26.7: 2.77s (26.6: 2.68s)
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Fuse GROUP BY with ORDER BY LIMIT</h2>
+
+<p style="margin-top: -0.3em;">When the GROUP BY key matches the ORDER BY key and the table's
+<br/>sorting key, the <b>LIMIT is pushed into aggregation-in-order</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT site, avg(dur) FROM visits
+GROUP BY site <b style="color: green;">ORDER BY site LIMIT 10</b>
+SETTINGS optimize_aggregation_in_order = 1;
+<span style="color: gray;">-- stops reading as soon as 10 groups are complete</span>
+</code></p>
+
+<p><b style="color: green;">Measured</b> &mdash; 200M rows: <b>0.23 s &rarr; <b style="color: green;">0.036 s</b></b> (6.4x), 26.6 vs 26.7.</p>
+
+<p style="margin-top: 0.5em;">Also: <b>DISTINCT in order</b> is 2x faster, <b>LIMIT BY in order</b> 1.4x faster
+<br/>(faster scanning of runs of equal keys in sorted streams).</p>
+
+<!-- Demo / proof:
+
+CREATE TABLE visits (site UInt32, ts DateTime, dur UInt32) ENGINE = MergeTree ORDER BY site;
+INSERT INTO visits SELECT number % 1000000, toDateTime('2026-07-01') + number % 86400, number % 1000 FROM numbers(200000000);
+Q="SELECT site, avg(dur) FROM visits GROUP BY site ORDER BY site LIMIT 10 FORMAT Null SETTINGS optimize_aggregation_in_order = 1"
+# 26.6: 0.232s   26.7: 0.036s
+# DISTINCT in order (max_threads=1): 26.6: 1.23s -> 26.7: 0.62s;  LIMIT 2 BY site: 2.31s -> 1.60s
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developers: Konstantin Bogdanov, Nihal Z. Miaji.</p>
+</section>
+
+<section class="slide">
+<h2>Query condition cache: more uses</h2>
+
+<p style="margin-top: -0.3em;">The query condition cache remembers which data ranges matched a WHERE
+<br/>&mdash; now it also works for:</p>
+
+<p style="margin-top: 0.3em;">&mdash; <b style="color: green;">Top-K queries</b> (<b>ORDER BY &hellip; LIMIT n</b>) with dynamic filtering &mdash;
+<br/>&emsp; including queries with lazy materialization, and entries are shared
+<br/>&emsp; with ordinary queries that have the same WHERE.
+<br/>&mdash; <b style="color: green;">Local Parquet files</b> read via the File engine
+<br/>&emsp; (object storage was already supported), keyed by ETag for S3.</p>
+
+<p style="margin-top: 0.5em;"><b style="color: green;">Measured</b> &mdash; Top-K over 100M rows, second run: <b>0.114 s &rarr; <b style="color: green;">0.057 s</b></b> (2x).</p>
+
+<!-- Demo:
+
+CREATE TABLE topk (id UInt64, score Float64, payload String) ENGINE = MergeTree ORDER BY id;
+INSERT INTO topk SELECT number, rand() / 4294967296.0 * 100, randomPrintableASCII(64) FROM numbers(100000000);
+SELECT id, score FROM topk WHERE score > 99.99 ORDER BY score DESC LIMIT 10 SETTINGS use_query_condition_cache = 1;
+-- run 1: 0.114s, run 2: 0.057s
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developers: Alexey Milovidov, Shankar Iyer.</p>
+</section>
+
+<section class="slide">
+<h2>Faster formats and compression</h2>
+
+<p style="margin-top: -0.5em;">&mdash; <b style="color: green;">Arrow / ArrowStream</b>: a native reader and writer (no Apache Arrow
+<br/>&emsp; library, no extra copies), now the default. Writes ~1.3x faster.
+<br/>&mdash; <b style="color: green;">ZSTD</b> decompression on ARM: NEON-vectorized short-offset copies.
+<br/>&emsp; Scan of a repetitive UInt64 column: <b>3.0 s &rarr; 1.8 s</b> (up to 2.3x pure decompression).
+<br/>&mdash; <b style="color: green;">GZip</b> via libdeflate: ~1.4&ndash;1.5x faster decompression, ~1.15x faster
+<br/>&emsp; compression with a better ratio &mdash; for .gz, HTTP, url/s3, Parquet GZIP.
+<br/>&mdash; <b style="color: green;">LZ4</b> decompression is faster for fixed-size, low-cardinality columns.
+<br/>&mdash; <b style="color: green;">Delta codec</b> decompression vectorized: 1.5&ndash;5x faster.</p>
+
+<!-- Demo / proof:
+
+# ZSTD (aarch64): CREATE TABLE z (ts DateTime CODEC(ZSTD), id UInt64 CODEC(ZSTD)) ...; 500M repetitive rows
+# single-thread scan: 26.6: 3.05s -> 26.7: 1.82s
+# gzip: 30M rows CSV.gz: read 1.76 -> 1.54s; write 4.32 -> 3.30s
+# Arrow write 50M rows: 1.53 -> 1.15s
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developers: Alexey Milovidov, Nikita Taranov, Manuel.</p>
+</section>
+
+<section class="slide">
+<h2>ClickHouse is fast on macOS</h2>
+
+<p style="margin-top: -0.3em;">A batch of improvements for those who run ClickHouse on a Mac:</p>
+
+<p style="margin-top: 0.3em;">&mdash; jemalloc no longer purges dirty pages eagerly &mdash; a background
+<br/>&emsp; purging thread, like on Linux: allocation-heavy workloads
+<br/>&emsp; (e.g. recursive CTEs) are <b>~2x faster</b>.
+<br/>&mdash; jemalloc per-CPU arenas and allocation profiling enabled.
+<br/>&mdash; Asynchronous reads from remote replicas (epoll over <b>kqueue</b>) &mdash;
+<br/>&emsp; distributed queries read shards in parallel instead of serially.
+<br/>&mdash; SSD cache dictionaries and the FileLog engine now work on macOS.
+<br/>&mdash; Fixed a hang on transaction COMMIT; STREAM queries supported.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developers: Alexey Milovidov, Raúl Marín.</p>
+</section>
+
+<section class="slide">
+<h2>Faster everything</h2>
+
+<p style="margin-top: -0.5em;">&mdash; <b style="color: green;">Faster query analysis</b>: shared subexpressions are not rebuilt when
+<br/>&emsp; constructing the DAG; bounded work for giant AND-chains.
+<br/>&mdash; <b style="color: green;">Faster window functions</b>: less memory for SELECT * over wide tables;
+<br/>&emsp; faster quantile*/uniq*/groupArray with OVER () and RANGE frames.
+<br/>&mdash; <b style="color: green;">Faster float parsing</b> &mdash; and it is <b>precise</b> (closest-representable)
+<br/>&emsp; by default now: 50M floats parse 1.2x faster than 26.6.
+<br/>&mdash; <b style="color: green;">Faster uniq, uniqCombined</b>: 500M rows, no keys: <b>0.23 s &rarr; 0.09 s</b> (2.5x).
+<br/>&mdash; <b style="color: green;">Redundant logical expressions</b> optimized: <b>a &lt; 3 AND a &gt; 5</b> &rarr; <b>false</b>,
+<br/>&emsp; <b>a = 3 AND a &lt; 5</b> &rarr; <b>a = 3</b> &mdash; contradictions detected at plan time.
+<br/>&mdash; INTERSECT ALL / EXCEPT ALL are several times faster. And more&hellip;</p>
+
+<!-- Demo:
+
+EXPLAIN actions = 1 SELECT count() FROM numbers(10) WHERE number < 3 AND number > 5;  -- Filter column: 0
+SELECT uniqCombined(number) FROM numbers_mt(500000000);  -- 26.6: 0.229s   26.7: 0.092s
+
+-->
+
+<p style="color: gray; font-size: 13pt; margin-top: 0.3em;">Developers: D. Novik, A. Milovidov, N. Z. Miaji, R. Marín, A. Popov, Xiaozhe Yu.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
+<h2><span class="hilite">Something Interesting</span></h2>
+</section>
+
+<section class="slide">
+<h2 style="margin-bottom: 0.5em;">Drivers for UDFs 🧪</h2>
+
+<p style="margin-top: -0.5em;">Write a UDF in <b>another programming language</b> &mdash; right in SQL.
+<br/>A "driver" compiles it at CREATE time into an executable UDF:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.2;">CREATE FUNCTION collatz_steps ARGUMENTS (n UInt64) RETURNS UInt64
+<b style="color: green;">ENGINE = DockerC()</b> AS '
+    uint64_t steps = 0;
+    while (n > 1) { n = (n % 2 == 0) ? n / 2 : 3 * n + 1; ++steps; }
+    return steps;
+';
+
+SELECT number, <b style="color: green;">collatz_steps</b>(number) FROM numbers(1, 10);
+</code></p>
+
+<p style="margin-top: -0.2em;">&mdash; The C body is compiled and runs in <b>sandboxed Docker containers</b>
+<br/>&emsp; (no network, read-only, all capabilities dropped).
+<br/>&mdash; Drivers are declared by the operator; functions survive restarts.</p>
+
+<!-- Demo (server started with user_defined_executable_function_drivers_config + allow_experimental_executable_udf_drivers=1):
+
+CREATE FUNCTION collatz_steps ARGUMENTS (n UInt64) RETURNS UInt64 ENGINE = DockerC() AS '
+    uint64_t steps = 0;
+    while (n > 1) { n = (n % 2 == 0) ? n / 2 : 3 * n + 1; ++steps; }
+    return steps;
+';
+SELECT number, collatz_steps(number) FROM numbers(1, 10);
+-- 1->0, 2->1, 3->7, 4->2, 5->5, 6->8, 7->16, ...
+-- (the first call may need a few seconds while the container pool warms up)
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.2em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>DateTime64: years 0 to 9999</h2>
+
+<p>The supported range grew from [1900, 2299] to <b style="color: green;">[0000-01-01, 9999-12-31]</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT toDateTime64('9999-12-31 23:59:59.999', 3);
+<span style="color: gray;">-- 9999-12-31 23:59:59.999   (was clamped to 2299-12-31)</span>
+
+SELECT age('year', toDateTime64('0044-03-15 12:00:00', 0), now());
+<span style="color: gray;">-- 1982 years since the Ides of March</span>
+
+SELECT toDateTime64('1789-07-14 12:00:00', 0) + INTERVAL 237 YEAR;
+<span style="color: gray;">-- 2026-07-14 12:00:00</span>
+</code></p>
+
+<p>&mdash; Out-of-range values are computed <b>correctly</b> (via cctz), not clamped.
+<br/>&mdash; Precision 8&ndash;9 is narrower (Int64 ticks): nanoseconds end at 2262-04-11.</p>
+
+<!-- Demo:
+
+SELECT toDateTime64('9999-12-31 23:59:59.999', 3), toDateTime64('0044-03-15 12:00:00', 0);
+-- On 26.6 the first one returns 2299-12-31 23:59:59.999
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>EXPLAIN ANALYZE</h2>
+
+<p style="margin-top: -0.5em;">Run the query &mdash; and see the <b>actual</b> execution metrics in the plan:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.2;"><b style="color: green;">EXPLAIN ANALYZE</b> SELECT site, avg(dur) FROM visits
+WHERE site &lt; 100000 GROUP BY site ORDER BY site LIMIT 10
+
+Query summary:
+  Time:        76.77 ms (planning 29.38 ms · execution 47.39 ms)
+  Read:        20.08 million rows, 160.54 MB (423.72 million rows/s.)
+  Peak memory: 91.95 MiB
+&hellip;
+└──Aggregating
+   │  I/O: rows 20.00 million → 100.00 thousand (0.50%) · 160 MB → 1.2 MB
+   │    Stage (partial aggregation): time 24.29 ms <b style="color: green;">(51.3%)</b> · parallelism 16.29/96
+   └──ReadFromMergeTree (default.visits)
+</code></p>
+
+<p style="margin-top: -0.2em;">&mdash; Time split into planning and execution; per-step rows, bytes,
+<br/>&emsp; time share, and achieved <b>parallelism</b>. Find the bottleneck at a glance.</p>
+
+<!-- Demo:
+
+EXPLAIN ANALYZE SELECT site, avg(dur) FROM visits WHERE site < 100000 GROUP BY site ORDER BY site LIMIT 10;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.2em;">Developer: Kirill Kopnev.</p>
+</section>
+
+<section class="slide">
+<h2>ZXC codec</h2>
+
+<p>A new asymmetric LZ codec: <b>compresses better than LZ4,
+<br/>decompresses just as fast</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE logs (line String <b style="color: green;">CODEC(ZXC)</b>) &hellip;;
+</code></p>
+
+<table style="font-size: 15pt; width: 85%; margin-top: 0.4em;">
+<tr><th>codec</th><th>compressed</th><th>ratio</th><th>full scan</th></tr>
+<tr><td>LZ4</td><td>1.28 GiB</td><td>3.73</td><td>0.21 s</td></tr>
+<tr><td><b style="color: green;">ZXC</b></td><td><b style="color: green;">1.15 GiB</b></td><td><b style="color: green;">4.16</b></td><td><b style="color: green;">0.21 s</b></td></tr>
+<tr><td>ZSTD</td><td>0.67 GiB</td><td>7.16</td><td>1.05 s</td></tr>
+</table>
+
+<p style="margin-top: 0.4em;">&mdash; Compression is slower (~2x LZ4) &mdash; by design: pay once on write,
+<br/>&emsp; win on every read. A great fit for read-heavy columns.</p>
+
+<!-- Demo / proof: 50M log-like lines, single-thread scan, aarch64. Insert 10M rows: LZ4 2.1s / ZSTD 2.4s / ZXC 3.9s. -->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.4em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>SZ3 and ALP codecs</h2>
+
+<p style="margin-top: -0.5em;"><b style="color: green;">SZ3</b> 🧪 &mdash; error-bounded <b>lossy</b> compression for floats:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">v Float64 CODEC(<b style="color: green;">SZ3</b>('ALGO_INTERP_LORENZO', 'ABS', 0.001))
+<span style="color: gray;">-- sensor data, 50M rows: ZSTD 353 MiB → SZ3 22 MiB (16x)</span>
+<span style="color: gray;">-- with the default settings: 2.1 MiB (168x)</span>
+</code></p>
+
+<p style="margin-top: 0.2em;"><b style="color: green;">ALP</b> 🧪 &mdash; now auto-selects between two schemes:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">price Float64 CODEC(<b style="color: green;">ALP</b>)        <span style="color: gray;">-- AUTO: picks STD or RD per block</span>
+m Float64 CODEC(<b style="color: green;">ALP(RD)</b>)        <span style="color: gray;">-- force "Real Doubles"</span>
+<span style="color: gray;">-- decimal-like data: ALP ratio 3.74 vs ZSTD 2.42 — and it is lossless</span>
+</code></p>
+
+<p style="margin-top: 0.2em;">&mdash; Both require <b>allow_experimental_codecs = 1</b>.</p>
+
+<!-- Demo:
+
+SET allow_experimental_codecs = 1;
+CREATE TABLE alp_test (price_zstd Float64 CODEC(ZSTD), price_alp Float64 CODEC(ALP)) ENGINE = MergeTree ORDER BY tuple();
+INSERT INTO alp_test SELECT p, p FROM (SELECT round(rand() / 4294967296.0 * 1000, 2) AS p FROM numbers(30000000));
+OPTIMIZE TABLE alp_test FINAL;
+SELECT name, formatReadableSize(data_compressed_bytes) FROM system.columns WHERE table = 'alp_test';
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developers: Alexey Milovidov, Nazarii Piontko.</p>
+</section>
+
+<section class="slide">
+<h2>QueryRunner</h2>
+
+<p style="margin-top: -0.3em;">A table engine that <b>executes</b> the queries you INSERT into it:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE shadow (query String) <b style="color: green;">ENGINE = QueryRunner</b>
+SETTINGS cluster = 'staging', shard = 'random', threads = 4;
+
+INSERT INTO shadow
+SELECT query FROM system.query_log WHERE type = 'QueryFinish';
+<span style="color: gray;">-- replay production traffic on the staging cluster</span>
+</code></p>
+
+<p>&mdash; Fire-and-forget: async or sync mode, results are discarded.
+<br/>&mdash; For <b>shadow traffic</b>, benchmarks, fuzzing, batch execution
+<br/>&emsp; of generated queries, and directing queries to remote clusters.
+<br/>&mdash; Access control via SQL SECURITY INVOKER / DEFINER / NONE.</p>
+
+<!-- Demo:
+
+CREATE TABLE shadow (query String) ENGINE = QueryRunner SETTINGS mode = 'synchronous', threads = 4;
+CREATE TABLE audit (q String, ts DateTime DEFAULT now()) ENGINE = MergeTree ORDER BY ts;
+INSERT INTO shadow VALUES ('INSERT INTO audit (q) VALUES (''ran query 1'')'), ('INSERT INTO audit (q) SELECT ''ran query '' || toString(number + 2) FROM numbers(3)');
+SELECT q FROM audit ORDER BY q;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Miсhael Stetsyuk.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/wing.jpg); background-size: cover;">
+<h2>Meetups</h2>
+<p style="line-height: 1.2; margin-top: -2.2em; font-size: 19pt;">
+<br/><span class="hilite">&mdash; 🇹🇭 Bangkok: OSS &amp; Data Evening, Jul 23</span>
+<br/><span class="hilite">&mdash; 🇮🇳 Mumbai: Lakes to Queries, Jul 25</span>
+<br/><span class="hilite">&mdash; 🇸🇬 Singapore: BUILD Workshop, Jul 28</span>
+<br/><span class="hilite">&mdash; 🇯🇵 Tokyo: Google Cloud Next, Jul 30</span>
+<br/><span class="hilite">&mdash; 🇨🇴 Bogotá: AWS Summit, Jul 30</span>
+<br/><span class="hilite">&mdash; 🇮🇩 Jakarta Meetup, Aug 5</span>
+<br/><span class="hilite">&mdash; 🇺🇸 Seattle: AI Demo Night, Aug 6</span>
+<br/><span class="hilite">&mdash; 🇨🇱 Santiago: Real-time Analytics Training, Aug 6</span>
+<br/><span class="hilite">&mdash; 🇺🇸 San Francisco Meetup, Aug 11</span>
+<br/><span class="hilite">&mdash; 🇦🇺 Sydney User Conference, Aug 11</span>
+<br/><span class="hilite">&mdash; 🇦🇺 Melbourne User Conference, Aug 13</span>
+<br/><span class="hilite">&mdash; 🇺🇸 New York: AI Demo Night, Aug 18</span>
+</p>
+</section>
+
+<section class="slide">
+<h2>Reading Corner 📖</h2>
+
+<a href="https://clickhouse.com/blog/introducing-the-clickhouse-adbc-driver"><img style="float: right; width: 20%; margin-right: -3em; image-rendering: pixelated; margin-top: -1em;" src="pictures/qr_adbc.png" alt="QR: clickhouse.com/blog/introducing-the-clickhouse-adbc-driver"/></a>
+
+<p><a href="https://clickhouse.com/blog/">https://clickhouse.com/blog/</a></p>
+
+<p style="line-height: 1.5; margin-right: -5em;">
+&mdash; One driver, one format, every language: ADBC
+<br/>&mdash; @clickhouse/rowbinary: when your library
+<br/>&emsp; is also a parser compiler
+<br/>&mdash; Replacing the HDB: ClickHouse for historical ticker data
+<br/>&mdash; ClickHouse on Docker Hardened Images
+<br/>&mdash; PostgresBench: the cost of High Availability in managed Postgres
+<br/>&mdash; Migrate Datadog telemetry with the OpenTelemetry Collector
+<br/>&mdash; How Bullet gives DeFi's fastest exchange real-time analytics
+<br/>&mdash; ClickHouse is the Principal Partner of Fulham FC ⚽
+</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back9.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
+<h2 style="color: white; margin-left: -1em;">Q&amp;A</h2>
+</section>
+
+<!-- Video embed: add after the release call recording is published.
+<section class="slide" style="background: black; padding: 0;">
+<iframe style="width: 100%; height: 100%; position: absolute; top: 0; left: 0;" src="https://www.youtube.com/embed/VIDEO_ID" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</section>
+-->
+
+    <div class="progress"></div>
+    <script src="https://presentations.clickhouse.com/shower/shower.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/shower-video.css">
+    <script src="https://presentations.clickhouse.com/shower/shower-video.js"></script>
+    <!--/Video plugin-->
+<footer class="badge">
+    <a href="https://presentations.clickhouse.com/">ClickHouse Theater</a>
+</footer>
+</body>
+</html>
