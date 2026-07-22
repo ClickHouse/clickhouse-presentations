@@ -157,6 +157,9 @@ SELECT user, groupFormat('Markdown')(action, ts) AS history FROM events GROUP BY
 
 SELECT <b style="color: green;">corrTuple</b>((a1, a2), (b1, b2));
 <span style="color: gray;">-- (corr(a1, b1), corr(a2, b2)) — arguments paired by position</span>
+
+<span style="color: gray;">-- Note: this was already possible</span>
+SELECT COLUMNS('^metric_') <b>APPLY sum</b> FROM table;
 </code></p>
 
 <p>&mdash; Unlike <b>-ForEach</b> (for Arrays), elements may have <b>different types</b>.
@@ -177,16 +180,18 @@ WITH CAST((number, number*2), 'Tuple(clicks UInt64, views UInt64)') AS m SELECT 
 
 <p>A projection can now materialize <b>only the rows matching a predicate</b>:</p>
 
-<p><code style="font-size: 14pt; line-height: 1.25;">ALTER TABLE hits ADD PROJECTION errors (
-    SELECT ts, status, url <b style="color: green;">WHERE status >= 400</b> ORDER BY status);
+<p><code style="font-size: 14pt; line-height: 1.25;">ALTER TABLE hits ADD PROJECTION errors
+(
+    SELECT ts, status, url <b style="color: green;">WHERE status >= 400</b> ORDER BY status
+);
 
-SELECT count() FROM hits WHERE status >= 400;
 <span style="color: gray;">-- reads the tiny projection: 4 granules instead of 10M rows</span>
+SELECT count() FROM hits <b>WHERE status >= 400</b>;
 </code></p>
 
 <p>&mdash; The optimizer uses it (cost-based) when the query's <b>WHERE</b>
 <br/>&emsp; implies the projection's <b>WHERE</b>.
-<br/>&mdash; Ideal for rare classes of records: errors, anomalies, VIP users.</p>
+<br/>&mdash; A subset of data, that <b style="color: green;">works faster</b>, without the need of a separate table.</p>
 
 <!-- Demo:
 
@@ -209,14 +214,16 @@ EXPLAIN indexes = 1 SELECT count() FROM hits WHERE status >= 400;
 <br/>to the right backend <b>based on the URL scheme</b>:</p>
 
 <p><code style="font-size: 14pt; line-height: 1.25;">SELECT * FROM url('<b style="color: green;">file://</b>data/hits.csv');       <span style="color: gray;">-- File</span>
-SELECT * FROM url('<b style="color: green;">s3://</b>bucket/data/*.parquet');   <span style="color: gray;">-- S3</span>
-SELECT * FROM url('<b style="color: green;">gs://</b>bucket/table.parquet');    <span style="color: gray;">-- S3 (GCS)</span>
-SELECT * FROM url('<b style="color: green;">az://</b>container/blob.csv');      <span style="color: gray;">-- Azure</span>
-SELECT * FROM url('<b style="color: green;">hdfs://</b>nn:8020/path');          <span style="color: gray;">-- HDFS</span>
+SELECT * FROM url('<b style="color: green;">s3://</b>bucket/data/*.parquet'); <span style="color: gray;">-- S3</span>
+SELECT * FROM url('<b style="color: green;">gs://</b>bucket/table.parquet');  <span style="color: gray;">-- S3 (GCS)</span>
+SELECT * FROM url('<b style="color: green;">az://</b>container/blob.csv');    <span style="color: gray;">-- Azure</span>
+SELECT * FROM url('<b style="color: green;">hdfs://</b>nn:8020/path');        <span style="color: gray;">-- HDFS</span>
 </code></p>
 
-<p>&mdash; One function to read them all &mdash; no need to remember which engine to use.
-<br/>&mdash; <b>http(s)://</b> works as before.</p>
+<p>&mdash; One function to read them all.
+<br/>&mdash; <b>http(s)://</b> works as before.
+<br/>&mdash; <b>s3</b>, <b>gs</b>, etc. use the environment credentials.
+</p>
 
 <!-- Demo:
 
