@@ -238,29 +238,44 @@ SELECT count() FROM url('s3://datasets-documentation/hackernews/hacknernews.csv.
 <section class="slide">
 <h2>eval 🧪</h2>
 
-<p>A table function that builds a query string <b>from an expression</b> and runs it:</p>
+<p style="margin-top: -0.5em;">A table function that builds a query string <b>from an expression</b> and runs it:</p>
 
-<p><code style="font-size: 14pt; line-height: 1.25;">SET allow_experimental_eval_table_function = 1;
+<p style="margin-top: -0.3em;"><code style="font-size: 13pt; line-height: 1.25;">SET allow_experimental_eval_table_function = 1;
 
-SELECT * FROM <b style="color: green;">eval</b>('SELECT number FROM numbers(' || toString(2 + 1) || ')');
+SELECT * FROM <b style="color: green;">eval</b>(
+    'SELECT number FROM numbers(' || toString(2 + 1) || ')');
 <span style="color: gray;">-- 0, 1, 2</span>
 
-<span style="color: gray;">-- e.g., read from a table whose name is computed from the date:</span>
-SELECT * FROM <b style="color: green;">eval</b>('SELECT * FROM logs_' ||
-    replaceAll(substring(toString(today()), 1, 7), '-', '_'));
+<span style="color: gray;">-- the argument can also be a subquery, not wrapped in a string —</span>
+<span style="color: gray;">-- e.g., generate a query that sums every numeric column of a table:</span>
+SELECT * FROM <b style="color: green;">eval</b>((
+    SELECT 'SELECT '
+        || arrayStringConcat(groupArray('sum(' || name || ')'), ', ')
+        || ' FROM metrics'
+    FROM system.columns WHERE table = 'metrics' AND type LIKE '%Int%'));
 </code></p>
 
-<p>&mdash; Dynamic SQL without external scripting.</p>
+<p style="margin-top: -0.2em;">&mdash; Dynamic SQL without external scripting.</p>
 
 <!-- Demo:
 
 SET allow_experimental_eval_table_function = 1;
+
+CREATE TABLE metrics (ts DateTime, cpu UInt32, mem UInt64, disk UInt64, host String) ENGINE = Memory;
+INSERT INTO metrics VALUES ('2026-07-01 00:00:00', 10, 100, 5, 'a'), ('2026-07-01 00:00:01', 20, 200, 7, 'b');
+SELECT * FROM eval((
+    SELECT 'SELECT ' || arrayStringConcat(groupArray('sum(' || name || ')'), ', ') || ' FROM metrics'
+    FROM system.columns WHERE database = currentDatabase() AND table = 'metrics' AND type LIKE '%Int%'
+));
+-- 30, 300, 12
+
+-- a table whose name is computed from the date:
 CREATE TABLE t_2026_07 (x UInt8) ENGINE = Memory; INSERT INTO t_2026_07 VALUES (42);
 SELECT * FROM eval('SELECT x FROM t_' || replaceAll(substring(toString(today()), 1, 7), '-', '_'));
 
 -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Yue Ni, Alexey Milovidov.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0.2em;">Developers: Yue Ni, Alexey Milovidov.</p>
 </section>
 
 
