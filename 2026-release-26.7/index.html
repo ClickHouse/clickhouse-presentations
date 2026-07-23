@@ -59,6 +59,7 @@ Wildcards over HTTP index pages
 
 Vector Search
 
+QBit recap (production-ready since 26.2)
 QBit: Int8 quantization — 1 to 8 bits on demand
 QBit: strides — Matryoshka dimensions
 Randomized Hadamard rotations
@@ -374,6 +375,26 @@ SELECT _file, * FROM url('http://localhost:8090/data/*/stats.csv', CSVWithNames)
 
 <section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
 <h2><span class="hilite">Vector Search</span></h2>
+</section>
+
+<section class="slide">
+<h2>QBit</h2>
+
+<p>A data type for <b>vector embeddings</b>,
+<br/>that allows tuning the search precision at runtime.
+<br/><span style="color: gray;">Production-ready since 26.2:</span></p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -1em;">CREATE TABLE vectors (
+    id UInt64, name String, ...
+    vec <b style="color: green;">QBit(BFloat16, 1536)</b>
+) ORDER BY ();</code></p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -1em;">SELECT id, name FROM vectors
+ORDER BY <b style="color: green;">L2DistanceTransposed</b>(vec, target, <b style="color: green;">10</b>)
+LIMIT 10;
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Raufs Dunamalijevs.</p>
 </section>
 
 <section class="slide">
