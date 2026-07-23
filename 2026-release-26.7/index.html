@@ -583,14 +583,22 @@ EXPLAIN indexes = 1 SELECT count() FROM docs WHERE hasPhrase(body, 'quick brown 
 <p>Convert between WGS84 coordinates and the <b>UTM</b> / <b>MGRS</b> systems
 <br/>used in surveying, mapping, and military grids:</p>
 
-<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">geoToUTM</b>(4.89, 52.36) AS amsterdam;
-<span style="color: gray;">-- (628700.24, 5802760.82, 31, 'U') — easting, northing, zone, band</span>
+<div style="float: right; width: 41%; margin: 0 -55px 0 12px;">
+<img style="width: 100%;" src="pictures/utm_zones.jpg" alt="UTM zones: 60 longitude zones and latitude bands C–X on a world map"/>
+<p style="color: gray; font-size: 9pt; text-align: right; margin: 0.2em 0 0 0;">Map: NASA Visible Earth / Wikimedia Commons, public domain.</p>
+</div>
+
+<p><code style="display: inline-block; font-size: 13pt; line-height: 1.25;">SELECT <b style="color: green;">geoToUTM</b>(4.89, 52.36) AS amsterdam;
+<span style="color: gray;">-- (628700.24, 5802760.82, 31, 'U')</span>
+<span style="color: gray;">--  easting, northing, zone, band</span>
 
 SELECT <b style="color: green;">UTMToGeo</b>(628700.24, 5802760.82, 31, true);
 <span style="color: gray;">-- (4.89, 52.36) — and back</span>
 
-SELECT <b style="color: green;">geoToMGRS</b>(4.89, 52.36);         <span style="color: gray;">-- '31UFU2870002760'</span>
-SELECT <b style="color: green;">MGRSToGeo</b>('31UFU2870002760');   <span style="color: gray;">-- (4.89, 52.36)</span>
+SELECT <b style="color: green;">geoToMGRS</b>(4.89, 52.36);
+<span style="color: gray;">-- '31UFU2870002760'</span>
+SELECT <b style="color: green;">MGRSToGeo</b>('31UFU2870002760');
+<span style="color: gray;">-- (4.89, 52.36)</span>
 </code></p>
 
 <!-- Demo:
