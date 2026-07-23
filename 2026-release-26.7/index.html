@@ -378,7 +378,7 @@ SELECT _file, * FROM url('http://localhost:8090/data/*/stats.csv', CSVWithNames)
 </section>
 
 <section class="slide">
-<h2>QBit</h2>
+<h2>QBit Improvements</h2>
 
 <p>A data type for <b>vector embeddings</b>,
 <br/>that allows tuning the search precision at runtime.
@@ -393,70 +393,49 @@ SELECT _file, * FROM url('http://localhost:8090/data/*/stats.csv', CSVWithNames)
 ORDER BY <b style="color: green;">L2DistanceTransposed</b>(vec, target, <b style="color: green;">10</b>)
 LIMIT 10;
 </code></p>
-
-<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Raufs Dunamalijevs.</p>
 </section>
 
 <section class="slide">
 <div style="float: right; width: 60%; height: 110%; margin-right: -100px; margin-top: -20px; background: #1a1a18;">
 <img style="width: 100%;" src="pictures/qbit.jpg"/>
 </div>
-<h2>QBit</h2>
+<h2 style="margin-top: 0em;">QBit</h2>
 
 <p>It uses a <b>bit-sliced</b> data layout:
 <br/>every number is sliced by bits,
-<br/>e.g., for 1536-dim vector of Float32,
-<br/>we store <b style="color: green;">32 subcolumns</b> with Nth (0..31th) bits from all dimensions.</p>
+<br/>e.g., for 1536-dim vector of BFloat16,
+<br/>we store <b style="color: green;">16 subcolumns</b> with Nth (1..16th) bits from all dimensions.</p>
 
 <p>At the query time, we specify, how many (most significant) bits to take.</p>
 
 <p>For example, we can ask to read
-<br/>only 10 out of 32 bits.</p>
-
-<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Raufs Dunamalijevs.</p>
+<br/>only 10 out of 16 bits.</p>
 </section>
 
 <section class="slide">
 <h2>QBit: Int8 quantization</h2>
 
-<p style="margin-top: -0.5em;"><b>QBit</b> stores vectors <b>bit-plane by bit-plane</b>. With Int8 Lloyd&ndash;Max codes,
-the top k planes <b>are</b> a k-bit quantization &mdash; one column serves
-<b style="color: green;">every precision from 1-bit (binary) to 8-bit</b>, chosen per query:</p>
+<p style="margin-top: -0.5em;"><b>QBit</b> now supports <b>Int8</b>, which allows anything from binary (1 bit) to full 8 bit quantization, chosen at runtime per query.</p>
+
+<p>It can store any Int8 codes, and we also provide <b>quantizeBFloat16ToInt8</b> and <b>dequantizeInt8ToBFloat16</b> functions for optimal conversion from Float to Int8, minimizing the error on gaussian-distributed vector coordinates.</p>
 
 <p style="margin-top: -0.2em;"><code style="font-size: 13pt; line-height: 1.25;">CREATE TABLE images (id UInt64, emb <b style="color: green;">QBit(Int8, 2048)</b>) &hellip;;
 
-INSERT INTO images SELECT id, <b style="color: green;">quantizeBFloat16ToInt8</b>(embedding) FROM src;
-<span style="color: gray;">-- scale unit-normalized embeddings by sqrt(dim) to fill the Int8 range</span>
+INSERT INTO images SELECT id, <b style="color: green;">quantizeBFloat16ToInt8</b>(embedding * sqrt(2048)) FROM src;
+<span style="color: gray;">-- scale unit-normalized embeddings by sqrt(dim) and convert to Int8</span>
 
 SELECT id FROM images
-ORDER BY <b style="color: green;">cosineDistanceTransposedQuantized</b>(emb, $query, <b style="color: green;">4</b>) LIMIT 10;
-<span style="color: gray;">-- reads only the top 4 bit-planes: a 4-bit search — half the I/O of 8-bit</span>
+ORDER BY <b style="color: green;">cosineDistanceTransposedQuantized</b>(emb, target, <b style="color: green;">4</b>) LIMIT 10;
+<span style="color: gray;">-- reads only the top 4 bit-planes — half the I/O of 8-bit</span>
 </code></p>
-
-<p style="margin-top: -0.1em;">Recall@100 on 99M images (<a href="https://embeddings.info/">embeddings.info</a>, 2048-dim rotated):
-<br/>&emsp; <b>1 bit: 0.78</b> &emsp; 2 bits: 0.89 &emsp; <b>4 bits: 0.96</b> &emsp; 8 bits: <b style="color: green;">1.00</b>.</p>
-
-<!-- Demo (verified: 8-bit returns the exact full-precision top-5; 1-bit is a usable coarse pass):
-
-SET allow_experimental_qbit_type = 1;
-CREATE TABLE images (id UInt64, emb QBit(Int8, 256), emb_full Array(Float32)) ENGINE = MergeTree ORDER BY id;
-INSERT INTO images
-WITH arrayMap(x -> (rand(number * 256 + x) / 4294967296 - 0.5), range(256)) AS v, arrayMap(x -> x / L2Norm(v), v) AS unit
-SELECT number, quantizeBFloat16ToInt8(arrayMap(x -> toBFloat16(x * sqrt(256)), unit)), unit FROM numbers(100000);
-
--- exact:  SELECT id FROM images ORDER BY cosineDistance(emb_full, (SELECT emb_full FROM images WHERE id = 42)) LIMIT 5;
-SELECT id FROM images ORDER BY cosineDistanceTransposedQuantized(emb, (SELECT emb_full FROM images WHERE id = 42), 1) LIMIT 5;  -- binary
-SELECT id FROM images ORDER BY cosineDistanceTransposedQuantized(emb, (SELECT emb_full FROM images WHERE id = 42), 8) LIMIT 5;  -- = exact top-5
-
--->
 
 <p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
 </section>
 
 <section class="slide">
-<h2>QBit: strides</h2>
+<h2>QBit: strided storage</h2>
 
-<p style="margin-top: -0.5em;">The optional <b>stride</b> slices dimensions into groups &mdash; each bit-plane of
+<p style="margin-top: -0.5em;">The optional <b>stride</b> parameter slices dimensions into groups &mdash; each bit-plane of
 each group is <b>its own stream on disk</b>: <b style="color: green;">QBit(Int8, 1024, 256)</b>:</p>
 
 <table style="border-collapse: collapse; font-size: 10pt; margin: 0.2em 0; line-height: 1; width: auto; margin-left: 0;">
@@ -472,23 +451,32 @@ each group is <b>its own stream on disk</b>: <b style="color: green;">QBit(Int8,
 <tr><td style="padding: 0 5px; color: gray;">bit 5 &hellip; 8</td><td style="padding: 0; border: 2px solid white; background: #e2e2e2; height: 28px;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td></tr>
 </table>
 
-<p style="margin-top: 0;"><code style="font-size: 12pt; line-height: 1.2;">&hellip; ORDER BY cosineDistanceTransposedQuantized(emb, $q256, <b style="color: green;">4</b>, <b style="color: green;">256</b>) &hellip;
+<p style="margin-top: 0;"><code style="font-size: 12pt; line-height: 1.2;">&hellip; ORDER BY cosineDistanceTransposedQuantized(emb, target, <b style="color: green;">4</b>, <b style="color: green;">256</b>) &hellip;
 <span style="color: gray;">-- 4 bits × first 256 dims: reads the 4 green streams of 32 — 3% of a Float32 column</span>
 </code></p>
 
-<p style="margin-top: -0.2em;">&mdash; Precision (bits) and <b>Matryoshka</b> dims (stride groups) slice independently.
-<br/>&mdash; Also new: <b>dotProductTransposed</b>, <b>CAST</b> between QBit types, <b>length()</b>.</p>
-
-<!-- Demo:
-
--- 4-bit search over only the first 128 of 256 dims (stride 128): the query vector is 128-dim:
-SELECT id FROM images ORDER BY cosineDistanceTransposedQuantized(emb, arraySlice((SELECT emb_full FROM images WHERE id = 42), 1, 128), 4, 128) LIMIT 5;
--- embeddings.info explores 99M images this way: a coarse 1-bit × 128-dim first pass, then rescore.
-
--->
+<p>You can request reading only first N dimensions - good for MRL (Matryoshka Representation Learning) embeddings to tune between the speed and recall.</p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
 </section>
+
+<section class="slide">
+<h2>Randomized Hadamard rotations</h2>
+
+<p>To improve the quality of vector search, it makes sense to apply <b>random rotation</b> of N-dimensional space before quantization of vectors.</p>
+
+<p>Rotation is a multiplication to an orthogonal matrix. There are many orthogonal matrices, and matrix multiplication is computationally expensive.</p>
+
+<p>Thankfully, there is a family of orthogonal matrices, that are faster to multiply with - Hadamard matrices. And it is broad enough to represent pseudorandom rotations.</p>
+
+<p>Now ClickHouse has a function for pseudorandom rotations:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">randomHadamardTransform</b>(vec);
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: Alexey Milovidov.</p>
+</section>
+
 
 <section class="slide">
 <h2>Randomized Hadamard rotations</h2>
@@ -517,13 +505,14 @@ WITH [1., 2., 3., 4.]::Array(Float32) AS v SELECT randomHadamardTransform(v) AS 
 <p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: Alexey Milovidov.</p>
 </section>
 
+
 <section class="slide">
 <h2>Quantization codecs 🧪</h2>
 
 <p style="margin-top: -0.3em;">Store a compact <b>quantized companion</b> next to full-precision vectors:</p>
 
 <p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE vecs (id UInt32,
-    v Array(Float32) <b style="color: green;">CODEC(Quantized('rabitq', 384))</b>) &hellip;;
+    v Array(BFloat16) <b style="color: green;">CODEC(Quantized('rabitq', 384))</b>) &hellip;;
 <span style="color: gray;">-- methods: int8, rabitq (1-bit), turboquant (2-bit), mrl, pq</span>
 
 SET <b style="color: green;">vector_search_use_quantized_codes</b> = 1;
@@ -532,7 +521,7 @@ SELECT id FROM vecs ORDER BY L2Distance(v, [&hellip;]) LIMIT 10;
 
 <p>&mdash; Two-stage brute-force search without an index: scan the small
 <br/>&emsp; quantized stream, then <b>rescore</b> the candidates at full precision.
-<br/>&mdash; Up to 8x less I/O in the first stage (1-bit codes: 32x smaller).</p>
+<br/>&mdash; Up to 8x less I/O in the first stage (1-bit codes: 16x smaller).</p>
 
 <!-- Demo:
 
@@ -606,6 +595,8 @@ SELECT <b style="color: green;">geoToMGRS</b>(13.4050, 52.5200);   <span style="
 <p>&mdash; <b>MGRSToGeo</b> completes the quartet.</p>
 
 <!-- Demo:
+
+SELECT geoToUTM(4.89, 52.36);
 
 WITH geoToUTM(13.4050, 52.5200) AS utm SELECT utm, UTMToGeo(utm.easting, utm.northing, utm.zone, true) AS back FORMAT Vertical;
 SELECT geoToMGRS(13.4050, 52.5200) AS mgrs, MGRSToGeo(geoToMGRS(13.4050, 52.5200)) AS back;
