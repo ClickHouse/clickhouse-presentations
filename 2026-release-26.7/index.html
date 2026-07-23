@@ -935,8 +935,8 @@ SETTINGS optimize_aggregation_in_order = 1;
 </code></p>
 
 <p>A test: 200M rows:</p>
-<p><b>26.6: <span style="color: red;">0.23</span> sec.</b>
-<br/><b>26.7: <span style="color: green;">0.036</span> sec.</b>
+<p><b>26.6: <span style="color: red;">0.23</span></b> sec.</b>
+<br/><b>26.7: <span style="color: green;">0.036</span></b> sec. (6.4 times faster!)</b>
 </p>
 
 <p style="margin-top: 0.5em;">Also: <b>DISTINCT in order</b> is 2x faster, <b>LIMIT BY in order</b> 1.4x faster
@@ -996,13 +996,13 @@ SELECT id, score FROM topk WHERE score > 99.99 ORDER BY score DESC LIMIT 10 SETT
 <h2>Faster formats and compression</h2>
 
 <p style="margin-top: -0.5em;">&mdash; <b style="color: green;">Arrow / ArrowStream</b>: a native reader and writer (no Apache Arrow
-<br/>&emsp; library, no extra copies), now the default. Writes ~1.3x faster.
-<br/>&mdash; <b style="color: green;">ZSTD</b> decompression on ARM: NEON-vectorized short-offset copies.
-<br/>&emsp; Scan of a repetitive UInt64 column: <b>3.0 s &rarr; 1.8 s</b> (up to 2.3x pure decompression).
-<br/>&mdash; <b style="color: green;">GZip</b> via libdeflate: ~1.4&ndash;1.5x faster decompression, ~1.15x faster
-<br/>&emsp; compression with a better ratio &mdash; for .gz, HTTP, url/s3, Parquet GZIP.
-<br/>&mdash; <b style="color: green;">LZ4</b> decompression is faster for fixed-size, low-cardinality columns.
-<br/>&mdash; <b style="color: green;">Delta codec</b> decompression vectorized: 1.5&ndash;5x faster.</p>
+<br/>&emsp; library, no extra copies), now the default. Writes ~1.3x faster.</p>
+<p>&mdash; <b style="color: green;">ZSTD</b> decompression on ARM: NEON-vectorized short-offset copies.
+<br/>&emsp; Scan of a repetitive UInt64 column: <b>3.0 s &rarr; 1.8 s</b> (up to 2.3x pure decompression).</p>
+<p>&mdash; <b style="color: green;">GZip</b> via libdeflate: ~1.4&ndash;1.5x faster decompression, ~1.15x faster
+<br/>&emsp; compression with a better ratio &mdash; for .gz, HTTP, url/s3, Parquet GZIP.</p>
+<p>&mdash; <b style="color: green;">LZ4</b> decompression is faster for fixed-size, low-cardinality columns.</p>
+<p>&mdash; <b style="color: green;">Delta codec</b> decompression vectorized: 1.5&ndash;5x faster.</p>
 
 <!-- Demo / proof:
 
@@ -1028,7 +1028,7 @@ SELECT id, score FROM topk WHERE score > 99.99 ORDER BY score DESC LIMIT 10 SETT
 <br/>&mdash; Asynchronous reads from remote replicas (epoll over <b>kqueue</b>) &mdash;
 <br/>&emsp; distributed queries read shards in parallel instead of serially.
 <br/>&mdash; SSD cache dictionaries and the FileLog engine now work on macOS.
-<br/>&mdash; Fixed a hang on transaction COMMIT; STREAM queries supported.</p>
+<br/>&mdash; STREAM queries are supported.</p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developers: Alexey Milovidov, Raúl Marín.</p>
 </section>
