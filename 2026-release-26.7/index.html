@@ -398,6 +398,25 @@ LIMIT 10;
 </section>
 
 <section class="slide">
+<div style="float: right; width: 60%; height: 110%; margin-right: -100px; margin-top: -20px; background: #1a1a18;">
+<img style="width: 100%;" src="pictures/qbit.jpg"/>
+</div>
+<h2>QBit</h2>
+
+<p>It uses a <b>bit-sliced</b> data layout:
+<br/>every number is sliced by bits,
+<br/>e.g., for 1536-dim vector of Float32,
+<br/>we store <b style="color: green;">32 subcolumns</b> with Nth (0..31th) bits from all dimensions.</p>
+
+<p>At the query time, we specify, how many (most significant) bits to take.</p>
+
+<p>For example, we can ask to read
+<br/>only 10 out of 32 bits.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Raufs Dunamalijevs.</p>
+</section>
+
+<section class="slide">
 <h2>QBit: Int8 quantization</h2>
 
 <p style="margin-top: -0.5em;"><b>QBit</b> stores vectors <b>bit-plane by bit-plane</b>. With Int8 Lloyd&ndash;Max codes,
