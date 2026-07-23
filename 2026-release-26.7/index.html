@@ -1102,21 +1102,21 @@ SELECT uniqCombined(number) FROM numbers_mt(500000000);  -- 26.6: 0.229s   26.7:
 <section class="slide">
 <h2 style="margin-bottom: 0.5em;">Drivers for UDFs 🧪</h2>
 
-<p style="margin-top: -0.5em;">Write a UDF in <b>another programming language</b> &mdash; right in SQL.
+<p style="margin-top: -0.5em;">Write a UDF in <b>any programming language</b> &mdash; right in SQL.
 <br/>A "driver" compiles it at CREATE time into an executable UDF:</p>
 
 <p><code style="font-size: 13pt; line-height: 1.2;">CREATE FUNCTION collatz_steps ARGUMENTS (n UInt64) RETURNS UInt64
-<b style="color: green;">ENGINE = DockerC()</b> AS '
-    uint64_t steps = 0;
+<b style="color: green;">ENGINE = GVisorC</b> AS $$
+    <span style="color: blue;">uint64_t steps = 0;
     while (n > 1) { n = (n % 2 == 0) ? n / 2 : 3 * n + 1; ++steps; }
-    return steps;
-';
+    return steps;</span>
+$$;
 
 SELECT number, <b style="color: green;">collatz_steps</b>(number) FROM numbers(1, 10);
 </code></p>
 
 <p style="margin-top: -0.2em;">&mdash; The C body is compiled and runs in <b>sandboxed Docker containers</b>
-<br/>&emsp; (no network, read-only, all capabilities dropped).
+<br/>&emsp; the GVisorC, DockerC, and UnsafeC drivers are provided as examples.
 <br/>&mdash; Drivers are declared by the operator; functions survive restarts.</p>
 
 <!-- Demo (server started with user_defined_executable_function_drivers_config + allow_experimental_executable_udf_drivers=1):
@@ -1187,7 +1187,12 @@ Query summary:
 
 <!-- Demo:
 
-EXPLAIN ANALYZE SELECT site, avg(dur) FROM visits WHERE site < 100000 GROUP BY site ORDER BY site LIMIT 10;
+EXPLAIN ANALYZE SELECT created_at, actor_login, repo_name,
+    'https://github.com/'||repo_name||(event_type LIKE 'Issue%' ? '/issues/' : '/pull/')||number AS url,
+    title
+FROM "default"."github_events"
+WHERE (title ILIKE '%ClickHouse%' OR body ILIKE '%ClickHouse%') AND repo_name NOT LIKE 'ClickHouse/%'
+ORDER BY created_at DESC LIMIT 100
 
 -->
 
@@ -1215,7 +1220,8 @@ EXPLAIN ANALYZE SELECT site, avg(dur) FROM visits WHERE site < 100000 GROUP BY s
 
 <!-- Demo / proof: 50M log-like lines, single-thread scan, aarch64. Insert 10M rows: LZ4 2.1s / ZSTD 2.4s / ZXC 3.9s. -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.4em;">Developer: Alexey Milovidov.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0.4em;">Developer: Alexey Milovidov.
+<br/>ZXC codec: Bertrand Lebonnois and contributors (BSD License) https://github.com/hellobertrand/zxc</p>
 </section>
 
 <section class="slide">
