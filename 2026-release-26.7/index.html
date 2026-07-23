@@ -286,7 +286,7 @@ SELECT * FROM eval('SELECT x FROM t_' || replaceAll(substring(toString(today()),
 <section class="slide">
 <h2>Remote and RemoteSecure engines</h2>
 
-<p>The <b>remote</b> table function now has persistent counterparts:</p>
+<p style="margin-top: -1em;">The <b>remote</b> table function now has persistent counterparts:</p>
 
 <p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE events_on_prod
 <b style="color: green;">ENGINE = Remote</b>('prod:9000', default, events);
