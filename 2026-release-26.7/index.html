@@ -950,6 +950,17 @@ Q="SELECT site, avg(dur) FROM visits GROUP BY site ORDER BY site LIMIT 10 FORMAT
 # 26.6: 0.232s   26.7: 0.036s
 # DISTINCT in order (max_threads=1): 26.6: 1.23s -> 26.7: 0.62s;  LIMIT 2 BY site: 2.31s -> 1.60s
 
+Q&A note — three related but distinct GROUP BY + LIMIT optimizations:
+1. THIS slide: #104859 (Konstantin Bogdanov, merged in 26.7, issue #105196) — ORDER BY the group key,
+   reading in order; LIMIT pushed into aggregation-in-order for early termination.
+2. #78553 (Dmitriy Terenichev) -> #95224 -> #96630 (Konstantin Bogdanov, OPEN, issue #72610) —
+   bounded top-K heap during hash aggregation prunes non-competitive groups; works regardless of
+   read order; enable_group_by_top_k_optimization.
+3. #98607 -> #107576 (Murphy, OPEN, issue #75098) — ORDER BY a min/max AGGREGATE value (not the key):
+   fused TopNAggregating operator when the table is sorted by the aggregate's argument; stops at the
+   K-th distinct group; optimize_topn_aggregation (off by default); ~5-10x in its benchmarks;
+   an unsorted-input mode is planned as a follow-up.
+
 -->
 
 <p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developers: Konstantin Bogdanov, Nihal Z. Miaji.</p>
