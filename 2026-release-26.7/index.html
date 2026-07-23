@@ -934,7 +934,10 @@ SETTINGS optimize_aggregation_in_order = 1;
 <span style="color: gray;">-- stops reading as soon as 10 groups are complete</span>
 </code></p>
 
-<p><b style="color: green;">Measured</b> &mdash; 200M rows: <b>0.23 s &rarr; <b style="color: green;">0.036 s</b></b> (6.4x), 26.6 vs 26.7.</p>
+<p>A test: 200M rows:</p>
+<p><b>26.6: <span style="color: red;">0.23</span> sec.</b>
+<br/><b>26.7: <span style="color: green;">0.036</span> sec.</b>
+</p>
 
 <p style="margin-top: 0.5em;">Also: <b>DISTINCT in order</b> is 2x faster, <b>LIMIT BY in order</b> 1.4x faster
 <br/>(faster scanning of runs of equal keys in sorted streams).</p>
