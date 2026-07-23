@@ -294,6 +294,9 @@ SELECT * FROM eval('SELECT x FROM t_' || replaceAll(substring(toString(today()),
 
 SELECT count() FROM events_on_prod;    <span style="color: gray;">-- reads remotely</span>
 INSERT INTO events_on_prod VALUES &hellip;;  <span style="color: gray;">-- writes remotely</span>
+
+<span style="color: gray;">-- Note: this was already possible:</span>
+CREATE TABLE events_on_prod <b>AS remote</b>('prod:9000', default, events);
 </code></p>
 
 <p>&mdash; A permanent "symlink" to a table on another server.
