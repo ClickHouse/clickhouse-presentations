@@ -320,9 +320,10 @@ INSERT INTO metrics_remote VALUES ('2026-07-02 00:00:00', 123.0);
 <p style="margin-top: -0.3em;"><b>mysql</b>, <b>postgresql</b>, and <b>sqlite</b> accept a <b>query</b> instead of a table name
 <br/>and pass it to the external database <b>as is</b>:</p>
 
-<p><code style="font-size: 14pt; line-height: 1.25;">SELECT * FROM postgresql('host:5432', 'db',
-    <b style="color: green;">query($$SELECT date_trunc('week', day) AS w, count(*)
-           FROM pageviews GROUP BY w$$)</b>, 'user', 'pass');
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT * FROM postgresql('host:5432', 'db', <b style="color: green;">query($$
+    SELECT date_trunc('week', day) AS w, count()
+    FROM pageviews GROUP BY w
+$$)</b>, 'user', 'pass');
 <span style="color: gray;">-- runs inside PostgreSQL, with PostgreSQL functions</span>
 
 SELECT * FROM sqlite('db.sqlite', <b style="color: green;">(SELECT customer, sum(amount)
