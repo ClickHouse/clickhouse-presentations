@@ -1024,12 +1024,12 @@ SELECT id, score FROM topk WHERE score > 99.99 ORDER BY score DESC LIMIT 10 SETT
 
 <p style="margin-top: 0.3em;">&mdash; jemalloc no longer purges dirty pages eagerly &mdash; a background
 <br/>&emsp; purging thread, like on Linux: allocation-heavy workloads
-<br/>&emsp; (e.g. recursive CTEs) are <b>~2x faster</b>.
-<br/>&mdash; jemalloc per-CPU arenas and allocation profiling enabled.
-<br/>&mdash; Asynchronous reads from remote replicas (epoll over <b>kqueue</b>) &mdash;
-<br/>&emsp; distributed queries read shards in parallel instead of serially.
-<br/>&mdash; SSD cache dictionaries and the FileLog engine now work on macOS.
-<br/>&mdash; STREAM queries are supported.</p>
+<br/>&emsp; (e.g. recursive CTEs) are <b>~2x faster</b>.</p>
+<p>&mdash; jemalloc per-CPU arenas and allocation profiling enabled.</p>
+<p>&mdash; Asynchronous reads from remote replicas (epoll over <b>kqueue</b>) &mdash;
+<br/>&emsp; distributed queries read shards in parallel instead of serially.</p>
+<p>&mdash; SSD cache dictionaries and the FileLog engine now work on macOS.</p>
+<p>&mdash; STREAM queries are supported.</p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developers: Alexey Milovidov, Raúl Marín.</p>
 </section>
@@ -1068,15 +1068,15 @@ SELECT id, score FROM topk WHERE score > 99.99 ORDER BY score DESC LIMIT 10 SETT
 <h2>Faster everything</h2>
 
 <p style="margin-top: -0.5em;">&mdash; <b style="color: green;">Faster query analysis</b>: shared subexpressions are not rebuilt when
-<br/>&emsp; constructing the DAG; bounded work for giant AND-chains.
-<br/>&mdash; <b style="color: green;">Faster window functions</b>: less memory for SELECT * over wide tables;
-<br/>&emsp; faster quantile*/uniq*/groupArray with OVER () and RANGE frames.
-<br/>&mdash; <b style="color: green;">Faster float parsing</b> &mdash; and it is <b>precise</b> (closest-representable)
-<br/>&emsp; by default now: 50M floats parse 1.2x faster than 26.6.
-<br/>&mdash; <b style="color: green;">Faster uniq, uniqCombined</b>: 500M rows, no keys: <b>0.23 s &rarr; 0.09 s</b> (2.5x).
-<br/>&mdash; <b style="color: green;">Redundant logical expressions</b> optimized: <b>a &lt; 3 AND a &gt; 5</b> &rarr; <b>false</b>,
-<br/>&emsp; <b>a = 3 AND a &lt; 5</b> &rarr; <b>a = 3</b> &mdash; contradictions detected at plan time.
-<br/>&mdash; INTERSECT ALL / EXCEPT ALL are several times faster. And more&hellip;</p>
+<br/>&emsp; constructing the DAG; bounded work for giant AND-chains.</p>
+<p style="margin-top: -0.4em;">&mdash; <b style="color: green;">Faster window functions</b>: less memory for SELECT * over wide tables;
+<br/>&emsp; faster quantile*/uniq*/groupArray with OVER () and RANGE frames.</p>
+<p style="margin-top: -0.4em;">&mdash; <b style="color: green;">Faster float parsing</b> &mdash; and it is <b>precise</b> (closest-representable)
+<br/>&emsp; by default now: 50M floats parse 1.2x faster than 26.6.</p>
+<p style="margin-top: -0.4em;">&mdash; <b style="color: green;">Faster uniq, uniqCombined</b>: 500M rows, no keys: <b>0.23 s &rarr; 0.09 s</b> (2.5x).</p>
+<p style="margin-top: -0.4em;">&mdash; <b style="color: green;">Redundant logical expressions</b> optimized: <b>a &lt; 3 AND a &gt; 5</b> &rarr; <b>false</b>,
+<br/>&emsp; <b>a = 3 AND a &lt; 5</b> &rarr; <b>a = 3</b> &mdash; contradictions detected at plan time.</p>
+<p style="margin-top: -0.4em;">&mdash; INTERSECT ALL / EXCEPT ALL are several times faster. And more&hellip;</p>
 
 <!-- Demo:
 
@@ -1197,7 +1197,7 @@ EXPLAIN ANALYZE SELECT site, avg(dur) FROM visits WHERE site < 100000 GROUP BY s
 <p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE logs (line String <b style="color: green;">CODEC(ZXC)</b>) &hellip;;
 </code></p>
 
-<table style="font-size: 15pt; width: 85%; margin-top: 0.4em;">
+<table style="font-size: 15pt; width: 85%; margin-top: 0.4em; line-height: 1.1;">
 <tr><th>codec</th><th>compressed</th><th>ratio</th><th>full scan</th></tr>
 <tr><td>LZ4</td><td>1.28 GiB</td><td>3.73</td><td>0.21 s</td></tr>
 <tr><td><b style="color: green;">ZXC</b></td><td><b style="color: green;">1.15 GiB</b></td><td><b style="color: green;">4.16</b></td><td><b style="color: green;">0.21 s</b></td></tr>
