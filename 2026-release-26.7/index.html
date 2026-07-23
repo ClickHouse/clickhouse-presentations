@@ -18,6 +18,8 @@
         p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
         .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
         .slide table tr:not(:last-of-type)>* { background: none; }
+        .zoomable { cursor: zoom-in; }
+        .zoomable.zoomed { position: fixed; left: 0; top: 0; width: 100% !important; height: 100%; object-fit: contain; background: #000; z-index: 50; cursor: zoom-out; }
     </style>
 </head>
 <body class="shower list">
@@ -584,7 +586,7 @@ EXPLAIN indexes = 1 SELECT count() FROM docs WHERE hasPhrase(body, 'quick brown 
 <br/>used in surveying, mapping, and military grids:</p>
 
 <div style="float: right; width: 41%; margin: 0 -55px 0 12px;">
-<img style="width: 100%;" src="pictures/utm_zones.jpg" alt="UTM zones: 60 longitude zones and latitude bands C–X on a world map"/>
+<img class="zoomable" style="width: 100%;" src="pictures/utm_zones.jpg" alt="UTM zones: 60 longitude zones and latitude bands C–X on a world map" onclick="this.classList.toggle('zoomed'); event.stopPropagation();"/>
 <p style="color: gray; font-size: 9pt; text-align: right; margin: 0.2em 0 0 0;">Map: NASA Visible Earth / Wikimedia Commons, public domain.</p>
 </div>
 
