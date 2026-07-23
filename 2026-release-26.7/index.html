@@ -1138,7 +1138,8 @@ SELECT number, collatz_steps(number) FROM numbers(1, 10);
 <section class="slide">
 <h2>DateTime64: years 0 to 9999</h2>
 
-<p>The supported range grew from [1900, 2299] to <b style="color: green;">[0000-01-01, 9999-12-31]</b>:</p>
+<p>The supported range grew from [1900, 2299]
+<br/>to <b style="color: green;">[0000-01-01, 9999-12-31]</b>:</p>
 
 <p><code style="font-size: 14pt; line-height: 1.25;">SELECT toDateTime64('9999-12-31 23:59:59.999', 3);
 <span style="color: gray;">-- 9999-12-31 23:59:59.999   (was clamped to 2299-12-31)</span>
@@ -1150,8 +1151,7 @@ SELECT toDateTime64('1789-07-14 12:00:00', 0) + INTERVAL 237 YEAR;
 <span style="color: gray;">-- 2026-07-14 12:00:00</span>
 </code></p>
 
-<p>&mdash; Out-of-range values are computed <b>correctly</b> (via cctz), not clamped.
-<br/>&mdash; Precision 8&ndash;9 is narrower (Int64 ticks): nanoseconds end at 2262-04-11.</p>
+<p>Uses Proleptic Gregorian Calendar.</p>
 
 <!-- Demo:
 
@@ -1285,7 +1285,7 @@ SELECT q FROM audit ORDER BY q;
 </section>
 
 <section class="slide">
-<p style="margin: 0 -55px 0 -55px;"><code style="font-size: 8pt; line-height: 1.25; height: 620px; overflow: auto;">WITH
+<p style="margin: 0 -55px 0 -55px;"><code style="font-size: 8pt; line-height: 1.25; height: 550px; overflow: auto;">WITH
     2.5 AS z0, 0.6 AS ty,
     (24.0, 0.0, 6.0)    AS target,
     (24.0, -45.0, 12.0) AS eye,
@@ -1408,8 +1408,7 @@ FROM (
   )
 )
 GROUP BY pixel
-SETTINGS max_block_size = 2048,
-         optimize_and_compare_chain = 0
+SETTINGS max_block_size = 2048
 FORMAT PNG
 </code></p>
 </section>
