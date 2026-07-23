@@ -1144,8 +1144,8 @@ SELECT number, collatz_steps(number) FROM numbers(1, 10);
 <p><code style="font-size: 14pt; line-height: 1.25;">SELECT toDateTime64('9999-12-31 23:59:59.999', 3);
 <span style="color: gray;">-- 9999-12-31 23:59:59.999   (was clamped to 2299-12-31)</span>
 
-SELECT age('year', toDateTime64('0044-03-15 12:00:00', 0), now());
-<span style="color: gray;">-- 1982 years since the Ides of March</span>
+SELECT age('year', toDateTime64('0079-08-24 13:00:00', 0), now());
+<span style="color: gray;">-- 1946 years since the eruption of Vesuvius</span>
 
 SELECT toDateTime64('1789-07-14 12:00:00', 0) + INTERVAL 237 YEAR;
 <span style="color: gray;">-- 2026-07-14 12:00:00</span>
@@ -1155,7 +1155,7 @@ SELECT toDateTime64('1789-07-14 12:00:00', 0) + INTERVAL 237 YEAR;
 
 <!-- Demo:
 
-SELECT toDateTime64('9999-12-31 23:59:59.999', 3), toDateTime64('0044-03-15 12:00:00', 0);
+SELECT toDateTime64('9999-12-31 23:59:59.999', 3), toDateTime64('0079-08-24 13:00:00', 0);
 -- On 26.6 the first one returns 2299-12-31 23:59:59.999
 
 -->
