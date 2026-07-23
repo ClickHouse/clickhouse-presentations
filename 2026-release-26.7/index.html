@@ -855,8 +855,10 @@ SELECT count(), max(length(payload)) FROM facts JOIN lookup ON facts.id = lookup
 <br/>&mdash; Benchmarked on 100&ndash;300M row joins: median <b>12%</b> faster,
 <br/>&emsp; <b>15%</b> less peak memory; <b>INNER</b> on UInt64 keys: 21% faster, 38% less memory.</p>
 
-<p style="margin-top: 0.5em;"><b style="color: green;">Measured</b> &mdash; 100M &times; 150M parallel_hash INNER JOIN:
-<br/>&emsp; memory <b>14.4 GB &rarr; <b style="color: green;">8.0 GB</b></b>, time <b>0.84 s &rarr; <b style="color: green;">0.66 s</b></b>, 26.6 vs 26.7.</p>
+<p style="margin-top: 0.5em;">A test: 100M &times; 150M parallel_hash INNER JOIN:</p>
+<p><b>26.6: <span style="color: red;">14.4</span> GB, <span style="color: red;">0.84</span> sec.</b>
+<br/><b>26.7: <span style="color: green;">8.0</span> GB, <span style="color: green;">0.66</span> sec.</b>
+</p>
 
 <!-- Demo / proof:
 
@@ -904,8 +906,10 @@ WHERE <b style="color: green;">match</b>(line, '^[a-z]+[0-9]+@example[0-9]+\\.co
 <br/>&mdash; <b>compile_regular_expressions</b> &mdash; on by default; unsupported patterns
 <br/>&emsp; transparently fall back to RE2.</p>
 
-<p style="margin-top: 0.5em;"><b style="color: green;">Measured</b> &mdash; match() over 20M strings:
-<br/>&emsp; <b>2.7 s &rarr; <b style="color: green;">1.1 s</b></b> (2.5x), 26.6 vs 26.7.</p>
+<p style="margin-top: 0.5em;">A test: match() over 20M strings:</p>
+<p><b>26.6: <span style="color: red;">2.7</span> sec.</b>
+<br/><b>26.7: <span style="color: green;">1.1</span> sec.</b>
+</p>
 
 <!-- Demo / proof:
 
@@ -945,7 +949,8 @@ Q="SELECT site, avg(dur) FROM visits GROUP BY site ORDER BY site LIMIT 10 FORMAT
 
 -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developers: Konstantin Bogdanov, Nihal Z. Miaji.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developers: Konstantin Bogdanov, Nihal Z. Miaji.
+<br/>Earlier work: Dmitry Rubashkin (aggregation in order, 2020), Igor Nikonov (DISTINCT in order, 2022).</p>
 </section>
 
 <section class="slide">
