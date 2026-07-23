@@ -104,6 +104,7 @@ DISTINCT and LIMIT BY in order
 Query condition cache: TopK, Parquet
 Faster formats and compression
 ClickHouse is fast on macOS
+SQL Mandelbrot benchmark
 Faster everything
 
 Main
@@ -1031,6 +1032,34 @@ SELECT id, score FROM topk WHERE score > 99.99 ORDER BY score DESC LIMIT 10 SETT
 <br/>&mdash; STREAM queries are supported.</p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developers: Alexey Milovidov, Raúl Marín.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">SQL Mandelbrot Benchmark</h2>
+
+<p style="margin-top: -0.5em;">The Mandelbrot set in <b>pure SQL</b> (a recursive CTE) &mdash; 1400&times;800, 256 iterations:
+<br/><a href="https://github.com/ClickHouse/sql-mandelbrot-benchmark">github.com/ClickHouse/sql-mandelbrot-benchmark</a></p>
+
+<div style="float: right; width: 44%; margin: 0.3em -55px 0 12px;">
+<img class="zoomable" style="width: 100%;" src="pictures/mandelbrot.png" alt="The Mandelbrot set rendered by ClickHouse in pure SQL" onclick="this.classList.toggle('zoomed'); event.stopPropagation();"/>
+<p style="color: gray; font-size: 10pt; text-align: right; margin: 0.2em 0 0 0;">Rendered by ClickHouse. Pixel-for-pixel identical across engines.</p>
+</div>
+
+<table style="border-collapse: collapse; font-size: 14pt; width: auto; margin: 0.3em 0 0 0; line-height: 1.3;">
+<tr><td style="padding: 0 8px 0 0;"><b style="color: green;">1</b></td><td style="padding: 0 10px 0 0;"><b style="color: green;">ClickHouse (SQL)</b></td><td style="padding: 0; text-align: right;"><b style="color: green;">518 ms</b> ⭐</td></tr>
+<tr><td style="padding: 0 8px 0 0;">2</td><td style="padding: 0 10px 0 0;">NumPy (vectorized)</td><td style="padding: 0; text-align: right;">688 ms</td></tr>
+<tr><td style="padding: 0 8px 0 0;">3</td><td style="padding: 0 10px 0 0;">chDB (SQL)</td><td style="padding: 0; text-align: right;">745 ms</td></tr>
+<tr><td style="padding: 0 8px 0 0;">4</td><td style="padding: 0 10px 0 0;">CedarDB (SQL)</td><td style="padding: 0; text-align: right;">835 ms</td></tr>
+<tr><td style="padding: 0 8px 0 0;">5</td><td style="padding: 0 10px 0 0;">ArrowDatafusion (SQL)</td><td style="padding: 0; text-align: right;">998 ms</td></tr>
+<tr><td style="padding: 0 8px 0 0;">6</td><td style="padding: 0 10px 0 0;">Arc (DuckDB over HTTP)</td><td style="padding: 0; text-align: right;">1,589 ms</td></tr>
+<tr><td style="padding: 0 8px 0 0;">7</td><td style="padding: 0 10px 0 0;">DuckDB (SQL)</td><td style="padding: 0; text-align: right;">1,954 ms</td></tr>
+<tr><td style="padding: 0 8px 0 0;">&hellip;</td><td style="padding: 0 10px 0 0;"></td><td style="padding: 0;"></td></tr>
+<tr><td style="padding: 0 8px 0 0;">11</td><td style="padding: 0 10px 0 0;">SQLite (SQL)</td><td style="padding: 0; text-align: right;">144,421 ms</td></tr>
+</table>
+
+<p style="margin-top: 0.4em; font-size: 15pt;">&mdash; The only engine <b>faster than hand-vectorized NumPy</b>.
+<br/>&mdash; MacBook Pro M3 Max &mdash; this benchmark surfaced the jemalloc fix
+<br/>&emsp; from the previous slide.</p>
 </section>
 
 <section class="slide">
