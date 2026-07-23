@@ -1042,7 +1042,7 @@ SELECT id, score FROM topk WHERE score > 99.99 ORDER BY score DESC LIMIT 10 SETT
 
 <div style="float: right; width: 44%; margin: 0.3em -55px 0 12px;">
 <img class="zoomable" style="width: 100%;" src="pictures/mandelbrot.png" alt="The Mandelbrot set rendered by ClickHouse in pure SQL" onclick="this.classList.toggle('zoomed'); event.stopPropagation();"/>
-<p style="color: gray; font-size: 10pt; text-align: right; margin: 0.2em 0 0 0;">Rendered by ClickHouse. Pixel-for-pixel identical across engines.</p>
+<p style="color: gray; font-size: 10pt; text-align: right; margin: -0.8em 0 0 0;">Rendered by ClickHouse.</p>
 </div>
 
 <table style="border-collapse: collapse; font-size: 14pt; width: auto; margin: 0.3em 0 0 0; line-height: 1.3;">
@@ -1058,8 +1058,7 @@ SELECT id, score FROM topk WHERE score > 99.99 ORDER BY score DESC LIMIT 10 SETT
 </table>
 
 <p style="margin-top: 0.4em; font-size: 15pt;">&mdash; The only engine <b>faster than hand-vectorized NumPy</b>.
-<br/>&mdash; MacBook Pro M3 Max &mdash; this benchmark surfaced the jemalloc fix
-<br/>&emsp; from the previous slide.</p>
+<br/>&mdash; MacBook Pro M3 Max &mdash; this benchmark surfaced the allocator fix from the previous slide.</p>
 </section>
 
 <section class="slide">
