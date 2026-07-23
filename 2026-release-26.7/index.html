@@ -59,7 +59,8 @@ Wildcards over HTTP index pages
 
 Vector Search
 
-QBit: Int8 and strides
+QBit: Int8 quantization — 1 to 8 bits on demand
+QBit: strides — Matryoshka dimensions
 Randomized Hadamard rotations
 Quantization codecs
 
@@ -375,33 +376,77 @@ SELECT _file, * FROM url('http://localhost:8090/data/*/stats.csv', CSVWithNames)
 </section>
 
 <section class="slide">
-<h2>QBit: Int8 and strides</h2>
+<h2>QBit: Int8 quantization</h2>
 
-<p style="margin-top: -0.3em;">The <b>QBit</b> data type (transposed vector storage) learned new tricks:</p>
+<p style="margin-top: -0.5em;"><b>QBit</b> stores vectors <b>bit-plane by bit-plane</b>. With Int8 Lloyd&ndash;Max codes,
+the top k planes <b>are</b> a k-bit quantization &mdash; one column serves
+<b style="color: green;">every precision from 1-bit (binary) to 8-bit</b>, chosen per query:</p>
 
-<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE vecs (id UInt32, v <b style="color: green;">QBit(Int8, 384)</b>) &hellip;;
-<span style="color: gray;">-- quantized 8-bit vectors, stored bit-plane by bit-plane</span>
+<p style="margin-top: -0.2em;"><code style="font-size: 13pt; line-height: 1.25;">CREATE TABLE images (id UInt64, emb <b style="color: green;">QBit(Int8, 2048)</b>) &hellip;;
 
-CREATE TABLE mat (id UInt32, v <b style="color: green;">QBit(Float32, 1024, 256)</b>) &hellip;;
-<span style="color: gray;">-- stride 256: dimensions stored in groups — for Matryoshka embeddings</span>
+INSERT INTO images SELECT id, <b style="color: green;">quantizeBFloat16ToInt8</b>(embedding) FROM src;
+<span style="color: gray;">-- scale unit-normalized embeddings by sqrt(dim) to fill the Int8 range</span>
 
-SELECT id FROM mat ORDER BY
-    L2DistanceTransposed(v, [&hellip;256-dim query&hellip;], 16, <b style="color: green;">256</b>) LIMIT 10;
-<span style="color: gray;">-- reads only the first 256 dimensions from disk</span>
+SELECT id FROM images
+ORDER BY <b style="color: green;">cosineDistanceTransposedQuantized</b>(emb, $query, <b style="color: green;">4</b>) LIMIT 10;
+<span style="color: gray;">-- reads only the top 4 bit-planes: a 4-bit search — half the I/O of 8-bit</span>
 </code></p>
 
-<p style="margin-top: -0.2em;">&mdash; Also new: <b>dotProductTransposed</b>, <b>*TransposedQuantized</b> functions,
-<br/>&emsp; <b>CAST</b> between QBit types, <b>length()</b> for QBit.</p>
+<p style="margin-top: -0.1em;">Recall@100 on 99M images (<a href="https://embeddings.info/">embeddings.info</a>, 2048-dim rotated):
+<br/>&emsp; <b>1 bit: 0.78</b> &emsp; 2 bits: 0.89 &emsp; <b>4 bits: 0.96</b> &emsp; 8 bits: <b style="color: green;">1.00</b>.</p>
 
-<!-- Demo:
+<!-- Demo (verified: 8-bit returns the exact full-precision top-5; 1-bit is a usable coarse pass):
 
-CREATE TABLE mat (id UInt32, v QBit(Float32, 64, 16)) ENGINE = Memory;
-INSERT INTO mat SELECT number, arrayMap(x -> toFloat32(x + number), range(64)) FROM numbers(3);
-SELECT id, L2DistanceTransposed(v, arrayMap(x -> toFloat32(x), range(16)), 32, 16) AS d_16 FROM mat ORDER BY d_16;
+SET allow_experimental_qbit_type = 1;
+CREATE TABLE images (id UInt64, emb QBit(Int8, 256), emb_full Array(Float32)) ENGINE = MergeTree ORDER BY id;
+INSERT INTO images
+WITH arrayMap(x -> (rand(number * 256 + x) / 4294967296 - 0.5), range(256)) AS v, arrayMap(x -> x / L2Norm(v), v) AS unit
+SELECT number, quantizeBFloat16ToInt8(arrayMap(x -> toBFloat16(x * sqrt(256)), unit)), unit FROM numbers(100000);
+
+-- exact:  SELECT id FROM images ORDER BY cosineDistance(emb_full, (SELECT emb_full FROM images WHERE id = 42)) LIMIT 5;
+SELECT id FROM images ORDER BY cosineDistanceTransposedQuantized(emb, (SELECT emb_full FROM images WHERE id = 42), 1) LIMIT 5;  -- binary
+SELECT id FROM images ORDER BY cosineDistanceTransposedQuantized(emb, (SELECT emb_full FROM images WHERE id = 42), 8) LIMIT 5;  -- = exact top-5
 
 -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.2em;">Developer: Alexey Milovidov.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>QBit: strides</h2>
+
+<p style="margin-top: -0.5em;">The optional <b>stride</b> slices dimensions into groups &mdash; each bit-plane of
+each group is <b>its own stream on disk</b>: <b style="color: green;">QBit(Int8, 1024, 256)</b>:</p>
+
+<table style="border-collapse: collapse; font-size: 10pt; margin: 0.2em 0; line-height: 1; width: auto; margin-left: 0;">
+<tr><td style="padding: 0 5px;"></td>
+<td style="padding: 0 3px; text-align: center; color: gray;">dims 1&ndash;256</td>
+<td style="padding: 0 3px; text-align: center; color: gray;">257&ndash;512</td>
+<td style="padding: 0 3px; text-align: center; color: gray;">513&ndash;768</td>
+<td style="padding: 0 3px; text-align: center; color: gray;">769&ndash;1024</td></tr>
+<tr><td style="padding: 0 5px; color: gray;">bit 1 (sign)</td><td style="padding: 0; border: 2px solid white; background: #8c4; width: 88px; height: 17px;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2; width: 88px;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2; width: 88px;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2; width: 88px;"></td></tr>
+<tr><td style="padding: 0 5px; color: gray;">bit 2</td><td style="padding: 0; border: 2px solid white; background: #8c4; height: 17px;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td></tr>
+<tr><td style="padding: 0 5px; color: gray;">bit 3</td><td style="padding: 0; border: 2px solid white; background: #8c4; height: 17px;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td></tr>
+<tr><td style="padding: 0 5px; color: gray;">bit 4</td><td style="padding: 0; border: 2px solid white; background: #8c4; height: 17px;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td></tr>
+<tr><td style="padding: 0 5px; color: gray;">bit 5 &hellip; 8</td><td style="padding: 0; border: 2px solid white; background: #e2e2e2; height: 28px;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td></tr>
+</table>
+
+<p style="margin-top: 0;"><code style="font-size: 12pt; line-height: 1.2;">&hellip; ORDER BY cosineDistanceTransposedQuantized(emb, $q256, <b style="color: green;">4</b>, <b style="color: green;">256</b>) &hellip;
+<span style="color: gray;">-- 4 bits × first 256 dims: reads the 4 green streams of 32 — 3% of a Float32 column</span>
+</code></p>
+
+<p style="margin-top: -0.2em;">&mdash; Precision (bits) and <b>Matryoshka</b> dims (stride groups) slice independently.
+<br/>&mdash; Also new: <b>dotProductTransposed</b>, <b>CAST</b> between QBit types, <b>length()</b>.</p>
+
+<!-- Demo:
+
+-- 4-bit search over only the first 128 of 256 dims (stride 128): the query vector is 128-dim:
+SELECT id FROM images ORDER BY cosineDistanceTransposedQuantized(emb, arraySlice((SELECT emb_full FROM images WHERE id = 42), 1, 128), 4, 128) LIMIT 5;
+-- embeddings.info explores 99M images this way: a coarse 1-bit × 128-dim first pass, then rescore.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
 </section>
 
 <section class="slide">
@@ -464,7 +509,7 @@ SELECT id FROM qv ORDER BY L2Distance(v, (SELECT v FROM qv WHERE id = 42)::Array
 
 
 <section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
-<h2><span class="hilite" style="color: black;">Text Search &amp; Geo</span></h2>
+<h2><span class="hilite" style="color: black;">Text Search</span></h2>
 </section>
 
 <section class="slide">
@@ -495,6 +540,11 @@ EXPLAIN indexes = 1 SELECT count() FROM docs WHERE hasPhrase(body, 'quick brown 
 -->
 
 <p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Elmi Ahmadov.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back2.jpg); background-size: cover;">
+<h2><span class="hilite">Geo</span></h2>
 </section>
 
 <section class="slide">
