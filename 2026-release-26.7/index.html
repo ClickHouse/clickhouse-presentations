@@ -321,8 +321,8 @@ INSERT INTO metrics_remote VALUES ('2026-07-02 00:00:00', 123.0);
 <br/>and pass it to the external database <b>as is</b>:</p>
 
 <p><code style="font-size: 14pt; line-height: 1.25;">SELECT * FROM postgresql('host:5432', 'db',
-    <b style="color: green;">query('SELECT date_trunc(''week'', day) AS w, count(*)
-           FROM pageviews GROUP BY w')</b>, 'user', 'pass');
+    <b style="color: green;">query($$SELECT date_trunc('week', day) AS w, count(*)
+           FROM pageviews GROUP BY w$$)</b>, 'user', 'pass');
 <span style="color: gray;">-- runs inside PostgreSQL, with PostgreSQL functions</span>
 
 SELECT * FROM sqlite('db.sqlite', <b style="color: green;">(SELECT customer, sum(amount)
@@ -337,10 +337,11 @@ SELECT * FROM sqlite('db.sqlite', <b style="color: green;">(SELECT customer, sum
 SELECT * FROM sqlite('/tmp/demo.sqlite', query('SELECT customer, sum(amount) AS total FROM orders GROUP BY customer'));
 SELECT * FROM postgresql('localhost:5432', 'demo', query('SELECT path, sum(hits) AS total FROM pageviews GROUP BY path ORDER BY total DESC'), 'demo', 'demo');
 SELECT * FROM mysql('127.0.0.1:3306', 'demo', query('SELECT country, count(*) AS n, sum(ltv) AS total FROM customers GROUP BY country'), 'demo', 'demo');
+SELECT * FROM postgresql('localhost:5432', 'demo', query($$SELECT date_trunc('week', day) AS w, count(*) AS c FROM pageviews GROUP BY w ORDER BY w$$), 'demo', 'demo');
 
 -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Alexey Milovidov.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developers: Denis Vidiaev, Alexey Milovidov.</p>
 </section>
 
 <section class="slide">
@@ -548,7 +549,7 @@ SELECT * FROM (SELECT 1 AS id, (13.4050, 52.5200)::Point AS geometry, 'Berlin' A
 
 -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Nihal Z. Miaji.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Mark Needham, Nihal Z. Miaji.</p>
 </section>
 
 <section class="slide">
@@ -1100,7 +1101,7 @@ SELECT name, formatReadableSize(data_compressed_bytes) FROM system.columns WHERE
 
 -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developers: Alexey Milovidov, Nazarii Piontko.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developers: Konstantin Vedernikov, Alexey Milovidov, Nazarii Piontko.</p>
 </section>
 
 <section class="slide">
