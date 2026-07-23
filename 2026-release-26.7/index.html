@@ -705,14 +705,14 @@ OPTIMIZE TABLE ice MANIFEST;
 <section class="slide">
 <h2>Data lakes, elsewhere</h2>
 
-<p><b style="color: green;">Delta Lake writes are now Beta</b> (were experimental):</p>
+<p><b style="color: green;">Delta Lake writes</b> are now Beta (were experimental):</p>
 
 <p><code style="font-size: 14pt; line-height: 1.25;">SET allow_experimental_delta_lake_writes = 1;
 INSERT INTO delta_table VALUES (3, 'written'), (4, 'by clickhouse');
-<span style="color: gray;">-- commits a new Delta log version; readable by Spark, DuckDB, python</span>
+<span style="color: gray;">-- commits a new Delta log version; readable by Spark, Trino, Python</span>
 </code></p>
 
-<p><b style="color: green;">OneLake: authentication with a bearer token</b>:</p>
+<p><b style="color: green;">Microsoft OneLake:</b> authentication with a bearer token:</p>
 
 <p><code style="font-size: 14pt; line-height: 1.25;">CREATE DATABASE onelake ENGINE = DataLakeCatalog('https://onelake.&hellip;')
 SETTINGS catalog_type = 'onelake', <b style="color: green;">onelake_bearer_token</b> = '&hellip;';
