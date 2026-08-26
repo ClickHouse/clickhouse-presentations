@@ -192,9 +192,9 @@ SHOW CREATE USER app_user;   -- VALID UNTIL '2026-09-24 ...'
 <p style="margin-top: -0.3em;">Which user is a connection <b>without a user name</b>?
 <br/>It used to be hardcoded to <b>default</b>. Now it is your choice:</p>
 
-<p><code style="font-size: 14pt; line-height: 1.25;">&lt;clickhouse&gt;
-    &lt;<b style="color: green;">default_session_user</b>&gt;anonymous&lt;/default_session_user&gt;
-&lt;/clickhouse&gt;
+<p><code style="font-size: 14pt; line-height: 1.25;"><span style="color: gray;">$ cat config.d/default_session_user.yaml</span>
+
+<b style="color: green;">default_session_user</b>: anonymous
 </code></p>
 
 <p>&mdash; The native, MySQL, and PostgreSQL protocols now accept
@@ -1253,12 +1253,12 @@ SELECT * FROM system.stack_trace;
 <p style="margin-top: -0.3em;">ClickHouse Keeper always kept the whole coordination state in memory.
 <br/>Now it can store it <b>on disk, in a custom LSM tree</b>:</p>
 
-<p><code style="font-size: 14pt; line-height: 1.25;">&lt;keeper_server&gt;
-    &lt;coordination_settings&gt;
-        &lt;<b style="color: green;">storage_memory_only</b>&gt;false&lt;/storage_memory_only&gt;
-    &lt;/coordination_settings&gt;
-    &lt;<b style="color: green;">data_storage_path</b>&gt;/var/lib/keeper-data&lt;/data_storage_path&gt;
-&lt;/keeper_server&gt;
+<p><code style="font-size: 14pt; line-height: 1.25;"><span style="color: gray;">$ cat keeper_config.d/on_disk_storage.yaml</span>
+
+keeper_server:
+    coordination_settings:
+        <b style="color: green;">storage_memory_only</b>: false
+    <b style="color: green;">data_storage_path</b>: /var/lib/keeper-data
 </code></p>
 
 <p style="margin-top: 0.3em;">&mdash; Similar performance to the in-memory storage.
