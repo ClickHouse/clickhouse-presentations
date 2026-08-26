@@ -41,7 +41,7 @@
 <h2><span class="hilite">Release 26.8 LTS</span></h2>
 <p><span class="hilite">&mdash; 98 new features 🍇</span></p>
 <p><span class="hilite">&mdash; 128 performance optimizations 🌠</span></p>
-<p><span class="hilite">&mdash; 556 bug fixes 🦗</span></p>
+<p><span class="hilite">&mdash; 556 bug fixes 🐝</span></p>
 <p style="margin-top: 1em;"><span class="hilite">A long-term support release.</span></p>
 </section>
 <!-- Feature count = 48 New Feature + 48 Experimental Feature + 2 new-feature backward-incompatible
@@ -132,455 +132,6 @@ Reading Corner: ClickBench Playground, ClickGap, Shopify, Jump Trading, Musinsa,
 
 
 <section class="slide">
-<h2>Pipe operators</h2>
-
-<p style="margin-top: -0.3em;">Write queries top-down, like in GoogleSQL &mdash; each step follows the previous:</p>
-
-<p><code style="font-size: 14pt; line-height: 1.25;">FROM hits
-<b style="color: green;">|&gt;</b> WHERE status = 404
-<b style="color: green;">|&gt;</b> AGGREGATE sum(hits) AS total GROUP BY path
-<b style="color: green;">|&gt;</b> ORDER BY total DESC
-<b style="color: green;">|&gt;</b> LIMIT 3;
-</code></p>
-
-<p>&mdash; Each <b>|&gt;</b> wraps the query before it into a subquery,
-<br/>&emsp; so the result is the same AST as for nested subqueries &mdash; no new semantics.
-<br/>&mdash; A query can now start with <b>FROM</b>, and <b>SELECT</b> is optional
-<br/>&emsp; (defaults to <b>SELECT *</b>): <b>FROM hits |&gt; LIMIT 10</b> just works.</p>
-
-<!-- Demo:
-
-FROM numbers(100) |> WHERE number % 7 = 0 |> AGGREGATE count() AS c, sum(number) AS s;   -- 15, 735
-FROM system.numbers |> LIMIT 10 |> WHERE number > 5;   -- 6 7 8 9
-
--->
-
-<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: Alexey Milovidov.</p>
-</section>
-
-<section class="slide">
-<h2>GROUPS frame for window functions</h2>
-
-<p style="margin-top: -0.3em;">The third frame mode of SQL:2011, joining <b>ROWS</b> and <b>RANGE</b>:</p>
-
-<p><code style="font-size: 14pt; line-height: 1.25;">SELECT ts, price, avg(price) OVER (
-    PARTITION BY symbol ORDER BY ts
-    <b style="color: green;">GROUPS BETWEEN 1 PRECEDING AND CURRENT ROW</b>)
-FROM trades;
-</code></p>
-
-<p>&mdash; In a <b>GROUPS</b> frame, boundaries count whole <b>peer groups</b> &mdash;
-<br/>&emsp; sets of rows equal on the ORDER BY key.
-<br/>&mdash; <b>N PRECEDING</b> = N peer groups before the current row's group,
-<br/>&emsp; not N physical rows (ROWS) or an ORDER BY value distance (RANGE).</p>
-
-<!-- Demo:
-
-SELECT number AS n, intDiv(number, 3) AS grp, sum(n) OVER (ORDER BY grp GROUPS BETWEEN 1 PRECEDING AND CURRENT ROW) AS s FROM numbers(9);
--- groups of 3 rows; s = sum of the current and the previous peer group
-
--->
-
-<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Nihal Z. Miaji.</p>
-</section>
-
-<section class="slide">
-<h2>Array subscripts and notHas</h2>
-
-<p style="margin-top: -0.3em;">The subscript operator accepts an <b>array of indexes</b>:</p>
-
-<p><code style="font-size: 14pt; line-height: 1.25;">SELECT ['a', 'b', 'c', 'd', 'e']<b style="color: green;">[[1, 3, 5]]</b>;  <span style="color: gray;">-- ['a', 'c', 'e']</span>
-<span style="color: gray;">-- same as arrayMap(i -&gt; arr[i], indexes)</span>
-</code></p>
-
-<p>And <b>notHas</b> &mdash; the negation of <b>has</b> for arrays, maps, and JSON:</p>
-
-<p><code style="font-size: 14pt; line-height: 1.25;">SELECT count() FROM events WHERE <b style="color: green;">notHas</b>(tags, 'internal');
-<span style="color: gray;">-- with a constant array, it is rewritten to `x NOT IN (...)`,</span>
-<span style="color: gray;">-- so it can prune by the primary key index</span>
-</code></p>
-
-<!-- Demo:
-
-SELECT ['a','b','c','d','e'][[1,3,5]], [10,20,30][materialize([2,3])];   -- ['a','c','e'], [20,30]
-SELECT notHas([1,2,3], 5), notHas(map('a',1), 'b');                     -- 1, 1
-
--->
-
-<p style="color: gray; font-size: 14pt; margin-top: 1.5em;">Developers: folly, Nihal Z. Miaji.</p>
-</section>
-
-<section class="slide">
-<h2>mergedJSONPatch</h2>
-
-<p style="margin-top: -0.3em;">An aggregate function that merges <b>JSON</b> values in the order of a sort key,
-<br/>RFC 7396 style &mdash; the latest value of each path wins:</p>
-
-<p><code style="font-size: 14pt; line-height: 1.25;">SELECT id, <b style="color: green;">mergedJSONPatch</b>(patch, ts) FROM changes GROUP BY id;
-
-<span style="color: gray;">-- ts 1: {"name":"alice","age":30}</span>
-<span style="color: gray;">-- ts 2: {"age":31,"city":"Berlin"}</span>
-<span style="color: gray;">-- result: {"age":31,"city":"Berlin","name":"alice"}</span>
-</code></p>
-
-<p>&mdash; The current state of an entity from a stream of partial updates.
-<br/>&mdash; Works in <b>AggregatingMergeTree</b> &mdash; keep the state up to date on merges.</p>
-
-<!-- Demo:
-
-SELECT mergedJSONPatch(j, ts) FROM (SELECT 1 AS ts, '{"name":"alice","age":30}'::JSON AS j UNION ALL SELECT 2, '{"age":31,"city":"Berlin"}'::JSON UNION ALL SELECT 3, '{"vip":true}'::JSON);
--- {"age":31,"city":"Berlin","name":"alice","vip":true}
-
--->
-
-<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: larryluogit.</p>
-</section>
-
-<section class="slide">
-<h2>Date32: years 0 to 9999</h2>
-
-<p>26.7 extended <b>DateTime64</b>. 26.8 extends <b>Date32</b> to match:
-<br/>the range grew from [1900, 2299] to <b style="color: green;">[0000-01-01, 9999-12-31]</b>:</p>
-
-<p><code style="font-size: 14pt; line-height: 1.25;">SELECT toDate32('9999-12-31');  <span style="color: gray;">-- was clamped to 2299-12-31</span>
-SELECT toDate32('0001-01-01');  <span style="color: gray;">-- was clamped to 1900-01-01</span>
-
-SELECT toDate32('0079-08-24') + INTERVAL 1947 YEAR;
-<span style="color: gray;">-- 2026-08-24 — 1947 years after the eruption of Vesuvius</span>
-</code></p>
-
-<p>&mdash; Parsing and conversions accept the extended range
-<br/>&emsp; instead of silently clamping to the old boundaries.</p>
-
-<!-- Demo:
-
-SELECT toDate32('9999-12-31'), toDate32('0001-01-01');   -- works; 26.7 clamps to [1900-01-01, 2299-12-31]
-
--->
-
-<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexey Milovidov.</p>
-</section>
-
-<section class="slide">
-<h2>More small things</h2>
-
-<p style="margin-top: -0.5em;">&mdash; <b style="color: green;">gini</b> &mdash; an aggregate function for the Gini coefficient:
-<br/>&emsp; <code style="display: inline; font-size: 13pt;">SELECT gini(income) FROM households;</code></p>
-<p style="margin-top: -0.2em;">&mdash; <b style="color: green;">VALID FOR</b> &mdash; a shorthand for VALID UNTIL:
-<br/>&emsp; <code style="display: inline; font-size: 13pt;">CREATE USER app IDENTIFIED BY '...' VALID FOR INTERVAL 30 DAY;</code></p>
-<p style="margin-top: -0.2em;">&mdash; Column modifiers in <b style="color: green;">any order</b>:
-<br/>&emsp; <code style="display: inline; font-size: 13pt;">x UInt64 COMMENT 'id' CODEC(ZSTD)</code> is no longer a syntax error.</p>
-<p style="margin-top: -0.2em;">&mdash; <b style="color: green;">EXPLAIN SYNTAX</b> returns one recoverable record:
-<br/>&emsp; <code style="display: inline; font-size: 13pt;">SELECT count() FROM (EXPLAIN SYNTAX ...)</code> returns 1.</p>
-<p style="margin-top: -0.2em;">&mdash; <b style="color: green;">system.mutations.finish_time</b> &mdash; when a mutation completed.</p>
-<p style="margin-top: -0.2em;">&mdash; <b style="color: green;">system.statements</b> &mdash; documentation of every SQL statement.</p>
-
-<!-- Demo:
-
-SELECT round(gini(number % 10), 4) FROM numbers(1000);              -- 0.3667
-CREATE USER app_user IDENTIFIED WITH no_password VALID FOR INTERVAL 30 DAY; SHOW CREATE USER app_user;  -- VALID UNTIL '...'
-CREATE TABLE t (x UInt64 COMMENT 'the id' CODEC(ZSTD), s String TTL ts + INTERVAL 30 DAY COMMENT 'payload', ts DateTime) ENGINE = MergeTree ORDER BY x;
-SELECT count() FROM (EXPLAIN SYNTAX SELECT 1 UNION ALL SELECT 2);   -- 1
-ALTER TABLE taxi UPDATE fare = 20 WHERE fare = 10 SETTINGS mutations_sync = 1; SELECT command, is_done, finish_time FROM system.mutations WHERE table = 'taxi';
-SELECT name, syntax FROM system.statements WHERE name = 'SELECT';
-
--->
-
-<p style="color: gray; font-size: 13pt; margin-top: 0.4em;">Developers: Amirreza Akhondi, A. Milovidov, N. Mikhaylov, R. Schulze.</p>
-</section>
-
-
-<section class="slide" style="background: url(pictures/back4.jpg); background-size: cover;">
-<h2><span class="hilite">HTTP Interface</span></h2>
-</section>
-
-<section class="slide">
-<h2>CREATE HANDLER</h2>
-
-<p style="margin-top: -0.5em;">Define custom HTTP endpoints <b>from SQL</b> &mdash; no config editing:</p>
-
-<p><code style="font-size: 14pt; line-height: 1.25;"><b style="color: green;">CREATE HANDLER</b> top_pages <b style="color: green;">URL</b> '/top_pages' AS
-SELECT path, sum(hits) AS total FROM hits
-GROUP BY path ORDER BY total DESC LIMIT 5;
-</code></p>
-
-<p><code style="font-size: 14pt; line-height: 1.25;">$ curl http://server:8123<b style="color: green;">/top_pages</b>
-/page19  254500
-/page18  254000
-</code></p>
-
-<p style="margin-top: 0.3em;">&mdash; Parameterized: <b>{p:String}</b> is filled from URL params, form fields,
-<br/>&emsp; headers, or named regexp capture groups. INSERT handlers read the body.
-<br/>&mdash; Persisted (locally or in Keeper) &mdash; handlers survive restarts and
-<br/>&emsp; sync across replicas. ALTER/DROP HANDLER, grants, <b>system.handlers</b>.</p>
-
-<!-- Demo:
-
-CREATE HANDLER top_pages URL '/top_pages' METHODS (GET) AS SELECT path, sum(hits) AS total FROM default.hits GROUP BY path ORDER BY total DESC LIMIT 5;
-curl -s 'http://localhost:8123/top_pages'
-CREATE HANDLER page_stats URL '/stats' AS SELECT path, count() AS n, sum(hits) AS total FROM default.hits WHERE path = {p:String} GROUP BY path;
-curl -s 'http://localhost:8123/stats?p=/page3'
-SELECT name, url, methods FROM system.handlers;
--- verified: handlers survived a server restart
-
--->
-
-<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
-</section>
-
-<section class="slide">
-<h2>Tables as URL paths</h2>
-
-<p style="margin-top: -0.5em;">The HTTP interface can serve tables <b>by path</b> &mdash; REST style:</p>
-
-<p><code style="font-size: 13pt; line-height: 1.25;">$ curl 'http://server:8123<b style="color: green;">/default/hits.csv</b>?limit=3'
-$ curl 'http://server:8123/default<b style="color: green;">/status=404/</b>hits.csv'   <span style="color: gray;">-- path filters</span>
-$ curl 'http://server:8123/default/hits.JSONEachRow<b style="color: green;">?status=404&amp;hits&gt;500</b>'
-$ curl 'http://server:8123/default/hits.csv<b style="color: green;">?order=hits+desc&amp;page=2</b>'
-$ curl 'http://server:8123/default/hits.csv<b style="color: green;">.gz</b>'              <span style="color: gray;">-- compression</span>
-</code></p>
-
-<p style="margin-top: 0.3em;">&mdash; New query-construction settings: <b>select</b>, <b>filter</b>, <b>order</b>, <b>limit</b>, <b>page</b>, &hellip;
-<br/>&mdash; They compose with each other and with the classic <b>query</b> parameter.
-<br/>&mdash; Off by default: the server-level <b>http_allow_path_requests</b> gates routing,
-<br/>&emsp; and per-user settings enable each piece for chosen users only.</p>
-
-<!-- Demo (server started with http_allow_path_requests=1):
-
-curl -s 'http://localhost:8123/default/hits.csv?limit=3&http_allow_database_as_path=1&http_allow_table_as_file=1'
-curl -s 'http://localhost:8123/default/status=404/hits.csv?limit=2&http_allow_database_as_path=1&http_allow_table_as_file=1&http_allow_filters_as_path=1'
-curl -s --get 'http://localhost:8123/default/hits.csv' --data-urlencode 'status=404' --data-urlencode 'hits>500' --data-urlencode 'limit=2' --data-urlencode 'http_allow_database_as_path=1' --data-urlencode 'http_allow_table_as_file=1' --data-urlencode 'http_allow_filters_as_unrecognized_url_parameters=1'
-curl -s --get 'http://localhost:8123/default/hits.csv' --data-urlencode 'select=path,hits' --data-urlencode 'order=hits desc' --data-urlencode 'limit=3' --data-urlencode 'page=2' --data-urlencode 'http_allow_database_as_path=1' --data-urlencode 'http_allow_table_as_file=1'
-curl -s 'http://localhost:8123/default/hits.csv.gz?limit=3&http_allow_database_as_path=1&http_allow_table_as_file=1' | gunzip
-
--->
-
-<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Alexey Milovidov.</p>
-</section>
-
-<section class="slide">
-<h2>Framing formats</h2>
-
-<p style="margin-top: -0.5em;">One HTTP response stream can now carry <b>everything</b>: data, progress,
-<br/>totals, profile events, server logs, and exceptions &mdash; multiplexed:</p>
-
-<p><code style="font-size: 13pt; line-height: 1.25;">$ curl 'http://server:8123/?query=...&amp;<b style="color: green;">framing_output_format=EventStream</b>'
-event: data
-data: {"number":"0"}
-event: <b style="color: green;">progress</b>
-data: {"read_rows":"3","elapsed_ns":"7496990",...}
-</code></p>
-
-<p style="margin-top: 0.3em;">&mdash; <b>EventStream</b> &mdash; HTTP server-sent events, consumable
-<br/>&emsp; by the browser's built-in <b>EventSource</b> API.
-<br/>&mdash; <b>JSONEachPacketString</b> / <b>JSONEachPacketBase64</b> &mdash; a JSON object per packet.
-<br/>&mdash; Live progress bars and streaming results without a custom protocol.</p>
-
-<!-- Demo:
-
-curl -s 'http://localhost:8123/?query=SELECT+number+FROM+numbers(3)&framing_output_format=EventStream&default_format=JSONEachRow'
-curl -s 'http://localhost:8123/?query=SELECT+number+FROM+numbers(3)&framing_output_format=JSONEachPacketString&default_format=CSV'
-
--->
-
-<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: Alexey Milovidov.</p>
-</section>
-
-<section class="slide">
-<h2>HTTP interface, elsewhere</h2>
-
-<p style="margin-top: -0.3em;">&mdash; <b style="color: green;">default_session_user</b>: the user for connections that do not specify one
-<br/>&emsp; (was hardcoded to <b>default</b>) &mdash; per server, or per listening port;
-<br/>&emsp; set it to an empty string to prohibit anonymous connections.</p>
-
-<p>&mdash; <b style="color: green;">403 Forbidden</b> is returned for ACCESS_DENIED errors
-<br/>&emsp; (was 500 Internal Server Error).</p>
-
-<p>&mdash; <b style="color: green;">clickhouse-local</b> answers CORS preflight requests,
-<br/>&emsp; so <b>SYSTEM START LISTEN HTTP</b> makes it usable from a browser.</p>
-
-<p>&mdash; Parsing requests with thousands of repeated parameters
-<br/>&emsp; is no longer quadratic.</p>
-
-<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developers: Alexey Milovidov, Schum, James.</p>
-</section>
-
-
-<section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
-<h2><span class="hilite">Text Search</span></h2>
-</section>
-
-<section class="slide">
-<h2>Tokenizers for every language</h2>
-
-<p style="margin-top: -0.5em;">Four new tokenizers for the <b>tokens</b> function and <b>text indexes</b>:</p>
-
-<p><code style="font-size: 13pt; line-height: 1.25;">SELECT tokens('ClickHouse是一个快速的开源数据库', <b style="color: green;">'chinese'</b>);
-<span style="color: gray;">-- ['ClickHouse','是','一个','快速','的','开源','数据库'] — dictionary + HMM</span>
-
-SELECT tokens('こんにちは世界。データベースです。', <b style="color: green;">'icu'</b>, 'ja');
-<span style="color: gray;">-- ['こんにちは','世界','データベース','です'] — locale-aware Unicode segmentation</span>
-
-SELECT tokens('C++ and C# are languages', <b style="color: green;">'splitByRegexp'</b>, '[^\p{L}\p{N}#+]+');
-<span style="color: gray;">-- ['C++','and','C#','are','languages'] — tokens other tokenizers would break</span>
-</code></p>
-
-<p style="margin-top: 0.2em;">&mdash; Also: <b style="color: green;">japanese</b> &mdash; the MeCab morphological analyzer (the dictionary
-<br/>&emsp; is loaded from a path in the server config, checksum-verified),
-<br/>&emsp; and <b>keyword</b> as an Elasticsearch-compatible alias for <b>array</b>.</p>
-
-<!-- Demo:
-
-SELECT tokens('ClickHouse是一个快速的开源数据库', 'chinese');
-SELECT tokens('こんにちは世界。データベースです。', 'icu', 'ja');
-SELECT tokens('สวัสดีชาวโลก', 'icu', 'th');   -- Thai works too: ['สวัสดี','ชาว','โลก']
-SELECT tokens('C++ and C# are programming languages', 'splitByRegexp', '[^\\p{L}\\p{N}#+]+');
-
--->
-
-<p style="color: gray; font-size: 13pt; margin-top: 0.3em;">Developers: Robert Schulze, Amos Bird, Jimmy Aguilar Mena.</p>
-</section>
-
-<section class="slide">
-<h2>Text indexes: faster answers</h2>
-
-<p style="margin-top: -0.3em;"><b>COUNT()</b> is answered directly from the <b>index cardinality metadata</b>:</p>
-
-<p><code style="font-size: 14pt; line-height: 1.25;">SELECT count() FROM docs WHERE hasAnyTokens(body, ['fox']);
-<span style="color: gray;">-- 1 million rows matched; rows actually read: <b style="color: green;">1</b></span>
-</code></p>
-
-<p style="margin-top: 0.5em;">&mdash; Posting lists are now decoded <b style="color: green;">lazily</b>, at packed-block granularity,
-<br/>&emsp; instead of being eagerly materialized into bitmaps.
-<br/>&mdash; Optional cache for tokens <b>missing</b> from the index.
-<br/>&mdash; The v2 on-disk format (with positions for phrase search) is the default;
-<br/>&emsp; <b>text_index_version</b> controls it for rolling upgrades.</p>
-
-<!-- Demo:
-
-CREATE TABLE docs (id UInt64, body String, INDEX idx body TYPE text(tokenizer = 'splitByNonAlpha')) ENGINE = MergeTree ORDER BY id;
-INSERT INTO docs SELECT number, arrayStringConcat(arrayMap(x -> ['red','green','blue','fast','slow','fox','dog','cat','runs','sleeps'][(number * 7 + x * 3) % 10 + 1], range(20)), ' ') FROM numbers(1000000);
-clickhouse client --print-profile-events -q "SELECT count() FROM docs WHERE hasAnyTokens(body, ['fox'])"
--- count = 1000000, SelectedRows: 1
-
--->
-
-<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Elmi Ahmadov, Anton Popov, Rory Shanks.</p>
-</section>
-
-
-<section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
-<h2><span class="hilite" style="color: black;">Data Lakes &amp; Integrations</span></h2>
-</section>
-
-<section class="slide">
-<h2>BigQuery</h2>
-
-<p style="margin-top: -0.3em;">A table function and a table engine for <b>Google BigQuery</b>:</p>
-
-<p><code style="font-size: 14pt; line-height: 1.25;">SELECT corpus, count() FROM <b style="color: green;">bigquery</b>(
-    'my-project', 'samples', 'shakespeare',
-    service_account_key = '{"type": "service_account", ...}')
-GROUP BY corpus;
-
-CREATE TABLE bq_events <b style="color: green;">ENGINE = BigQuery</b>('my-project', 'events', 'log');
-INSERT INTO bq_events VALUES (...);   <span style="color: gray;">-- writes work, too</span>
-</code></p>
-
-<p>&mdash; The structure is inferred from the BigQuery table schema.
-<br/>&mdash; Includes public datasets.
-<br/>&mdash; Auth: OAuth access token, service account key (JSON),
-<br/>&emsp; or an OAuth client with a refresh token.</p>
-
-<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
-</section>
-
-<section class="slide">
-<h2>Data lakes, elsewhere</h2>
-
-<p style="margin-top: -0.5em;">&mdash; <b style="color: green;">Snowflake Horizon</b>: query Iceberg tables behind the Horizon catalog &mdash;
-<br/>&emsp; and write to them through the catalog.</p>
-
-<p style="margin-top: -0.2em;">&mdash; <b style="color: green;">AWS S3 Tables</b> catalog: now with a working INSERT,
-<br/>&emsp; and you can create your own tables.</p>
-
-<p style="margin-top: -0.2em;">&mdash; <b style="color: green;">Puffin</b> file format (Iceberg statistics files) &mdash;
-<br/>&emsp; readable with <b>file</b>, <b>url</b>, <b>s3</b>, and friends.</p>
-
-<p style="margin-top: -0.2em;">&mdash; Concurrent <b>Iceberg writes on a local disk</b>: conditional writes
-<br/>&emsp; make the snapshot compare-and-swap safe.</p>
-
-<p style="margin-top: -0.2em;">&mdash; Iceberg reads: the next manifest is <b>prefetched</b> while the current one
-<br/>&emsp; is parsed; delete manifests are decoded concurrently;
-<br/>&emsp; manifests without <b>sequence_number</b> (e.g. written by BigQuery) load fine.</p>
-
-<p style="color: gray; font-size: 13pt; margin-top: 0.5em;">Developers: Melvyn Peignon, Konstantin Vedernikov, Alexey Milovidov, Asya Shneerson.</p>
-</section>
-
-<section class="slide">
-<h2>The URL database engine</h2>
-
-<p style="margin-top: -0.5em;">26.7 unified the <b>url</b> function. 26.8 finishes the job:</p>
-
-<p><code style="font-size: 14pt; line-height: 1.25;"><span style="color: gray;">-- a table name can simply be a URL now:</span>
-SELECT town, price FROM <b style="color: green;">'https://&hellip;/house_prices.parquet'</b>
-ORDER BY price DESC LIMIT 3;
-
-CREATE DATABASE web <b style="color: green;">ENGINE = URL</b>('https://example.com/data/');
-SELECT count() FROM web.`sales/2026.parquet`;  <span style="color: gray;">-- resolved against the base</span>
-</code></p>
-
-<p>&mdash; Dispatches by URL scheme: file, http(s), s3, gs, az, hdfs &mdash; uniformly.
-<br/>&mdash; It replaces <b>Filesystem</b> in the default database of <b>clickhouse-local</b>
-<br/>&emsp; (with a <b>file://</b> base), so plain file names keep working.
-<br/>&mdash; <b>s3_base</b> / <b>url_base</b> settings resolve relative URLs.</p>
-
-<!-- Demo:
-
-SELECT * FROM '/tmp/demo_local.csv';
-SELECT town, price FROM 'https://datasets-documentation.s3.eu-west-3.amazonaws.com/house_parquet/house_0.parquet' ORDER BY price DESC LIMIT 3;
-CREATE DATABASE web ENGINE = URL('https://datasets-documentation.s3.eu-west-3.amazonaws.com/');
-SELECT count() FROM web.`house_parquet/house_0.parquet`;   -- 2772030
-
--->
-
-<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
-</section>
-
-<section class="slide">
-<h2>PostgreSQL, better together</h2>
-
-<p style="margin-top: -0.5em;"><b>psql</b> now feels at home when connected to ClickHouse:</p>
-
-<p><code style="font-size: 13pt; line-height: 1.25;">$ psql "host=&hellip; port=9005 user=pg dbname=default"
-default=&gt; <b style="color: green;">\dt</b>                        <span style="color: gray;">-- lists ClickHouse tables</span>
-default=&gt; SELECT count() FROM hits WHERE path <b style="color: green;">~</b> 'page1[0-9]';  <span style="color: gray;">-- 5000</span>
-</code></p>
-
-<p style="margin-top: 0.3em;">&mdash; PostgreSQL-style regexp operators: <b>~</b>, <b>~*</b>, <b>!~</b>, <b>!~*</b> &mdash; in any query.
-<br/>&mdash; A failed query no longer terminates the psql connection.
-<br/>&mdash; <b style="color: green;">TLS to PostgreSQL</b> everywhere (engine, function, databases, dictionaries):
-<br/>&emsp; <b>sslmode</b> plus certificates &mdash; inline (<b>sslcert_pem</b>, masked like passwords)
-<br/>&emsp; or as server-side paths in named collections.
-<br/>&mdash; MySQL-compatibility columns in INFORMATION_SCHEMA.</p>
-
-<!-- Demo (against the ClickHouse server's PostgreSQL port):
-
-CREATE USER pg IDENTIFIED WITH plaintext_password BY 'demo' DEFAULT DATABASE default; GRANT SELECT ON default.* TO pg;
-PGPASSWORD=demo psql "host=127.0.0.1 port=9005 user=pg dbname=default sslmode=disable" -c '\dt'
-PGPASSWORD=demo psql "host=127.0.0.1 port=9005 user=pg dbname=default sslmode=disable" -c "SELECT count() FROM hits WHERE path ~ 'page1[0-9]'"
-
--->
-
-<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Alexey Milovidov.</p>
-</section>
-
-
-<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
-<h2><span class="hilite">Observability &amp; Operations</span></h2>
-</section>
-
-<section class="slide">
 <h2>run_query_in_background</h2>
 
 <p style="margin-top: -0.3em;">Fire and forget: the server accepts the query, returns immediately,
@@ -607,6 +158,55 @@ SELECT query_id, query FROM system.processes WHERE query_id = 'bg_demo_1';  -- s
 -->
 
 <p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: Miсhael Stetsyuk.</p>
+</section>
+
+<section class="slide">
+<h2>VALID FOR</h2>
+
+<p style="margin-top: -0.3em;">Time-limited credentials, without calculating dates by hand:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE USER bot IDENTIFIED BY '&hellip;' <b style="color: green;">VALID FOR INTERVAL 30 DAY</b>;
+
+SHOW CREATE USER bot;
+<span style="color: gray;">-- CREATE USER bot ... VALID UNTIL '2026-09-25 12:34:56'</span>
+
+ALTER USER bot <b style="color: green;">VALID FOR INTERVAL 90 DAY</b>;  <span style="color: gray;">-- extend from now</span>
+</code></p>
+
+<p>&mdash; A shorthand for <b>VALID UNTIL</b>: the deadline is computed
+<br/>&emsp; as the current time plus the interval, at execution time.
+<br/>&mdash; <b>system.users.valid_until</b> is now DateTime64 &mdash;
+<br/>&emsp; deadlines beyond the year 2106 are represented exactly.</p>
+
+<!-- Demo:
+
+CREATE USER app_user IDENTIFIED WITH no_password VALID FOR INTERVAL 30 DAY;
+SHOW CREATE USER app_user;   -- VALID UNTIL '2026-09-24 ...'
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>default_session_user</h2>
+
+<p style="margin-top: -0.3em;">Which user is a connection <b>without a user name</b>?
+<br/>It used to be hardcoded to <b>default</b>. Now it is your choice:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">&lt;clickhouse&gt;
+    &lt;<b style="color: green;">default_session_user</b>&gt;anonymous&lt;/default_session_user&gt;
+&lt;/clickhouse&gt;
+</code></p>
+
+<p>&mdash; The native, MySQL, and PostgreSQL protocols now accept
+<br/>&emsp; an empty user name instead of rejecting it.
+<br/>&mdash; Overridable per listening port in the <b>protocols</b> section &mdash;
+<br/>&emsp; different ports can serve different anonymous users.
+<br/>&mdash; Set it to an empty string to prohibit anonymous connections.
+<br/>&mdash; Interserver connections never use it.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: Alexey Milovidov.</p>
 </section>
 
 <section class="slide">
@@ -638,71 +238,33 @@ clickhouse client --user analyst -q "SELECT count() FROM system.query_log"   -- 
 </section>
 
 <section class="slide">
-<h2>Union system log tables</h2>
+<h2>The URL database engine</h2>
 
-<p style="margin-top: -0.5em;">System logs rotate, and every replica keeps its own &mdash;
-<br/>now one table can query <b>all of them at once</b>:</p>
+<p style="margin-top: -0.5em;">26.7 unified the <b>url</b> function. 26.8 finishes the job:</p>
 
-<p><code style="font-size: 14pt; line-height: 1.25;"><span style="color: gray;">-- with the create_union_system_log_tables config section:</span>
-SELECT &hellip; FROM <b style="color: green;">system.all_query_log</b>;
-<span style="color: gray;">-- the current table + rotated versions + all replicas of the cluster</span>
+<p><code style="font-size: 14pt; line-height: 1.25;"><span style="color: gray;">-- a table name can simply be a URL now:</span>
+SELECT town, price FROM <b style="color: green;">'https://&hellip;/house_prices.parquet'</b>
+ORDER BY price DESC LIMIT 3;
+
+CREATE DATABASE web <b style="color: green;">ENGINE = URL</b>('https://example.com/data/');
+SELECT count() FROM web.`sales/2026.parquet`;  <span style="color: gray;">-- resolved against the base</span>
 </code></p>
 
-<p>Also, <b>remote</b>, <b>cluster</b>, and friends accept a trailing SETTINGS clause:</p>
-
-<p><code style="font-size: 14pt; line-height: 1.25;">SELECT &hellip; FROM clusterAllReplicas('default', system.query_log,
-    <b style="color: green;">SETTINGS skip_unavailable_shards = 1</b>);
-</code></p>
+<p>&mdash; Dispatches by URL scheme: file, http(s), s3, gs, az, hdfs &mdash; uniformly.
+<br/>&mdash; It replaces <b>Filesystem</b> in the default database of <b>clickhouse-local</b>
+<br/>&emsp; (with a <b>file://</b> base), so plain file names keep working.
+<br/>&mdash; <b>s3_base</b> / <b>url_base</b> settings resolve relative URLs.</p>
 
 <!-- Demo:
 
-SELECT count() FROM remote('127.0.0.1|127.0.0.2:19999', system.one, SETTINGS skip_unavailable_shards = 1);   -- 1, the dead host is skipped
+SELECT * FROM '/tmp/demo_local.csv';
+SELECT town, price FROM 'https://datasets-documentation.s3.eu-west-3.amazonaws.com/house_parquet/house_0.parquet' ORDER BY price DESC LIMIT 3;
+CREATE DATABASE web ENGINE = URL('https://datasets-documentation.s3.eu-west-3.amazonaws.com/');
+SELECT count() FROM web.`house_parquet/house_0.parquet`;   -- 2772030
 
 -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexey Milovidov.</p>
-</section>
-
-<section class="slide">
-<h2>The introspection port</h2>
-
-<p style="margin-top: -0.3em;">What is my server doing <b>while it starts up or shuts down</b>?
-<br/>A native protocol listener that opens <b>before</b> tables are attached
-<br/>and closes only <b>after</b> they are detached:</p>
-
-<p><code style="font-size: 14pt; line-height: 1.25;">$ clickhouse client --port 9099   <span style="color: gray;">-- during a slow startup</span>
-SHOW PROCESSLIST;
-SELECT * FROM system.stack_trace;
-</code></p>
-
-<p>&mdash; Watch table loading, catch shutdown hangs, instrument code paths.
-<br/>&mdash; The default <b>shutdown_wait_unfinished</b> grew from 5 to 120 seconds,
-<br/>&emsp; so the server no longer force-exits in the middle of a graceful shutdown.</p>
-
-<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Miсhael Stetsyuk.</p>
-</section>
-
-<section class="slide">
-<h2>Keeper news</h2>
-
-<p style="margin-top: -0.5em;">&mdash; <b style="color: green;">On-disk storage</b> 🧪: a custom LSM tree instead of keeping
-<br/>&emsp; the whole state in memory &mdash; with similar performance;
-<br/>&emsp; the data can even live on S3 (<b>s3_plain</b> disk).</p>
-
-<p style="margin-top: -0.2em;">&mdash; <b style="color: green;">A Cluster tab</b> in the Keeper HTTP dashboard: Raft membership
-<br/>&emsp; as a topology graph with health colors, lag, and priority.</p>
-
-<p style="margin-top: -0.2em;">&mdash; <b style="color: green;">Faster</b>: changelog reads with less lock contention and background
-<br/>&emsp; pre-decoding; startup reads changelog files concurrently;
-<br/>&emsp; fsync batching (<b>min_time_between_fsyncs_ms</b>).</p>
-
-<p style="margin-top: -0.2em;">&mdash; ZooKeeper-compatible election metrics in <b>mntr</b>:
-<br/>&emsp; <b>zk_leader_uptime</b>, <b>zk_sum_election_time</b>, &hellip;</p>
-
-<!-- Note: the Keeper on-disk storage setting is called use_new_storage in the PR and will be renamed
-     (the changelog entry has a TODO about forbidding "new" in names) — check the final name before presenting. -->
-
-<p style="color: gray; font-size: 13pt; margin-top: 0.5em;">Developers: Michael Kolupaev, yanglongwei, Antonio Andelic, Maxim Orlovsky.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
 </section>
 
 <section class="slide">
@@ -741,9 +303,626 @@ clickhouse client -q "SELECT (SELECT sum(v) FROM events) AS source, (SELECT sum(
 <p style="color: gray; font-size: 14pt; margin-top: 0em;">Developer: Alexey Milovidov.</p>
 </section>
 
+<section class="slide">
+<h2>GROUPS frame for window functions</h2>
 
-<section class="slide" style="background: url(pictures/back8.jpg); background-size: cover;">
+<p style="margin-top: -0.3em;">The third frame mode of SQL:2011, joining <b>ROWS</b> and <b>RANGE</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT ts, price, avg(price) OVER (
+    PARTITION BY symbol ORDER BY ts
+    <b style="color: green;">GROUPS BETWEEN 1 PRECEDING AND CURRENT ROW</b>)
+FROM trades;
+</code></p>
+
+<p>&mdash; In a <b>GROUPS</b> frame, boundaries count whole <b>peer groups</b> &mdash;
+<br/>&emsp; sets of rows equal on the ORDER BY key.
+<br/>&mdash; <b>N PRECEDING</b> = N peer groups before the current row's group,
+<br/>&emsp; not N physical rows (ROWS) or an ORDER BY value distance (RANGE).</p>
+
+<!-- Demo:
+
+SELECT number AS n, intDiv(number, 3) AS grp, sum(n) OVER (ORDER BY grp GROUPS BETWEEN 1 PRECEDING AND CURRENT ROW) AS s FROM numbers(9);
+-- groups of 3 rows; s = sum of the current and the previous peer group
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Nihal Z. Miaji.</p>
+</section>
+
+<section class="slide">
+<h2>mergedJSONPatch</h2>
+
+<p style="margin-top: -0.3em;">An aggregate function that merges <b>JSON</b> values in the order of a sort key,
+<br/>RFC 7396 style &mdash; the latest value of each path wins:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT id, <b style="color: green;">mergedJSONPatch</b>(patch, ts) FROM changes GROUP BY id;
+
+<span style="color: gray;">-- ts 1: {"name":"alice","age":30}</span>
+<span style="color: gray;">-- ts 2: {"age":31,"city":"Berlin"}</span>
+<span style="color: gray;">-- result: {"age":31,"city":"Berlin","name":"alice"}</span>
+</code></p>
+
+<p>&mdash; The current state of an entity from a stream of partial updates.
+<br/>&mdash; Works in <b>AggregatingMergeTree</b> &mdash; keep the state up to date on merges.</p>
+
+<!-- Demo:
+
+SELECT mergedJSONPatch(j, ts) FROM (SELECT 1 AS ts, '{"name":"alice","age":30}'::JSON AS j UNION ALL SELECT 2, '{"age":31,"city":"Berlin"}'::JSON UNION ALL SELECT 3, '{"vip":true}'::JSON);
+-- {"age":31,"city":"Berlin","name":"alice","vip":true}
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: larryluogit.</p>
+</section>
+
+<section class="slide">
+<h2>Array subscripts</h2>
+
+<p style="margin-top: -0.3em;">The subscript operator accepts an <b>array of indexes</b>
+<br/>and returns the elements at all of the given positions:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT ['a', 'b', 'c', 'd', 'e']<b style="color: green;">[[1, 3, 5]]</b>;
+<span style="color: gray;">-- ['a', 'c', 'e']</span>
+
+SELECT scores<b style="color: green;">[top_indexes]</b> FROM results;
+<span style="color: gray;">-- same as arrayMap(i -&gt; scores[i], top_indexes)</span>
+</code></p>
+
+<p>&mdash; Gather, reorder, or sample array elements in one expression &mdash;
+<br/>&emsp; convenient together with <b>arraySort</b> and <b>topK</b>-style functions.</p>
+
+<!-- Demo:
+
+SELECT ['a','b','c','d','e'][[1,3,5]], [10,20,30][materialize([2,3])];   -- ['a','c','e'], [20,30]
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1.5em;">Developer: folly.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back4.jpg); background-size: cover;">
+<h2><span class="hilite">Interfaces</span></h2>
+</section>
+
+<section class="slide">
+<h2>CREATE HANDLER</h2>
+
+<p style="margin-top: -0.5em;">Define custom HTTP endpoints <b>from SQL</b> &mdash; no config editing:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;"><b style="color: green;">CREATE HANDLER</b> top_pages <b style="color: green;">URL</b> '/top_pages' AS
+SELECT path, sum(hits) AS total FROM hits
+GROUP BY path ORDER BY total DESC LIMIT 5;
+</code></p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">$ curl http://server:8123<b style="color: green;">/top_pages</b>
+/page19  254500
+/page18  254000
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; Parameterized: <b>{p:String}</b> is filled from URL params, form fields,
+<br/>&emsp; headers, or named regexp capture groups. INSERT handlers read the body.
+<br/>&mdash; Persisted (locally or in Keeper) &mdash; handlers survive restarts and
+<br/>&emsp; sync across replicas. ALTER/DROP HANDLER, grants, <b>system.handlers</b>.</p>
+
+<!-- Demo:
+
+CREATE HANDLER top_pages URL '/top_pages' METHODS (GET) AS SELECT path, sum(hits) AS total FROM default.hits GROUP BY path ORDER BY total DESC LIMIT 5;
+curl -s 'http://localhost:8123/top_pages'
+CREATE HANDLER page_stats URL '/stats' AS SELECT path, count() AS n, sum(hits) AS total FROM default.hits WHERE path = {p:String} GROUP BY path;
+curl -s 'http://localhost:8123/stats?p=/page3'
+SELECT name, url, methods FROM system.handlers;
+-- verified: handlers survived a server restart
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>API for query construction</h2>
+
+<p style="margin-top: -0.5em;">New HTTP settings <b>compose a query</b> for you &mdash; and turn the HTTP
+<br/>interface into a REST-style API over tables:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.25;">$ curl 'http://server:8123<b style="color: green;">/default/hits.csv</b>?limit=3'
+$ curl 'http://server:8123/default<b style="color: green;">/status=404/</b>hits.csv'   <span style="color: gray;">-- path filters</span>
+$ curl 'http://server:8123/default/hits.JSONEachRow<b style="color: green;">?status=404&amp;hits&gt;500</b>'
+$ curl 'http://server:8123/default/hits.csv<b style="color: green;">?order=hits+desc&amp;page=2</b>'
+$ curl 'http://server:8123/default/hits.csv<b style="color: green;">.gz</b>'              <span style="color: gray;">-- compression</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; The building blocks: <b>select</b>, <b>filter</b>, <b>order</b>, <b>limit</b>, <b>page</b>, <b>format</b>, &hellip;
+<br/>&emsp; They compose with each other and with the classic <b>query</b> parameter.
+<br/>&mdash; Off by default: the server-level <b>http_allow_path_requests</b> gates routing,
+<br/>&emsp; and per-user settings enable each piece for chosen users only.</p>
+
+<!-- Demo (server started with http_allow_path_requests=1):
+
+curl -s 'http://localhost:8123/default/hits.csv?limit=3&http_allow_database_as_path=1&http_allow_table_as_file=1'
+curl -s 'http://localhost:8123/default/status=404/hits.csv?limit=2&http_allow_database_as_path=1&http_allow_table_as_file=1&http_allow_filters_as_path=1'
+curl -s --get 'http://localhost:8123/default/hits.csv' --data-urlencode 'status=404' --data-urlencode 'hits>500' --data-urlencode 'limit=2' --data-urlencode 'http_allow_database_as_path=1' --data-urlencode 'http_allow_table_as_file=1' --data-urlencode 'http_allow_filters_as_unrecognized_url_parameters=1'
+curl -s --get 'http://localhost:8123/default/hits.csv' --data-urlencode 'select=path,hits' --data-urlencode 'order=hits desc' --data-urlencode 'limit=3' --data-urlencode 'page=2' --data-urlencode 'http_allow_database_as_path=1' --data-urlencode 'http_allow_table_as_file=1'
+curl -s 'http://localhost:8123/default/hits.csv.gz?limit=3&http_allow_database_as_path=1&http_allow_table_as_file=1' | gunzip
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Sorting, filtering, and pagination</h2>
+
+<p style="margin-top: -0.3em;">The built-in <b>/play</b> UI shapes results <b>without editing the query</b> &mdash;
+<br/>powered by the same query-construction settings:</p>
+
+<p style="margin-top: 0.3em;">&mdash; <b style="color: green;">Sorting arrows</b> in every column header
+<br/>&emsp; (Shift-click for multi-column sort).
+<br/>&mdash; <b style="color: green;">A filter input</b> per column; a selected cell offers
+<br/>&emsp; the comparisons that fit its value.
+<br/>&mdash; <b style="color: green;">A pager</b> with an adjustable page size appears
+<br/>&emsp; under a result that does not fit on one screen.
+<br/>&mdash; All <b>server-side</b>: the whole result is shaped,
+<br/>&emsp; not the rows that happen to be displayed.
+<br/>&mdash; The sort, filters, and page travel in the URL &mdash;
+<br/>&emsp; a shared link reproduces the result.</p>
+
+<p style="margin-top: 0.5em;">Demo</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/play_sort_filter.png) center / contain no-repeat; background-color: #111;">
+</section>
+
+<section class="slide" style="background: url(pictures/play_pager.png) center / contain no-repeat; background-color: #111;">
+</section>
+
+<section class="slide">
+<h2>Framing formats</h2>
+
+<p style="margin-top: -0.5em;">One HTTP response stream can now carry <b>everything</b>: data, progress,
+<br/>totals, profile events, server logs, and exceptions &mdash; multiplexed:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.25;">$ curl 'http://server:8123/?query=...&amp;<b style="color: green;">framing_output_format=EventStream</b>'
+event: data
+data: {"number":"0"}
+event: <b style="color: green;">progress</b>
+data: {"read_rows":"3","elapsed_ns":"7496990",...}
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; <b>EventStream</b> &mdash; HTTP server-sent events, consumable
+<br/>&emsp; by the browser's built-in <b>EventSource</b> API.
+<br/>&mdash; <b>JSONEachPacketString</b> / <b>JSONEachPacketBase64</b> &mdash; a JSON object per packet.
+<br/>&mdash; Live progress bars and streaming results without a custom protocol.</p>
+
+<!-- Demo:
+
+curl -s 'http://localhost:8123/?query=SELECT+number+FROM+numbers(3)&framing_output_format=EventStream&default_format=JSONEachRow'
+curl -s 'http://localhost:8123/?query=SELECT+number+FROM+numbers(3)&framing_output_format=JSONEachPacketString&default_format=CSV'
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">parseQueryToJSON, formatQueryFromJSON</h2>
+
+<p style="margin-top: -0.3em;">The AST of a query, as JSON &mdash; in both directions:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.25;">SELECT <b style="color: green;">parseQueryToJSON</b>('SELECT number FROM numbers(10) WHERE number &gt; 5');
+<span style="color: gray;">{"type":"SelectWithUnionQuery", ... "where":{"type":"Function","name":"greater",
+ "arguments":{...[{"type":"Identifier","name":"number"},
+                  {"type":"Literal","value":{"field_type":"UInt64","value":5}}]}}...}</span>
+
+SELECT <b style="color: green;">formatQueryFromJSON</b>(json);   <span style="color: gray;">-- and back to SQL</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; Analyze, validate, rewrite, and generate queries <b>programmatically</b> &mdash;
+<br/>&emsp; from any language with a JSON library.
+<br/>&mdash; Round-trip safe: parse &rarr; transform &rarr; format.</p>
+
+<!-- Demo:
+
+SELECT parseQueryToJSON('SELECT number FROM numbers(10) WHERE number > 5');
+SELECT formatQueryFromJSON(parseQueryToJSON('SELECT count() FROM hits WHERE status=404 GROUP BY path'));
+-- SELECT count() FROM hits WHERE status = 404 GROUP BY path
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Alexey Milovidov, Nikita Fomichev.</p>
+</section>
+
+<section class="slide">
+<h2>clickhouse_json dialect 🧪</h2>
+
+<p style="margin-top: -0.3em;">Skip SQL entirely: send the query <b>as a JSON AST</b>:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.25;">SET enable_json_ast_dialect = 1, <b style="color: green;">dialect = 'clickhouse_json'</b>;
+
+{"type":"SelectWithUnionQuery","list_of_selects":{
+    "type":"ExpressionList","children":[{"type":"SelectQuery",
+    "select":{"type":"ExpressionList","children":[
+        {"type":"Literal","value":{"field_type":"UInt64","value":42}}]}}]}}
+<span style="color: gray;">-- 42</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; For machine-generated queries: no string concatenation,
+<br/>&emsp; no escaping bugs, no injection surface.
+<br/>&mdash; Build the tree structurally &mdash; the server executes it.</p>
+
+<!-- Demo:
+
+SET enable_json_ast_dialect = 1, dialect = 'clickhouse_json';
+{"type":"SelectWithUnionQuery","list_of_selects":{"type":"ExpressionList","children":[{"type":"SelectQuery","select":{"type":"ExpressionList","children":[{"type":"Literal","value":{"field_type":"UInt64","value":42}}]}}]}}
+-- 42
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Alexey Milovidov, Nikita Fomichev.</p>
+</section>
+
+<section class="slide">
+<h2>Pipelined SQL</h2>
+
+<p style="margin-top: -0.3em;">Write queries top-down, like in GoogleSQL &mdash; each step follows the previous:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">FROM hits
+<b style="color: green;">|&gt;</b> WHERE status = 404
+<b style="color: green;">|&gt;</b> AGGREGATE sum(hits) AS total GROUP BY path
+<b style="color: green;">|&gt;</b> ORDER BY total DESC
+<b style="color: green;">|&gt;</b> LIMIT 3;
+</code></p>
+
+<p>&mdash; Each <b>|&gt;</b> wraps the query before it into a subquery,
+<br/>&emsp; so the result is the same AST as for nested subqueries &mdash; no new semantics.
+<br/>&mdash; A query can now start with <b>FROM</b>, and <b>SELECT</b> is optional
+<br/>&emsp; (defaults to <b>SELECT *</b>): <b>FROM hits |&gt; LIMIT 10</b> just works.</p>
+
+<!-- Demo:
+
+FROM numbers(100) |> WHERE number % 7 = 0 |> AGGREGATE count() AS c, sum(number) AS s;   -- 15, 735
+FROM system.numbers |> LIMIT 10 |> WHERE number > 5;   -- 6 7 8 9
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>New chdig features</h2>
+
+<p style="margin-top: -0.3em;"><b>chdig</b> &mdash; a terminal UI for ClickHouse introspection.
+<br/>Version 26.8.1 is a big one:</p>
+
+<p style="margin-top: 0.3em;">&mdash; Rewritten on <b style="color: green;">ratatui</b>: flicker-free updates, responsive
+<br/>&emsp; over slow SSH, near-zero idle CPU.
+<br/>&mdash; <b style="color: green;">tmux-style split panes</b>: Alt+= / Alt+- to split, drag to resize.
+<br/>&mdash; Configurable per-view settings and <b>startup layouts</b>,
+<br/>&emsp; tmuxinator-style &mdash; e.g. SELECTs in one pane, INSERTs in another.
+<br/>&mdash; Auto-refreshing server <b>flamegraphs</b> that highlight
+<br/>&emsp; what changed since the last refresh.
+<br/>&mdash; Shared logs keep their <b style="color: green;">colors</b>.</p>
+
+<p style="margin-top: 0.3em;"><a href="https://github.com/azat/chdig">github.com/azat/chdig</a> &mdash; with a feature tour in the docs.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Azat Khuzhin.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
+<h2><span class="hilite">Performance</span></h2>
+</section>
+
+<section class="slide">
+<h2>Adaptive aggregator</h2>
+
+<p style="margin-top: -0.5em;">A new algorithm for parallel GROUP BY, <b>on by default</b>:
+<br/>each thread aggregates into its own hash table until it holds
+<br/>~16K keys, then <b>freezes</b> it:</p>
+
+<p style="margin-top: 0.3em;">&mdash; <b>Frequent keys</b> keep updating the small, cache-resident tables
+<br/>&emsp; with no coordination.
+<br/>&mdash; <b>Rare keys</b> are routed by hash into per-bucket backlogs
+<br/>&emsp; and aggregated exactly once, in the bucket-parallel merge.</p>
+
+<p style="margin-top: 0.5em;"><b style="color: green;">Measured</b> &mdash; GROUP BY over 100M distinct keys with heavy states:</p>
+<p><b>26.7: <span style="color: red;">0.81</span> sec.</b> &nbsp; <b>26.8: <span style="color: green;">0.43</span> sec.</b>
+<br/>&hellip;and with an early LIMIT: <b><span style="color: red;">3.1</span> sec &rarr; <span style="color: green;">0.03</span> sec</b> &mdash; up to 14x in CI perf tests.</p>
+
+<!-- Demo:
+
+Q="SELECT number, uniq(number) FROM numbers_mt(100000000) GROUP BY number FORMAT Null"
+clickhouse local --time --max_threads=32 -q "$Q"    # 26.7: 0.80s   26.8: 0.43s
+# with `LIMIT 100` appended: 26.7: 3.06s (destroying 100M unused states), 26.8: 0.03s
+# CI perf tests: "select number, uniq(number) from numbers_mt(1e8) group by number limit 100": 3.79s -> 0.23s
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Nihal Z. Miaji.</p>
+</section>
+
+<section class="slide">
+<h2>Fused aggregation and topK</h2>
+
+<p style="margin-top: -0.3em;">26.7 fused GROUP BY with ORDER BY LIMIT <b>for sorted tables</b>.
+<br/>26.8 does it for <b>any read order</b>: a bounded heap during aggregation
+<br/>prunes the groups that cannot appear in the result:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT k, count() FROM events
+GROUP BY k <b style="color: green;">ORDER BY k LIMIT 10</b>;
+<span style="color: gray;">-- only ~10 groups are kept per thread, not 500 million</span>
+</code></p>
+
+<p style="margin-top: 0.3em;"><b style="color: green;">Measured</b> &mdash; 500M rows, ~500M distinct keys:</p>
+<p><b>26.7: <span style="color: red;">2.32</span> sec, <span style="color: red;">19.9 GB</span> of memory.</b>
+<br/><b>26.8: <span style="color: green;">0.22</span> sec, <span style="color: green;">2.3 MB</span> of memory.</b></p>
+
+<!-- Demo:
+
+Q="SELECT k, count() AS c FROM (SELECT sipHash64(number) AS k FROM numbers_mt(500000000)) GROUP BY k ORDER BY k LIMIT 10 FORMAT Null"
+clickhouse local --time --memory-usage --max_threads=32 -q "$Q"
+-- 26.7: 2.32s / 19.93 GB    26.8: 0.22s / 2.33 MB
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developers: Dmitriy Terenichev, Konstantin Bogdanov.</p>
+</section>
+
+<section class="slide">
+<h2>Faster aggregation by strings</h2>
+
+<p style="margin-top: -0.3em;">GROUP BY with a single <b>String</b> key uses much smaller
+<br/>hash-table cells now:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT user_id, count() FROM events GROUP BY user_id;
+<span style="color: gray;">-- user_id String — the most common aggregation shape there is</span>
+</code></p>
+
+<p style="margin-top: 0.3em;"><b style="color: green;">Measured</b> &mdash; 200M rows, 10M distinct 16-byte keys:</p>
+<p><b>26.7: <span style="color: red;">1.60</span> sec.</b> &nbsp; <b>26.8: <span style="color: green;">0.88</span> sec.</b> (1.8x)</p>
+
+<p style="margin-top: 0.3em;">&mdash; On by default (<b>enable_packed_string_keys_in_aggregation</b>);
+<br/>&emsp; the legacy method can still win for very low-cardinality
+<br/>&emsp; aggregation with keys longer than 11 bytes.</p>
+
+<!-- Demo:
+
+Q="SELECT s, count() FROM (SELECT concat('user_id_', toString(number % 10000000)) AS s FROM numbers_mt(200000000)) GROUP BY s FORMAT Null"
+# interleaved runs, min of 5: 26.7: 1.60s    26.8: 0.88s
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: Harikrishnan Prabakaran.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Faster merging of aggregation states</h2>
+
+<p style="margin-top: -0.3em;">In a parallel GROUP BY, every thread builds its own hash table &mdash;
+<br/>and the final merge could become the single-threaded bottleneck:</p>
+
+<p style="margin-top: 0.3em;">&mdash; <b style="color: green;">Parallel single-level merge</b>: when the per-thread tables are small,
+<br/>&emsp; the key space is split by hash and merged by all threads &mdash;
+<br/>&emsp; no two threads ever touch the same key.
+<br/>&mdash; The single-level &rarr; two-level <b>conversion</b> of per-thread states
+<br/>&emsp; is parallelized too &mdash; fixing a 2&ndash;3x regression for heavy states
+<br/>&emsp; (e.g. COUNT(DISTINCT &hellip;)) on machines with very many cores.</p>
+
+<p style="margin-top: 0.5em;">ClickBench Q10/Q11 (COUNT(DISTINCT) with GROUP BY &hellip; LIMIT):
+<br/>~1.15x faster on top of everything else in this release.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developers: Nihal Z. Miaji, Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Faster uniq / uniqExact without a key</h2>
+
+<p style="margin-top: -0.3em;">Plain <b>uniq</b>, <b>uniqExact</b>, and <b>uniqHLL12</b> over a whole table
+<br/>got a batch of micro-optimizations:</p>
+
+<p style="margin-top: 0.3em;">&mdash; A <b style="color: green;">last-value cache</b>: consecutive equal values
+<br/>&emsp; (sorted or clustered inputs) skip the hash lookup entirely.
+<br/>&mdash; Better devirtualization and inlining of batch inserts.
+<br/>&mdash; Memory <b>prefetch</b> for the uniqExact hash set.</p>
+
+<p style="margin-top: 0.5em;"><b style="color: green;">Measured</b> &mdash; uniqExact over 500M rows with runs of equal values:</p>
+<p><b>26.7: <span style="color: red;">1.82</span> sec.</b> &nbsp; <b>26.8: <span style="color: green;">1.22</span> sec.</b> (1.5x, single thread)</p>
+
+<!-- Demo:
+
+Q="SELECT uniqExact(intDiv(number, 100)) FROM numbers(500000000) FORMAT Null"
+clickhouse local --time --max_threads=1 -q "$Q"   # 26.7: 1.82s   26.8: 1.22s
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: Anton Popov.</p>
+</section>
+
+<section class="slide">
+<h2>Adaptive codecs 🧪</h2>
+
+<p style="margin-top: -0.5em;">Merges can now pick <b>the best codec per block</b> for columns
+<br/>that use the default codec:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.25;">CREATE TABLE t (ts DateTime, id UInt64, price Float64, msg String)
+ENGINE = MergeTree ORDER BY ts
+SETTINGS <b style="color: green;">allow_experimental_adaptive_codec_selection</b> = 1;
+
+<span style="color: gray;">-- inspect what the merge chose, with another 26.8 novelty:</span>
+SELECT column, sumMap(codec_block_counts)
+FROM <b style="color: green;">mergeTreeCodecBlockCounts</b>(currentDatabase(), 't') GROUP BY column;
+<span style="color: gray;">-- ts: {'T64':611}, id: {'T64':1221}, price: {'LZ4':1221}, msg: {'LZ4':1832}</span>
+</code></p>
+
+<p style="margin-top: 0.3em;"><b style="color: green;">Measured</b> on a mixed 4-column table:
+<b><span style="color: red;">117.6</span> MiB &rarr; <span style="color: green;">77.0</span> MiB</b> (-35%).</p>
+
+<!-- Demo:
+
+CREATE TABLE adaptive (...) ENGINE = MergeTree ORDER BY ts SETTINGS allow_experimental_adaptive_codec_selection = 1;
+INSERT INTO adaptive SELECT toDateTime('2026-08-01') + number, number * 2, round(sin(number / 100) * 100, 2), 'msg' || toString(number % 10) FROM numbers(10000000);
+OPTIMIZE TABLE adaptive FINAL;
+SELECT column, sumMap(codec_block_counts) FROM mergeTreeCodecBlockCounts(currentDatabase(), 'adaptive') GROUP BY column;
+-- vs identical table without the setting: 117.63 MiB -> 76.96 MiB
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Raufs Dunamalijevs.</p>
+</section>
+
+<section class="slide">
+<h2>Lazy reading in Parquet</h2>
+
+<p style="margin-top: -0.3em;">For <b>ORDER BY &hellip; LIMIT n</b> over Parquet &mdash; on object storage, Iceberg,
+<br/>and local files &mdash; the heavy columns are now read <b>only for the n rows
+<br/>that survive the LIMIT</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT k, payload FROM s3('&hellip;/data.parquet')
+ORDER BY score DESC <b style="color: green;">LIMIT 10</b>;
+<span style="color: gray;">-- on S3: reads 3.3 MB instead of 171 MB — 51x less I/O, 8x faster</span>
+</code></p>
+
+<p style="margin-top: 0.3em;"><b style="color: green;">Measured</b> on a local 880 MB Parquet file:
+<b><span style="color: red;">0.40</span> &rarr; <span style="color: green;">0.06</span> sec</b> (6.5x).</p>
+
+<p>&mdash; On by default; a file changed between the two passes is detected
+<br/>&emsp; (<b>FILE_CHANGED_DURING_READ</b>) &mdash; no silently wrong results.</p>
+
+<!-- Demo:
+
+SELECT number AS k, rand() % 1000000 AS score, randomPrintableASCII(200) AS payload FROM numbers(5000000) INTO OUTFILE '/tmp/lazy_test.parquet' FORMAT Parquet;
+clickhouse local --time -q "SELECT k, payload FROM file('/tmp/lazy_test.parquet') ORDER BY score DESC LIMIT 5 FORMAT Null"   -- 0.061s
+clickhouse local --time -q "... SETTINGS query_plan_optimize_lazy_materialization_for_file = 0"                              -- 0.397s
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Dictionary-based filtering in Parquet</h2>
+
+<p style="margin-top: -0.3em;">A new way to <b>skip whole row groups</b>, for equality and IN conditions:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT count() FROM s3('&hellip;/events.parquet')
+WHERE device = 'device_255';
+<span style="color: gray;">-- reads only the dictionary page of each column chunk:</span>
+<span style="color: gray;">-- if the value is not in the dictionary, the row group is skipped</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; Works where min/max statistics cannot help (the value lies
+<br/>&emsp; inside every row group's range) and bloom filters are absent &mdash;
+<br/>&emsp; most Parquet writers do not write them by default.
+<br/>&mdash; Applies when a column chunk is fully dictionary-encoded;
+<br/>&emsp; controlled by <b>input_format_parquet_dictionary_filter_push_down</b>.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Spatial pruning for GeoParquet</h2>
+
+<p style="margin-top: -0.3em;">Geospatial queries over <b>GeoParquet</b> files skip the data
+<br/>that cannot match:</p>
+
+<p style="margin-top: 0.3em;">&mdash; <b style="color: green;">Row-group pruning</b>: row groups whose bounding box does not
+<br/>&emsp; overlap the query geometry are skipped entirely.
+<br/>&mdash; <b style="color: green;">Page-level pruning</b>: the <b>covering.bbox</b> column index
+<br/>&emsp; skips irrelevant pages within the surviving row groups.
+<br/>&mdash; Spatial predicate push-down also applies during row reading.</p>
+
+<p style="margin-top: 0.5em;">Load city-scale slices out of planet-scale files &mdash;
+<br/>without reading the planet.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Vasily Chekalkin.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Lower memory usage for many parts</h2>
+
+<p style="margin-top: -0.3em;">Every data part used to keep its own copy of schema-derived metadata:
+<br/>the column list, descriptions, serializations, substreams &mdash;
+<br/>all essentially identical across the parts of a table.</p>
+
+<p style="margin-top: 0.3em;">Now the parts of a table <b style="color: green;">share</b> one immutable, reference-counted
+<br/>copy, interned per column &mdash; parts that differ only in some columns
+<br/>(e.g. sparse vs dense) still share the rest.</p>
+
+<p style="margin-top: 0.5em;"><b style="color: green;">Measured</b> (from the PR) &mdash; 231 columns &times; 3000 small parts:</p>
+<p><b>live server memory: <span style="color: red;">~840</span> MiB &rarr; <span style="color: green;">~240</span> MiB</b> (3.5x)</p>
+
+<p style="margin-top: 0.3em;">&mdash; The effect is largest for wide tables with many small parts.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: Raúl Marín.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 28pt;">Faster DISTINCT and window functions
+<br/>in partitioned tables</h2>
+
+<p style="margin-top: -0.3em;">When the partition key is a function of the DISTINCT
+<br/>(or window PARTITION BY) columns, each partition is now processed
+<br/>in its own stream &mdash; no cross-thread reshuffle, no final merge:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.2;">SELECT DISTINCT uid, ev FROM pt;                     <span style="color: gray;">-- PARTITION BY uid % 64</span>
+SELECT row_number() OVER (PARTITION BY uid ORDER BY ts) FROM pt;
+</code></p>
+
+<p style="margin-top: 0.3em;"><b style="color: green;">Measured</b> &mdash; 200M rows, 64 partitions:</p>
+<p>DISTINCT: <b><span style="color: red;">16.6</span> s, <span style="color: red;">13.3</span> GB &rarr; <span style="color: green;">0.49</span> s, <span style="color: green;">2.5</span> GB</b> (34x!)
+<br/>Window function: <b><span style="color: red;">2.2</span> s &rarr; <span style="color: green;">0.46</span> s</b> (4.8x)</p>
+
+<p style="margin-top: 0.2em;">&mdash; Also applies to building sets for <b>IN (subquery)</b>.</p>
+
+<!-- Demo:
+
+CREATE TABLE pt (uid UInt64, ev UInt32, ts UInt64) ENGINE = MergeTree PARTITION BY uid % 64 ORDER BY uid;
+INSERT INTO pt SELECT rand64() % 20000000, number % 100, number FROM numbers_mt(200000000);
+SELECT count() FROM (SELECT DISTINCT uid, ev FROM pt) FORMAT Null;                              -- 16.6s/13.3GB -> 0.49s/2.5GB
+SELECT max(rn) FROM (SELECT row_number() OVER (PARTITION BY uid ORDER BY ts) AS rn FROM pt) FORMAT Null;  -- 2.2s -> 0.46s
+-- Needs enough partitions relative to max_threads (heuristic); 16 partitions at 32 threads did not activate it, 64 did.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Nihal Z. Miaji.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
 <h2><span class="hilite">JOINs</span></h2>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Column statistics, enabled by default</h2>
+
+<p style="margin-top: -0.3em;">Column statistics are now materialized <b>on INSERT</b>
+<br/>(for tables up to 25 GiB) &mdash; not only on merges. The cost-based
+<br/>join optimizer gets accurate estimates for <b>freshly loaded tables</b>:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.25;"><span style="color: gray;">-- right after loading: 100M fact, 50M items, 1M users</span>
+SELECT count() FROM fact f
+JOIN items i ON f.iid = i.iid
+JOIN users u ON f.uid = u.uid WHERE u.country = 'IS';
+</code></p>
+
+<p style="margin-top: 0.3em;"><b style="color: green;">Measured</b> &mdash; the same query on the same fresh data:</p>
+<p><b>26.7: <span style="color: red;">1.8</span> sec, <span style="color: red;">2.6 GB</span></b> (joins the 50M table first)
+<br/><b>26.8: <span style="color: green;">1.0</span> sec, <span style="color: green;">0.39 GB</span></b> (statistics reveal the selective filter)</p>
+
+<p style="margin-top: 0.2em;">&mdash; TPC-H at scale factor 40: Q5 and Q8 no longer time out.</p>
+
+<!-- Demo:
+
+Fresh-loaded tables (no merges yet): fact 100M rows (uid % 1M, iid % 50M), users 1M (country 'IS' for 0.01%), items 50M.
+26.7 materializes statistics only on merges -> no stats right after load -> joins items (50M) first: 1.83s / 2.61 GB.
+26.8 (materialize_statistics_on_insert_max_table_size = 25 GiB) has stats -> joins filtered users first: 1.04s / 0.39 GB.
+Memory difference is stable across runs; time fluctuates with machine load (min over runs shown).
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
 </section>
 
 <section class="slide">
@@ -840,300 +1019,178 @@ SETTINGS make_distributed_plan = 1, enable_cascades_optimizer = 1, distributed_p
 </section>
 
 
+<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
+<h2><span class="hilite">Data Lakes</span></h2>
+</section>
+
+<section class="slide">
+<h2>S3 Tables</h2>
+
+<p style="margin-top: -0.3em;">A catalog for <b>AWS S3 Tables</b> &mdash; Amazon's managed Iceberg buckets:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.25;">CREATE DATABASE tables ENGINE = DataLakeCatalog(
+    'https://s3tables.us-east-1.amazonaws.com/iceberg')
+SETTINGS <b style="color: green;">catalog_type = 's3tables'</b>, region = 'us-east-1',
+    warehouse = 'arn:aws:s3tables:us-east-1:1234567890:bucket/analytics';
+
+SHOW TABLES FROM tables;
+SELECT &hellip; FROM tables.`ns.events`;
+<b style="color: green;">INSERT INTO</b> tables.`ns.events` VALUES (&hellip;);   <span style="color: gray;">-- writes work now</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; Reading arrived earlier; 26.8 brings a <b>working INSERT</b> &mdash;
+<br/>&emsp; and you can create your own tables.
+<br/>&mdash; Requests are SigV4-signed; IAM role support included.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Konstantin Vedernikov.</p>
+</section>
+
+<section class="slide">
+<h2>Snowflake Horizon</h2>
+
+<p style="margin-top: -0.3em;">Query &mdash; and <b>write</b> &mdash; Iceberg tables behind the
+<br/><b>Snowflake Horizon</b> catalog:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.25;">CREATE DATABASE horizon ENGINE = DataLakeCatalog(
+    'https://&lt;org&gt;-&lt;account&gt;.snowflakecomputing.com/polaris/api/catalog')
+SETTINGS <b style="color: green;">catalog_type = 'horizon'</b>, warehouse = 'ICEBERG_DB',
+    catalog_credential = '&lt;PAT&gt;', vended_credentials = 1;
+
+SELECT &hellip; FROM horizon.`schema.trades`;   <span style="color: gray;">-- reads Iceberg directly</span>
+INSERT INTO horizon.`schema.trades` &hellip;;    <span style="color: gray;">-- commits via the catalog</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; ClickHouse speaks to the Snowflake-hosted Iceberg REST endpoint &mdash;
+<br/>&emsp; the data files are read from object storage directly,
+<br/>&emsp; without spending Snowflake compute credits.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Melvyn Peignon.</p>
+</section>
+
+<section class="slide">
+<h2>Puffin</h2>
+
+<p style="margin-top: -0.3em;">Support for the <b>Puffin</b> file format &mdash; Iceberg's sidecar files
+<br/>for statistics and <b>deletion vectors</b>:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.25;">SELECT * FROM s3('&hellip;/data/delete-0001.puffin');
+<span style="color: gray;">┌─referenced_data_file──────────┬─deleted_rows──────┐
+│ s3://bucket/data/f1.parquet   │ [4, 17, 23, 1042] │
+└───────────────────────────────┴───────────────────┘</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; See exactly <b>which rows are deleted</b> from which data file &mdash;
+<br/>&emsp; the physical truth behind Iceberg v3 deletion vectors.
+<br/>&mdash; Works with <b>file</b>, <b>url</b>, <b>s3</b>, and the other table functions;
+<br/>&emsp; a metadata mode lists the blobs: types, offsets, properties.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Konstantin Vedernikov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Prefetching manifest files in Iceberg</h2>
+
+<p style="margin-top: -0.3em;">Query planning over Iceberg walks a chain of manifest files &mdash;
+<br/>previously one at a time, paying the object-storage latency for each:</p>
+
+<p style="margin-top: 0.3em;">&mdash; The next manifest is now <b style="color: green;">prefetched</b> while the current one
+<br/>&emsp; is parsed &mdash; I/O overlaps with CPU work.
+<br/>&mdash; <b>Delete manifests</b> are read and decoded concurrently
+<br/>&emsp; (<b>iceberg_delete_manifest_decode_concurrency</b>, default 4) &mdash;
+<br/>&emsp; tables with many delete files start much faster.
+<br/>&mdash; Also: the S3 bucket-region cache now works for data lake catalogs,
+<br/>&emsp; saving a region-resolution round trip per request.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Asya Shneerson, Konstantin Vedernikov.</p>
+</section>
+
+<section class="slide">
+<h2>Table function bigquery</h2>
+
+<p style="margin-top: -0.3em;">A table function and a table engine for <b>Google BigQuery</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT corpus, count() FROM <b style="color: green;">bigquery</b>(
+    'my-project', 'samples', 'shakespeare',
+    service_account_key = '{"type": "service_account", ...}')
+GROUP BY corpus;
+
+CREATE TABLE bq_events <b style="color: green;">ENGINE = BigQuery</b>('my-project', 'events', 'log');
+INSERT INTO bq_events VALUES (...);   <span style="color: gray;">-- writes work, too</span>
+</code></p>
+
+<p>&mdash; The structure is inferred from the BigQuery table schema.
+<br/>&mdash; Includes public datasets.
+<br/>&mdash; Auth: OAuth access token, service account key (JSON),
+<br/>&emsp; or an OAuth client with a refresh token.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back8.jpg); background-size: cover;">
+<h2><span class="hilite">Text Search</span></h2>
+</section>
+
+<section class="slide">
+<h2>Tokenizers for every language</h2>
+
+<p style="margin-top: -0.5em;">Four new tokenizers for the <b>tokens</b> function and <b>text indexes</b>:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.25;">SELECT tokens('ClickHouse是一个快速的开源数据库', <b style="color: green;">'chinese'</b>);
+<span style="color: gray;">-- ['ClickHouse','是','一个','快速','的','开源','数据库'] — dictionary + HMM</span>
+
+SELECT tokens('こんにちは世界。データベースです。', <b style="color: green;">'icu'</b>, 'ja');
+<span style="color: gray;">-- ['こんにちは','世界','データベース','です'] — locale-aware Unicode segmentation</span>
+
+SELECT tokens('C++ and C# are languages', <b style="color: green;">'splitByRegexp'</b>, '[^\p{L}\p{N}#+]+');
+<span style="color: gray;">-- ['C++','and','C#','are','languages'] — tokens other tokenizers would break</span>
+</code></p>
+
+<p style="margin-top: 0.2em;">&mdash; Also: <b style="color: green;">japanese</b> &mdash; the MeCab morphological analyzer (the dictionary
+<br/>&emsp; is loaded from a path in the server config, checksum-verified),
+<br/>&emsp; and <b>keyword</b> as an Elasticsearch-compatible alias for <b>array</b>.</p>
+
+<!-- Demo:
+
+SELECT tokens('ClickHouse是一个快速的开源数据库', 'chinese');
+SELECT tokens('こんにちは世界。データベースです。', 'icu', 'ja');
+SELECT tokens('สวัสดีชาวโลก', 'icu', 'th');   -- Thai works too: ['สวัสดี','ชาว','โลก']
+SELECT tokens('C++ and C# are programming languages', 'splitByRegexp', '[^\\p{L}\\p{N}#+]+');
+
+-->
+
+<p style="color: gray; font-size: 13pt; margin-top: 0.3em;">Developers: Robert Schulze, Amos Bird, Jimmy Aguilar Mena.</p>
+</section>
+
+<section class="slide">
+<h2>Text indexes: faster answers</h2>
+
+<p style="margin-top: -0.3em;"><b>COUNT()</b> is answered directly from the <b>index cardinality metadata</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT count() FROM docs WHERE hasAnyTokens(body, ['fox']);
+<span style="color: gray;">-- 1 million rows matched; rows actually read: <b style="color: green;">1</b></span>
+</code></p>
+
+<p style="margin-top: 0.5em;">&mdash; Posting lists are now decoded <b style="color: green;">lazily</b>, at packed-block granularity,
+<br/>&emsp; instead of being eagerly materialized into bitmaps.
+<br/>&mdash; Optional cache for tokens <b>missing</b> from the index.
+<br/>&mdash; The v2 on-disk format (with positions for phrase search) is the default;
+<br/>&emsp; <b>text_index_version</b> controls it for rolling upgrades.</p>
+
+<!-- Demo:
+
+CREATE TABLE docs (id UInt64, body String, INDEX idx body TYPE text(tokenizer = 'splitByNonAlpha')) ENGINE = MergeTree ORDER BY id;
+INSERT INTO docs SELECT number, arrayStringConcat(arrayMap(x -> ['red','green','blue','fast','slow','fox','dog','cat','runs','sleeps'][(number * 7 + x * 3) % 10 + 1], range(20)), ' ') FROM numbers(1000000);
+clickhouse client --print-profile-events -q "SELECT count() FROM docs WHERE hasAnyTokens(body, ['fox'])"
+-- count = 1000000, SelectedRows: 1
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Elmi Ahmadov, Anton Popov, Rory Shanks.</p>
+</section>
+
+
 <section class="slide" style="background: url(pictures/back9.jpg); background-size: cover;">
-<h2><span class="hilite">Performance</span></h2>
-</section>
-
-<section class="slide">
-<h2>Adaptive parallel GROUP BY</h2>
-
-<p style="margin-top: -0.5em;">A new algorithm for parallel aggregation, <b>on by default</b>:
-<br/>each thread aggregates into its own hash table until it holds
-<br/>~16K keys, then <b>freezes</b> it:</p>
-
-<p style="margin-top: 0.3em;">&mdash; <b>Frequent keys</b> keep updating the small, cache-resident tables
-<br/>&emsp; with no coordination.
-<br/>&mdash; <b>Rare keys</b> are routed by hash into per-bucket backlogs
-<br/>&emsp; and aggregated exactly once, in the bucket-parallel merge.</p>
-
-<p style="margin-top: 0.5em;"><b style="color: green;">Measured</b> &mdash; GROUP BY over 100M distinct keys with heavy states:</p>
-<p><b>26.7: <span style="color: red;">0.81</span> sec.</b> &nbsp; <b>26.8: <span style="color: green;">0.43</span> sec.</b>
-<br/>&hellip;and with an early LIMIT: <b><span style="color: red;">3.1</span> sec &rarr; <span style="color: green;">0.03</span> sec</b> &mdash; up to 14x in CI perf tests.</p>
-
-<!-- Demo:
-
-Q="SELECT number, uniq(number) FROM numbers_mt(100000000) GROUP BY number FORMAT Null"
-clickhouse local --time --max_threads=32 -q "$Q"    # 26.7: 0.80s   26.8: 0.43s
-# with `LIMIT 100` appended: 26.7: 3.06s (destroying 100M unused states), 26.8: 0.03s
-# CI perf tests: "select number, uniq(number) from numbers_mt(1e8) group by number limit 100": 3.79s -> 0.23s
-
--->
-
-<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Nihal Z. Miaji.</p>
-</section>
-
-<section class="slide">
-<h2>GROUP BY + LIMIT: a bounded heap</h2>
-
-<p style="margin-top: -0.3em;">26.7 fused GROUP BY with ORDER BY LIMIT <b>for sorted tables</b>.
-<br/>26.8 does it for <b>any read order</b>: a bounded heap during aggregation
-<br/>prunes the groups that cannot appear in the result:</p>
-
-<p><code style="font-size: 14pt; line-height: 1.25;">SELECT k, count() FROM events
-GROUP BY k <b style="color: green;">ORDER BY k LIMIT 10</b>;
-<span style="color: gray;">-- only ~10 groups are kept per thread, not 500 million</span>
-</code></p>
-
-<p style="margin-top: 0.3em;"><b style="color: green;">Measured</b> &mdash; 500M rows, ~500M distinct keys:</p>
-<p><b>26.7: <span style="color: red;">2.32</span> sec, <span style="color: red;">19.9 GB</span> of memory.</b>
-<br/><b>26.8: <span style="color: green;">0.22</span> sec, <span style="color: green;">2.3 MB</span> of memory.</b></p>
-
-<!-- Demo:
-
-Q="SELECT k, count() AS c FROM (SELECT sipHash64(number) AS k FROM numbers_mt(500000000)) GROUP BY k ORDER BY k LIMIT 10 FORMAT Null"
-clickhouse local --time --memory-usage --max_threads=32 -q "$Q"
--- 26.7: 2.32s / 19.93 GB    26.8: 0.22s / 2.33 MB
-
--->
-
-<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developers: Dmitriy Terenichev, Konstantin Bogdanov.</p>
-</section>
-
-<section class="slide">
-<h2>Aggregation, elsewhere</h2>
-
-<p style="margin-top: -0.5em;">&mdash; <b style="color: green;">Packed string keys</b>: smaller hash-table cells for single-String
-<br/>&emsp; GROUP BY keys &mdash; string-heavy aggregation up to 2x faster.</p>
-<p style="margin-top: -0.3em;">&mdash; <b style="color: green;">Parallel single-level merge</b>: when per-thread tables stay small
-<br/>&emsp; but the merge dominates, it now runs in parallel.</p>
-<p style="margin-top: -0.3em;">&mdash; GROUP BY <b>without aggregate functions</b> uses HashSet-based methods:
-<br/>&emsp; up to 1.8x faster; String keys skip a per-row placeholder write.</p>
-<p style="margin-top: -0.3em;">&mdash; <b>DISTINCT</b>: 2.4x faster when the stream is sorted by a prefix;
-<br/>&emsp; partitioned tables aggregate each partition independently &mdash;
-<br/>&emsp; the same trick now speeds up <b>window functions</b> and <b>IN (subquery)</b> sets.</p>
-<p style="margin-top: -0.3em;">&mdash; <b>uniq, uniqExact, uniqHLL12</b> optimized without keys;
-<br/>&emsp; <b>groupUniqArray</b> up to 3x faster.</p>
-
-<p style="color: gray; font-size: 13pt; margin-top: 0.5em;">Developers: H. Prabakaran, N. Z. Miaji, N. Taranov, A. Popov, Manuel.</p>
-</section>
-
-<section class="slide">
-<h2>Lazy reading of Parquet</h2>
-
-<p style="margin-top: -0.3em;">For <b>ORDER BY &hellip; LIMIT n</b> over Parquet &mdash; on object storage, Iceberg,
-<br/>and local files &mdash; the heavy columns are now read <b>only for the n rows
-<br/>that survive the LIMIT</b>:</p>
-
-<p><code style="font-size: 14pt; line-height: 1.25;">SELECT k, payload FROM s3('&hellip;/data.parquet')
-ORDER BY score DESC <b style="color: green;">LIMIT 10</b>;
-<span style="color: gray;">-- on S3: reads 3.3 MB instead of 171 MB — 51x less I/O, 8x faster</span>
-</code></p>
-
-<p style="margin-top: 0.3em;"><b style="color: green;">Measured</b> on a local 880 MB Parquet file:
-<b><span style="color: red;">0.40</span> &rarr; <span style="color: green;">0.06</span> sec</b> (6.5x).</p>
-
-<p>&mdash; On by default; a file changed between the two passes is detected
-<br/>&emsp; (<b>FILE_CHANGED_DURING_READ</b>) &mdash; no silently wrong results.</p>
-
-<!-- Demo:
-
-SELECT number AS k, rand() % 1000000 AS score, randomPrintableASCII(200) AS payload FROM numbers(5000000) INTO OUTFILE '/tmp/lazy_test.parquet' FORMAT Parquet;
-clickhouse local --time -q "SELECT k, payload FROM file('/tmp/lazy_test.parquet') ORDER BY score DESC LIMIT 5 FORMAT Null"   -- 0.061s
-clickhouse local --time -q "... SETTINGS query_plan_optimize_lazy_materialization_for_file = 0"                              -- 0.397s
-
--->
-
-<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Alexey Milovidov.</p>
-</section>
-
-<section class="slide">
-<h2>Parquet reader improvements</h2>
-
-<p style="margin-top: -0.5em;">More ways to <b>skip data</b> in the native Parquet V3 reader:</p>
-
-<p style="margin-top: 0.3em;">&mdash; <b style="color: green;">Dictionary pruning</b>: for equality and IN conditions, whole row groups
-<br/>&emsp; are skipped when the dictionary page proves the value is absent &mdash;
-<br/>&emsp; works where min/max statistics and bloom filters do not help.</p>
-<p style="margin-top: -0.2em;">&mdash; <b style="color: green;">GeoParquet spatial pruning</b>: row groups and pages whose bounding box
-<br/>&emsp; does not overlap the query geometry are skipped.</p>
-<p style="margin-top: -0.2em;">&mdash; <b style="color: green;">Tuple subcolumns</b>: <b>WHERE tup.1 = &hellip;</b> prunes row groups and pages
-<br/>&emsp; using the element's own statistics.</p>
-<p style="margin-top: -0.2em;">&mdash; Filter push-down through more type conversions
-<br/>&emsp; (DateTime64, Decimal, Float32&harr;Float64); optional DECIMAL
-<br/>&emsp; serialization of 128/256-bit integers enables pruning on them.</p>
-
-<p style="color: gray; font-size: 13pt; margin-top: 0.5em;">Developers: A. Milovidov, V. Chekalkin, M. Kolupaev, Groene AI, I. Babrou.</p>
-</section>
-
-<section class="slide">
-<h2>Parallel INSERT SELECT by default</h2>
-
-<p style="margin-top: -0.3em;">The default of <b>max_insert_threads</b> changed from 1 to <b style="color: green;">auto</b>
-<br/>(the number of CPU cores):</p>
-
-<p><code style="font-size: 14pt; line-height: 1.25;">INSERT INTO dst SELECT hex(SHA256(toString(number)))
-FROM numbers_mt(20000000);
-</code></p>
-
-<p style="margin-top: 0.3em;"><b style="color: green;">Measured</b> (CPU-bound transform, 32 threads):</p>
-<p><b>26.7: <span style="color: red;">1.9</span> sec.</b> &nbsp; <b>26.8: <span style="color: green;">0.48</span> sec.</b> (4x)</p>
-
-<p style="margin-top: 0.3em;">&mdash; Also parallelizes the write side of a plain INSERT where it is safe.
-<br/>&mdash; Note: the number of created parts and the order of inserted rows
-<br/>&emsp; can change; set <b>max_insert_threads = 1</b> or <b>compatibility = '26.7'</b>
-<br/>&emsp; to restore the old behavior.</p>
-
-<!-- Demo:
-
-SETUP="CREATE TABLE dst (h String) ENGINE = MergeTree ORDER BY ();"
-Q="INSERT INTO dst SELECT hex(SHA256(toString(number))) FROM numbers_mt(20000000)"
-clickhouse-26.7 local --path /tmp/ib_old --time --max_threads=32 --multiquery "$SETUP $Q"   # 1.915s
-clickhouse local --path /tmp/ib_new --time --max_threads=32 --multiquery "$SETUP $Q"        # 0.477s
-# Caveat: on slow disks the parallel insert can be limited by I/O — the win is on CPU-bound transforms.
-
--->
-
-<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Alexey Milovidov.</p>
-</section>
-
-<section class="slide">
-<h2>Faster everything</h2>
-
-<p style="margin-top: -0.5em;">&mdash; <b style="color: green;">Formatting Decimals as text</b>: up to 190x for Decimal256
-<br/>&emsp; (measured 5.3x on a mixed query); int-to-text 1.4x with AVX-512 IFMA.</p>
-<p style="margin-top: -0.3em;">&mdash; <b style="color: green;">toStartOfInterval</b> / <b>time_bucket</b>: up to 5x (measured 2.6x).</p>
-<p style="margin-top: -0.3em;">&mdash; <b style="color: green;">Native protocol</b>: String columns as offsets + bulk data &mdash;
-<br/>&emsp; clients read them ~4x faster (negotiated by protocol revision).</p>
-<p style="margin-top: -0.3em;">&mdash; <b style="color: green;">ZSTD decompression on x86_64</b>: vectorized short-offset copies
-<br/>&emsp; (the ARM counterpart shipped in 26.7).</p>
-<p style="margin-top: -0.3em;">&mdash; <b style="color: green;">clickhouse-client</b> skips a ping round trip before every query;
-<br/>&emsp; client and local start faster (no accidental timezone table builds).</p>
-<p style="margin-top: -0.3em;">&mdash; <b>ORDER BY pk LIMIT n</b> over many parts reads only contributing parts
-<br/>&emsp; (<b>read_in_order_use_virtual_row</b> on by default) &mdash; much less memory.</p>
-
-<!-- Demo / proof:
-
-toString(Decimal256/3): 26.7: 6.78s -> 26.8: 1.29s (5M rows, 1 thread)
-toStartOfInterval(15 MINUTE) over 100M: 0.558s -> 0.218s
-Native strings: PR #110320 (vahid-sohrabloo) ~4x on client-side reads
-
--->
-
-<p style="color: gray; font-size: 13pt; margin-top: 0.4em;">Developers: K. Bogdanov, Manuel, vahid-sohrabloo, A. Milovidov, N. Taranov.</p>
-</section>
-
-
-<section class="slide" style="background: url(pictures/back10.jpg); background-size: cover;">
-<h2><span class="hilite">Web UI</span></h2>
-</section>
-
-<section class="slide">
-<h2>Sort, filter, and page results</h2>
-
-<p style="margin-top: -0.3em;">The built-in <b>/play</b> UI shapes results <b>without editing the query</b>:</p>
-
-<p style="margin-top: 0.3em;">&mdash; <b style="color: green;">Sorting arrows</b> in every column header
-<br/>&emsp; (Shift-click for multi-column sort).
-<br/>&mdash; <b style="color: green;">A filter input</b> per column; a selected cell offers
-<br/>&emsp; the comparisons that fit its value.
-<br/>&mdash; <b style="color: green;">A pager</b> with an adjustable page size appears
-<br/>&emsp; under a result that does not fit on one screen.
-<br/>&mdash; All <b>server-side</b> (the <b>order</b>, <b>filter</b>, <b>limit</b>, <b>page</b> settings):
-<br/>&emsp; the whole result is shaped, not the rows that happen to be displayed.
-<br/>&mdash; The sort, filters, and page travel in the URL &mdash;
-<br/>&emsp; a shared link reproduces the result.</p>
-
-<p style="margin-top: 0.5em;">Demo</p>
-
-<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Alexey Milovidov.</p>
-</section>
-
-<section class="slide" style="background: url(pictures/play_sort_filter.png) center / contain no-repeat; background-color: #111;">
-</section>
-
-<section class="slide" style="background: url(pictures/play_pager.png) center / contain no-repeat; background-color: #111;">
-</section>
-
-<section class="slide">
-<h2>Web UI, elsewhere</h2>
-
-<p style="margin-top: -0.5em;">&mdash; Hold <b>Ctrl</b> (<b>Cmd</b>) while hovering a cell with an image URL &mdash;
-<br/>&emsp; an <b style="color: green;">image preview</b> pops up.</p>
-<p style="margin-top: -0.4em;">&mdash; <b style="color: green;">Charts</b> can plot Date and DateTime columns directly
-<br/>&emsp; (previously only integer timestamps), with ISO 8601 axes
-<br/>&emsp; and K/M/G quantity suffixes, like the advanced dashboard.</p>
-<p style="margin-top: -0.4em;">&mdash; A button to <b style="color: green;">close all tabs</b> except the current one.</p>
-<p style="margin-top: -0.4em;">&mdash; Browser history is recorded on query runs and tab switches,
-<br/>&emsp; not on every keypress.</p>
-<p style="margin-top: -0.4em;">&mdash; In dashboards, a failing chart shows a note instead of
-<br/>&emsp; hiding the whole page.</p>
-<p style="margin-top: -0.4em;">&mdash; The hourglass in the database panel is animated again. ⏳</p>
-
-<p style="color: gray; font-size: 14pt; margin-top: 0em;">Developers: Alexey Milovidov, Mikhail Artemenko.</p>
-</section>
-
-
-<section class="slide" style="background: url(pictures/back11.jpg); background-size: cover;">
-<h2><span class="hilite">AI Functions</span></h2>
-</section>
-
-<section class="slide">
-<h2>aiSimilarity</h2>
-
-<p style="margin-top: -0.3em;">Semantic similarity of two texts, straight in SQL:</p>
-
-<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">aiSimilarity</b>('The cat sat on the mat',
-                    'A kitten rested on the rug',
-                    'text-embedding-3-small') AS s;
-<span style="color: gray;">-- 0.87 — and ~0 for unrelated texts</span>
-</code></p>
-
-<p>&mdash; Embeds both texts with the configured provider and returns
-<br/>&emsp; their cosine similarity in [-1, 1].
-<br/>&mdash; Inputs are batched into one API request per block of rows.
-<br/>&mdash; Credentials come from a named collection
-<br/>&emsp; (<b>ai_function_embedding_default_credentials</b>).</p>
-
-<!-- Demo (tested against a local OpenAI-compatible mock endpoint; the numbers 0.874 / -0.046
-     are from bag-of-words embeddings of the mock — real models give similar contrast):
-
-SET allow_experimental_ai_functions = 1;
-CREATE NAMED COLLECTION mock AS provider = 'openai', endpoint = 'http://127.0.0.1:8099/v1/embeddings', api_key = 'demo';
-SET ai_function_embedding_default_credentials = 'mock';
-SELECT round(aiSimilarity('The cat sat on the mat', 'A kitten rested on the rug', 'text-embedding-3-small'), 3) AS similar,
-       round(aiSimilarity('The cat sat on the mat', 'Distributed database performance', 'text-embedding-3-small'), 3) AS unrelated;
--- 0.874, -0.046
-
--->
-
-<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: David Meng.</p>
-</section>
-
-<section class="slide">
-<h2>aiRedact and aiFilter</h2>
-
-<p style="margin-top: -0.5em;"><b style="color: green;">aiRedact</b> &mdash; scrub PII before the data leaves the database:</p>
-
-<p><code style="font-size: 13pt; line-height: 1.25;">SELECT <b style="color: green;">aiRedact</b>(comment, ['email', 'name', 'phone']) FROM feedback;
-<span style="color: gray;">-- 'Contact [REDACTED] at [REDACTED]' — categories of your choice</span>
-</code></p>
-
-<p style="margin-top: 0.3em;"><b style="color: green;">aiFilter</b> &mdash; a natural-language condition as a WHERE clause:</p>
-
-<p><code style="font-size: 13pt; line-height: 1.25;">SELECT * FROM reviews
-WHERE <b style="color: green;">aiFilter</b>(text, 'the customer is asking for a refund');
-</code></p>
-
-<p style="margin-top: 0.3em;">Hardening, for all AI functions:
-<br/>&mdash; Insecure (http) endpoints to remote hosts are denied by default.
-<br/>&mdash; Outbound API calls are capped per query (default 1000).
-<br/>&mdash; Truncated model responses are rejected, not silently returned.</p>
-
-<p style="color: gray; font-size: 13pt; margin-top: 0.4em;">Developers: David Meng, yanglongwei, George Larionov.</p>
-</section>
-
-
-<section class="slide" style="background: url(pictures/back12.jpg); background-size: cover;">
 <h2><span class="hilite">Bonus</span></h2>
 </section>
 
@@ -1174,24 +1231,164 @@ FROM numbers_mt(480 * 360 * 60)
 </section>
 
 <section class="slide">
-<h2>ClickHouse in your browser 🧪</h2>
+<h2>The introspection port</h2>
 
-<p style="margin-top: -0.3em;">The <b>clickhouse</b> binary now builds for <b style="color: green;">WebAssembly</b>
-<br/>(wasm64, via Emscripten):</p>
+<p style="margin-top: -0.3em;">What is my server doing <b>while it starts up or shuts down</b>?
+<br/>A native protocol listener that opens <b>before</b> tables are attached
+<br/>and closes only <b>after</b> they are detached:</p>
 
-<p><code style="font-size: 14pt; line-height: 1.25;">$ node clickhouse.js local -q "
-    CREATE TABLE t (x UInt64) ENGINE = <b style="color: green;">MergeTree</b> ORDER BY x;
-    INSERT INTO t SELECT number FROM numbers(1000000);
-    SELECT sum(x) FROM t"
-<span style="color: gray;">-- a real ClickHouse, with real MergeTree tables — no server, no cloud</span>
+<p><code style="font-size: 14pt; line-height: 1.25;">$ clickhouse client --port 9099   <span style="color: gray;">-- during a slow startup</span>
+SHOW PROCESSLIST;
+SELECT * FROM system.stack_trace;
 </code></p>
 
-<p>&mdash; <b>clickhouse local</b> runs queries under Node.js ≥ 24 <b>and in the browser</b>.
-<br/>&mdash; A CI job pins the build; the WASM module is a build artifact.
-<br/>&mdash; The SQL parser also builds standalone (<b>utils/wasm-parser</b>) &mdash;
-<br/>&emsp; the same parser that powers syntax highlighting in the Web UI.</p>
+<p>&mdash; Watch table loading, catch shutdown hangs, instrument code paths.
+<br/>&mdash; The default <b>shutdown_wait_unfinished</b> grew from 5 to 120 seconds,
+<br/>&emsp; so the server no longer force-exits in the middle of a graceful shutdown.</p>
 
-<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexey Milovidov.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Miсhael Stetsyuk.</p>
+</section>
+
+<section class="slide">
+<h2>On-disk storage for Keeper 🧪</h2>
+
+<p style="margin-top: -0.3em;">ClickHouse Keeper always kept the whole coordination state in memory.
+<br/>Now it can store it <b>on disk, in a custom LSM tree</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">&lt;keeper_server&gt;
+    &lt;coordination_settings&gt;
+        &lt;<b style="color: green;">storage_memory_only</b>&gt;false&lt;/storage_memory_only&gt;
+    &lt;/coordination_settings&gt;
+    &lt;<b style="color: green;">data_storage_path</b>&gt;/var/lib/keeper-data&lt;/data_storage_path&gt;
+&lt;/keeper_server&gt;
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; Similar performance to the in-memory storage.
+<br/>&mdash; State no longer bounded by RAM &mdash; and it can even live on S3
+<br/>&emsp; (point <b>data_storage_disk</b> to an <b>s3_plain</b> disk).</p>
+
+<!-- Note: the changelog has a TODO — the enabling setting (use_new_storage in the PR) will be renamed
+     ("new" is forbidden in names). Verify the final setting names before presenting. -->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: Michael Kolupaev.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">PostgreSQL protocol improvements</h2>
+
+<p style="margin-top: -0.5em;"><b>psql</b> now feels at home when connected to ClickHouse:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.25;">$ psql "host=&hellip; port=9005 user=pg dbname=default"
+default=&gt; <b style="color: green;">\dt</b>                        <span style="color: gray;">-- lists ClickHouse tables</span>
+default=&gt; SELECT count() FROM hits WHERE path <b style="color: green;">~</b> 'page1[0-9]';  <span style="color: gray;">-- 5000</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; The <b>\d</b>, <b>\dt</b>, <b>\dv</b> commands of psql work now.
+<br/>&mdash; PostgreSQL-style regexp operators &mdash; in any query,
+<br/>&emsp; over any protocol: <b>~</b>, <b>~*</b>, <b>!~</b>, <b>!~*</b>.
+<br/>&mdash; A failed query no longer terminates the connection.
+<br/>&mdash; Anonymous connections follow <b>default_session_user</b>.</p>
+
+<!-- Demo (against the ClickHouse server's PostgreSQL port):
+
+CREATE USER pg IDENTIFIED WITH plaintext_password BY 'demo' DEFAULT DATABASE default; GRANT SELECT ON default.* TO pg;
+PGPASSWORD=demo psql "host=127.0.0.1 port=9005 user=pg dbname=default sslmode=disable" -c '\dt'
+PGPASSWORD=demo psql "host=127.0.0.1 port=9005 user=pg dbname=default sslmode=disable" -c "SELECT count() FROM hits WHERE path ~ 'page1[0-9]'"
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>chDB in WASM</h2>
+
+<p style="margin-top: -0.3em;">The <b>clickhouse</b> binary now builds for <b style="color: green;">WebAssembly</b>
+<br/>(wasm64, via Emscripten) &mdash; and <b>chDB</b> brings it to your browser:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;"><b style="color: green;">https://wasm.chdb.io</b>   <span style="color: gray;">-- a full SQL shell, no server, no cloud</span>
+
+chdb :) CREATE TABLE t (x UInt64) ENGINE = <b style="color: green;">MergeTree</b> ORDER BY x;
+chdb :) INSERT INTO t SELECT number FROM numbers(1000000);
+chdb :) SELECT sum(x) FROM t;   <span style="color: gray;">-- everything runs in the browser tab</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; <b>clickhouse local</b> runs under Node.js ≥ 24 and in the browser,
+<br/>&emsp; including real MergeTree tables; a CI job pins the build.
+<br/>&mdash; The SQL parser also builds standalone (<b>utils/wasm-parser</b>) &mdash;
+<br/>&emsp; it powers the syntax highlighting of the Web UI and the new Fiddle.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developers: Alexey Milovidov, Auxten Wang (chDB).</p>
+</section>
+
+<section class="slide" style="background: url(pictures/chdb_wasm.png) center / contain no-repeat; background-color: #111;">
+</section>
+
+<section class="slide">
+<h2>ClickBench Playground</h2>
+
+<p style="margin-top: -0.3em;">ClickBench now has a <b>playground</b>: run ad-hoc SQL
+<br/>against <b style="color: green;">110+ database systems</b>, right from the browser:</p>
+
+<p style="margin-top: 0.3em;"><b><a href="https://benchmark.clickhouse.com/playground/">benchmark.clickhouse.com/playground</a></b></p>
+
+<p style="margin-top: 0.3em;">&mdash; Every system comes with the 100M-row ClickBench dataset preloaded &mdash;
+<br/>&emsp; and you can create tables, insert data, and run anything.
+<br/>&mdash; <b style="color: green;">Competition mode</b>: select several systems and race them
+<br/>&emsp; on the same query, comparing results for correctness.
+<br/>&mdash; Runs on Firecracker microVMs &mdash; strong isolation, fast startup.</p>
+
+<p style="margin-top: 0.5em;">Demo &rarr;</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/clickbench_playground.png) center / contain no-repeat; background-color: #fdf6ec;">
+</section>
+
+<section class="slide">
+<h2>New ClickHouse Fiddle</h2>
+
+<p style="margin-top: -0.3em;">The community favorite for sharing runnable SQL snippets
+<br/>got a major upgrade &mdash; and moved to the ClickHouse organization:</p>
+
+<p style="margin-top: 0.3em;"><b><a href="https://fiddle.clickhouse.com/">fiddle.clickhouse.com</a></b></p>
+
+<p style="margin-top: 0.3em;">&mdash; A new UI built with the <b style="color: green;">Click-UI</b> design system, with syntax
+<br/>&emsp; highlighting by the same WASM lexer as the Web UI.
+<br/>&mdash; Run a query in <b>any ClickHouse version</b> &mdash; now including
+<br/>&emsp; <b style="color: green;">debug and sanitizer builds</b> (great for bug reports!).
+<br/>&mdash; Share a link to the query and its result.
+<br/>&mdash; A hex viewer for binary output, box-drawing-capable fonts.</p>
+
+<p style="margin-top: 0.5em;">Demo &rarr;</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Created by Igor Baliuk; continued by Alexey Milovidov.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/fiddle.png) center / contain no-repeat; background-color: #fff;">
+</section>
+
+<section class="slide">
+<h2>Embeddings.info</h2>
+
+<p style="margin-top: -0.3em;">A little showcase of what 26.8-era vector search can do:
+<br/><b style="color: green;">100 million embeddings</b>, explored live in your browser:</p>
+
+<p style="margin-top: 0.3em;"><b><a href="https://embeddings.info/">embeddings.info</a></b></p>
+
+<p style="margin-top: 0.3em;">&mdash; Photos, HackerNews, and Web corpora &times; siglip2 / clip / nomic models.
+<br/>&mdash; Points or image thumbnails; linear, UMAP, and UMAP-3D projections;
+<br/>&emsp; pan, zoom, and rotate through the point cloud.
+<br/>&mdash; Every pixel is a query: ClickHouse aggregates the embedding space
+<br/>&emsp; server-side, on the fly.</p>
+
+<p style="margin-top: 0.5em;">Demo &rarr;</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/embeddings_info.png) center / contain no-repeat; background-color: #000;">
 </section>
 
 
@@ -1200,36 +1397,44 @@ FROM numbers_mt(480 * 360 * 60)
 <p style="line-height: 1.2; margin-top: -2.2em; font-size: 18pt;">
 <br/><span class="hilite">&mdash; 🇺🇸 San Francisco: Better Days Hackathon, Aug 28</span>
 <br/><span class="hilite">&mdash; 🇺🇸 Boston: Data Party Trivia Night, Aug 31</span>
-<br/><span class="hilite">&mdash; 🇳🇱 Amsterdam User Conference, Sep 1</span>
 <br/><span class="hilite">&mdash; 🇩🇪 Berlin: The Agentic Data Stack, Sep 2</span>
-<br/><span class="hilite">&mdash; 🇺🇸 New York City User Conference, Sep 10</span>
 <br/><span class="hilite">&mdash; 🇬🇧 London: Agentic Data Stack Breakfast, Sep 11</span>
 <br/><span class="hilite">&mdash; 🇳🇱 Amsterdam Meetup @ Adyen, Sep 15</span>
 <br/><span class="hilite">&mdash; 🇿🇦 Cape Town: AI Builders &amp; Databases, Sep 15</span>
 <br/><span class="hilite">&mdash; 🇫🇷 Paris + 🇨🇭 Zurich: The Agentic Data Stack, Sep 17</span>
-<br/><span class="hilite">&mdash; 🇮🇳 Bangalore User Conference, Sep 22</span>
-<br/><span class="hilite">&mdash; 🇸🇬 Singapore User Conference, Sep 24</span>
-<br/><span class="hilite">&mdash; 🇬🇧 London User Conference, Sep 30</span>
+<br/><span class="hilite">&mdash; 🇦🇺 Sydney: Build Better LLM Apps, Sep 17</span>
+<br/><span class="hilite">&mdash; 🇸🇪 Stockholm + 🇩🇰 Copenhagen: Trainings, Sep 23&ndash;24</span>
+<br/><span class="hilite">&mdash; 🇫🇷 Paris: AI Builders &amp; Databases, Sep 29</span>
+<br/><span class="hilite">&mdash; 🇬🇧 London: Query Optimization Workshop, Sep 29</span>
 </p>
+</section>
+
+<section class="slide">
+<h2 style="margin-top: -0.5em;">Open House Roadshow</h2>
+
+<img class="zoomable" style="margin-left: -100px; margin-right: -100px; margin-top: -1.5em; width: calc(100% + 200px); display: block;" src="pictures/openhouse_tour.jpg" alt="Open House by ClickHouse — the real-time database for AI conference" onclick="this.classList.toggle('zoomed'); event.stopPropagation();"/>
+
+<p style="line-height: 1.45; font-size: 16pt; text-align: center; margin-top: 1.5em;">🇳🇱 Amsterdam, Sep 1 &nbsp;·&nbsp; 🇺🇸 New York, Sep 10 &nbsp;·&nbsp; 🇮🇳 Bangalore, Sep 22
+<br/>🇸🇬 Singapore, Sep 24 &nbsp;·&nbsp; 🇬🇧 London, Sep 30 &nbsp;·&nbsp; 🇩🇪 Munich, Oct 6</p>
 </section>
 
 <section class="slide">
 <h2>Reading Corner 📖</h2>
 
-<a href="https://clickhouse.com/blog/reliable-opentelemetry-ingestion-at-scale"><img style="float: right; width: 20%; margin-right: -3em; image-rendering: pixelated; margin-top: -1em;" src="pictures/qr_otel.png" alt="QR: clickhouse.com/blog/reliable-opentelemetry-ingestion-at-scale"/></a>
+<a href="https://clickhouse.com/blog/clickbench-playground"><img style="float: right; width: 20%; margin-right: -3em; image-rendering: pixelated; margin-top: -1em;" src="pictures/qr_clickbench.png" alt="QR: clickhouse.com/blog/clickbench-playground"/></a>
 
 <p><a href="https://clickhouse.com/blog/">https://clickhouse.com/blog/</a></p>
 
 <p style="line-height: 1.5; margin-right: -5em;">
-&mdash; Ensuring reliable OpenTelemetry ingestion at scale
+&mdash; I created a playground for 110 database systems
+<br/>&mdash; ClickGap: autonomous QA for ClickHouse
+<br/>&mdash; ClickHouse Labs, led by Andy Pavlo
+<br/>&mdash; How Jump Trading uses ClickHouse with Iceberg
 <br/>&mdash; Shopify: observability for global-scale commerce
-<br/>&mdash; Sony LIV: live streaming analytics at billion-row scale
-<br/>&mdash; How iFood built its agentic security platform
+<br/>&mdash; Mercado Libre: 50x faster trace queries
 <br/>&mdash; Musinsa scaled its audience engine and cut TCO by 71%
-<br/>&mdash; bitdrift: mobile observability for ClickStack
-<br/>&mdash; ClickStack and Hud: runtime intelligence for AI development
-<br/>&mdash; Postgres isn't slow, your storage is
-<br/>&mdash; What's new with monitoring in PostgreSQL 19
+<br/>&mdash; Sony LIV: live streaming analytics at billion-row scale
+<br/>&mdash; Ensuring reliable OpenTelemetry ingestion at scale
 </p>
 </section>
 
