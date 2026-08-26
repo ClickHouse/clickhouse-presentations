@@ -197,16 +197,16 @@ SHOW CREATE USER app_user;   -- VALID UNTIL '2026-09-24 ...'
 <b style="color: green;">default_session_user</b>: anonymous  <span style="color: gray;"># instead of 'default'</span>
 
 protocols:
-    mysql_guests:
-        type: mysql
-        port: 9106
-        <b style="color: green;">default_session_user</b>: mysql_guest  <span style="color: gray;"># override per port</span>
+  mysql_guests:
+    type: mysql
+    port: 9106
+    <b style="color: green;">default_session_user</b>: mysql_guest  <span style="color: gray;"># override per port</span>
 </code></p>
 
-<p style="margin-top: 0.1em;">&mdash; The native, MySQL, and PostgreSQL protocols now accept
+<p style="margin-top: 0.1em;">&mdash; The native, HTTP, MySQL, and PostgreSQL protocols now accept
 <br/>&emsp; an empty user name instead of rejecting it.
 <br/>&mdash; Set it to an empty string to prohibit anonymous connections.
-<br/>&mdash; Interserver connections never use it.</p>
+</p>
 
 <!-- Demo (config as on the slide; users anonymous and mysql_guest created):
 
@@ -239,7 +239,7 @@ SELECT count() FROM system.query_log;
 <span style="color: gray;">-- ACCESS_DENIED — as before</span>
 </code></p>
 
-<p>&mdash; Debug your own slow queries without asking the DBA.</p>
+<p>&mdash; debug your own slow queries without asking anyone.</p>
 
 <!-- Demo:
 
@@ -256,20 +256,21 @@ clickhouse client --user analyst -q "SELECT count() FROM system.query_log"   -- 
 <section class="slide">
 <h2>The URL database engine</h2>
 
-<p style="margin-top: -0.5em;">26.7 unified the <b>url</b> function. 26.8 finishes the job:</p>
+<p style="margin-top: -0.5em;">Since 26.7, the <b>url</b> table function supports multi-protocol operation,
+<br/>and dispatches on file://, s3://, etc. to the specific implementation.</p>
 
-<p><code style="font-size: 14pt; line-height: 1.25;"><span style="color: gray;">-- a table name can simply be a URL now:</span>
-SELECT town, price FROM <b style="color: green;">'https://&hellip;/house_prices.parquet'</b>
-ORDER BY price DESC LIMIT 3;
-
-CREATE DATABASE web <b style="color: green;">ENGINE = URL</b>('https://example.com/data/');
-SELECT count() FROM web.`sales/2026.parquet`;  <span style="color: gray;">-- resolved against the base</span>
+<p style="margin-top: -0.5em;">In 26.8, you can create an <b>URL</b> database:</p>
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE DATABASE web <b style="color: green;">ENGINE = URL</b>('https://example.com/data/');
+USE web; SELECT count() FROM "sales/2026.parquet";
 </code></p>
 
-<p>&mdash; Dispatches by URL scheme: file, http(s), s3, gs, az, hdfs &mdash; uniformly.
-<br/>&mdash; It replaces <b>Filesystem</b> in the default database of <b>clickhouse-local</b>
-<br/>&emsp; (with a <b>file://</b> base), so plain file names keep working.
-<br/>&mdash; <b>s3_base</b> / <b>url_base</b> settings resolve relative URLs.</p>
+<p>In clickhouse-local, the default database is an URL <b>Overlay</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT * FROM 'hits.tsv'; <span style="color: gray;">-- select from local files</span>
+SELECT * FROM 'https://example.com/hits.tsv'; <span style="color: gray;">-- select from URLs</span>
+SELECT * FROM 's3://mybucket/hits.tsv'; <span style="color: gray;">-- select from S3</span>
+SELECT * FROM table; <span style="color: gray;">-- regular tables in the default database</span>
+</code></p>
 
 <!-- Demo:
 
@@ -286,7 +287,7 @@ SELECT count() FROM web.`house_parquet/house_0.parquet`;   -- 2772030
 <section class="slide">
 <h2>Atomic POPULATE</h2>
 
-<p style="margin-top: -0.5em;"><b>CREATE MATERIALIZED VIEW &hellip; POPULATE</b> used to lose rows
+<p style="margin-top: -0.5em;"><b>CREATE MATERIALIZED VIEW &hellip; POPULATE</b> used to skip records
 <br/>inserted while the view was being filled. Not anymore:</p>
 
 <p><code style="font-size: 13pt; line-height: 1.25;"><span style="color: gray;">-- 30 concurrent INSERTs racing the CREATE:</span>
@@ -295,13 +296,13 @@ CREATE MATERIALIZED VIEW mv ENGINE = SummingMergeTree ORDER BY ()
 
 SELECT (SELECT sum(v) FROM events) AS source,
        (SELECT sum(total) FROM mv) AS materialized;
-<span style="color: gray;">-- 20300000 = 20300000 — nothing lost, nothing duplicated ✓</span>
+<span style="color: gray;">-- 20300000 = 20300000 — nothing lost, nothing duplicated</span>
 </code></p>
 
-<p style="margin-top: 0em;">&mdash; The view subscription and the snapshot of existing data are set up
-<br/>&emsp; atomically, under a brief lock on the source (local inserts, MergeTree
-<br/>&emsp; and Memory sources; on by default: <b>materialized_views_populate_atomically</b>).
-<br/>&mdash; <b>POPULATE</b> now also works with <b>TO</b> &mdash; to backfill the target.</p>
+<p style="margin-top: 0em;">&mdash; <b>POPULATE</b> now also works with <b>TO</b> &mdash; to backfill the target.
+<br/>&mdash; the subscription is atomic with respect to inserts on the same local server
+<br/>&emsp; (distributed atomic subscription is to do).</p>
+
 
 <!-- Demo:
 
