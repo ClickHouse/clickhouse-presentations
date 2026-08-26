@@ -950,6 +950,15 @@ Memory difference is stable across runs; time fluctuates with machine load (min 
 <p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
 </section>
 
+<!-- The official versions benchmark (benchmark.clickhouse.com/versions), TPC-H + TPC-DS hot runs,
+     versions master (= 26.8, 2026-08-13) vs 26.7, 26.6, 26.5: overall, master is x1.08 vs x1.68-1.71 —
+     about 1.6x faster; in the TPC-H table, Q5 and Q8 time out (skulls) on 26.5-26.7 and run in ~0.5 s
+     on master, Q2 is ~50x faster, most queries are 4-6x faster — driven by statistics-based join
+     reordering. The slide links to the benchmark with this exact selection encoded in the URL. -->
+<section class="slide" style="background: url(pictures/versions_benchmark.png) center / contain no-repeat; background-color: #fff;">
+<a href="https://benchmark.clickhouse.com/versions/#version=+s|715|.6..3|652&amp;dataset=+ph|ps&amp;metric=hot&amp;queries=-" target="_blank" style="display: block; position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></a>
+</section>
+
 <section class="slide">
 <h2>IEJoin: fast inequality joins</h2>
 
