@@ -519,6 +519,14 @@ curl -s 'http://localhost:8123/?query=SELECT+number+FROM+numbers(3)&framing_outp
 <p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: Alexey Milovidov.</p>
 </section>
 
+<!-- The Metrics tab of the Play UI in action — it is fed by the multiplexed framing stream:
+     the GitHub events query on play.clickhouse.com (dark theme), reading 9.74 billion rows
+     at 17.94 GB/sec, with live values, rates, and sparklines per profile event.
+     The link restores the exact query with the repo_name column colorized (categorical). -->
+<section class="slide" style="background: url(pictures/play_metrics.png) center / contain no-repeat; background-color: #111;">
+<a href="https://play.clickhouse.com/play?user=play&amp;color_modes=%7B%22repo_name%22%3A%22categorical%22%7D&amp;tab=GitHub%20Events#U0VMRUNUIGNyZWF0ZWRfYXQsIGFjdG9yX2xvZ2luLCByZXBvX25hbWUsCiAgICAnaHR0cHM6Ly9naXRodWIuY29tLyd8fHJlcG9fbmFtZXx8KGV2ZW50X3R5cGUgTElLRSAnSXNzdWUlJyA/ICcvaXNzdWVzLycgOiAnL3B1bGwvJyl8fG51bWJlciBBUyB1cmwsCiAgICB0aXRsZQpGUk9NICJkZWZhdWx0Ii4iZ2l0aHViX2V2ZW50cyIKV0hFUkUgKHRpdGxlIElMSUtFICclQ2xpY2tIb3VzZSUnIE9SIGJvZHkgSUxJS0UgJyVDbGlja0hvdXNlJScpIEFORCByZXBvX25hbWUgTk9UIExJS0UgJ0NsaWNrSG91c2UvJScKT1JERVIgQlkgY3JlYXRlZF9hdCBERVNDIExJTUlUIDEwMA==" target="_blank" style="display: block; position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></a>
+</section>
+
 <section class="slide">
 <h2 style="font-size: 30pt;">parseQueryToJSON, formatQueryFromJSON</h2>
 
