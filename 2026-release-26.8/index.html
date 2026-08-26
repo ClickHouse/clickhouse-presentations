@@ -189,22 +189,40 @@ SHOW CREATE USER app_user;   -- VALID UNTIL '2026-09-24 ...'
 <section class="slide">
 <h2>default_session_user</h2>
 
-<p style="margin-top: -0.3em;">Which user is a connection <b>without a user name</b>?
+<p style="margin-top: -0.5em;">Which user is a connection <b>without a user name</b>?
 <br/>It used to be hardcoded to <b>default</b>. Now it is your choice:</p>
 
-<p><code style="font-size: 14pt; line-height: 1.25;"><span style="color: gray;">$ cat config.d/default_session_user.yaml</span>
+<p><code style="font-size: 12pt; line-height: 1.2;"><span style="color: gray;">$ cat config.d/default_session_user.yaml</span>
 
-<b style="color: green;">default_session_user</b>: anonymous
+<b style="color: green;">default_session_user</b>: anonymous  <span style="color: gray;"># instead of 'default'</span>
+
+protocols:
+    mysql_guests:
+        type: mysql
+        port: 9106
+        <b style="color: green;">default_session_user</b>: mysql_guest  <span style="color: gray;"># override per port</span>
 </code></p>
 
-<p>&mdash; The native, MySQL, and PostgreSQL protocols now accept
+<p style="margin-top: 0.1em;">&mdash; The native, MySQL, and PostgreSQL protocols now accept
 <br/>&emsp; an empty user name instead of rejecting it.
-<br/>&mdash; Overridable per listening port in the <b>protocols</b> section &mdash;
-<br/>&emsp; different ports can serve different anonymous users.
 <br/>&mdash; Set it to an empty string to prohibit anonymous connections.
 <br/>&mdash; Interserver connections never use it.</p>
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: Alexey Milovidov.</p>
+<!-- Demo (config as on the slide; users anonymous and mysql_guest created):
+
+curl -s 'http://127.0.0.1:8123/?query=SELECT%20currentUser()'   -- anonymous
+# MySQL protocol with a truly empty user name (CLI clients substitute the OS user, use pymysql):
+python3 -c "
+import pymysql
+for port in (9106, 9004):
+    conn = pymysql.connections.Connection(host='127.0.0.1', port=port, user='x', password='', defer_connect=True)
+    conn.user = b''; conn.connect()
+    cur = conn.cursor(); cur.execute('SELECT currentUser()'); print(port, '->', cur.fetchone()[0])"
+# 9106 -> mysql_guest    9004 -> anonymous
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0em;">Developer: Alexey Milovidov.</p>
 </section>
 
 <section class="slide">
@@ -471,9 +489,11 @@ curl -s 'http://localhost:8123/default/hits.csv.gz?limit=3&http_allow_database_a
 </section>
 
 <section class="slide" style="background: url(pictures/play_sort_filter.png) center / contain no-repeat; background-color: #111;">
+<a href="https://play.clickhouse.com/play?user=play" target="_blank" style="display: block; position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></a>
 </section>
 
 <section class="slide" style="background: url(pictures/play_pager.png) center / contain no-repeat; background-color: #111;">
+<a href="https://play.clickhouse.com/play?user=play" target="_blank" style="display: block; position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></a>
 </section>
 
 <section class="slide">
@@ -1320,6 +1340,7 @@ chdb :) SELECT sum(x) FROM t;   <span style="color: gray;">-- everything runs in
 </section>
 
 <section class="slide" style="background: url(pictures/chdb_wasm.png) center / contain no-repeat; background-color: #111;">
+<a href="https://wasm.chdb.io/" target="_blank" style="display: block; position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></a>
 </section>
 
 <section class="slide">
@@ -1342,6 +1363,7 @@ chdb :) SELECT sum(x) FROM t;   <span style="color: gray;">-- everything runs in
 </section>
 
 <section class="slide" style="background: url(pictures/clickbench_playground.png) center / contain no-repeat; background-color: #fdf6ec;">
+<a href="https://benchmark.clickhouse.com/playground/" target="_blank" style="display: block; position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></a>
 </section>
 
 <section class="slide">
@@ -1364,7 +1386,8 @@ chdb :) SELECT sum(x) FROM t;   <span style="color: gray;">-- everything runs in
 <p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Created by Igor Baliuk; continued by Alexey Milovidov.</p>
 </section>
 
-<section class="slide" style="background: url(pictures/fiddle.png) center / contain no-repeat; background-color: #fff;">
+<section class="slide" style="background: url(pictures/fiddle.png) center / contain no-repeat; background-color: #111;">
+<a href="https://fiddle.clickhouse.com/" target="_blank" style="display: block; position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></a>
 </section>
 
 <section class="slide">
@@ -1387,6 +1410,7 @@ chdb :) SELECT sum(x) FROM t;   <span style="color: gray;">-- everything runs in
 </section>
 
 <section class="slide" style="background: url(pictures/embeddings_info.png) center / contain no-repeat; background-color: #000;">
+<a href="https://embeddings.info/" target="_blank" style="display: block; position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></a>
 </section>
 
 
