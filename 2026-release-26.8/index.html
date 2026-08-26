@@ -619,21 +619,17 @@ FROM system.numbers |> LIMIT 10 |> WHERE number > 5;   -- 6 7 8 9
 <section class="slide">
 <h2>New chdig features</h2>
 
-<p style="margin-top: -0.3em;"><b>chdig</b> &mdash; a terminal UI for ClickHouse introspection.
-<br/>Version 26.8.1 is a big one:</p>
+<p style="margin-top: -0.5em;"><b>chdig</b> &mdash; a TUI for cluster introspection.</p>
 
-<p style="margin-top: 0.3em;">&mdash; Rewritten on <b style="color: green;">ratatui</b>: flicker-free updates, responsive
-<br/>&emsp; over slow SSH, near-zero idle CPU.
-<br/>&mdash; <b style="color: green;">tmux-style split panes</b>: Alt+= / Alt+- to split, drag to resize.
-<br/>&mdash; Configurable per-view settings and <b>startup layouts</b>,
-<br/>&emsp; tmuxinator-style &mdash; e.g. SELECTs in one pane, INSERTs in another.
-<br/>&mdash; Auto-refreshing server <b>flamegraphs</b> that highlight
-<br/>&emsp; what changed since the last refresh.
-<br/>&mdash; Shared logs keep their <b style="color: green;">colors</b>.</p>
+<img class="zoomable" style="width: 60%; display: block; margin: 0 auto;" src="pictures/chdig_overview.gif" alt="chdig: queries, a CPU flamegraph, and server logs in tmux-style panes" onclick="this.classList.toggle('zoomed'); event.stopPropagation();"/>
 
-<p style="margin-top: 0.3em;"><a href="https://github.com/azat/chdig">github.com/azat/chdig</a> &mdash; with a feature tour in the docs.</p>
+<!-- The animation is Documentation/images/overview.gif from github.com/azat/chdig at v26.8.1 (MIT license):
+     a configured pane layout (queries + CPU flamegraph + server logs), filtering, EXPLAIN, pane zoom.
+     v26.8.1 highlights kept for Q&A: rewritten on ratatui (flicker-free, near-zero idle CPU);
+     tmux-style split panes (Alt+= / Alt+-); tmuxinator-style startup layouts and per-view settings;
+     auto-refreshing flamegraphs that highlight changes; shared logs keep colors. -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Azat Khuzhin.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0em;"><a href="https://github.com/azat/chdig">github.com/azat/chdig</a>. Developer: Azat Khuzhin.</p>
 </section>
 
 
