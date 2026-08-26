@@ -528,7 +528,7 @@ curl -s 'http://localhost:8123/?query=SELECT+number+FROM+numbers(3)&framing_outp
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">parseQueryToJSON, formatQueryFromJSON</h2>
+<h2>Query to JSON</h2>
 
 <p style="margin-top: -0.3em;">The AST of a query, as JSON &mdash; in both directions:</p>
 
@@ -542,7 +542,7 @@ SELECT <b style="color: green;">formatQueryFromJSON</b>(json);   <span style="co
 
 <p style="margin-top: 0.3em;">&mdash; Analyze, validate, rewrite, and generate queries <b>programmatically</b> &mdash;
 <br/>&emsp; from any language with a JSON library.
-<br/>&mdash; Round-trip safe: parse &rarr; transform &rarr; format.</p>
+<br/>&mdash; Round-trip safe.</p>
 
 <!-- Demo:
 
@@ -587,7 +587,7 @@ SET enable_json_ast_dialect = 1, dialect = 'clickhouse_json';
 <section class="slide">
 <h2>Pipelined SQL</h2>
 
-<p style="margin-top: -0.3em;">Write queries top-down, like in GoogleSQL &mdash; each step follows the previous:</p>
+<p style="margin-top: -0.5em;">Write queries top-down - each step follows the previous:</p>
 
 <p><code style="font-size: 14pt; line-height: 1.25;">FROM hits
 <b style="color: green;">|&gt;</b> WHERE status = 404
@@ -596,10 +596,15 @@ SET enable_json_ast_dialect = 1, dialect = 'clickhouse_json';
 <b style="color: green;">|&gt;</b> LIMIT 3;
 </code></p>
 
-<p>&mdash; Each <b>|&gt;</b> wraps the query before it into a subquery,
-<br/>&emsp; so the result is the same AST as for nested subqueries &mdash; no new semantics.
-<br/>&mdash; A query can now start with <b>FROM</b>, and <b>SELECT</b> is optional
-<br/>&emsp; (defaults to <b>SELECT *</b>): <b>FROM hits |&gt; LIMIT 10</b> just works.</p>
+<p>Pipes can apply to any normal query:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT region_id, user_id, sum(session_length) AS total_duration
+FROM hits GROUP BY user_id
+<b style="color: green;">|&gt;</b> AGGREGATE avg(total_duration) GROUP BY region_id
+<b style="color: green;">|&gt;</b> ORDER BY 1 DESC
+<b style="color: green;">|&gt;</b> LIMIT 100;
+</code></p>
+
 
 <!-- Demo:
 
