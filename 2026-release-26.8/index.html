@@ -42,7 +42,7 @@
 <p><span class="hilite">&mdash; 98 new features 🌻</span></p>
 <p><span class="hilite">&mdash; 128 performance optimizations ⛱️</span></p>
 <p><span class="hilite">&mdash; 556 bug fixes 🍉</span></p>
-<p style="margin-top: 1em;"><span class="hilite">A long-term support release: maintained for one year.</span></p>
+<p style="margin-top: 1em;"><span class="hilite">A long-term support release.</span></p>
 </section>
 <!-- Feature count = 48 New Feature + 48 Experimental Feature + 2 new-feature backward-incompatible
      changes (VALID FOR interval in CREATE USER #110171; Date32 extended range #111534).
@@ -52,74 +52,77 @@
 
 Small And Nice
 
-Pipe operators
+run_query_in_background
+VALID FOR
+default_session_user
+system.user_query_log
+URL database engine and its usage in clickhouse-local
+Atomic POPULATE
 GROUPS frame for window functions
-Array subscripts and notHas
 mergedJSONPatch
-Date32: years 0 to 9999
-More small things
+Array subscripts
 
-HTTP Interface
+Interfaces
 
 CREATE HANDLER
-Tables as URL paths
+API for query construction
+Sorting, filtering, and paginating in the web UI
 Framing formats
-HTTP, elsewhere
-
-Text Search
-
-Tokenizers for every language
-Text indexes: faster answers
-
-Data Lakes and Integrations
-
-BigQuery
-Data lakes, elsewhere
-The URL database engine
-PostgreSQL, better together
-
-Observability and Operations
-
-run_query_in_background
-system.user_query_log
-Union system log tables
-The introspection port
-Keeper news
-Atomic POPULATE
-
-JOINs
-
-IEJoin
-parallel_full_sorting_merge
-Cascades optimizer
+parseQueryToJSON and formatQueryFromJSON
+clickhouse_json dialect
+Pipelined SQL
+New chdig features
 
 Performance
 
-Adaptive parallel GROUP BY
-GROUP BY + LIMIT: a bounded heap
-Aggregation, elsewhere
-Lazy reading of Parquet
-Parquet reader improvements
-Parallel INSERT SELECT by default
-Faster everything
+Adaptive aggregator
+Fused aggregation and topK
+Faster aggregation by strings
+Faster merging of aggregation states
+Faster uniq/uniqExact without key
+Adaptive codecs
+Lazy reading in Parquet
+Dictionary-based filtering in Parquet
+Spatial pruning for GeoParquet
+Lower memory usage for a huge number of parts
+Faster DISTINCT and window functions in partitioned tables
 
-Web UI
+Joins
 
-Sort, filter, and page results
-Web UI, elsewhere
+Column statistics are enabled by default - show versions benchmark
+IEJoin algorithm
+parallel_full_sorting_merge algorithm
+Cascades optimizer
 
-AI Functions
+Data Lakes
 
-aiSimilarity
-aiRedact and aiFilter
+S3 Tables
+Horizon
+Puffin
+Prefetching manifest files in Iceberg
+Table function bigquery
+
+Text Search
+
+japanese, chinese, icu, splitByRegexp
+Text indexes: faster answers
 
 Bonus
 
 Animated PNG
-ClickHouse in your browser (WASM)
+Introspection port
+On-disk storage for keeper
+Postgres protocol improvements
+chdb WASM
+ClickBench Playground
+New ClickHouse Fiddle
+Embeddings.info
 
 Meetups
-Reading Corner
+
+Open House Roadshow
+
+Reading Corner: ClickBench Playground, ClickGap, Shopify, Jump Trading, Musinsa, Mercado Libre, Andy Pavlo and ClickHouse Labs,
 
 -->
 
