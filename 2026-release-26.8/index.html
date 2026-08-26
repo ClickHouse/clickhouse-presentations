@@ -919,9 +919,9 @@ SELECT max(rn) FROM (SELECT row_number() OVER (PARTITION BY uid ORDER BY ts) AS 
 <section class="slide">
 <h2 style="font-size: 30pt;">Column statistics, enabled by default</h2>
 
-<p style="margin-top: -0.3em;">Column statistics are now materialized <b>on INSERT</b>
-<br/>(for tables up to 25 GiB) &mdash; not only on merges. The cost-based
-<br/>join optimizer gets accurate estimates for <b>freshly loaded tables</b>:</p>
+<p style="margin-top: -0.5em;">Column statistics are now materialized <b>on INSERT</b> while the table
+<br/>is small (table size + written block &le; 25 GiB) &mdash; not only on merges.
+<br/>The cost-based join optimizer gets estimates for <b>freshly loaded tables</b>:</p>
 
 <p><code style="font-size: 13pt; line-height: 1.25;"><span style="color: gray;">-- right after loading: 100M fact, 50M items, 1M users</span>
 SELECT count() FROM fact f
@@ -929,14 +929,18 @@ JOIN items i ON f.iid = i.iid
 JOIN users u ON f.uid = u.uid WHERE u.country = 'IS';
 </code></p>
 
-<p style="margin-top: 0.3em;"><b style="color: green;">Measured</b> &mdash; the same query on the same fresh data:</p>
+<p style="margin-top: 0em;"><b style="color: green;">Measured</b> &mdash; the same query on the same fresh data:</p>
 <p><b>26.7: <span style="color: red;">1.8</span> sec, <span style="color: red;">2.6 GB</span></b> (joins the 50M table first)
 <br/><b>26.8: <span style="color: green;">1.0</span> sec, <span style="color: green;">0.39 GB</span></b> (statistics reveal the selective filter)</p>
 
-<p style="margin-top: 0.2em;">&mdash; TPC-H at scale factor 40: Q5 and Q8 no longer time out.</p>
+<p style="margin-top: 0em;">&mdash; TPC-H at scale factor 40: Q5 and Q8 no longer time out.</p>
 
 <!-- Demo:
 
+Semantics of the threshold (materialize_statistics_on_insert_max_table_size = 25 GiB): checked PER WRITTEN BLOCK
+as current active table size + block size <= threshold — so a first bulk load into an empty table materializes
+statistics for every block even if the table ends up larger than 25 GiB; and a table past the threshold still
+gets statistics from merges — only the per-insert building stops. materialize_statistics_on_insert is a session setting.
 Fresh-loaded tables (no merges yet): fact 100M rows (uid % 1M, iid % 50M), users 1M (country 'IS' for 0.01%), items 50M.
 26.7 materializes statistics only on merges -> no stats right after load -> joins items (50M) first: 1.83s / 2.61 GB.
 26.8 (materialize_statistics_on_insert_max_table_size = 25 GiB) has stats -> joins filtered users first: 1.04s / 0.39 GB.
