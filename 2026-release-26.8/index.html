@@ -132,7 +132,7 @@ Reading Corner: ClickBench Playground, ClickGap, Shopify, Jump Trading, Musinsa,
 
 
 <section class="slide">
-<h2>run_query_in_background</h2>
+<h2>Run a query in the background</h2>
 
 <p style="margin-top: -0.3em;">Fire and forget: the server accepts the query, returns immediately,
 <br/>and runs it to completion &mdash; <b>whatever happens to your connection</b>:</p>
@@ -145,8 +145,8 @@ SELECT query_id, elapsed FROM system.processes;  <span style="color: gray;">-- t
 </code></p>
 
 <p>&mdash; For long <b>INSERT &hellip; SELECT</b>, <b>CREATE TABLE &hellip; AS SELECT</b>,
-<br/>&emsp; <b>CREATE MATERIALIZED VIEW &hellip; POPULATE</b> &mdash; that must not die
-<br/>&emsp; with a dropped connection, a closed laptop, or a flaky VPN.
+<br/>&emsp; <b>CREATE MATERIALIZED VIEW &hellip; POPULATE</b> &mdash; that must continue
+<br/>&emsp; with a dropped connection.
 <br/>&mdash; Track by <b>query_id</b> in <b>system.processes</b> and the query log.</p>
 
 <!-- Demo:
@@ -161,7 +161,7 @@ SELECT query_id, query FROM system.processes WHERE query_id = 'bg_demo_1';  -- s
 </section>
 
 <section class="slide">
-<h2>VALID FOR</h2>
+<h2>CREATE USER ... VALID FOR</h2>
 
 <p style="margin-top: -0.3em;">Time-limited credentials, without calculating dates by hand:</p>
 
@@ -174,9 +174,7 @@ ALTER USER bot <b style="color: green;">VALID FOR INTERVAL 90 DAY</b>;  <span st
 </code></p>
 
 <p>&mdash; A shorthand for <b>VALID UNTIL</b>: the deadline is computed
-<br/>&emsp; as the current time plus the interval, at execution time.
-<br/>&mdash; <b>system.users.valid_until</b> is now DateTime64 &mdash;
-<br/>&emsp; deadlines beyond the year 2106 are represented exactly.</p>
+<br/>&emsp; as the current time plus the interval, at execution time.</p>
 
 <!-- Demo:
 
