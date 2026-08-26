@@ -1154,8 +1154,11 @@ INSERT INTO bq_events VALUES (...);   <span style="color: gray;">-- writes work,
 
 <p style="margin-top: -0.5em;">Four new tokenizers for the <b>tokens</b> function and <b>text indexes</b>:</p>
 
-<p><code style="font-size: 13pt; line-height: 1.25;">SELECT tokens('ClickHouse是一个快速的开源数据库', <b style="color: green;">'chinese'</b>);
+<p><code style="font-size: 12pt; line-height: 1.2;">SELECT tokens('ClickHouse是一个快速的开源数据库', <b style="color: green;">'chinese'</b>);
 <span style="color: gray;">-- ['ClickHouse','是','一个','快速','的','开源','数据库'] — dictionary + HMM</span>
+
+SELECT tokens('日本語の形態素解析エンジン', <b style="color: green;">'japanese'</b>);
+<span style="color: gray;">-- ['日本語','の','形態','素','解析','エンジン'] — the MeCab morphological analyzer</span>
 
 SELECT tokens('こんにちは世界。データベースです。', <b style="color: green;">'icu'</b>, 'ja');
 <span style="color: gray;">-- ['こんにちは','世界','データベース','です'] — locale-aware Unicode segmentation</span>
@@ -1164,9 +1167,9 @@ SELECT tokens('C++ and C# are languages', <b style="color: green;">'splitByRegex
 <span style="color: gray;">-- ['C++','and','C#','are','languages'] — tokens other tokenizers would break</span>
 </code></p>
 
-<p style="margin-top: 0.2em;">&mdash; Also: <b style="color: green;">japanese</b> &mdash; the MeCab morphological analyzer (the dictionary
-<br/>&emsp; is loaded from a path in the server config, checksum-verified),
-<br/>&emsp; and <b>keyword</b> as an Elasticsearch-compatible alias for <b>array</b>.</p>
+<p style="margin-top: 0.2em;">&mdash; The <b>japanese</b> dictionary is loaded from a location in the server config
+<br/>&emsp; and verified against a SHA-256 checksum before use.
+<br/>&mdash; Also: <b>keyword</b> &mdash; an Elasticsearch-compatible alias for <b>array</b>.</p>
 
 <!-- Demo:
 
@@ -1174,6 +1177,15 @@ SELECT tokens('ClickHouse是一个快速的开源数据库', 'chinese');
 SELECT tokens('こんにちは世界。データベースです。', 'icu', 'ja');
 SELECT tokens('สวัสดีชาวโลก', 'icu', 'th');   -- Thai works too: ['สวัสดี','ชาว','โลก']
 SELECT tokens('C++ and C# are programming languages', 'splitByRegexp', '[^\\p{L}\\p{N}#+]+');
+
+japanese needs a MeCab dictionary in the server config (tested with the minimal fixture from
+tests/integration/test_japanese_tokenizer; use a full UniDic/IPADIC in production — the minimal
+dictionary splits 形態素 as 形態+素 and falls back to per-character for unknown words):
+<tokenizer><japanese>
+    <dictionary_location>file:///path/to/dic.tar.gz</dictionary_location>
+    <dictionary_sha>7477c765961bc60186bb517665194d6ee0d484071d3d06182de78f6d3da553f5</dictionary_sha>
+</japanese></tokenizer>
+SELECT tokens('日本語の形態素解析エンジン', 'japanese');   -- ['日本語','の','形態','素','解析','エンジン']
 
 -->
 
@@ -1232,6 +1244,7 @@ SELECT px AS x, py AS y, <b style="color: green;">t</b>, least(1.0, 2.2 * w * w)
     least(1.0, greatest(0., 1.8 * w - 0.35)) AS g,
     least(1.0, greatest(0., w &lt; 0.6 ? 0.4 + 1.2 * w : 2.2 - 2.4 * w)) AS b
 FROM numbers_mt(480 * 360 * 60)
+SETTINGS <b style="color: green;">output_format_image_width</b> = 480, <b style="color: green;">output_format_image_height</b> = 360
 <b style="color: green;">FORMAT PNG</b></code></p>
 
 <p style="margin-top: 0em;">&mdash; A morphing Julia set: 10M pixels &times; 48 iterations, rendered in 1.4 sec &rarr;</p>
@@ -1246,6 +1259,49 @@ FROM numbers_mt(480 * 360 * 60)
 
 <section class="slide" style="background: black; padding: 0;">
 <img style="width: 100%; height: 100%; object-fit: contain;" src="pictures/julia.png" alt="A morphing Julia set, rendered by ClickHouse as an animated PNG"/>
+</section>
+
+<section class="slide">
+<h2>Animated PNG, in practice</h2>
+
+<p style="margin-top: -0.5em;">One year of air traffic over Dubai International Airport &mdash; 24 million
+<br/>ADS-B traces from <a href="https://adsb.exposed/">adsb.exposed</a>, one frame per month, colored by airline:</p>
+
+<p style="margin-top: -0.5em;"><code style="font-size: 10pt; line-height: 1.1;">WITH 640 AS W, 480 AS H, 1150 AS px,                <span style="color: gray;">-- a ~6 km viewport</span>
+    toUInt32(4294967295 * ((55.356 + 180) / 360)) - intDiv(W, 2) * px AS x0,
+    toUInt32(4294967295 * (1/2 - log(tan(((25.259 + 90) / 360) * pi()))
+                               / (2 * pi()))) - intDiv(H, 2) * px AS y0,
+    <span style="color: gray;">-- the frame number: 0..11 for the past 12 months</span>
+    dateDiff('month', toStartOfMonth(subtractMonths(now(), 11)), toStartOfMonth(time)) AS <b style="color: green;">t</b>,
+    cityHash64(substring(aircraft_flight, 1, 3)) AS airline,        <span style="color: gray;">-- color by airline code</span>
+    pow(least(count() / 150, 1), 0.11) AS alpha,
+    avg(airline % 256) AS r0, avg(intDiv(airline, 256) % 256) AS g0,
+    avg(intDiv(airline, 65536) % 256) AS b0, greatest(r0, g0, b0, 1) AS m
+SELECT intDiv(mercator_x - x0, px) AS x, intDiv(mercator_y - y0, px) AS y, <b style="color: green;">t</b>,
+       r0 / m * alpha AS r, g0 / m * alpha AS g, b0 / m * alpha AS b
+FROM planes_mercator
+WHERE mercator_x &gt;= x0 AND mercator_x &lt; x0 + W * px
+  AND mercator_y &gt;= y0 AND mercator_y &lt; y0 + H * px
+  AND time &gt;= subtractMonths(toStartOfMonth(now()), 11) AND aircraft_flight != ''
+GROUP BY x, y, t
+SETTINGS <b style="color: green;">output_format_image_width</b> = 640, <b style="color: green;">output_format_image_height</b> = 480
+<b style="color: green;">FORMAT PNG</b></code></p>
+
+<p style="margin-top: -0.2em;">&mdash; Pixels you don't output are simply black &mdash; and rendered in 2 seconds &rarr;</p>
+
+<!-- Demo: pictures/dxb_airlines.png is produced by exactly this query, run in clickhouse local (26.8+)
+     against the public adsb.exposed backend by replacing the FROM clause with
+     remoteSecure('kvzqttvc2n.eu-west-1.aws.clickhouse-staging.com:9440', default.planes_mercator, 'website', '')
+     — the aggregation runs on the remote server, the animated PNG is encoded locally,
+     plus output_format_image_time_divisor_seconds = 2 for a 6-second loop.
+     Framing matches https://adsb.exposed/?dataset=Planes&zoom=15&lat=25.2536&lng=55.3637 ("All Airlines" mode);
+     the coloring formula follows the site's query. Checked 2026-08-26: 24.3M traces, 676 airline codes. -->
+
+<p style="color: gray; font-size: 11pt; margin-top: -0.3em;">Data: adsb.exposed &mdash; © adsb.lol (ODbL v1.0), © airplanes.live, © adsbexchange.com.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/dxb_airlines.png) center / contain no-repeat; background-color: #000;">
+<a href="https://adsb.exposed/?dataset=Planes&amp;zoom=15&amp;lat=25.2536&amp;lng=55.3637&amp;query=9ba733743fe7e64053f55d92b4ac1fc0" target="_blank" style="display: block; position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></a>
 </section>
 
 <section class="slide">
