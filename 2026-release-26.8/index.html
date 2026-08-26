@@ -479,33 +479,15 @@ GET /x=1/db/hits.parquet
 <p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Alexey Milovidov.</p>
 </section>
 
-<section class="slide">
-<h2 style="font-size: 32pt;">Sorting, filtering, and pagination</h2>
-
-<p style="margin-top: -0.3em;">The built-in <b>/play</b> UI shapes results <b>without editing the query</b> &mdash;
-<br/>powered by the same query-construction settings:</p>
-
-<p style="margin-top: 0.3em;">&mdash; <b style="color: green;">Sorting arrows</b> in every column header
-<br/>&emsp; (Shift-click for multi-column sort).
-<br/>&mdash; <b style="color: green;">A filter input</b> per column; a selected cell offers
-<br/>&emsp; the comparisons that fit its value.
-<br/>&mdash; <b style="color: green;">A pager</b> with an adjustable page size appears
-<br/>&emsp; under a result that does not fit on one screen.
-<br/>&mdash; All <b>server-side</b>: the whole result is shaped,
-<br/>&emsp; not the rows that happen to be displayed.
-<br/>&mdash; The sort, filters, and page travel in the URL &mdash;
-<br/>&emsp; a shared link reproduces the result.</p>
-
-<p style="margin-top: 0.5em;">Demo</p>
-
-<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
-</section>
-
-<section class="slide" style="background: url(pictures/play_sort_filter.png) center / contain no-repeat; background-color: #111;">
-<a href="https://play.clickhouse.com/play?user=play" target="_blank" style="display: block; position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></a>
-</section>
-
-<section class="slide" style="background: url(pictures/play_pager.png) center / contain no-repeat; background-color: #111;">
+<!-- Sorting, filtering, and pagination in the Web UI — shown live on play.clickhouse.com:
+     Hacker News stories, sorted by the score column (arrows in the header), filtered to by = 'pg'
+     (the filter chip), with the server-side pager below. All shaped server-side via the
+     order/filter/limit/page settings; the state travels in the URL.
+     Collage of two screenshots of https://play.clickhouse.com/play?user=play (dark theme):
+     SELECT title, by, score, time FROM hackernews WHERE type = 'story'
+     — then sort desc on score; filter input on `by`: = 'pg'; the pager strip is from the
+     unfiltered sorted result (3.7M rows -> pages of 1000). -->
+<section class="slide" style="background: url(pictures/play_collage.png) center / contain no-repeat; background-color: #111;">
 <a href="https://play.clickhouse.com/play?user=play" target="_blank" style="display: block; position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></a>
 </section>
 
