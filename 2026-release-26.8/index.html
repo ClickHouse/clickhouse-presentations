@@ -1300,25 +1300,6 @@ SETTINGS <b style="color: green;">output_format_image_width</b> = 1280, <b style
 </section>
 
 <section class="slide">
-<h2>The introspection port</h2>
-
-<p style="margin-top: -0.3em;">What is my server doing <b>while it starts up or shuts down</b>?
-<br/>A native protocol listener that opens <b>before</b> tables are attached
-<br/>and closes only <b>after</b> they are detached:</p>
-
-<p><code style="font-size: 14pt; line-height: 1.25;">$ clickhouse client --port 9099   <span style="color: gray;">-- during a slow startup</span>
-SHOW PROCESSLIST;
-SELECT * FROM system.stack_trace;
-</code></p>
-
-<p>&mdash; Watch table loading, catch shutdown hangs, instrument code paths.
-<br/>&mdash; The default <b>shutdown_wait_unfinished</b> grew from 5 to 120 seconds,
-<br/>&emsp; so the server no longer force-exits in the middle of a graceful shutdown.</p>
-
-<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Miсhael Stetsyuk.</p>
-</section>
-
-<section class="slide">
 <h2>On-disk storage for Keeper 🧪</h2>
 
 <p style="margin-top: -0.3em;">ClickHouse Keeper always kept the whole coordination state in memory.
@@ -1387,7 +1368,7 @@ chdb :) SELECT sum(x) FROM t;   <span style="color: gray;">-- everything runs in
 <br/>&mdash; The SQL parser also builds standalone (<b>utils/wasm-parser</b>) &mdash;
 <br/>&emsp; it powers the syntax highlighting of the Web UI and the new Fiddle.</p>
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developers: Alexey Milovidov, Auxten Wang (chDB).</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developers: Auxten Wang (chDB), Alexey Milovidov (parser).</p>
 </section>
 
 <section class="slide" style="background: url(pictures/chdb_wasm.png) center / contain no-repeat; background-color: #111;">
@@ -1441,33 +1422,25 @@ chdb :) SELECT sum(x) FROM t;   <span style="color: gray;">-- everything runs in
 <a href="https://fiddle.clickhouse.com/" target="_blank" style="display: block; position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></a>
 </section>
 
+<section class="slide" style="background: url(pictures/embeddings.png) center / contain no-repeat; background-color: #000;">
+<a href="https://embeddings.info/" target="_blank" style="display: block; position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></a>
+</section>
+
 <section class="slide">
 <h2>Embeddings.info</h2>
 
-<p style="margin-top: -0.3em;">A little showcase of what 26.8-era vector search can do:
-<br/><b style="color: green;">100 million embeddings</b>, explored live in your browser:</p>
+<p>Contains 100 million photos, 50 million comments, and the Internet
+<br/>&mdash; to explore as a vector embeddings in ClickHouse!</p>
 
-<p style="margin-top: 0.3em;"><b><a href="https://embeddings.info/">embeddings.info</a></b></p>
-
-<p style="margin-top: 0.3em;">&mdash; Photos, HackerNews, and Web corpora &times; siglip2 / clip / nomic models.
-<br/>&mdash; Points or image thumbnails; linear, UMAP, and UMAP-3D projections;
-<br/>&emsp; pan, zoom, and rotate through the point cloud.
-<br/>&mdash; Every pixel is a query: ClickHouse aggregates the embedding space
-<br/>&emsp; server-side, on the fly.</p>
-
-<p style="margin-top: 0.5em;">Demo &rarr;</p>
+<p style="margin-top: 0.5em;"><a href="https://embeddings.info/" target="_blank">Demo</a>.</p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
-</section>
-
-<section class="slide" style="background: url(pictures/embeddings_info.png) center / contain no-repeat; background-color: #000;">
-<a href="https://embeddings.info/" target="_blank" style="display: block; position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></a>
 </section>
 
 
 <section class="slide" style="background: url(pictures/wing.jpg); background-size: cover;">
 <h2>Meetups</h2>
-<p style="line-height: 1.2; margin-top: -2.2em; font-size: 18pt;">
+<p style="line-height: 1.3; margin-top: -2.2em; font-size: 18pt;">
 <br/><span class="hilite">&mdash; 🇺🇸 San Francisco: Better Days Hackathon, Aug 28</span>
 <br/><span class="hilite">&mdash; 🇺🇸 Boston: Data Party Trivia Night, Aug 31</span>
 <br/><span class="hilite">&mdash; 🇩🇪 Berlin: The Agentic Data Stack, Sep 2</span>
