@@ -698,7 +698,7 @@ clickhouse local --time --memory-usage --max_threads=32 -q "$Q"
 <span style="color: gray;">-- user_id String — the most common aggregation shape there is</span>
 </code></p>
 
-<p style="margin-top: 0.3em;"><b style="color: green;">Measured</b> &mdash; 200M rows, 10M distinct 16-byte keys:</p>
+<p style="margin-top: 0.3em;">Example: 200M rows, 10M distinct 16-byte keys:</p>
 <p><b>26.7: <span style="color: red;">1.60</span> sec.</b> &nbsp; <b>26.8: <span style="color: green;">0.88</span> sec.</b> (1.8x)</p>
 
 <p style="margin-top: 0.3em;">&mdash; On by default (<b>enable_packed_string_keys_in_aggregation</b>);
@@ -745,7 +745,7 @@ Q="SELECT s, count() FROM (SELECT concat('user_id_', toString(number % 10000000)
 <br/>&mdash; Better devirtualization and inlining of batch inserts.
 <br/>&mdash; Memory <b>prefetch</b> for the uniqExact hash set.</p>
 
-<p style="margin-top: 0.5em;"><b style="color: green;">Measured</b> &mdash; uniqExact over 500M rows with runs of equal values:</p>
+<p style="margin-top: 0.5em;">Example: uniqExact over 500M rows with runs of equal values:</p>
 <p><b>26.7: <span style="color: red;">1.82</span> sec.</b> &nbsp; <b>26.8: <span style="color: green;">1.22</span> sec.</b> (1.5x, single thread)</p>
 
 <!-- Demo:
@@ -774,7 +774,7 @@ FROM <b style="color: green;">mergeTreeCodecBlockCounts</b>(currentDatabase(), '
 <span style="color: gray;">-- ts: {'T64':611}, id: {'T64':1221}, price: {'LZ4':1221}, msg: {'LZ4':1832}</span>
 </code></p>
 
-<p style="margin-top: 0.3em;"><b style="color: green;">Measured</b> on a mixed 4-column table:
+<p style="margin-top: 0.3em;">Example: a mixed 4-column table:
 <b><span style="color: red;">117.6</span> MiB &rarr; <span style="color: green;">77.0</span> MiB</b> (-35%).</p>
 
 <!-- Demo:
@@ -802,7 +802,7 @@ ORDER BY score DESC <b style="color: green;">LIMIT 10</b>;
 <span style="color: gray;">-- on S3: reads 3.3 MB instead of 171 MB — 51x less I/O, 8x faster</span>
 </code></p>
 
-<p style="margin-top: 0.3em;"><b style="color: green;">Measured</b> on a local 880 MB Parquet file:
+<p style="margin-top: 0.3em;">Example: a local 880 MB Parquet file:
 <b><span style="color: red;">0.40</span> &rarr; <span style="color: green;">0.06</span> sec</b> (6.5x).</p>
 
 <p>&mdash; On by default; a file changed between the two passes is detected
@@ -868,7 +868,7 @@ WHERE device = 'device_255';
 <br/>copy, interned per column &mdash; parts that differ only in some columns
 <br/>(e.g. sparse vs dense) still share the rest.</p>
 
-<p style="margin-top: 0.5em;"><b style="color: green;">Measured</b> (from the PR) &mdash; 231 columns &times; 3000 small parts:</p>
+<p style="margin-top: 0.5em;">Example (from the PR): 231 columns &times; 3000 small parts:</p>
 <p><b>live server memory: <span style="color: red;">~840</span> MiB &rarr; <span style="color: green;">~240</span> MiB</b> (3.5x)</p>
 
 <p style="margin-top: 0.3em;">&mdash; The effect is largest for wide tables with many small parts.</p>
@@ -887,7 +887,7 @@ WHERE device = 'device_255';
 SELECT row_number() OVER (PARTITION BY uid ORDER BY ts) FROM pt;
 </code></p>
 
-<p style="margin-top: 0.3em;"><b style="color: green;">Measured</b> &mdash; 200M rows, 64 partitions:</p>
+<p style="margin-top: 0.3em;">Example: 200M rows, 64 partitions:</p>
 <p>DISTINCT: <b><span style="color: red;">16.6</span> s, <span style="color: red;">13.3</span> GB &rarr; <span style="color: green;">0.49</span> s, <span style="color: green;">2.5</span> GB</b> (34x!)
 <br/>Window function: <b><span style="color: red;">2.2</span> s &rarr; <span style="color: green;">0.46</span> s</b> (4.8x)</p>
 
@@ -958,7 +958,7 @@ SELECT max(rn) FROM (SELECT row_number() OVER (PARTITION BY uid ORDER BY ts) AS 
 ON t.time <b style="color: green;">&gt;</b> q.window_start AND t.time <b style="color: green;">&lt;</b> q.window_end;
 </code></p>
 
-<p style="margin-top: 0.3em;"><b style="color: green;">Measured</b> &mdash; 200K &times; 200K rows:</p>
+<p style="margin-top: 0.3em;">Example: 200K &times; 200K rows:</p>
 <p><b>26.7: <span style="color: red;">112</span> sec.</b> (cross join + filter)
 <br/><b>26.8: <span style="color: green;">1.06</span> sec.</b> (105x faster!)</p>
 
@@ -987,7 +987,7 @@ SELECT count() FROM trades t JOIN quotes q ON t.t > q.t1 AND t.t < q.t2 FORMAT N
 <p><code style="font-size: 14pt; line-height: 1.25;">SET join_algorithm = '<b style="color: green;">parallel_full_sorting_merge</b>';
 </code></p>
 
-<p style="margin-top: 0.3em;"><b style="color: green;">Measured</b> &mdash; 100M &times; 150M INNER JOIN, 32 threads:</p>
+<p style="margin-top: 0.3em;">Example: 100M &times; 150M INNER JOIN, 32 threads:</p>
 
 <table style="font-size: 15pt; width: 90%; margin-top: 0.3em; line-height: 1.15;">
 <tr><th>algorithm</th><th>time</th><th>peak memory</th></tr>
