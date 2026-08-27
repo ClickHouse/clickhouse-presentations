@@ -1296,8 +1296,36 @@ SETTINGS <b style="color: green;">output_format_image_width</b> = 1280, <b style
 <p style="color: gray; font-size: 11pt; margin-top: -0.5em;">Data: adsb.exposed &mdash; © adsb.lol (ODbL v1.0), © airplanes.live, © adsbexchange.com.</p>
 </section>
 
-<section class="slide" style="background: url(pictures/dxb_airlines.png) center / contain no-repeat; background-color: #000;">
-<a href="https://adsb.exposed/?dataset=Planes&amp;zoom=15&amp;lat=25.2536&amp;lng=55.3637&amp;query=9ba733743fe7e64053f55d92b4ac1fc0" target="_blank" style="display: block; position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></a>
+<section class="slide" style="background: black; padding: 0;">
+<a href="https://adsb.exposed/?dataset=Planes&amp;zoom=15&amp;lat=25.2536&amp;lng=55.3637&amp;query=9ba733743fe7e64053f55d92b4ac1fc0" target="_blank" style="display: block; position: absolute; left: 0; top: 0; width: 100%; height: 100%;"><img id="adsb-anim-img" src="pictures/dxb_airlines.png" alt="A year of air traffic over the airport, one frame per week, colored by airline" style="width: 100%; height: 100%; object-fit: contain;"/></a>
+<div id="adsb-anim-week" style="position: absolute; left: 24px; bottom: 18px; font-family: monospace; font-size: 21pt; color: white; background: rgba(0, 0, 0, 0.6); padding: 4px 14px; border-radius: 6px; pointer-events: none;">week of 2025-08-31</div>
+<script>
+(() => {
+    /// The date label is synchronized with the animated PNG by restarting the animation
+    /// (re-setting img.src makes it play from frame 0) and running the label off the same
+    /// wall clock. Browsers expose no API for the current APNG frame, so this restart-based
+    /// sync is re-armed whenever the slide becomes active or the tab becomes visible again.
+    const img = document.getElementById('adsb-anim-img');
+    const label = document.getElementById('adsb-anim-week');
+    const FRAMES = 52, MS_PER_FRAME = 100;                       /// 10 fps, 5.2 s loop
+    const LAST_WEEK = new Date(2026, 7, 23);                     /// the week of the last frame; update when re-rendering the PNG
+    let t0 = performance.now();
+    const resync = () => { const url = img.src; img.src = ''; img.src = url; t0 = performance.now(); };
+    const pad = n => String(n).padStart(2, '0');
+    const tick = () => {
+        const frame = Math.floor(((performance.now() - t0) % (FRAMES * MS_PER_FRAME)) / MS_PER_FRAME);
+        const d = new Date(LAST_WEEK);
+        d.setDate(d.getDate() - (FRAMES - 1 - frame) * 7);
+        label.textContent = 'week of ' + d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+        requestAnimationFrame(tick);
+    };
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) resync(); });
+    const section = img.closest('section');
+    new MutationObserver(() => { if (section.classList.contains('active')) resync(); })
+        .observe(section, { attributes: true, attributeFilter: ['class'] });
+    tick();
+})();
+</script>
 </section>
 
 <section class="slide">
