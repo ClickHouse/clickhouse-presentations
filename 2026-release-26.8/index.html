@@ -779,33 +779,21 @@ FROM <b style="color: green;">mergeTreeCodecBlockCounts</b>(currentDatabase(), '
 <section class="slide">
 <h2>Lazy reading in Parquet</h2>
 
-<p style="margin-top: -0.3em;">For <b>ORDER BY &hellip; LIMIT n</b> over Parquet &mdash; on object storage, Iceberg,
-<br/>and local files &mdash; the heavy columns are now read <b>only for the n rows
-<br/>that survive the LIMIT</b>:</p>
+<p style="margin-top: -0.3em;">Read the ORDER BY columns first,
+<br/>then read only records that survive the LIMIT for the rest:</p>
 
 <p><code style="font-size: 13pt; line-height: 1.25;">SELECT URL, Title
 FROM s3('s3://clickhouse-public-datasets/hits_compatible/<b>hits.parquet</b>')
 ORDER BY EventTime DESC <b style="color: green;">LIMIT 10</b>;
-<span style="color: gray;">-- ClickBench: 100 million rows, 14 GB</span>
+<span style="color: gray;">-- 100 million rows, 14 GB</span>
 </code></p>
 
-<p style="margin-top: 0.3em;">Example: reads <b><span style="color: red;">5.85</span> &rarr; <span style="color: green;">0.53</span> GB</b> from S3 (11x less traffic),
-<br/><b><span style="color: red;">4.9</span> &rarr; <span style="color: green;">1.7</span> sec</b>; Parquet pages touched: 24x fewer.</p>
+<p style="margin-top: 0.3em;">
+<b>26.7</b>: <span style="color: red;">4.9</span> sec, 5.85 GB read.
+<br/><b style="color: green;">26.8</b>: <span style="color: green;">1.7</span> sec, 0.53 GB read (11 times less).
+</p>
 
-<p>&mdash; On by default; a file changed between the two passes is detected
-<br/>&emsp; (<b>FILE_CHANGED_DURING_READ</b>) &mdash; no silently wrong results.</p>
-
-<!-- Demo (measured over real S3 from eu-central-1, master 26.9.1.62; sums of ReadBufferFromS3Bytes
-     and ParquetReadPages from --print-profile-events):
-
-clickhouse local --time --print-profile-events -q "SELECT URL, Title FROM s3('s3://clickhouse-public-datasets/hits_compatible/hits.parquet') ORDER BY EventTime DESC LIMIT 10 FORMAT Null"
--- lazy on (default): 0.53 GB read from S3, ParquetReadPages: 631, 1.66s
--- SETTINGS query_plan_optimize_lazy_materialization_for_object_storage = 0: 5.85 GB, 15471 pages, 4.85s
-For local files the setting is query_plan_optimize_lazy_materialization_for_file (0.81 -> 0.38s page-cache-warm).
-Note: the https://datasets.clickhouse.com CDN URL does not support the S3 ranged-read path from here —
-use the s3:// bucket URL as on the slide.
-
--->
+<!-- SET query_plan_optimize_lazy_materialization_for_object_storage = 0; -->
 
 <p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Alexey Milovidov.</p>
 </section>
@@ -987,7 +975,7 @@ SELECT count() FROM trades t JOIN quotes q ON t.t > q.t1 AND t.t < q.t2 FORMAT N
 </section>
 
 <section class="slide">
-<h2>parallel_full_sorting_merge</h2>
+<h2>parallel_full_sorting_merge JOIN</h2>
 
 <p style="margin-top: -0.5em;">A merge join that runs <b>on all cores</b>: the input is sharded by the hash
 <br/>of the keys into independent per-shard merge joins:</p>
@@ -1004,7 +992,7 @@ SELECT count() FROM trades t JOIN quotes q ON t.t > q.t1 AND t.t < q.t2 FORMAT N
 <tr><td>parallel_hash</td><td>20.4 s</td><td>14.1 GB</td></tr>
 </table>
 
-<p style="margin-top: 0.4em;">&mdash; The streaming, low-memory nature of a merge join &mdash; at hash-join speed.</p>
+<p style="margin-top: 0.4em;">The streaming, low-memory nature of a merge join at full speed.</p>
 
 <!-- Demo:
 
@@ -1125,10 +1113,10 @@ INSERT INTO horizon.`schema.trades` &hellip;;    <span style="color: gray;">-- c
 
 <p style="margin-top: 0.3em;">&mdash; The next manifest is now <b style="color: green;">prefetched</b> while the current one
 <br/>&emsp; is parsed &mdash; I/O overlaps with CPU work.
-<br/>&mdash; <b>Delete manifests</b> are read and decoded concurrently
+</p><p>&mdash; <b>Delete manifests</b> are read and decoded concurrently
 <br/>&emsp; (<b>iceberg_delete_manifest_decode_concurrency</b>, default 4) &mdash;
 <br/>&emsp; tables with many delete files start much faster.
-<br/>&mdash; Also: the S3 bucket-region cache now works for data lake catalogs,
+</p><p>&mdash; Also: the S3 bucket-region cache now works for data lake catalogs,
 <br/>&emsp; saving a region-resolution round trip per request.</p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Asya Shneerson, Konstantin Vedernikov.</p>
@@ -1162,7 +1150,7 @@ INSERT INTO bq_events VALUES (...);   <span style="color: gray;">-- writes work,
 </section>
 
 <section class="slide">
-<h2>Tokenizers for every language</h2>
+<h2>Speaks new languages</h2>
 
 <p style="margin-top: -0.5em;">Four new tokenizers for the <b>tokens</b> function and <b>text indexes</b>:</p>
 
@@ -1178,10 +1166,6 @@ SELECT tokens('こんにちは世界。データベースです。', <b style="c
 SELECT tokens('C++ and C# are languages', <b style="color: green;">'splitByRegexp'</b>, '[^\p{L}\p{N}#+]+');
 <span style="color: gray;">-- ['C++','and','C#','are','languages'] — tokens other tokenizers would break</span>
 </code></p>
-
-<p style="margin-top: 0.2em;">&mdash; The <b>japanese</b> dictionary is loaded from a location in the server config
-<br/>&emsp; and verified against a SHA-256 checksum before use.
-<br/>&mdash; Also: <b>keyword</b> &mdash; an Elasticsearch-compatible alias for <b>array</b>.</p>
 
 <!-- Demo:
 
@@ -1201,13 +1185,13 @@ SELECT tokens('日本語の形態素解析エンジン', 'japanese');   -- ['日
 
 -->
 
-<p style="color: gray; font-size: 13pt; margin-top: 0.3em;">Developers: Robert Schulze, Amos Bird, Jimmy Aguilar Mena.</p>
+<p style="color: gray; font-size: 13pt; margin-top: 5em;">Developers: Robert Schulze, Amos Bird, Jimmy Aguilar Mena.</p>
 </section>
 
 <section class="slide">
 <h2>Text indexes: faster answers</h2>
 
-<p style="margin-top: -0.3em;"><b>COUNT()</b> is answered directly from the <b>index cardinality metadata</b>:</p>
+<p style="margin-top: -0.3em;"><b>count()</b> is answered directly from the <b>index cardinality metadata</b>:</p>
 
 <p><code style="font-size: 14pt; line-height: 1.25;">SELECT count() FROM docs WHERE hasAnyTokens(body, ['fox']);
 <span style="color: gray;">-- 1 million rows matched; rows actually read: <b style="color: green;">1</b></span>
@@ -1215,8 +1199,8 @@ SELECT tokens('日本語の形態素解析エンジン', 'japanese');   -- ['日
 
 <p style="margin-top: 0.5em;">&mdash; Posting lists are now decoded <b style="color: green;">lazily</b>, at packed-block granularity,
 <br/>&emsp; instead of being eagerly materialized into bitmaps.
-<br/>&mdash; Optional cache for tokens <b>missing</b> from the index.
-<br/>&mdash; The v2 on-disk format (with positions for phrase search) is the default;
+</p><p>&mdash; Optional cache for tokens <b>missing</b> from the index.
+</p><p>&mdash; The v2 on-disk format (with positions for phrase search) is the default;
 <br/>&emsp; <b>text_index_version</b> controls it for rolling upgrades.</p>
 
 <!-- Demo:
@@ -1259,8 +1243,6 @@ FROM numbers_mt(480 * 360 * 60)
 SETTINGS <b style="color: green;">output_format_image_width</b> = 480, <b style="color: green;">output_format_image_height</b> = 360
 <b style="color: green;">FORMAT PNG</b></code></p>
 
-<p style="margin-top: 0em;">&mdash; A morphing Julia set: 10M pixels &times; 48 iterations, rendered in 1.4 sec &rarr;</p>
-
 <!-- Demo: see pictures/julia.png — rendered by exactly this query with
      output_format_image_width = 480, output_format_image_height = 360, output_format_image_time_divisor_seconds = 12.
      Also: output_format_image_streaming_animation streams frames as the query produces them,
@@ -1276,7 +1258,7 @@ SETTINGS <b style="color: green;">output_format_image_width</b> = 480, <b style=
 <section class="slide">
 <h2>Animated PNG, in practice</h2>
 
-<p style="margin-top: -0.5em;">One year of air traffic over Dubai International Airport &mdash; 24 million
+<p style="margin-top: -0.5em;">One year of air traffic over <span style="color: gray">Guess it</span> International Airport &mdash; 24 million
 <br/>ADS-B traces from <a href="https://adsb.exposed/">adsb.exposed</a>, one frame per month, colored by airline:</p>
 
 <p style="margin-top: -0.5em;"><code style="font-size: 10pt; line-height: 1.1;">WITH 1280 AS W, 960 AS H, 650 AS px,                <span style="color: gray;">-- a ~7 km viewport</span>
@@ -1298,8 +1280,6 @@ WHERE mercator_x &gt;= x0 AND mercator_x &lt; x0 + W * px
 GROUP BY x, y, t
 SETTINGS <b style="color: green;">output_format_image_width</b> = 1280, <b style="color: green;">output_format_image_height</b> = 960
 <b style="color: green;">FORMAT PNG</b></code></p>
-
-<p style="margin-top: -0.2em;">&mdash; Pixels you don't output are simply black &mdash; and rendered in 4 seconds &rarr;</p>
 
 <!-- Demo: pictures/dxb_airlines.png is produced by exactly this query, run in clickhouse local (26.8+)
      against the adsb.exposed backend by replacing the FROM clause with
