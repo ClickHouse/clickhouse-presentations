@@ -937,7 +937,7 @@ SELECT max(rn) FROM (SELECT row_number() OVER (PARTITION BY uid ORDER BY ts) AS 
      on master, Q2 is ~50x faster, most queries are 4-6x faster — driven by statistics-based join
      reordering. The slide links to the benchmark with this exact selection encoded in the URL. -->
 <section class="slide">
-<a href="https://benchmark.clickhouse.com/versions/" target="_blank">
+<a href="https://benchmark.clickhouse.com/versions/">
 <img style="width: 100%" src="pictures/versions_benchmark.png">
 <img style="height: 65%; float: left; padding-right: 1em;" src="pictures/versions_benchmark2.png">
 </a>
