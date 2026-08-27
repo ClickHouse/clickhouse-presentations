@@ -724,14 +724,11 @@ Q="SELECT s, count() FROM (SELECT concat('user_id_', toString(number % 10000000)
 <p style="margin-top: 0.3em;">&mdash; <b style="color: green;">Parallel single-level merge</b>: when the per-thread tables are small,
 <br/>&emsp; the key space is split by hash and merged by all threads &mdash;
 <br/>&emsp; no two threads ever touch the same key.
-<br/>&mdash; The single-level &rarr; two-level <b>conversion</b> of per-thread states
+</p><p>&mdash; The single-level -> two-level <b>conversion</b> of per-thread states
 <br/>&emsp; is parallelized too &mdash; fixing a 2&ndash;3x regression for heavy states
 <br/>&emsp; (e.g. COUNT(DISTINCT &hellip;)) on machines with very many cores.</p>
 
-<p style="margin-top: 0.5em;">ClickBench Q10/Q11 (COUNT(DISTINCT) with GROUP BY &hellip; LIMIT):
-<br/>~1.15x faster on top of everything else in this release.</p>
-
-<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developers: Nihal Z. Miaji, Alexey Milovidov.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developers: Nihal Z. Miaji.</p>
 </section>
 
 <section class="slide">
@@ -768,24 +765,13 @@ clickhouse local --time --max_threads=1 -q "$Q"   # 26.7: 1.82s   26.8: 1.22s
 ENGINE = MergeTree ORDER BY ts
 SETTINGS <b style="color: green;">allow_experimental_adaptive_codec_selection</b> = 1;
 
-<span style="color: gray;">-- inspect what the merge chose, with another 26.8 novelty:</span>
+<span style="color: gray;">-- inspect what the merge chose, with another 26.8 feature:</span>
 SELECT column, sumMap(codec_block_counts)
 FROM <b style="color: green;">mergeTreeCodecBlockCounts</b>(currentDatabase(), 't') GROUP BY column;
 <span style="color: gray;">-- ts: {'T64':611}, id: {'T64':1221}, price: {'LZ4':1221}, msg: {'LZ4':1832}</span>
 </code></p>
 
-<p style="margin-top: 0.3em;">Example: a mixed 4-column table:
-<b><span style="color: red;">117.6</span> MiB &rarr; <span style="color: green;">77.0</span> MiB</b> (-35%).</p>
-
-<!-- Demo:
-
-CREATE TABLE adaptive (...) ENGINE = MergeTree ORDER BY ts SETTINGS allow_experimental_adaptive_codec_selection = 1;
-INSERT INTO adaptive SELECT toDateTime('2026-08-01') + number, number * 2, round(sin(number / 100) * 100, 2), 'msg' || toString(number % 10) FROM numbers(10000000);
-OPTIMIZE TABLE adaptive FINAL;
-SELECT column, sumMap(codec_block_counts) FROM mergeTreeCodecBlockCounts(currentDatabase(), 'adaptive') GROUP BY column;
--- vs identical table without the setting: 117.63 MiB -> 76.96 MiB
-
--->
+<p>Good for tables with a lot of numeric data.</p>
 
 <p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Raufs Dunamalijevs.</p>
 </section>
