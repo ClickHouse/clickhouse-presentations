@@ -640,36 +640,32 @@ FROM system.numbers |> LIMIT 10 |> WHERE number > 5;   -- 6 7 8 9
 <section class="slide">
 <h2>Adaptive aggregator</h2>
 
-<p style="margin-top: -0.5em;">A new algorithm for parallel GROUP BY, <b>on by default</b>:
-<br/>each thread aggregates into its own hash table until it holds
-<br/>~16K keys, then <b>freezes</b> it:</p>
+<p>There are two ways of doing GROUP BY in parallel, opposite of each other:
+<br/>&mdash; <b>Merging aggregator</b> - aggregate arbitrary subsets of data independently in different threads in parallel, then merge in parallel.
+<br/>&mdash; <b>Splitting aggregator</b> - distributed data across the threads based on the hash of the aggregation key, so that different threads aggregate data for different keys, and the merge phase is unneeded.
+</p>
 
-<p style="margin-top: 0.3em;">&mdash; <b>Frequent keys</b> keep updating the small, cache-resident tables
-<br/>&emsp; with no coordination.
-<br/>&mdash; <b>Rare keys</b> are routed by hash into per-bucket backlogs
-<br/>&emsp; and aggregated exactly once, in the bucket-parallel merge.</p>
+<p>Both of these methods were implemented early in ClickHouse, before 2016.
+<br/><span style="color: gray; font-size: 11pt;">Parallel merge with two-level hash tables from ClickHouse was later adopted by DuckDB (in 2022) and Datafusion (in 2023).</p>
 
-<p style="margin-top: 0.5em;"><b style="color: green;">Measured</b> &mdash; GROUP BY over 100M distinct keys with heavy states:</p>
-<p><b>26.7: <span style="color: red;">0.81</span> sec.</b> &nbsp; <b>26.8: <span style="color: green;">0.43</span> sec.</b>
-<br/>&hellip;and with an early LIMIT: <b><span style="color: red;">3.1</span> sec &rarr; <span style="color: green;">0.03</span> sec</b> &mdash; up to 14x in CI perf tests.</p>
+<p>Now we have a <b>new algorithm</b> for parallel GROUP BY, which adaptively combines both approaches, and works well on different data distributions!</p>
 
-<!-- Demo:
+<p style="float: right;">Demo.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Nihal Z. Miaji.</p>
 
-Q="SELECT number, uniq(number) FROM numbers_mt(100000000) GROUP BY number FORMAT Null"
-clickhouse local --time --max_threads=32 -q "$Q"    # 26.7: 0.80s   26.8: 0.43s
-# with `LIMIT 100` appended: 26.7: 3.06s (destroying 100M unused states), 26.8: 0.03s
-# CI perf tests: "select number, uniq(number) from numbers_mt(1e8) group by number limit 100": 3.79s -> 0.23s
+<!--
+
+SELECT URL, count() FROM hits GROUP BY URL ORDER BY count() DESC LIMIT 100
+SETTINGS enable_adaptive_aggregator = 0
 
 -->
-
-<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Nihal Z. Miaji.</p>
 </section>
 
 <section class="slide">
 <h2>Fused aggregation and topK</h2>
 
-<p style="margin-top: -0.3em;">26.7 fused GROUP BY with ORDER BY LIMIT <b>for sorted tables</b>.
-<br/>26.8 does it for <b>any read order</b>: a bounded heap during aggregation
+<p style="margin-top: -0.3em;">26.7 fused GROUP BY with ORDER BY LIMIT <b>for tables sorted by the key</b>.
+<br/><b>26.8</b> does it for <b>any read order</b>: a bounded heap during aggregation
 <br/>prunes the groups that cannot appear in the result:</p>
 
 <p><code style="font-size: 14pt; line-height: 1.25;">SELECT k, count() FROM events
@@ -677,7 +673,7 @@ GROUP BY k <b style="color: green;">ORDER BY k LIMIT 10</b>;
 <span style="color: gray;">-- only ~10 groups are kept per thread, not 500 million</span>
 </code></p>
 
-<p style="margin-top: 0.3em;"><b style="color: green;">Measured</b> &mdash; 500M rows, ~500M distinct keys:</p>
+<p style="margin-top: 0.3em;">Example: 500M rows, ~500M distinct keys:</p>
 <p><b>26.7: <span style="color: red;">2.32</span> sec, <span style="color: red;">19.9 GB</span> of memory.</b>
 <br/><b>26.8: <span style="color: green;">0.22</span> sec, <span style="color: green;">2.3 MB</span> of memory.</b></p>
 
@@ -916,38 +912,23 @@ SELECT max(rn) FROM (SELECT row_number() OVER (PARTITION BY uid ORDER BY ts) AS 
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Column statistics, enabled by default</h2>
+<h2 style="font-size: 30pt;">Column statistics, enabled on INSERT</h2>
 
-<p style="margin-top: -0.5em;">Column statistics are now materialized <b>on INSERT</b> while the table
-<br/>is small (table size + written block &le; 25 GiB) &mdash; not only on merges.
-<br/>The cost-based join optimizer gets estimates for <b>freshly loaded tables</b>:</p>
+<p>Column statistics provide information about the distribution of values
+<br/>and this information is used by the query optimizer
+<br/>to drive optimizations, such as JOIN reordering.</p>
 
-<p><code style="font-size: 13pt; line-height: 1.25;"><span style="color: gray;">-- right after loading: 100M fact, 50M items, 1M users</span>
-SELECT count() FROM fact f
-JOIN items i ON f.iid = i.iid
-JOIN users u ON f.uid = u.uid WHERE u.country = 'IS';
-</code></p>
+<p><b>23.11</b>: first implementation of statistics with manual selection
+<br/><b>25.9</b>: an option for JOIN reordering with statistics
+<br/><b>25.10</b>: automatic choice of statistics for columns
+<br/><b>25.12</b>: the usage of statistics for optimization by default
+<br/><b>26.2</b>: efficient and compact storage format and cache for statistics
+<br/><b>26.3</b>: the on-disk format and the feature is GA
+<br/><b>26.4</b>: building statistics on background merges by default
+<br/><span style="color: green;"><b>26.8</b>: building statistics on INSERT by default for small tables</span>
+</p>
 
-<p style="margin-top: 0em;"><b style="color: green;">Measured</b> &mdash; the same query on the same fresh data:</p>
-<p><b>26.7: <span style="color: red;">1.8</span> sec, <span style="color: red;">2.6 GB</span></b> (joins the 50M table first)
-<br/><b>26.8: <span style="color: green;">1.0</span> sec, <span style="color: green;">0.39 GB</span></b> (statistics reveal the selective filter)</p>
-
-<p style="margin-top: 0em;">&mdash; TPC-H at scale factor 40: Q5 and Q8 no longer time out.</p>
-
-<!-- Demo:
-
-Semantics of the threshold (materialize_statistics_on_insert_max_table_size = 25 GiB): checked PER WRITTEN BLOCK
-as current active table size + block size <= threshold — so a first bulk load into an empty table materializes
-statistics for every block even if the table ends up larger than 25 GiB; and a table past the threshold still
-gets statistics from merges — only the per-insert building stops. materialize_statistics_on_insert is a session setting.
-Fresh-loaded tables (no merges yet): fact 100M rows (uid % 1M, iid % 50M), users 1M (country 'IS' for 0.01%), items 50M.
-26.7 materializes statistics only on merges -> no stats right after load -> joins items (50M) first: 1.83s / 2.61 GB.
-26.8 (materialize_statistics_on_insert_max_table_size = 25 GiB) has stats -> joins filtered users first: 1.04s / 0.39 GB.
-Memory difference is stable across runs; time fluctuates with machine load (min over runs shown).
-
--->
-
-<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Han Fei, Anton Popov, Rober Schulze, Alexey Milovidov, ...</p>
 </section>
 
 <!-- The official versions benchmark (benchmark.clickhouse.com/versions), TPC-H + TPC-DS hot runs,
@@ -955,8 +936,15 @@ Memory difference is stable across runs; time fluctuates with machine load (min 
      about 1.6x faster; in the TPC-H table, Q5 and Q8 time out (skulls) on 26.5-26.7 and run in ~0.5 s
      on master, Q2 is ~50x faster, most queries are 4-6x faster — driven by statistics-based join
      reordering. The slide links to the benchmark with this exact selection encoded in the URL. -->
-<section class="slide" style="background: url(pictures/versions_benchmark.png) center / contain no-repeat; background-color: #fff;">
-<a href="https://benchmark.clickhouse.com/versions/#version=+s|715|.6..3|652&amp;dataset=+ph|ps&amp;metric=hot&amp;queries=-" target="_blank" style="display: block; position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></a>
+<section class="slide">
+<a href="https://benchmark.clickhouse.com/versions/">
+<img style="width: 100%" src="pictures/versions_benchmark.png">
+<img style="height: 65%; float: left; padding-right: 1em;" src="pictures/versions_benchmark2.png">
+</a>
+<p><h3 style="line-height: 1.5; margin-top: -1em;">Column statistics by default</h3></p>
+<p><b style="color: green;">29%</b> improvement across <b>all</b> the benchmarks.</p>
+<p><b style="color: green;">4.5</b> times improvement on TPC-H
+<br/>(an old synthetic benchmark for JOINs).</p>
 </section>
 
 <section class="slide">
