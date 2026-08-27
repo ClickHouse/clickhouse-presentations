@@ -1259,16 +1259,16 @@ SETTINGS <b style="color: green;">output_format_image_width</b> = 480, <b style=
 <h2>Animated PNG, in practice</h2>
 
 <p style="margin-top: -0.5em;">One year of air traffic over <span style="color: gray">Guess it</span> International Airport &mdash; 24 million
-<br/>ADS-B traces from <a href="https://adsb.exposed/">adsb.exposed</a>, one frame per month, colored by airline:</p>
+<br/>ADS-B traces from <a href="https://adsb.exposed/">adsb.exposed</a>, one frame per week, colored by airline:</p>
 
 <p style="margin-top: -0.5em;"><code style="font-size: 10pt; line-height: 1.1;">WITH 1280 AS W, 960 AS H, 650 AS px,                <span style="color: gray;">-- a ~7 km viewport</span>
     toUInt32(4294967295 * ((55.361 + 180) / 360)) - intDiv(W, 2) * px AS x0,
     toUInt32(4294967295 * (1/2 - log(tan(((25.253 + 90) / 360) * pi()))
                                / (2 * pi()))) - intDiv(H, 2) * px AS y0,
-    <span style="color: gray;">-- the frame number: one per calendar month, 0..11</span>
-    dateDiff('month', toStartOfMonth(subtractMonths(now(), 11)), toStartOfMonth(time)) AS <b style="color: green;">t</b>,
+    <span style="color: gray;">-- the frame number: one per week, 0..51</span>
+    dateDiff('week', toStartOfWeek(subtractWeeks(now(), 51)), toStartOfWeek(time)) AS <b style="color: green;">t</b>,
     cityHash64(substring(aircraft_flight, 1, 3)) AS airline,        <span style="color: gray;">-- color by airline code</span>
-    pow(least(count() / 50, 1), 0.1) AS alpha,
+    pow(least(count() / 12, 1), 0.1) AS alpha,
     avg(airline % 256) AS r0, avg(intDiv(airline, 256) % 256) AS g0,
     avg(intDiv(airline, 65536) % 256) AS b0, greatest(r0, g0, b0, 1) AS m
 SELECT intDiv(mercator_x - x0, px) AS x, intDiv(mercator_y - y0, px) AS y, <b style="color: green;">t</b>,
@@ -1276,23 +1276,24 @@ SELECT intDiv(mercator_x - x0, px) AS x, intDiv(mercator_y - y0, px) AS y, <b st
 FROM planes_mercator
 WHERE mercator_x &gt;= x0 AND mercator_x &lt; x0 + W * px
   AND mercator_y &gt;= y0 AND mercator_y &lt; y0 + H * px
-  AND time &gt;= subtractMonths(toStartOfMonth(now()), 11) AND aircraft_flight != ''
+  AND time &gt;= toStartOfWeek(subtractWeeks(now(), 51)) AND aircraft_flight != ''
 GROUP BY x, y, t
-SETTINGS <b style="color: green;">output_format_image_width</b> = 1280, <b style="color: green;">output_format_image_height</b> = 960
+SETTINGS <b style="color: green;">output_format_image_width</b> = 1280, <b style="color: green;">output_format_image_height</b> = 960,
+         <b style="color: green;">output_format_image_time_divisor_seconds</b> = 10   <span style="color: gray;">-- 10 frames per second</span>
 <b style="color: green;">FORMAT PNG</b></code></p>
 
-<!-- Demo: pictures/dxb_airlines.png is produced by exactly this query, run in clickhouse local (26.8+)
-     against the adsb.exposed backend by replacing the FROM clause with
-     remoteSecure('kvzqttvc2n.eu-west-1.aws.clickhouse-staging.com:9440', default.planes_mercator, '<user>', '<password>')
-     — the aggregation runs on the remote server, the animated PNG is encoded locally,
-     plus output_format_image_time_divisor_seconds = 2 for a 6-second loop.
-     Frames are calendar months: Sep 2025 .. Aug 2026, the last one being the current month so far.
-     The public 'website' user works too, but its 1.05M result-row cap requires fetching month by month
-     at this resolution. Viewport: center 25.253, 55.361, ~7.0 x 5.3 km — the whole airport with margins;
-     also rendered at 1920x1440 and 1600x1200 — 1px traces get dimmer when downscaled, 1280x960 reads best.
-     The coloring formula follows the site's "All Airlines" mode. Checked 2026-08-26: 24.3M traces, 676 airline codes. -->
+<!-- Demo: pictures/dxb_airlines.png is produced by exactly this query (52 frames at 10 fps, a 5.2 s loop),
+     run in clickhouse local (26.8+) against the adsb.exposed backend — with credentials, replace the FROM
+     clause with remoteSecure('kvzqttvc2n.eu-west-1.aws.clickhouse-staging.com:9440', default.planes_mercator,
+     '<user>', '<password>') for a single-query render; the public 'website' user works too, but its 1.05M
+     result-row cap requires fetching week by week and rendering from the concatenated TSV.
+     Frames are weeks: 52 of them, ending with the current week. Weekly frames expose the real coverage
+     variance of the dataset (7K-47K traces/week over DXB in late 2025 vs ~1M recently, verified server-side) —
+     the flicker and the brightening through the loop are the data, not an artifact.
+     Viewport: center 25.253, 55.361, ~7.0 x 5.3 km; 1280x960 reads best (1px traces dim when downscaled).
+     The coloring formula follows the site's "All Airlines" mode. -->
 
-<p style="color: gray; font-size: 11pt; margin-top: -0.3em;">Data: adsb.exposed &mdash; © adsb.lol (ODbL v1.0), © airplanes.live, © adsbexchange.com.</p>
+<p style="color: gray; font-size: 11pt; margin-top: -0.5em;">Data: adsb.exposed &mdash; © adsb.lol (ODbL v1.0), © airplanes.live, © adsbexchange.com.</p>
 </section>
 
 <section class="slide" style="background: url(pictures/dxb_airlines.png) center / contain no-repeat; background-color: #000;">
