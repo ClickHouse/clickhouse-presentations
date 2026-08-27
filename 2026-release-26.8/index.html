@@ -784,27 +784,26 @@ FROM <b style="color: green;">mergeTreeCodecBlockCounts</b>(currentDatabase(), '
 <br/>that survive the LIMIT</b>:</p>
 
 <p><code style="font-size: 13pt; line-height: 1.25;">SELECT URL, Title
-FROM s3('https://datasets.clickhouse.com/hits_compatible/<b>hits.parquet</b>')
+FROM s3('s3://clickhouse-public-datasets/hits_compatible/<b>hits.parquet</b>')
 ORDER BY EventTime DESC <b style="color: green;">LIMIT 10</b>;
 <span style="color: gray;">-- ClickBench: 100 million rows, 14 GB</span>
 </code></p>
 
-<p style="margin-top: 0.3em;">Example: Parquet pages read: <b><span style="color: red;">15471</span> &rarr; <span style="color: green;">631</span></b> (24x less I/O),
-<br/><b><span style="color: red;">0.81</span> &rarr; <span style="color: green;">0.38</span> sec</b> even with the file in the page cache.</p>
+<p style="margin-top: 0.3em;">Example: reads <b><span style="color: red;">5.85</span> &rarr; <span style="color: green;">0.53</span> GB</b> from S3 (11x less traffic),
+<br/><b><span style="color: red;">4.9</span> &rarr; <span style="color: green;">1.7</span> sec</b>; Parquet pages touched: 24x fewer.</p>
 
 <p>&mdash; On by default; a file changed between the two passes is detected
 <br/>&emsp; (<b>FILE_CHANGED_DURING_READ</b>) &mdash; no silently wrong results.</p>
 
-<!-- Demo (measured on a local mirror of hits.parquet via the file() function, master 26.9.1.62;
-     the numbers are ParquetReadPages sums from --print-profile-events; ORDER BY column reads dominate
-     the remaining I/O. To be re-verified on real S3 — from this box, reads of
-     datasets.clickhouse.com fetch the whole object, so timings here are page-cache-warm):
+<!-- Demo (measured over real S3 from eu-central-1, master 26.9.1.62; sums of ReadBufferFromS3Bytes
+     and ParquetReadPages from --print-profile-events):
 
-clickhouse local --time --print-profile-events -q "SELECT URL, Title FROM file('hits.parquet') ORDER BY EventTime DESC LIMIT 10 FORMAT Null"
--- ParquetReadPages: 631, 0.378s
-... SETTINGS query_plan_optimize_lazy_materialization_for_file = 0   -- ParquetReadPages: 15471, 0.810s
-For s3() the setting is query_plan_optimize_lazy_materialization_for_object_storage.
-Changelog reference numbers on real S3 (200 MB file): 51x less I/O, 8x faster.
+clickhouse local --time --print-profile-events -q "SELECT URL, Title FROM s3('s3://clickhouse-public-datasets/hits_compatible/hits.parquet') ORDER BY EventTime DESC LIMIT 10 FORMAT Null"
+-- lazy on (default): 0.53 GB read from S3, ParquetReadPages: 631, 1.66s
+-- SETTINGS query_plan_optimize_lazy_materialization_for_object_storage = 0: 5.85 GB, 15471 pages, 4.85s
+For local files the setting is query_plan_optimize_lazy_materialization_for_file (0.81 -> 0.38s page-cache-warm).
+Note: the https://datasets.clickhouse.com CDN URL does not support the S3 ranged-read path from here —
+use the s3:// bucket URL as on the slide.
 
 -->
 
@@ -817,7 +816,7 @@ Changelog reference numbers on real S3 (200 MB file): 51x less I/O, 8x faster.
 <p style="margin-top: -0.3em;">A new way to <b>skip whole row groups</b>, for equality and IN conditions:</p>
 
 <p><code style="font-size: 13pt; line-height: 1.25;">SELECT count()
-FROM s3('https://datasets.clickhouse.com/hits_compatible/<b>hits.parquet</b>')
+FROM s3('s3://clickhouse-public-datasets/hits_compatible/<b>hits.parquet</b>')
 WHERE MobilePhoneModel = 'GT-C3262';
 <span style="color: gray;">-- 200 rows out of 100 million; the value is read from the dictionary page:</span>
 <span style="color: gray;">-- if it is not in the dictionary, the whole row group is skipped</span>
@@ -831,11 +830,14 @@ WHERE MobilePhoneModel = 'GT-C3262';
 <br/>&mdash; Applies when a column chunk is fully dictionary-encoded;
 <br/>&emsp; controlled by <b>input_format_parquet_dictionary_filter_push_down</b>.</p>
 
-<!-- Demo (measured on a local mirror of hits.parquet via file(), master 26.9.1.62; to be re-verified on S3):
+<!-- Demo (measured over real S3, master 26.9.1.62):
 
-clickhouse local --time --print-profile-events -q "SELECT count() FROM file('hits.parquet') WHERE MobilePhoneModel = 'GT-C3262' FORMAT Null"
+clickhouse local --time --print-profile-events -q "SELECT count() FROM s3('s3://clickhouse-public-datasets/hits_compatible/hits.parquet') WHERE MobilePhoneModel = 'GT-C3262' FORMAT Null"
 -- 200; ParquetReadPages: 12 (the filter column has one page per row group)
 ... SETTINGS input_format_parquet_dictionary_filter_push_down = 0    -- ParquetReadPages: 226
+The byte savings show up in decode work here (the filter column is tiny); when heavy columns are
+selected, the v3 reader's page-level filtering already narrows them, so bytes converge — the
+row-group skip is the stable metric.
 Verified with ParquetMetadata: bloom_filter_bytes = 0 for all columns (no bloom filters in the file);
 every row group's MobilePhoneModel range spans the value (min '' — the column is mostly empty).
 Other tested values: 'S720' -> 26 pages, 'GT-I9100T' -> 49, a value absent from the dataset -> 0.
