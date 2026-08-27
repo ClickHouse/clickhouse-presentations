@@ -783,22 +783,28 @@ FROM <b style="color: green;">mergeTreeCodecBlockCounts</b>(currentDatabase(), '
 <br/>and local files &mdash; the heavy columns are now read <b>only for the n rows
 <br/>that survive the LIMIT</b>:</p>
 
-<p><code style="font-size: 14pt; line-height: 1.25;">SELECT k, payload FROM s3('&hellip;/data.parquet')
-ORDER BY score DESC <b style="color: green;">LIMIT 10</b>;
-<span style="color: gray;">-- on S3: reads 3.3 MB instead of 171 MB — 51x less I/O, 8x faster</span>
+<p><code style="font-size: 13pt; line-height: 1.25;">SELECT URL, Title
+FROM s3('https://datasets.clickhouse.com/hits_compatible/<b>hits.parquet</b>')
+ORDER BY EventTime DESC <b style="color: green;">LIMIT 10</b>;
+<span style="color: gray;">-- ClickBench: 100 million rows, 14 GB</span>
 </code></p>
 
-<p style="margin-top: 0.3em;">Example: a local 880 MB Parquet file:
-<b><span style="color: red;">0.40</span> &rarr; <span style="color: green;">0.06</span> sec</b> (6.5x).</p>
+<p style="margin-top: 0.3em;">Example: Parquet pages read: <b><span style="color: red;">15471</span> &rarr; <span style="color: green;">631</span></b> (24x less I/O),
+<br/><b><span style="color: red;">0.81</span> &rarr; <span style="color: green;">0.38</span> sec</b> even with the file in the page cache.</p>
 
 <p>&mdash; On by default; a file changed between the two passes is detected
 <br/>&emsp; (<b>FILE_CHANGED_DURING_READ</b>) &mdash; no silently wrong results.</p>
 
-<!-- Demo:
+<!-- Demo (measured on a local mirror of hits.parquet via the file() function, master 26.9.1.62;
+     the numbers are ParquetReadPages sums from --print-profile-events; ORDER BY column reads dominate
+     the remaining I/O. To be re-verified on real S3 — from this box, reads of
+     datasets.clickhouse.com fetch the whole object, so timings here are page-cache-warm):
 
-SELECT number AS k, rand() % 1000000 AS score, randomPrintableASCII(200) AS payload FROM numbers(5000000) INTO OUTFILE '/tmp/lazy_test.parquet' FORMAT Parquet;
-clickhouse local --time -q "SELECT k, payload FROM file('/tmp/lazy_test.parquet') ORDER BY score DESC LIMIT 5 FORMAT Null"   -- 0.061s
-clickhouse local --time -q "... SETTINGS query_plan_optimize_lazy_materialization_for_file = 0"                              -- 0.397s
+clickhouse local --time --print-profile-events -q "SELECT URL, Title FROM file('hits.parquet') ORDER BY EventTime DESC LIMIT 10 FORMAT Null"
+-- ParquetReadPages: 631, 0.378s
+... SETTINGS query_plan_optimize_lazy_materialization_for_file = 0   -- ParquetReadPages: 15471, 0.810s
+For s3() the setting is query_plan_optimize_lazy_materialization_for_object_storage.
+Changelog reference numbers on real S3 (200 MB file): 51x less I/O, 8x faster.
 
 -->
 
@@ -810,19 +816,33 @@ clickhouse local --time -q "... SETTINGS query_plan_optimize_lazy_materializatio
 
 <p style="margin-top: -0.3em;">A new way to <b>skip whole row groups</b>, for equality and IN conditions:</p>
 
-<p><code style="font-size: 14pt; line-height: 1.25;">SELECT count() FROM s3('&hellip;/events.parquet')
-WHERE device = 'device_255';
-<span style="color: gray;">-- reads only the dictionary page of each column chunk:</span>
-<span style="color: gray;">-- if the value is not in the dictionary, the row group is skipped</span>
+<p><code style="font-size: 13pt; line-height: 1.25;">SELECT count()
+FROM s3('https://datasets.clickhouse.com/hits_compatible/<b>hits.parquet</b>')
+WHERE MobilePhoneModel = 'GT-C3262';
+<span style="color: gray;">-- 200 rows out of 100 million; the value is read from the dictionary page:</span>
+<span style="color: gray;">-- if it is not in the dictionary, the whole row group is skipped</span>
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; Works where min/max statistics cannot help (the value lies
-<br/>&emsp; inside every row group's range) and bloom filters are absent &mdash;
-<br/>&emsp; most Parquet writers do not write them by default.
+<p style="margin-top: 0.2em;">Example: row groups read: <b><span style="color: red;">226</span> &rarr; <span style="color: green;">12</span></b> &mdash; only the ones with this value.</p>
+
+<p style="margin-top: 0.2em;">&mdash; Works where min/max statistics cannot help (every row group
+<br/>&emsp; spans the value) and bloom filters are absent &mdash; most Parquet
+<br/>&emsp; writers, including the one that wrote hits.parquet, do not write them.
 <br/>&mdash; Applies when a column chunk is fully dictionary-encoded;
 <br/>&emsp; controlled by <b>input_format_parquet_dictionary_filter_push_down</b>.</p>
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: Alexey Milovidov.</p>
+<!-- Demo (measured on a local mirror of hits.parquet via file(), master 26.9.1.62; to be re-verified on S3):
+
+clickhouse local --time --print-profile-events -q "SELECT count() FROM file('hits.parquet') WHERE MobilePhoneModel = 'GT-C3262' FORMAT Null"
+-- 200; ParquetReadPages: 12 (the filter column has one page per row group)
+... SETTINGS input_format_parquet_dictionary_filter_push_down = 0    -- ParquetReadPages: 226
+Verified with ParquetMetadata: bloom_filter_bytes = 0 for all columns (no bloom filters in the file);
+every row group's MobilePhoneModel range spans the value (min '' — the column is mostly empty).
+Other tested values: 'S720' -> 26 pages, 'GT-I9100T' -> 49, a value absent from the dataset -> 0.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0em;">Developer: Alexey Milovidov.</p>
 </section>
 
 <section class="slide">
