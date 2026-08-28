@@ -763,7 +763,7 @@ clickhouse local --time --max_threads=1 -q "$Q"   # 26.7: 1.82s   26.8: 1.22s
 
 <p><code style="font-size: 13pt; line-height: 1.25;">CREATE TABLE t (ts DateTime, id UInt64, price Float64, msg String)
 ENGINE = MergeTree ORDER BY ts
-SETTINGS <b style="color: green;">allow_experimental_adaptive_codec_selection</b> = 1;
+SETTINGS <b style="color: green;">enable_adaptive_codec_selection</b> = 1;
 
 <span style="color: gray;">-- inspect what the merge chose, with another 26.8 feature:</span>
 SELECT column, sumMap(codec_block_counts)
