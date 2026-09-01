@@ -1,0 +1,1977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: My Favorite Features</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta property="og:image" content="pictures/preview.jpg">
+    <meta property="og:title" content="ClickHouse: My Favorite Features">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="pictures/preview.jpg">
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/themes/clickhouse/styles/styles.css">
+
+    <style>
+        code { display: block; white-space: pre; background-color: #EEE; }
+        p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+        p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+        table, tr, td { border: 0; }
+        .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: My Favorite Features</h1>
+        <p>Author: Alexey Milovidov, ClickHouse User Council, Amsterdam, 2026.</p>
+    </header>
+
+<section class="slide" id="cover" style="background: url(pictures/title.jpg); background-size: cover;">
+<img src="pictures/yellow-logo.svg" style="width: 8%; position: absolute; right: 25px; top: 40px;" />
+<h1 style="margin-top: 20px; line-height: 150%; font-size: 42pt;"><span class="hilite">My Favorite ClickHouse Features</span></h1>
+<p style="position: absolute; right: 5px; bottom: 0; color: white; font-size: 6pt; text-shadow: black 1px 1px 1px; background-color: rgba(0, 0, 0, 0.5);">Photo by Eduard Gordeev, <a style="color: #8CF" href="https://www.instagram.com/eduard_gordeev_">https://www.instagram.com/eduard_gordeev_</a></p>
+</section>
+
+<section class="slide" style="background: url(https://presentations.clickhouse.com/2026-release-26.7/pictures/back2.jpg); background-size: cover;">
+<h2><span class="hilite">My favorite features</span></h2>
+</section>
+
+<section class="slide" style="background: url(https://presentations.clickhouse.com/2026-release-26.8/pictures/back2.jpg); background-size: cover;">
+<h2><span class="hilite">One year of ClickHouse</span></h2>
+<p><span class="hilite">From <b>25.8</b> to <b>26.8</b> &mdash; thirteen releases:</span></p>
+<p><span class="hilite">&mdash; <b>512</b> new features 🍇</span></p>
+<p><span class="hilite">&mdash; <b>703</b> performance optimizations 🌠</span></p>
+<p><span class="hilite">&mdash; <b>2825</b> bug fixes 🐝</span></p>
+<p style="margin-top: 1em;"><span class="hilite">Which one is your favorite?</span></p>
+</section>
+
+<section class="slide" style="background: url(https://presentations.clickhouse.com/2026-release-26.5/pictures/back3.jpg); background-size: cover;">
+<h2><span class="hilite">Query Engine</span></h2>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">DateTime64 and Date32: years 0 to 9999</h2>
+
+<p>The supported range grew from [1900, 2299]
+<br/>to <b style="color: green;">[0000-01-01, 9999-12-31]</b>:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.2;">SELECT toDateTime64('9999-12-31 23:59:59.999', 3);
+<span style="color: gray;">-- 9999-12-31 23:59:59.999   (was clamped to 2299-12-31)</span>
+
+SELECT age('year', toDateTime64('0079-08-24 13:00:00', 0), now());
+<span style="color: gray;">-- 1946 years since the eruption of Vesuvius</span>
+
+SELECT toDateTime64('1789-07-14 12:00:00', 0) + INTERVAL 237 YEAR;
+<span style="color: gray;">-- 2026-07-14 12:00:00</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">In <b style="color: green;">26.8</b>, <b>Date32</b> got the same range &mdash; parsing and conversions<br/>accept it instead of silently clamping.</p>
+<p style="margin-top: 0.3em;">Uses the Proleptic Gregorian Calendar.</p>
+
+<!-- Demo:
+
+SELECT toDateTime64('9999-12-31 23:59:59.999', 3), toDateTime64('0079-08-24 13:00:00', 0);
+-- On 26.6 the first one returns 2299-12-31 23:59:59.999
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Correlated Subqueries</h2>
+
+<p style="margin-top: -1em;">&mdash; are subqueries that depend on the columns from the outer scope.</p>
+<p><code style="font-size: 14pt; line-height: 1.25; white-space: pre-wrap;">SELECT * FROM users AS <b style="color: brown;">u1</b> WHERE EXISTS <span style="color: blue;">(
+    SELECT * FROM users2 AS u2 WHERE <b style="color: brown;">u1.age</b> = u2.age)</span>
+</code></p>
+
+<p>They can appear in many different contexts: EXISTS, IN, scalar...</p>
+<p>In <b>25.4</b> we supported correlated subqueries inside the <b>WHERE</b> clause with the <b>EXISTS</b> operator.</p>
+<p>In <b style="color: green;">25.5</b> we support <b style="color: green;">scalar correlated subqueries</b> inside the <b>WHERE</b> clause
+<br/>and correlated subqueries <b style="color: green;">inside SELECT</b>!</p>
+
+<p>Now it is enough to cover the <b>TPC-H</b> test suite without modifying queries.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Dmitry Novik.</p>
+</section>
+
+<section class="slide">
+<h2>Materialized CTE</h2>
+
+<p>CTEs (subqueries in the WITH clause) can now be <b style="color: green;">evaluated only once</b>
+<br/>and stored in temporary tables:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SET enable_materialized_cte = 1;
+
+WITH <b>top_users</b> AS <b style="color: green;">MATERIALIZED</b> (
+  SELECT user_id, count() AS cnt
+  FROM events GROUP BY user_id
+  ORDER BY cnt DESC LIMIT 1000)
+SELECT * FROM <b>top_users</b>
+INNER JOIN (SELECT user_id FROM <b>top_users</b> WHERE ...) ...
+</code></p>
+
+<!--
+
+SET enable_materialized_cte = 1;
+
+WITH town_type_prices AS -- MATERIALIZED
+    (
+        SELECT
+            town,
+            type,
+            toYear(date) AS year,
+            median(price) AS median_price
+        FROM uk_price_paid
+        WHERE (year >= 2013) AND (type != 'other')
+        GROUP BY
+            town,
+            type,
+            year
+        HAVING count() >= 10
+    )
+SELECT
+    now.town,
+    now.type AS rising_type,
+    other_now.type AS falling_type,
+    formatReadableQuantity(then.median_price) AS rising_price_2013,
+    formatReadableQuantity(now.median_price) AS rising_price_2023,
+    formatReadableQuantity(other_then.median_price) AS falling_price_2013,
+    formatReadableQuantity(other_now.median_price) AS falling_price_2023,
+    round(((now.median_price / then.median_price) - 1) * 100) AS rising_growth_pct,
+    round(((other_now.median_price / other_then.median_price) - 1) * 100) AS falling_growth_pct
+FROM town_type_prices AS now
+INNER JOIN town_type_prices AS then ON (now.town = then.town) AND (now.type = then.type) AND (then.year = 2013)
+INNER JOIN town_type_prices AS other_now ON (now.town = other_now.town) AND (now.type < other_now.type) AND (now.year = other_now.year)
+INNER JOIN town_type_prices AS other_then ON (other_now.town = other_then.town) AND (other_now.type = other_then.type) AND (other_then.year = 2013)
+WHERE (now.year = 2023) AND (then.median_price < other_then.median_price) AND (now.median_price > other_now.median_price)
+ORDER BY (now.median_price / other_now.median_price) - (then.median_price / other_then.median_price) DESC
+LIMIT 20;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Dmitry Novik.</p>
+</section>
+
+<section class="slide">
+<h2>JOIN Reordering</h2>
+
+<p>Reordering of the JOIN graph, based on the amount of data to read
+<br/>and on the column-level statistics.</p>
+
+<p><code style="font-size: 18pt; line-height: 1.25;">:) SET query_plan_optimize_join_order_limit = 10;
+:) SET allow_statistics_optimize = 1;
+</code></p>
+
+
+<!--
+
+CREATE TABLE big (k UInt64, s String) ORDER BY ();
+CREATE TABLE small (k UInt64, s String) ORDER BY ();
+
+INSERT INTO big SELECT number, 'table 1: ' || number FROM numbers_mt(1e8);
+INSERT INTO small SELECT number * 1000000 AS k, 'table 2: ' || k FROM numbers_mt(1e6);
+
+SELECT k, big.s, small.s FROM small JOIN big USING k SETTINGS query_plan_optimize_join_order_limit = 0;
+SELECT k, big.s, small.s FROM small JOIN big USING k SETTINGS query_plan_optimize_join_order_limit = 10;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Vladimir Cherkasov.</p>
+</section>
+
+<section class="slide">
+<a href="https://benchmark.clickhouse.com/versions/">
+<img style="width: 100%" src="https://presentations.clickhouse.com/2026-release-26.8/pictures/versions_benchmark.png">
+<img style="height: 65%; float: left; padding-right: 1em;" src="https://presentations.clickhouse.com/2026-release-26.8/pictures/versions_benchmark2.png">
+</a>
+<p><h3 style="line-height: 1.5; margin-top: -1em;">Column statistics by default</h3></p>
+<p><b style="color: green;">29%</b> improvement across <b>all</b> the benchmarks.</p>
+<p><b style="color: green;">4.5</b> times improvement on TPC-H
+<br/>(an old synthetic benchmark for JOINs).</p>
+</section>
+
+<section class="slide">
+<h2>JOIN Reordering, by default</h2>
+
+<p>Since <b style="color: green;">25.12</b>, JOIN reordering is enabled <b>by default</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">query_plan_optimize_join_order_limit = <b style="color: green;">10</b>  <span style="color: gray;">-- was 1</span>
+allow_statistics_optimize = <b style="color: green;">1</b>            <span style="color: gray;">-- was 0</span>
+</code></p>
+
+<p>&mdash; The optimizer reorders up to 10 tables using column-level statistics.</p>
+<p>&mdash; In <b>26.4</b>, statistics are collected <b>by default</b> on merges;
+<br/>&emsp; in <b>26.8</b>, also on <b>INSERT</b> &mdash; so freshly loaded dimension tables
+<br/>&emsp; already have good estimates.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Vladimir Cherkasov, Alexander Gololobov, Nikita Taranov.</p>
+</section>
+
+<section class="slide">
+<h2>DPsub JOIN reordering</h2>
+
+<p>A new JOIN-order optimization algorithm &mdash;
+<br/><b>dynamic programming over subsets</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SET query_plan_optimize_join_order_algorithm = '<b style="color: green;">dpsub</b>';
+</code></p>
+
+<p>&mdash; Considers <b>all</b> JOIN orders &mdash; finds the optimal plan.
+<br/>&mdash; Lower optimization overhead than <b>dpsize</b>.
+<br/>&mdash; Supports <b>non-inner</b> joins, unlike dpsize and dphyp.
+<br/>&mdash; Algorithms can be chained: <b>'dpsub,greedy'</b> &mdash; tried in order,
+<br/>&emsp; with fallback for queries an algorithm cannot handle.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1.5em;">Developer: Fisnik Kastrati.</p>
+</section>
+
+<section class="slide">
+<h2>Query cache for subqueries</h2>
+
+<p style="margin-top: -1em;">You can control query caching on a per-subquery basis:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -2em;"><span style="color: gray;">-- Enable query cache only for outmost query, as usual:</span>
+SELECT * FROM (SELECT * FROM table) SETTINGS <b style="color: green;">use_query_cache = 1</b>;
+
+<span style="color: gray;">-- Enable query cache for subquery (new in 26.5):</span>
+SELECT * FROM (SELECT * FROM table SETTINGS <b style="color: green;">use_query_cache = 1</b>);
+
+<span style="color: gray;">-- Enable propagation of query cache into all subqueries (new in 26.5):</span>
+SELECT * FROM (SELECT * FROM table)
+  SETTINGS <b style="color: green;">use_query_cache_for_subqueries = 1</b>;
+
+<span style="color: gray;">-- Enable propagation of query cache into all subqueries but disable in one:</span>
+SELECT * FROM (SELECT * FROM table1) t1
+  NATURAL JOIN (SELECT * FROM table2 <b style="color: green;">SETTINGS use_query_cache = 0</b>) t2
+  <b style="color: green;">SETTINGS use_query_cache_for_subqueries = 1</b>;
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Nikita Barannik, Vincent Voyer.</p>
+</section>
+
+<section class="slide">
+<h2>Distributed Processing For Large Files</h2>
+
+<p>ClickHouse runs distributed queries:
+<br/>&mdash; with <b>Distributed</b> tables;
+<br/>&mdash; with <b>Replicated</b> tables, using "parallel replicas";
+<br/>&mdash; on top of a bunch of external files, e.g., Parquet files on S3,
+<br/>&emsp; using the <b>s3Cluster</b> table function.
+</p>
+
+<p>But what if there is only a single (or a few) large files?</p>
+
+<p>Since <b style="color: green">25.11</b>, ClickHouse splits the work using ranges
+<br/>(row groups) inside single files!</p>
+
+<p>Many servers of the cluster will "eat" different portions of a file.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Konstantin Vedernikov.</p>
+</section>
+
+<section class="slide" style="overflow-y: scroll; outline: none;">
+<h2>Automatic Parallel Replicas</h2>
+
+<p>25.12 introduces <b>automatic_parallel_replicas_mode</b>,
+<br/>which collects statistics in the runtime and decides when
+<br/>&mdash; a query is heavy enough and has to be run distributed;
+<br/>&mdash; a query is quick or has a lot of network transfer;
+</p>
+
+<img src="https://presentations.clickhouse.com/2025-release-25.12/pictures/pr.png" style="width: 100%">
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Nikita Taranov.</p>
+</section>
+
+<section class="slide">
+<h2>Max-Min Scheduler</h2>
+
+<p>The server can be configured with <b>concurrent_threads_scheduler</b>,
+<br/>which gives better latency distribution on highly concurrent queries:</p>
+
+<img src="https://presentations.clickhouse.com/2026-release-26.1/pictures/scheduler.png" style="margin-left: -100px; margin-right: -100px; width: calc(100% + 200px);">
+
+<p><code style="font-size: 14pt; line-height: 1.5em;">$ cat config.d/scheduler.yaml
+<b>concurrent_threads_scheduler:</b> max_min_fair</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Sergei Trifonov.</p>
+</section>
+
+<section class="slide">
+<h2>Async Insert by default</h2>
+
+<p>Starting from <b>26.3 LTS</b>, <b style="color: green;">async inserts are enabled by default</b>.</p>
+
+<p>&mdash; ClickHouse will batch all small inserts automatically.
+<br/>&mdash; No configuration changes needed for most users.
+<br/>&mdash; Reduces the number of parts created by frequent small inserts.</p>
+
+<p>New: consistent mechanism of deduplication of both regular and asynchronous inserts,
+including inserts with materialized views.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Sema Checherinda.</p>
+</section>
+
+<section class="slide" style="background: url(https://presentations.clickhouse.com/2026-release-26.8/pictures/back8.jpg); background-size: cover;">
+<h2><span class="hilite">Data Lakes</span></h2>
+</section>
+
+<section class="slide">
+<h2>Data Lakes Performance</h2>
+
+<img src="https://presentations.clickhouse.com/2026-release-26.3/pictures/datalakes.png" style="width: 50%; float: right; margin-top: -2em; margin-right: -3em; padding-left: 2em;">
+
+<p>Reading from data lakes is now <b style="color: green;">tens of times faster</b>
+on multi-core machines, when reading from a small number of files.</p>
+<p>Applies to Iceberg, Delta Lake, Hudi, and all object storage reads.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Dictionary-based filtering in Parquet</h2>
+
+<p style="margin-top: -0.3em;">A new way to <b>skip whole row groups</b>, for equality and IN conditions:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.25;">SELECT count()
+FROM s3('s3://clickhouse-public-datasets/hits_compatible/<b>hits.parquet</b>')
+WHERE MobilePhoneModel = 'GT-C3262';
+<span style="color: gray;">-- 200 rows out of 100 million; the value is read from the dictionary page:</span>
+<span style="color: gray;">-- if it is not in the dictionary, the whole row group is skipped</span>
+</code></p>
+
+<p style="margin-top: 0.2em;">Example: row groups read: <b><span style="color: red;">226</span> &rarr; <span style="color: green;">12</span></b> &mdash; only the ones with this value.</p>
+
+<p style="margin-top: 0.2em;">&mdash; Works where min/max statistics cannot help (every row group
+<br/>&emsp; spans the value) and bloom filters are absent &mdash; most Parquet
+<br/>&emsp; writers, including the one that wrote hits.parquet, do not write them.
+<br/>&mdash; Applies when a column chunk is fully dictionary-encoded;
+<br/>&emsp; controlled by <b>input_format_parquet_dictionary_filter_push_down</b>.</p>
+
+<!-- Demo (measured over real S3, master 26.9.1.62):
+
+clickhouse local --time --print-profile-events -q "SELECT count() FROM s3('s3://clickhouse-public-datasets/hits_compatible/hits.parquet') WHERE MobilePhoneModel = 'GT-C3262' FORMAT Null"
+-- 200; ParquetReadPages: 12 (the filter column has one page per row group)
+... SETTINGS input_format_parquet_dictionary_filter_push_down = 0    -- ParquetReadPages: 226
+The byte savings show up in decode work here (the filter column is tiny); when heavy columns are
+selected, the v3 reader's page-level filtering already narrows them, so bytes converge — the
+row-group skip is the stable metric.
+Verified with ParquetMetadata: bloom_filter_bytes = 0 for all columns (no bloom filters in the file);
+every row group's MobilePhoneModel range spans the value (min '' — the column is mostly empty).
+Other tested values: 'S720' -> 26 pages, 'GT-I9100T' -> 49, a value absent from the dataset -> 0.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Lazy reading in Parquet</h2>
+
+<p style="margin-top: -0.3em;">Read the ORDER BY columns first,
+<br/>then read only records that survive the LIMIT for the rest:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.25;">SELECT URL, Title
+FROM s3('s3://clickhouse-public-datasets/hits_compatible/<b>hits.parquet</b>')
+ORDER BY EventTime DESC <b style="color: green;">LIMIT 10</b>;
+<span style="color: gray;">-- 100 million rows, 14 GB</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">
+<b>26.7</b>: <span style="color: red;">4.9</span> sec, 5.85 GB read.
+<br/><b style="color: green;">26.8</b>: <span style="color: green;">1.7</span> sec, 0.53 GB read (11 times less).
+</p>
+
+<!-- SET query_plan_optimize_lazy_materialization_for_object_storage = 0; -->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Parquet Metadata Cache</h2>
+
+<p>A new <b style="color: green;">SLRU cache for Parquet metadata</b> (footer):</p>
+
+<p>&mdash; Up to 2x reduction of reads on regular queries.
+<br/>&mdash; Especially beneficial for repeated queries over the same Parquet files.</p>
+
+<p><code>SET <b>use_parquet_metadata_cache</b>;</code></p>
+<p>Enabled by default.</p>
+<p>Consistency is guaranteed by tracking file modifications by etag.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Grant Holly.</p>
+</section>
+
+<section class="slide">
+<h2>Metadata prefetching for Iceberg</h2>
+
+<p>Iceberg tables now support <b>asynchronous metadata prefetching</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE my_iceberg (...)
+ENGINE = IcebergS3(...)
+SETTINGS <b style="color: green;">iceberg_metadata_async_prefetch_period_ms</b> = 60000;
+
+SELECT ... FROM my_iceberg
+SETTINGS <b style="color: green;">iceberg_metadata_staleness_ms</b> = 30000;
+</code></p>
+
+<p>&mdash; Periodically pre-populates the metadata cache.
+<br/>&mdash; SELECT queries use cached metadata if fresh enough,
+<br/>&emsp;eliminating calls to the Iceberg catalog.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Arsen Muk.</p>
+</section>
+
+<section class="slide">
+<h2>Query condition cache for Iceberg</h2>
+
+<p>The <b>query condition cache</b> &mdash; the ephemeral index that remembers which
+<br/>granules don't satisfy a WHERE clause &mdash; now works for <b>Iceberg</b> tables too:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SET use_query_condition_cache = 1;
+
+SELECT count() FROM iceberg('s3://bucket/events/')
+WHERE event_date = today() AND user_id = 42;
+<span style="color: gray;">-- Subsequent queries with the same predicate skip irrelevant data files.</span>
+</code></p>
+
+<p>&mdash; Especially useful for repeated dashboard queries.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Konstantin Vedernikov.</p>
+</section>
+
+<section class="slide">
+<h2>PREWHERE and more for Iceberg</h2>
+
+<p>SELECTs from Iceberg now use the <b>PREWHERE optimization</b>.</p>
+
+<p>Iceberg tables support <b>ALTER TABLE RENAME COLUMN</b>.</p>
+
+<p>INSERTs into Iceberg are <b>production ready</b>!</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developers: Konstantin Vedernikov, murphy-4o.</p>
+</section>
+
+<section class="slide">
+<h2>Every Data Lake Catalog</h2>
+
+<p style="margin-top: -0.5em;">ClickHouse has database engines for:</p>
+<p style="line-height: 1.3; margin-top: -0.5em;">
+&mdash; REST, Polaris catalog <span style="color: gray;">(since 24.12)</span>;
+<br/>&mdash; Unity catalog <span style="color: gray;">(since 25.3)</span>;
+<br/>&mdash; AWS Glue catalog <span style="color: gray;">(since 25.3)</span>;
+<br/>&mdash; Hive Metastore <span style="color: gray;">(since 25.5)</span>;
+<br/>&mdash; Microsoft Fabric <b>OneLake</b> <span style="color: gray;">(since 25.11)</span>;
+<br/>&mdash; Google <b>BigLake</b> <span style="color: gray;">(since 26.2)</span>;
+<br/>&mdash; AWS <b>S3 Tables</b> <span style="color: gray;">(since 26.8)</span>;
+<br/>&mdash; <b>Snowflake Horizon</b> <span style="color: gray;">(since 26.8)</span>;
+</p>
+
+<p style="margin-top: 0.3em;">And table engines for <b>Iceberg</b>, <b>Delta Lake</b>, <b>Apache Paimon</b>, <b>Hudi</b>.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developers: Konstantin Vedernikov, Melvyn Peignon, Daniil Ivanik, Arsen Muk, and others.</p>
+</section>
+
+<section class="slide">
+<h2>Fabric OneLake</h2>
+
+<p><b>OneLake</b> - Microsoft Fabric's unified data lake,<br/>powered by the OneLake Tables APIs and Apache Iceberg.</p>
+<p>Compatible with the Iceberg REST Catalog.</p>
+
+<p><code style="font-size: 12pt; line-height: 1.25; margin-right: -2em;">CREATE DATABASE onelake
+ENGINE = DataLakeCatalog('https://onelake.table.fabric.microsoft.com/iceberg')
+SETTINGS
+  catalog_type = <b style="color: green;">'onelake'</b>,
+  warehouse = 'warehouse_id/data_item_id',
+  onelake_tenant_id = '&lt;tenant_id>',
+  oauth_server_uri = 'https://login.microsoftonline.com/&lt;tenant_id>/oauth2/v2.0/token',
+  auth_scope = 'https://storage.azure.com/.default',
+  onelake_client_id = '&lt;client_id>',
+  onelake_client_secret = '&lt;client_secret>'
+</code></p>
+
+<!--
+
+SET allow_database_iceberg = 1;
+
+CREATE DATABASE OneLake_catalog
+ENGINE = DataLakeCatalog('https://onelake.table.fabric.microsoft.com/iceberg')
+SETTINGS catalog_type = 'onelake',
+warehouse = 'f6b7abeb-7eb7-4017-bcea-3742d792f7d4/bfcd71f9-ceb9-4aa1-81d8-2229e22e0a59',
+onelake_tenant_id = '3d7995a7-a475-466f-ab08-ed4bcfdca0f8',
+oauth_server_uri = 'https://login.microsoftonline.com/3d7995a7-a475-466f-ab08-ed4bcfdca0f8/oauth2/v2.0/token',
+auth_scope = 'https://storage.azure.com/.default',
+onelake_client_id = '7aca6968-ef4f-4add-8a1e-c426926ba217',
+onelake_client_secret = '...';
+
+USE OneLake_catalog;
+
+SELECT count(), avg(tip_amount) AS avg_tips, DOLocationID FROM `year_2017.green_tripdata_2017` GROUP BY DOLocationID ORDER BY avg_tips DESC;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Konstantin Vedernikov.</p>
+</section>
+
+<section class="slide">
+<h2>Google BigLake</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.5;">CREATE DATABASE <b style="color: green;">biglake</b>
+ENGINE = DataLakeCatalog(
+    'https://biglake.googleapis.com/iceberg/v1/restcatalog')
+SETTINGS catalog_type = 'biglake',
+    google_adc_credentials_file =
+    '/home/ubuntu/.config/gcloud/application_default_credentials.json',
+    warehouse = 'gs://biglake-public-nyc-taxi-iceberg'
+</code></p>
+
+<p>Demo</p>
+
+<!--
+
+CREATE DATABASE biglake
+ENGINE = DataLakeCatalog('https://biglake.googleapis.com/iceberg/v1/restcatalog')
+SETTINGS
+    catalog_type = 'biglake',
+    google_adc_credentials_file = '/home/milovidov/.config/gcloud/application_default_credentials.json',
+    warehouse = 'gs://biglake-public-nyc-taxi-iceberg';
+
+SHOW TABLES FROM biglake;
+
+SELECT passenger_count, count() FROM biglake."public_data.nyc_taxicab" GROUP BY ALL ORDER BY ALL;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Konstantin Vedernikov.</p>
+</section>
+
+<section class="slide">
+<h2>S3 Tables</h2>
+
+<p style="margin-top: -0.3em;">A catalog for <b>AWS S3 Tables</b> &mdash; Amazon's managed Iceberg buckets:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.25;">CREATE DATABASE tables ENGINE = DataLakeCatalog(
+    'https://s3tables.us-east-1.amazonaws.com/iceberg')
+SETTINGS <b style="color: green;">catalog_type = 's3tables'</b>, region = 'us-east-1',
+    warehouse = 'arn:aws:s3tables:us-east-1:1234567890:bucket/analytics';
+
+SHOW TABLES FROM tables;
+SELECT &hellip; FROM tables.`ns.events`;
+<b style="color: green;">INSERT INTO</b> tables.`ns.events` VALUES (&hellip;);   <span style="color: gray;">-- writes work now</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; Reading arrived earlier; 26.8 brings a <b>working INSERT</b> &mdash;
+<br/>&emsp; and you can create your own tables.
+<br/>&mdash; Requests are SigV4-signed; IAM role support included.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Konstantin Vedernikov.</p>
+</section>
+
+<section class="slide">
+<h2>Snowflake Horizon</h2>
+
+<p style="margin-top: -0.3em;">Query &mdash; and <b>write</b> &mdash; Iceberg tables behind the
+<br/><b>Snowflake Horizon</b> catalog:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.25;">CREATE DATABASE horizon ENGINE = DataLakeCatalog(
+    'https://&lt;org&gt;-&lt;account&gt;.snowflakecomputing.com/polaris/api/catalog')
+SETTINGS <b style="color: green;">catalog_type = 'horizon'</b>, warehouse = 'ICEBERG_DB',
+    catalog_credential = '&lt;PAT&gt;', vended_credentials = 1;
+
+SELECT &hellip; FROM horizon.`schema.trades`;   <span style="color: gray;">-- reads Iceberg directly</span>
+INSERT INTO horizon.`schema.trades` &hellip;;    <span style="color: gray;">-- commits via the catalog</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; ClickHouse speaks to the Snowflake-hosted Iceberg REST endpoint &mdash;
+<br/>&emsp; the data files are read from object storage directly,
+<br/>&emsp; without spending Snowflake compute credits.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Melvyn Peignon.</p>
+</section>
+
+<section class="slide" style="background: url(https://presentations.clickhouse.com/2026-release-26.2/pictures/back5.jpg); background-size: cover;">
+<h2><span class="hilite">Text Index</span></h2>
+</section>
+
+<section class="slide">
+<h2>Text Index is production-ready!</h2>
+
+<p>A full-text search index in ClickHouse.</p>
+<p style="line-height: 1.5">&mdash; In development since 2022
+<br/>&mdash; first prototype in 2023 <span style="color: gray;">(by Harry Lee and Larry Luo)</span>
+<br/>&mdash; experimental in 25.9
+<br/>&mdash; beta in 25.12
+<br/>&mdash; <span style="color: green;">production in <b>26.2</b></span></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developers: Anton Popov, Elmi Ahmadov, Jimmy Aguilar Mena.</p>
+</section>
+
+<section class="slide">
+<h2>Text Index</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -2em;">CREATE TABLE text_log
+(
+    message String,
+    ...
+    INDEX inv_idx(message)
+        TYPE <b style="color: green;">text</b>(tokenizer = 'splitByNonAlpha')
+        GRANULARITY 128
+)
+ENGINE = SharedMergeTree ORDER BY id;
+
+SELECT ... WHERE <b style="color: green;">hasToken</b>(message, 'DDLWorker');
+SELECT ... WHERE <b style="color: green;">hasAllTokens</b>(message, ['peak', 'memory']);
+SELECT ... WHERE <b style="color: green;">hasAnyTokens</b>(message, tokens('01442_merge_detach_attach'));
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developers: Anton Popov, Elmi Ahmadov, Jimmy Aguilar Mena.</p>
+</section>
+
+<section class="slide" style="background: black url(https://presentations.clickhouse.com/2026-release-26.2/pictures/fts.png); background-size: contain;">
+</section>
+
+<section class="slide">
+<h2>Text Index (50 TB logs demo)</h2>
+
+<video style="width: 100%"><source src="https://presentations.clickhouse.com/2026-release-26.2/pictures/o11y-fts.mp4" type="video/mp4"></video>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developers: Anton Popov, Elmi Ahmadov, Jimmy Aguilar Mena.</p>
+</section>
+
+<section class="slide">
+<h2>Text Index: a new storage format</h2>
+
+<p>A new storage format, optimized for object storage.</p>
+
+
+<!--
+
+chc --connection v2
+chc --connection v3
+
+SELECT formatReadableQuantity(total_rows), formatReadableSize(total_bytes), formatReadableSize(total_bytes_uncompressed) FROM system.tables WHERE database = 'default' AND table = 'text_log_inverted_index';
+
+SET enable_filesystem_cache = 0;
+
+SELECT
+    instance_type,
+    count()
+FROM text_log_inverted_index
+WHERE hasAllTokens(message, 'total memory limit exceeded')
+GROUP BY instance_type
+ORDER BY count() DESC
+LIMIT 10;
+
+SELECT count()
+FROM text_log_inverted_index
+WHERE hasAllTokens(message, 'Committing part')
+SETTINGS enable_filesystem_cache = 1;
+
+SET enable_filesystem_cache = 1;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Anton Popov.</p>
+</section>
+
+<section class="slide">
+<h2>Text indexes: faster answers</h2>
+
+<p style="margin-top: -0.3em;"><b>count()</b> is answered directly from the <b>index cardinality metadata</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT count() FROM docs WHERE hasAnyTokens(body, ['fox']);
+<span style="color: gray;">-- 1 million rows matched; rows actually read: <b style="color: green;">1</b></span>
+</code></p>
+
+<p style="margin-top: 0.5em;">&mdash; Posting lists are now decoded <b style="color: green;">lazily</b>, at packed-block granularity,
+<br/>&emsp; instead of being eagerly materialized into bitmaps.
+</p><p>&mdash; Optional cache for tokens <b>missing</b> from the index.
+</p><p>&mdash; The v2 on-disk format (with positions for phrase search) is the default;
+<br/>&emsp; <b>text_index_version</b> controls it for rolling upgrades.</p>
+
+<!-- Demo:
+
+CREATE TABLE docs (id UInt64, body String, INDEX idx body TYPE text(tokenizer = 'splitByNonAlpha')) ENGINE = MergeTree ORDER BY id;
+INSERT INTO docs SELECT number, arrayStringConcat(arrayMap(x -> ['red','green','blue','fast','slow','fox','dog','cat','runs','sleeps'][(number * 7 + x * 3) % 10 + 1], range(20)), ' ') FROM numbers(1000000);
+clickhouse client --print-profile-events -q "SELECT count() FROM docs WHERE hasAnyTokens(body, ['fox'])"
+-- count = 1000000, SelectedRows: 1
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Elmi Ahmadov, Anton Popov, Rory Shanks.</p>
+</section>
+
+<section class="slide">
+<h2>Tokenization: new languages</h2>
+
+<p style="margin-top: -0.5em;">Four new tokenizers for the <b>tokens</b> function and <b>text indexes</b>:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.2;">SELECT tokens('ClickHouse是一个快速的开源数据库', <b style="color: green;">'chinese'</b>);
+<span style="color: gray;">-- ['ClickHouse','是','一个','快速','的','开源','数据库'] — dictionary + HMM</span>
+
+SELECT tokens('日本語の形態素解析エンジン', <b style="color: green;">'japanese'</b>);
+<span style="color: gray;">-- ['日本語','の','形態','素','解析','エンジン'] — the MeCab morphological analyzer</span>
+
+SELECT tokens('こんにちは世界。データベースです。', <b style="color: green;">'icu'</b>, 'ja');
+<span style="color: gray;">-- ['こんにちは','世界','データベース','です'] — locale-aware Unicode segmentation</span>
+
+SELECT tokens('C++ and C# are languages', <b style="color: green;">'splitByRegexp'</b>, '[^\p{L}\p{N}#+]+');
+<span style="color: gray;">-- ['C++','and','C#','are','languages'] — tokens other tokenizers would break</span>
+</code></p>
+
+<!-- Demo:
+
+SELECT tokens('ClickHouse是一个快速的开源数据库', 'chinese');
+SELECT tokens('こんにちは世界。データベースです。', 'icu', 'ja');
+SELECT tokens('สวัสดีชาวโลก', 'icu', 'th');   -- Thai works too: ['สวัสดี','ชาว','โลก']
+SELECT tokens('C++ and C# are programming languages', 'splitByRegexp', '[^\\p{L}\\p{N}#+]+');
+
+japanese needs a MeCab dictionary in the server config (tested with the minimal fixture from
+tests/integration/test_japanese_tokenizer; use a full UniDic/IPADIC in production — the minimal
+dictionary splits 形態素 as 形態+素 and falls back to per-character for unknown words):
+<tokenizer><japanese>
+    <dictionary_location>file:///path/to/dic.tar.gz</dictionary_location>
+    <dictionary_sha>7477c765961bc60186bb517665194d6ee0d484071d3d06182de78f6d3da553f5</dictionary_sha>
+</japanese></tokenizer>
+SELECT tokens('日本語の形態素解析エンジン', 'japanese');   -- ['日本語','の','形態','素','解析','エンジン']
+
+-->
+
+<p style="color: gray; font-size: 13pt; margin-top: 5em;">Developers: Robert Schulze, Amos Bird, Jimmy Aguilar Mena.</p>
+</section>
+
+<section class="slide">
+<h2>Positions for phrase matching</h2>
+
+<p>Text indexes can now store <b>token positions</b> &mdash; for exact phrase search:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE docs (&hellip;, INDEX idx body TYPE text(
+    tokenizer = 'splitByNonAlpha', <b style="color: green;">support_phrase_search = 1</b>))
+&hellip; SETTINGS allow_experimental_text_index_phrase_search = 1;
+
+SELECT count() FROM docs WHERE <b style="color: green;">hasPhrase</b>(body, 'quick brown fox');
+<span style="color: gray;">-- 1 — but hasPhrase(body, 'brown quick fox') = 0: order matters</span>
+</code></p>
+
+<p>&mdash; The phrase test is answered <b>directly from the index</b>:
+<br/>&emsp; in our test, 124 granules &rarr; 1, and no column data was read at all.</p>
+
+<!-- Demo:
+
+CREATE TABLE docs (id UInt64, body String, INDEX idx body TYPE text(tokenizer = 'splitByNonAlpha', support_phrase_search = 1) GRANULARITY 1) ENGINE = MergeTree ORDER BY id SETTINGS allow_experimental_text_index_phrase_search = 1;
+INSERT INTO docs SELECT number, arrayStringConcat(arrayMap(x -> ['red','green','blue','fast','slow','fox','dog','cat','runs','sleeps'][(number * 7 + x * 3) % 10 + 1], range(20)), ' ') FROM numbers(1000000);
+INSERT INTO docs VALUES (9999999, 'the quick brown fox jumps over the lazy dog');
+SELECT count() FROM docs WHERE hasPhrase(body, 'quick brown fox');
+EXPLAIN indexes = 1 SELECT count() FROM docs WHERE hasPhrase(body, 'quick brown fox');
+-- Skip index: Granules: 1/124; filter column __text_index_idx_hasPhrase_... (direct read)
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Elmi Ahmadov.</p>
+</section>
+
+<section class="slide" style="background: url(https://presentations.clickhouse.com/2026-release-26.6/pictures/back6.jpg); background-size: cover;">
+<h2><span class="hilite">Geospatial</span></h2>
+</section>
+
+<section class="slide">
+<h2>Geometry Data Type</h2>
+
+<p>We already had all the data types for GIS:</p>
+<p><b>Point</b>, <b>LineString</b>, <b>MultiLineString</b>, <b>Ring</b>, <b>Polygon</b>, <b>MultiPolygon</b></p>
+
+<p>Since <b>25.11</b>, we also have one unified data type: <b style="color: green;">Geometry</b></p>
+<p>&mdash; it can contain any geometry!</p>
+
+<p>New functions, <b>readWkt</b>, <b>readWkb</b>,
+<br/>which read any type of geometry as a <b>Geometry</b> value.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">ClickHouse also supports H3 and S2 indexes, Geohashes, optimized spherical and geo distances,<br/>Polygonal dictionaries for reverse geocoding, SVG rendering...</p>
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Konstantin Vedernikov.</p>
+</section>
+
+<section class="slide">
+<h2>Spatial pruning for GeoParquet</h2>
+
+<p style="margin-top: -0.3em;">Geospatial queries over <b>GeoParquet</b> files skip the data
+<br/>that cannot match:</p>
+
+<p style="margin-top: 0.3em;">&mdash; <b style="color: green;">Row-group pruning</b>: row groups whose bounding box does not
+<br/>&emsp; overlap the query geometry are skipped entirely.
+<br/>&mdash; <b style="color: green;">Page-level pruning</b>: the <b>covering.bbox</b> column index
+<br/>&emsp; skips irrelevant pages within the surviving row groups.
+<br/>&mdash; Spatial predicate push-down also applies during row reading.</p>
+
+<p style="margin-top: 0.5em;">Load city-scale slices out of planet-scale files &mdash;
+<br/>without reading the planet.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Vasily Chekalkin.</p>
+</section>
+
+<section class="slide">
+<h2>GeoJSON input format</h2>
+
+<p>Read a GeoJSON <b>FeatureCollection</b> &mdash; one row per feature:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT id, properties.name, toTypeName(geometry)
+FROM file('places.geojson', <b style="color: green;">GeoJSON</b>);
+</code></p>
+
+<table style="font-size: 14pt; width: 90%;">
+<tr><th>id</th><th>properties.name</th><th>geometry</th></tr>
+<tr><td>1</td><td>London</td><td>Geometry (Point)</td></tr>
+<tr><td>2</td><td>square</td><td>Geometry (Polygon)</td></tr>
+</table>
+
+<p style="margin-top: 0.5em;">&mdash; Columns: <b>id</b> String, <b>geometry</b> Geometry, <b>properties</b> Nullable(JSON).
+<br/>&mdash; Point, LineString, MultiLineString, Polygon, MultiPolygon supported natively.</p>
+
+<!-- Demo: places.geojson is a standard FeatureCollection
+
+SELECT id, properties.name, toTypeName(geometry) FROM file('/tmp/test.geojson', GeoJSON) FORMAT Vertical;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Mark Needham.</p>
+</section>
+
+<section class="slide">
+<h2>GeoJSON output</h2>
+
+<p>26.6 added GeoJSON input. 26.7 <b>writes</b> it, too:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.25;">SELECT id, (13.4050, 52.5200)::Point AS geometry, 'Berlin' AS name
+<b style="color: green;">FORMAT GeoJSON</b>
+</code></p>
+
+<p><code style="font-size: 12pt; line-height: 1.25;">{"type":"FeatureCollection","features":[
+  {"type":"Feature","id":1,
+   "geometry":{"type":"Point","coordinates":[13.405,52.52]},
+   "properties":{"name":"Berlin"}}, &hellip;]}
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; The geo column &rarr; <b>geometry</b>, the <b>id</b> column &rarr; feature id,
+<br/>&emsp; everything else &rarr; <b>properties</b>.
+<br/>&mdash; Feed query results straight to Leaflet, Mapbox, deck.gl, QGIS.</p>
+
+<!-- Demo:
+
+SELECT * FROM (SELECT 1 AS id, (13.4050, 52.5200)::Point AS geometry, 'Berlin' AS name UNION ALL SELECT 2, (2.3522, 48.8566)::Point, 'Paris') ORDER BY id FORMAT GeoJSON;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Mark Needham, Nihal Z. Miaji.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Polygons and bounding boxes as an index</h2>
+
+<p style="margin-top: -0.3em;">Geospatial predicates can now be answered by the <b>primary key index</b>:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.25;">CREATE TABLE points (p Point, ...) ENGINE = MergeTree ORDER BY p;
+<span style="color: gray;">-- or: ORDER BY (lon, lat) -- a tuple of coordinates works too</span>
+
+SELECT count() FROM points
+WHERE <b style="color: green;">pointInPolygon</b>(p, [(2.2, 48.8), (2.4, 48.8), (2.4, 49.0), (2.2, 49.0)]);
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; The <b>bounding box</b> of the polygon is derived at index-analysis time
+<br/>&emsp; and turned into a range condition on the key &mdash; granules outside it
+<br/>&emsp; are never read.
+<br/>&mdash; The same works for <b>pointInEllipses</b>, and for the first elements
+<br/>&emsp; of a tuple key.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 32pt;">Universal Transverse Mercator</h2>
+
+<p>Convert between WGS84 coordinates and the <b>UTM</b> / <b>MGRS</b> systems
+<br/>used in surveying, mapping, and military grids:</p>
+
+<div style="float: right; width: 41%; margin: 0 -55px 0 12px;">
+<img class="zoomable" style="width: 100%;" src="https://presentations.clickhouse.com/2026-release-26.7/pictures/utm_zones.jpg" alt="UTM zones: 60 longitude zones and latitude bands C–X on a world map" onclick="this.classList.toggle('zoomed'); event.stopPropagation();"/>
+<p style="color: gray; font-size: 9pt; text-align: right; margin: 0.2em 0 0 0;">Map: NASA Visible Earth / Wikimedia Commons, public domain.</p>
+</div>
+
+<p><code style="display: inline-block; font-size: 13pt; line-height: 1.25;">SELECT <b style="color: green;">geoToUTM</b>(4.89, 52.36) AS amsterdam;
+<span style="color: gray;">-- (628700.24, 5802760.82, 31, 'U')</span>
+<span style="color: gray;">--  easting, northing, zone, band</span>
+
+SELECT <b style="color: green;">UTMToGeo</b>(628700.24, 5802760.82, 31, true);
+<span style="color: gray;">-- (4.89, 52.36) — and back</span>
+
+SELECT <b style="color: green;">geoToMGRS</b>(4.89, 52.36);
+<span style="color: gray;">-- '31UFU2870002760'</span>
+SELECT <b style="color: green;">MGRSToGeo</b>('31UFU2870002760');
+<span style="color: gray;">-- (4.89, 52.36)</span>
+</code></p>
+
+<!-- Demo:
+
+SELECT geoToUTM(4.89, 52.36);
+
+WITH geoToUTM(4.89, 52.36) AS utm SELECT utm, UTMToGeo(utm.easting, utm.northing, utm.zone, true) AS back FORMAT Vertical;
+SELECT geoToMGRS(4.89, 52.36) AS mgrs, MGRSToGeo(geoToMGRS(4.89, 52.36)) AS back;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Mapbox Vector Tiles from SQL</h2>
+
+<p>Serve map tiles straight out of ClickHouse with the new <b style="color: green;">MVT</b> functions:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;"><span style="color: gray;">-- Project lon/lat into a tile's pixel space:</span>
+SELECT <b style="color: green;">MVTEncodeGeom</b>((13.37, 52.52)::Point, 10, 550, 335);
+<span style="color: gray;">-- (124, 3384)</span>
+
+<span style="color: gray;">-- Aggregate a group's geometries into one binary tile:</span>
+SELECT <b style="color: green;">MVTEncode</b>(geom_in_tile_space) FROM ...;
+
+<span style="color: gray;">-- Tile bounding box for the WHERE clause:</span>
+SELECT <b style="color: green;">MVTBoundingBox</b>(12, 1205, 2557);
+</code></p>
+
+<p>&mdash; Point, line and polygon geometry.
+<br/>&mdash; Also available as PostGIS aliases <b>ST_AsMVTGeom</b> and <b>ST_AsMVT</b>.</p>
+
+<!-- Demo:
+
+SELECT MVTEncodeGeom((13.37, 52.52)::Point, 10, 550, 335);
+SELECT MVTBoundingBox(12, 1205, 2557);
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Saarthak Gupta.</p>
+</section>
+
+<section class="slide" style="background: url(https://presentations.clickhouse.com/2026-release-26.7/pictures/back9.jpg); background-size: cover;">
+<h2><span class="hilite">More Indices</span></h2>
+</section>
+
+<section class="slide">
+<h2>Projections As Secondary Indices</h2>
+
+<p>You can already use projections to have different sort orders of a table:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.25;">CREATE TABLE pageviews (
+    CounterID UInt32,
+    UserID UInt64,
+    EventTime DateTime,
+    ...
+    <b>PROJECTION by_time (
+        SELECT * ORDER BY EventTime</b> <span style="color: gray;">-- projection's order</span>
+    <b>)</b>
+) ORDER BY (CounterID, UserID, EventTime) <span style="color: gray;">-- table's main order</span>
+</code></p>
+
+<p>And the projection with accelerate range queries or queries with ORDER BY.
+<br/>However, it requires <b>duplicating the storage</b> for the columns (or a subset).</p>
+
+<p>Can we make it work without duplication?</p>
+</section>
+
+<section class="slide">
+<h2>Projections As Secondary Indices</h2>
+
+<p style="margin-top: -0.5em;">Yes: since <b>25.11</b>, a projection can store a single column, <b>_part_offset</b>
+<br/>&mdash; so it acts as an <b>index</b> into the main table instead of a copy of the data.</p>
+
+<p style="margin-top: 0.2em;">Since <b style="color: green;">26.1</b>, there is a dedicated syntax for exactly this:</p>
+
+<p style="margin-top: 0.2em;"><code style="font-size: 12pt; line-height: 1.15;">CREATE TABLE pageviews (
+    CounterID UInt32,
+    UserID UInt64,
+    EventTime DateTime,
+    ...
+    <b>PROJECTION by_time <span style="color: green;">INDEX EventTime</span> TYPE basic</b>
+) ORDER BY (CounterID, UserID, EventTime)
+
+ALTER TABLE pageviews ADD <b>PROJECTION by_url <span style="color: green;">INDEX URL</span> TYPE basic</b>;
+</code></p>
+
+<p style="margin-top: 0.2em;">Accelerates queries using much less extra storage, at the cost of worse
+<br/>locality of reads: useful for point queries. Demo.</p>
+
+<!--
+
+Playground:
+
+chc
+
+SHOW TABLE hits
+SHOW TABLE hits_full_projection
+SHOW TABLE hits_index_projection
+
+SELECT table, formatReadableSize(total_bytes) FROM system.tables WHERE database = 'default' AND table LIKE 'hits%'
+
+clickhouse-benchmark --query "SELECT URL, Referer, Title FROM hits WHERE EventTime = '2013-07-15 01:02:03'" --use_query_condition_cache 0
+clickhouse-benchmark --query "SELECT URL, Referer, Title FROM hits_full_projection WHERE EventTime = '2013-07-15 01:02:03'" --use_query_condition_cache 0
+clickhouse-benchmark --query "SELECT URL, Referer, Title FROM hits_index_projection WHERE EventTime = '2013-07-15 01:02:03'" --use_query_condition_cache 0
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.2em;">Developer: Amos Bird.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Hypothetical indexes + EXPLAIN WHATIF</h2>
+
+<p style="margin-top: -0.5em;">Ask "what if I had this skip index?" &mdash; <b>without</b> building it:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.2;"><b style="color: green;">CREATE HYPOTHETICAL INDEX</b> idx_level ON logs (level) TYPE set(2) GRANULARITY 4;
+
+<b style="color: green;">EXPLAIN WHATIF</b> SELECT count() FROM logs WHERE level = 'error';
+</code></p>
+
+<p><code style="font-size: 12pt; line-height: 1.15;">Baseline (PK + partition + existing indexes):  marks: 612, 19.56 MiB
+With idx_level (set, hypothetical):
+  status:      applicable
+  marks:       200      <span style="color: gray;">(was 612)</span>
+  est_bytes:   6.39 MiB
+  <b style="color: green;">skip_ratio:  67.3%</b>
+Estimation: empirical, sampled 5/5 parts</code></p>
+
+<p style="margin-top: -0.3em;">&mdash; Session-scoped, visible in <b>system.hypothetical_indexes</b>.
+<br/>Tune indexes data-driven.</p>
+
+<!-- Demo:
+
+CREATE TABLE logs (id UInt64, level String, msg String) ENGINE = MergeTree ORDER BY id;
+INSERT INTO logs SELECT number, if(number % 100000 = 0, 'error', 'info'), 'm' FROM numbers(5000000);
+CREATE HYPOTHETICAL INDEX idx_level ON logs (level) TYPE set(2) GRANULARITY 4;
+EXPLAIN WHATIF SELECT count() FROM logs WHERE level = 'error';
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Yarik Briukhovetskyi.</p>
+</section>
+
+<section class="slide">
+<h2>Streaming For Secondary Indices</h2>
+
+<p>In <b style="color: red;">25.8</b>: reading and analyzing the index happens before the query starts reading the data,
+which introduces a noticable delay when using large indices.</p>
+
+<p>In <b style="color: green;">25.9</b>: reading the indices happens together when scanning the data.
+Queries start faster and can finish earlier, e.g., when LIMIT is reached.</p>
+
+<p><code style="font-size: 18pt; line-height: 1.25;">:) SET use_skip_indexes_on_data_read;
+</code></p>
+
+<p>Demo</p>
+
+<!--
+
+SELECT * FROM system.data_skipping_indices ORDER BY data_compressed_bytes DESC LIMIT 10 \G
+
+SELECT count() FROM asynchronous_metric_log_5265492640286358528;
+SHOW TABLE asynchronous_metric_log_5265492640286358528;
+
+SELECT DISTINCT commit_sha FROM asynchronous_metric_log_5265492640286358528 WHERE commit_sha LIKE '%aaaa%';
+SELECT DISTINCT commit_sha FROM asynchronous_metric_log_5265492640286358528 WHERE commit_sha LIKE '%aaaa%' SETTINGS use_skip_indexes_on_data_read;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Amos Bird.</p>
+</section>
+
+<section class="slide">
+<h2>The right table is an index</h2>
+
+<p>A JOIN can use the values of the right-hand side to <b>prune granules</b>
+<br/>of the left table via its primary key or skip indexes:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SET <b style="color: green;">enable_join_runtime_filters_index_analysis</b> = 1;
+
+SELECT &hellip; FROM facts JOIN lookup ON facts.id = lookup.id;
+<span style="color: gray;">-- the ids from `lookup` become an index condition on `facts`</span>
+</code></p>
+
+<p><b style="color: green;">Measured</b> &mdash; 100M-row table joined with a 100-row table:
+<br/>&emsp; granules read: <b>12216 &rarr; <b style="color: green;">100</b></b> (122x),
+<br/>&emsp; time: <b>0.177 s &rarr; <b style="color: green;">0.022 s</b></b> (8x).</p>
+
+<!-- Demo:
+
+CREATE TABLE facts (id UInt64, payload String) ENGINE = MergeTree ORDER BY id;
+INSERT INTO facts SELECT number, randomPrintableASCII(50) FROM numbers(100000000);
+CREATE TABLE lookup (id UInt64) ENGINE = MergeTree ORDER BY id;
+INSERT INTO lookup SELECT (rand64() % 100000000) FROM numbers(100);
+SELECT count(), max(length(payload)) FROM facts JOIN lookup ON facts.id = lookup.id SETTINGS enable_join_runtime_filters_index_analysis = 1;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: Shankar Iyer.</p>
+</section>
+
+<section class="slide" style="background: url(https://presentations.clickhouse.com/2026-release-26.4/pictures/back7.jpg); background-size: cover;">
+<h2><span class="hilite">More Interesting</span></h2>
+</section>
+
+<section class="slide">
+<h2>Continuous queries 🧪</h2>
+
+<p style="margin-top: -0.5em;">A <b>SELECT</b> that never ends &mdash; the first step toward streaming queries.
+Append <b style="color: green;">STREAM</b> and it keeps emitting new rows as they are inserted:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SET <b style="color: green;">enable_streaming_queries</b> = 1;
+SELECT id, msg FROM live_events <b style="color: green;">STREAM</b>;  <span style="color: gray;">-- blocks, keeps streaming</span>
+</code></p>
+
+<p>Applications: filtering and real-time alerting on a stream of events.</p>
+
+<p>Advanced usage with cursors:</p>
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT _block_number AS bn, _block_offset AS bo, id, msg
+FROM events <b style="color: green;">STREAM CURSOR {'all': {'block_number': 2, 'block_offset': 0}}</b></code></p>
+
+<!-- Demo:
+
+CREATE TABLE live_events (id UInt64, msg String) ENGINE = MergeTree ORDER BY id
+SETTINGS enable_block_number_column = 1, enable_block_offset_column = 1,
+  add_minmax_index_for_block_number_column = 1, add_minmax_index_for_block_offset_column = 1,
+  part_minmax_index_columns = 'with_block_number_offset';
+
+-- terminal 1:
+clickhouse client --enable_streaming_queries=1 --use_skip_indexes_on_data_read=0 -q "SELECT id, msg FROM live_events STREAM"
+
+-- terminal 2:
+INSERT INTO live_events VALUES (1,'hello'),(2,'world');
+INSERT INTO live_events VALUES (3,'streaming'),(4,'rocks');
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Mikhail Artemenko.</p>
+</section>
+
+<section class="slide">
+<h2>AI functions 🧪</h2>
+
+<p>Call LLM endpoints (OpenAI, Anthropic) directly from SQL:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">aiGenerate</b>('Summarize this in one line: ' || review)
+FROM product_reviews LIMIT 10;
+</code></p>
+
+<p>Higher-level helpers built on top:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">aiClassify</b>(text, ['bug', 'feature', 'question']) FROM tickets;
+SELECT <b style="color: green;">aiExtract</b>(article, 'people, organizations, dates') FROM news;
+SELECT <b style="color: green;">aiTranslate</b>(message, 'English') FROM logs;
+</code></p>
+
+<p>&mdash; Provider configured server-side; secrets never leak to clients.</p>
+
+<!-- Demo (requires AI provider configured server-side):
+
+SET allow_experimental_ai_functions = 1;
+SELECT aiGenerate('Write a one-line SQL joke');
+SELECT aiClassify('Cannot connect to database',
+                  ['bug', 'feature_request', 'question', 'docs']);
+SELECT aiExtract('Anthropic was founded in 2021 by Dario Amodei in San Francisco.',
+                 'people, organizations, dates, locations');
+SELECT aiTranslate('Bonjour, comment allez-vous?', 'English');
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: George Larionov.</p>
+</section>
+
+<section class="slide">
+<h2>Sharded Map</h2>
+
+<p>Bucketed serialization for <b>Map</b> columns:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE tab (id UInt64, m Map(String, UInt64))
+ENGINE = MergeTree ORDER BY id
+SETTINGS
+    <b style="color: green;">map_serialization_version</b> = 'with_buckets',
+    max_buckets_in_map = 32;
+</code></p>
+
+<p>&mdash; <b style="color: green;">2&ndash;49x faster</b> single-key lookups depending on map size.
+<br/>&mdash; Uses <b>map_serialization_version_for_zero_level_parts = 'basic'</b>
+<br/>&emsp; to keep insert speed close to baseline.</p>
+
+<!--
+
+SET optimize_functions_to_subcolumns = 0;
+SELECT sum(ProfileEvents['LogTrace']) FROM query_log_sharded;
+SET optimize_functions_to_subcolumns = 1;
+SELECT sum(ProfileEvents['LogTrace']) FROM query_log_sharded;
+
+-->
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Pavel Kruglov.</p>
+</section>
+
+<section class="slide">
+<h2>Indices on JSON columns</h2>
+
+<p>MergeTree skip indices now work on the set of <b>JSON paths</b>
+<br/>using <b style="color: green;">JSONAllPaths</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">ALTER TABLE events
+ADD INDEX paths_idx <b style="color: green;">JSONAllPaths</b>(data)
+TYPE <b>bloom_filter</b> GRANULARITY 1;
+</code></p>
+
+<p>&mdash; Supported types: <b>bloom_filter</b>, <b>tokenbf_v1</b>, <b>ngrambf_v1</b>, and <b>text</b> (inverted).
+<br/>&mdash; Skip granules where the JSON paths a query is filtering by are absent.</p>
+
+<!-- Demo:
+
+CREATE TABLE events (data JSON,
+  INDEX paths_idx JSONAllPaths(data) TYPE bloom_filter GRANULARITY 1)
+ENGINE = MergeTree ORDER BY tuple();
+INSERT INTO events VALUES ('{"a": 1}'), ('{"b": 2}'), ('{"c": 3}');
+SELECT JSONAllPaths(data) FROM events;
+SELECT count() FROM events WHERE has(JSONAllPaths(data), 'a');
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 4em;">Developer: Pavel Kruglov.</p>
+</section>
+
+<section class="slide">
+<h2>JSONAllValues + text index</h2>
+
+<p>A new function <b style="color: green;">JSONAllValues</b> returns every leaf value
+<br/>of a JSON column as <b>Array(String)</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">JSONAllValues</b>(data) FROM events
+<span style="color: gray;">-- ['42', 'click', '2026-04-30', ...]</span>
+</code></p>
+
+<p>Build a text index on it &mdash; and it kicks in automatically
+<br/>for filters on JSON subcolumns:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">ALTER TABLE events ADD INDEX vals
+  <b>JSONAllValues</b>(data) TYPE <b>text</b>(tokenizer='ngrams') GRANULARITY 1;
+
+SELECT * FROM events WHERE data.event_type = 'click';
+<span style="color: gray;">-- The text index is used to skip granules.</span>
+</code></p>
+
+<!-- Demo:
+
+CREATE TABLE j (data JSON) ENGINE = MergeTree ORDER BY tuple();
+INSERT INTO j VALUES ('{"event":"click","user":42}'),
+                    ('{"event":"view","page":"/home"}');
+SELECT JSONAllValues(data) FROM j;
+SELECT JSONAllPaths(data) FROM j;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Anton Popov.</p>
+</section>
+
+<section class="slide">
+<h2>Lazy type hints for JSON 🧪</h2>
+
+<p>Add or modify <b>JSON type hints</b> instantly,
+<br/>without rewriting data:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SET allow_experimental_json_lazy_type_hints = 1;
+
+ALTER TABLE events
+    MODIFY COLUMN data <b style="color: green;">JSON(metrics.count UInt64)</b>;
+</code></p>
+
+<p>&mdash; Metadata-only operation &mdash; completes <b>instantly</b>.
+<br/>&mdash; Type hints are applied at query time for old parts.
+<br/>&mdash; Materialized during INSERTs and background merges.
+</p>
+
+<!--
+
+CREATE TABLE test_json (data JSON) ENGINE = MergeTree ORDER BY tuple();
+INSERT INTO test_json VALUES ('{"a": 1, "b": "hello"}');
+
+SET allow_experimental_json_lazy_type_hints = 1;
+ALTER TABLE test_json MODIFY COLUMN data JSON(a UInt64);
+SELECT data.a FROM test_json;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: tanner-bruce.</p>
+</section>
+
+<section class="slide">
+<h2>Faster JSON parsing</h2>
+
+<p>For the JSON data type:</p>
+
+<img style="width: 150%" src="https://presentations.clickhouse.com/2026-release-26.2/pictures/json_parsing.png">
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Pavel Kruglov.</p>
+</section>
+
+<section class="slide" style="background: url(https://presentations.clickhouse.com/2026-release-26.8/pictures/back4.jpg); background-size: cover;">
+<h2><span class="hilite">Interfaces</span></h2>
+</section>
+
+<section class="slide">
+<h2>PromQL</h2>
+
+<p style="margin-top: -0.3em;">ClickHouse speaks <b style="color: green;">PromQL</b> &mdash; over a <b>TimeSeries</b> table:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.25;">CREATE TABLE metrics ENGINE = <b style="color: green;">TimeSeries</b>;
+
+SELECT * FROM prometheusQuery('metrics',
+    'sum by (job) (rate(http_requests_total[5m]))');
+
+<span style="color: gray;">-- or switch the whole session to the PromQL dialect:</span>
+SET <b style="color: green;">dialect = 'promql'</b>, promql_table = 'metrics';
+sum by (job) (rate(http_requests_total[5m]))
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; The Prometheus remote-write and remote-read protocols,
+<br/>&emsp; and the Prometheus HTTP API (<b>/api/v1/query</b>, <b>/api/v1/query_range</b>)
+<br/>&emsp; &mdash; so Grafana can point at ClickHouse as if it were Prometheus.
+<br/>&mdash; PromQL is transpiled to SQL and runs on the ClickHouse engine.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developers: Vitaly Baranov, Nikita Mikhaylov, Valery Petrov, Minh Vu.</p>
+</section>
+
+<section class="slide">
+<h2>PromQL: a real observability backend</h2>
+
+<p style="margin-top: -0.3em;">A year of work on making it fast and correct:</p>
+
+<p style="margin-top: 0.3em;">&mdash; Selectors compile into a continuous <b>primary-key range</b> on the samples
+<br/>&emsp; table instead of a huge <b>id IN (...)</b> set &mdash; up to <b style="color: green;">45%</b> lower cold latency
+<br/>&emsp; on dashboard and alerting-rule queries over a 62-billion-sample table.
+<br/>&mdash; <b>topk</b> / <b>bottomk</b> / <b>limitk</b> run streaming and parallel, in bounded memory.
+<br/>&mdash; Shared subexpressions are evaluated once (~<b style="color: green;">2x</b> on <b>topk</b> over <b>rate</b>).
+<br/>&mdash; A <b>"recent samples"</b> table: a TTL'd copy that short-range dashboards
+<br/>&emsp; and alerting rules read automatically &mdash; several times faster.
+<br/>&mdash; A PromQL compliance suite runs against Prometheus itself in CI.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Nikita Mikhaylov, Vitaly Baranov, Valery Petrov, Minh Vu.</p>
+</section>
+
+<section class="slide">
+<h2>Arrow Flight SQL</h2>
+
+<p style="margin-top: -0.3em;">ClickHouse can now serve queries over <b style="color: green;">Arrow Flight SQL</b>
+<br/>&mdash; a high-throughput, columnar gRPC protocol from Apache Arrow.
+<br/>&mdash; Any <b>ADBC</b> client can connect &mdash; the standard Arrow database API.</p>
+
+<p style="margin-top: 0.5em;">Configured as a separate listener:</p>
+
+<p style="margin-top: 0.3em;"><code style="font-size: 13pt; line-height: 1.2;"><span style="color: gray;">$ cat config.d/arrow.yaml</span>
+arrowflight_port: 9005
+</code></p>
+
+<p style="margin-top: 0.3em;"><code style="font-size: 13pt; line-height: 1.2;">import pyarrow.flight as flight
+client = flight.FlightClient("grpc://localhost:9005")
+ticket = flight.Ticket(b"SELECT * FROM system.numbers LIMIT 10")
+reader = client.do_get(ticket)
+print(reader.read_all())
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Yakov Olkhovskiy.</p>
+</section>
+
+<section class="slide">
+<h2>Web Terminal</h2>
+
+<p>An in-browser <b>clickhouse-client</b>:</p>
+
+<p>Point your browser at <b>http://localhost:8123/webterminal</b>
+<br/>&mdash; an interactive client session over a WebSocket, no installation.</p>
+
+<p>Experimental in <b>26.5</b>; since <b style="color: green;">26.6</b> it is a production feature,
+<br/><b style="color: green;">enabled by default</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;"><span style="color: gray;">$ cat config.d/webterminal.yaml</span>
+
+<b><span style="color: green;">enable_webterminal</span>: true</b>   <span style="color: gray;">-- the default; set to false to disable</span>
+</code></p>
+
+<p><a href="https://play.clickhouse.com/webterminal?user=play">Demo</a></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>CREATE HANDLER</h2>
+
+<p style="margin-top: -0.5em;">Define custom HTTP endpoints <b>from SQL</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;"><b style="color: green;">CREATE HANDLER</b> top_pages <b style="color: green;">URL</b> '/top_pages' AS
+SELECT path, sum(hits) AS total FROM hits
+GROUP BY path ORDER BY total DESC LIMIT 5;
+</code></p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">$ curl http://server:8123<b style="color: green;">/top_pages</b>
+/page19  254500
+/page18  254000
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; Parameterized: <b>{p:String}</b> is filled from URL params, form fields,
+<br/>&emsp; headers, or named regexp capture groups on paths.
+<br/>&mdash; INSERT handlers read the POST body.
+<br/>&mdash; ALTER/DROP HANDLER, grants, <b>system.handlers</b>.</p>
+
+<!-- Demo:
+
+CREATE HANDLER top_pages URL '/top_pages' METHODS (GET) AS SELECT path, sum(hits) AS total FROM default.hits GROUP BY path ORDER BY total DESC LIMIT 5;
+curl -s 'http://localhost:8123/top_pages'
+CREATE HANDLER page_stats URL '/stats' AS SELECT path, count() AS n, sum(hits) AS total FROM default.hits WHERE path = {p:String} GROUP BY path;
+curl -s 'http://localhost:8123/stats?p=/page3'
+SELECT name, url, methods FROM system.handlers;
+-- verified: handlers survived a server restart
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>API for query construction</h2>
+
+<p style="margin-top: -0.5em;">New HTTP settings <b>compose a query</b> for you &mdash; and turn the HTTP
+<br/>interface into a REST-style API over tables:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.25;"><span style="color: gray;">-- enable `http_allow_path_requests` in the server configuration
+-- and `http_allow_table_as_file` in settings profile</span>
+GET /hits.tsv.gz <span style="color: gray;">-- requests a table, format, and compression</span>
+GET /hits?format=RowBinary <span style="color: gray;">-- the <b>format</b> setting also works</span>
+GET /hits.tsv?select=a,b
+GET /hits.tsv?query=SELECT+a,b
+<span style="color: gray;">-- enable `http_allow_database_as_path`</span>
+GET /db/hits.parquet
+GET /db/hits.parquet?filter=x>1&amp;order=c+DESC&amp;limit=100&amp;page=2
+<span style="color: gray;">-- enable `http_allow_filters_as_unrecognized_url_parameters`</span>
+GET /db/hits.parquet?x=1&amp;y>2&amp;sort=-c
+<span style="color: gray;">-- http_allow_filters_as_path</span>
+GET /x=1/db/hits.parquet
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>API for result modification</h2>
+
+<p style="margin-top: -0.5em;">&mdash; new query settings: <b>filter</b>, <b>select</b>, <b>sort</b>, <b>order</b>, <b>page</b>, <b>compression</b>,
+<br/>&emsp; and already existing <b>limit</b>, <b>offset</b> - for out-of-band result modification;</p>
+
+<p>&mdash; and new settings <b>format</b>, <b>input_format</b>, <b>output_format</b>
+<br/>&emsp; allow to explicitly override the input/output data format.</p>
+
+<p>These settings wrap the query to alter its presentation for various tools.
+<br/>They are safe and available in the readonly mode and can be restricted if needed.</p>
+
+<p>&mdash; <b>database</b> and <b>default_format</b> became normal settings
+<br/>&emsp; rather than being limited to the HTTP interface;</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Framing formats</h2>
+
+<p style="margin-top: -0.5em;">One HTTP response stream can now carry <b>everything</b>: data, progress,
+<br/>totals, profile events, server logs, and exceptions &mdash; multiplexed:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.25;">$ curl 'http://server:8123/?query=...&amp;<b style="color: green;">framing_output_format=EventStream</b>'
+event: data
+data: {"number":"0"}
+event: <b style="color: green;">progress</b>
+data: {"read_rows":"3","elapsed_ns":"7496990",...}
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; <b>EventStream</b> - HTTP Server-Sent Events, consumable
+<br/>&emsp; by the browser's built-in <b>EventSource</b> API.
+<br/>&mdash; <b>JSONEachPacketString</b> / <b>JSONEachPacketBase64</b> - a JSON per packet.</p>
+<p>Live progress bars and streaming results wrapping any data format.</p>
+
+<!-- Demo:
+
+curl -s 'http://localhost:8123/?query=SELECT+number+FROM+numbers(3)&framing_output_format=EventStream&default_format=JSONEachRow'
+curl -s 'http://localhost:8123/?query=SELECT+number+FROM+numbers(3)&framing_output_format=JSONEachPacketString&default_format=CSV'
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Pipelined SQL</h2>
+
+<p style="margin-top: -0.5em;">Write queries top-down - each step follows the previous:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">FROM hits
+<b style="color: green;">|&gt;</b> WHERE status = 404
+<b style="color: green;">|&gt;</b> AGGREGATE sum(hits) AS total GROUP BY path
+<b style="color: green;">|&gt;</b> ORDER BY total DESC
+<b style="color: green;">|&gt;</b> LIMIT 3;
+</code></p>
+
+<p>Pipes can apply to any normal query:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT region_id, user_id, sum(session_length) AS total_duration
+FROM hits GROUP BY user_id
+<b style="color: green;">|&gt;</b> AGGREGATE avg(total_duration) GROUP BY region_id
+<b style="color: green;">|&gt;</b> ORDER BY 1 DESC
+<b style="color: green;">|&gt;</b> LIMIT 100;
+</code></p>
+
+
+<!-- Demo:
+
+FROM numbers(100) |> WHERE number % 7 = 0 |> AGGREGATE count() AS c, sum(number) AS s;   -- 15, 735
+FROM system.numbers |> LIMIT 10 |> WHERE number > 5;   -- 6 7 8 9
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide" style="background: url(https://presentations.clickhouse.com/2026-release-26.7/pictures/back5.jpg); background-size: cover;">
+<h2><span class="hilite">Vector Search</span></h2>
+</section>
+
+<section class="slide">
+<h2>Vector Search: the road to GA</h2>
+
+<p><b>22.9</b> &mdash; experimental version</p>
+<p style="color: gray; font-size: 14pt; margin-top: -1em;">Introduced by Arthur Filatenkov, Vladimir Makarov, Danila Mishin,
+Nikita Vasilenko, Alexander Piachonkin, Nikita Evsiukov, Hakob Sagatelyan.</p>
+
+<p><b>23.8</b> &mdash; integration with the USearch library</p>
+<p style="color: gray; font-size: 14pt; margin-top: -1em;">Introduced by Davit Vardanyan.</p>
+
+<p><b>25.1</b> &mdash; faster vector indices</p>
+<p style="color: gray; font-size: 14pt; margin-top: -1em;">By Robert Schulze, Michael Kolupaev.</p>
+
+<p><b style="color: green;">25.5</b> &mdash; beta (prefiltering, postfiltering, rescoring)</p>
+<p style="color: gray; font-size: 14pt; margin-top: -1em;">Developer: Shankar Iyer, Robert Schulze.</p>
+
+<p><b style="color: green;">25.8</b> &mdash; GA (index-only reading, fetch multiplier, binary quantization)</p>
+<p style="color: gray; font-size: 14pt; margin-top: -1em;">Developer: Shankar Iyer.</p>
+</section>
+
+<section class="slide">
+<h2>Vector Index</h2>
+
+<p>In development since 2021. Production-ready since <b style="color: green;">25.8</b>.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -1em;">ALTER TABLE dbpedia
+    ADD INDEX vector_index(vector)
+    TYPE <b style="color: green;">vector_similarity</b>(
+        'hnsw', 'cosineDistance', 1536, 'bf16', 64, 512);
+
+ALTER TABLE dbpedia MATERIALIZE INDEX vector_index;
+
+WITH ... AS reference_vector
+SELECT ... FROM table WHERE ...
+<b>ORDER BY cosineDistance(vector, reference_vector)
+LIMIT 10</b>;
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Shankar Iyer.</p>
+</section>
+
+<section class="slide">
+<h2>Vector Index: how it works</h2>
+
+<p><b>HNSW</b> algorithm with quantization options (<b>bf16</b>, <b>i8</b>, <b>b1</b>).</p>
+<p>Supports different filtering modes:<br/><b>post-filtering</b> (run ANN search, then apply other filters)<br/>or <b>pre-filtering</b> (apply regular filters, then run ANN across filtered results).</p>
+<p>Supports filtering multiplier<br/>(e.g., find 100 nearest candidates to filter and return 10).</p>
+<p>Avoids reading the data column if not necessarily.</p>
+
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Shankar Iyer.</p>
+</section>
+
+<section class="slide">
+<h2>QBit Data Type</h2>
+
+<p>A data type for <b>vector embeddings</b>,
+<br/>that allows tuning the search precision at runtime.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -1em;">CREATE TABLE vectors (
+    id UInt64, name String, ...
+    vec <b style="color: green;">QBit(BFloat16, 1536)</b>
+) ORDER BY ();</code></p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -1em;">SELECT id, name FROM vectors
+ORDER BY <b style="color: green;">L2DistanceTransposed</b>(vector, target, <b style="color: green;">10</b>)
+LIMIT 10;
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Raufs Dunamalijevs.</p>
+</section>
+
+<section class="slide">
+<div style="float: right; width: 60%; height: 110%; margin-right: -100px; margin-top: -20px; background: #1a1a18;">
+<img style="width: 100%;" src="https://presentations.clickhouse.com/2026-release-26.7/pictures/qbit.jpg"/>
+</div>
+<h2 style="margin-top: 0em; font-size: 26pt;">QBit: bit-sliced layout</h2>
+
+<p>It uses a <b>bit-sliced</b> data layout:
+<br/>every number is sliced by bits,
+<br/>e.g., for 1536-dim vector of BFloat16,
+<br/>we store <b style="color: green;">16 subcolumns</b> with Nth (1..16th) bits from all dimensions.</p>
+
+<p>At the query time, we specify, how many (most significant) bits to take.</p>
+
+<p>For example, we can ask to read
+<br/>only 10 out of 16 bits.</p>
+</section>
+
+<section class="slide">
+<h2>QBit: Int8 quantization</h2>
+
+<p style="margin-top: -0.5em;"><b>QBit</b> now supports <b>Int8</b>, which allows anything from binary (1 bit) to full 8 bit quantization, chosen at runtime per query.</p>
+
+<p>It can store any Int8 codes, and we also provide <b>quantizeBFloat16ToInt8</b> and <b>dequantizeInt8ToBFloat16</b> functions for optimal conversion from Float to Int8, minimizing the error on gaussian-distributed vector coordinates.</p>
+
+<p style="margin-top: -0.2em;"><code style="font-size: 13pt; line-height: 1.25;">CREATE TABLE images (id UInt64, emb <b style="color: green;">QBit(Int8, 2048)</b>) &hellip;;
+
+INSERT INTO images SELECT id, <b style="color: green;">quantizeBFloat16ToInt8</b>(embedding * sqrt(2048)) FROM src;
+<span style="color: gray;">-- scale unit-normalized embeddings by sqrt(dim) and convert to Int8</span>
+
+SELECT id FROM images
+ORDER BY <b style="color: green;">cosineDistanceTransposedQuantized</b>(emb, target, <b style="color: green;">4</b>) LIMIT 10;
+<span style="color: gray;">-- reads only the top 4 bit-planes — half the I/O of 8-bit</span>
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>QBit: strided storage</h2>
+
+<p style="margin-top: -0.5em;">The optional <b>stride</b> parameter slices dimensions into groups &mdash; each bit-plane of
+each group is <b>its own stream on disk</b>: <b style="color: green;">QBit(Int8, 1024, 256)</b>:</p>
+
+<table style="border-collapse: collapse; font-size: 10pt; margin: 0.2em 0; line-height: 1; width: auto; margin-left: 0;">
+<tr><td style="padding: 0 5px;"></td>
+<td style="padding: 0 3px; text-align: center; color: gray;">dims 1&ndash;256</td>
+<td style="padding: 0 3px; text-align: center; color: gray;">257&ndash;512</td>
+<td style="padding: 0 3px; text-align: center; color: gray;">513&ndash;768</td>
+<td style="padding: 0 3px; text-align: center; color: gray;">769&ndash;1024</td></tr>
+<tr><td style="padding: 0 5px; color: gray;">bit 1 (sign)</td><td style="padding: 0; border: 2px solid white; background: #8c4; width: 88px; height: 17px;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2; width: 88px;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2; width: 88px;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2; width: 88px;"></td></tr>
+<tr><td style="padding: 0 5px; color: gray;">bit 2</td><td style="padding: 0; border: 2px solid white; background: #8c4; height: 17px;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td></tr>
+<tr><td style="padding: 0 5px; color: gray;">bit 3</td><td style="padding: 0; border: 2px solid white; background: #8c4; height: 17px;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td></tr>
+<tr><td style="padding: 0 5px; color: gray;">bit 4</td><td style="padding: 0; border: 2px solid white; background: #8c4; height: 17px;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td></tr>
+<tr><td style="padding: 0 5px; color: gray;">bit 5 &hellip; 8</td><td style="padding: 0; border: 2px solid white; background: #e2e2e2; height: 28px;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td></tr>
+</table>
+
+<p style="margin-top: 0;"><code style="font-size: 12pt; line-height: 1.2;">&hellip; ORDER BY cosineDistanceTransposedQuantized(emb, target, <b style="color: green;">4</b>, <b style="color: green;">256</b>) &hellip;
+<span style="color: gray;">-- 4 bits × first 256 dims: reads the 4 green streams of 32 — 3% of a Float32 column</span>
+</code></p>
+
+<p>You can request reading only first N dimensions - good for MRL (Matryoshka Representation Learning) embeddings to tune between the speed and recall.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Quantization functions</h2>
+
+<p style="margin-top: -0.3em;">A scalar codec that compresses embedding components to 8bit and below:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">quantizeBFloat16ToInt8</b>(1.5::BFloat16);
+<span style="color: gray;">-- 107</span>
+
+SELECT <b style="color: green;">dequantizeInt8ToBFloat16</b>(quantizeBFloat16ToInt8(1.5::BFloat16));
+<span style="color: gray;">-- 1.5   (near-lossless round-trip)</span>
+</code></p>
+
+<p>&mdash; 256-level Gaussian Lloyd&ndash;Max quantizer; one byte per component.
+<br/>&mdash; Int4 / Int2 / binary codes fall out by bit-truncation &mdash; trade size for recall.
+<br/>&mdash; Shrinks vector indexes 4x (or more) for cheaper similarity search.</p>
+
+<!-- Demo:
+
+SELECT quantizeBFloat16ToInt8(1.5::BFloat16);                                       -- 107
+SELECT dequantizeInt8ToBFloat16(quantizeBFloat16ToInt8(1.5::BFloat16));            -- 1.5
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Randomized Hadamard rotations</h2>
+
+<p>To improve the quality of vector search, it makes sense to apply <b>random rotation</b> of N-dimensional space before quantization of vectors.</p>
+
+<p>Rotation is a multiplication to an orthogonal matrix. There are many orthogonal matrices, and matrix multiplication is computationally expensive.</p>
+
+<p>Thankfully, there is a family of orthogonal matrices, that are faster to multiply with - Hadamard matrices. And it is broad enough to represent pseudorandom rotations.</p>
+
+<p>Now ClickHouse has a function for pseudorandom rotations:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">randomHadamardTransform</b>(vec);
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Randomized Hadamard rotations</h2>
+
+<p>A building block for vector quantization pipelines:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">randomHadamardTransform</b>([1., 2., 3., 4.]::Array(Float32));
+<span style="color: gray;">-- [0, 2, 1, -5] — an orthogonal, norm-preserving rotation</span>
+
+SELECT randomHadamardTransform(v, <b style="color: green;">seed</b>);        <span style="color: gray;">-- different rotation</span>
+SELECT randomHadamardTransform(v, seed, <b style="color: green;">256</b>);   <span style="color: gray;">-- truncate to 256 dims</span>
+</code></p>
+
+<p>&mdash; Spreads the information evenly across dimensions,
+<br/>&emsp; so scalar quantization loses less &mdash; rotate, then quantize.
+<br/>&mdash; Truncated form = Johnson&ndash;Lindenstrauss random projection.
+<br/>&mdash; Deterministic: the same seed gives the same rotation.</p>
+
+<!-- Demo:
+
+WITH [1., 2., 3., 4.]::Array(Float32) AS v SELECT randomHadamardTransform(v) AS rotated, round(L2Norm(v), 6) AS norm_before, round(L2Norm(randomHadamardTransform(v)), 6) AS norm_after;
+-- norms are equal: 5.477226
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Quantization codecs 🧪</h2>
+
+<p style="margin-top: -0.3em;">Store a compact <b>quantized companion</b> next to full-precision vectors:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE vecs (id UInt32,
+    v Array(BFloat16) <b style="color: green;">CODEC(Quantized('rabitq', 384))</b>) &hellip;;
+<span style="color: gray;">-- methods: int8, rabitq (1-bit), turboquant (2-bit), mrl, pq</span>
+
+SET <b style="color: green;">vector_search_use_quantized_codes</b> = 1;
+SELECT id FROM vecs ORDER BY L2Distance(v, [&hellip;]) LIMIT 10;
+</code></p>
+
+<p>&mdash; Two-stage brute-force search without an index: scan the small
+<br/>&emsp; quantized stream, then <b>rescore</b> the candidates at full precision.
+<br/>&mdash; Up to 8x less I/O in the first stage (1-bit codes: 16x smaller).</p>
+
+<!-- Demo:
+
+SET allow_experimental_codecs = 1;
+CREATE TABLE qv (id UInt32, v Array(Float32) CODEC(Quantized('rabitq', 384))) ENGINE = MergeTree ORDER BY id;
+INSERT INTO qv SELECT number, arrayMap(x -> (rand(number * 1000 + x) / 4294967296.0 - 0.5) * 2, range(384)) FROM numbers(1000000);
+SET vector_search_use_quantized_codes = 1;
+SELECT id FROM qv ORDER BY L2Distance(v, (SELECT v FROM qv WHERE id = 42)::Array(Float32)) LIMIT 3;
+-- ReadCompressedBytes: 1.54 GB -> 190 MB (single thread)
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Shankar Iyer.</p>
+</section>
+
+<section class="slide">
+<h2>Embeddings.info</h2>
+
+<p>Contains 100 million photos, 50 million comments, and the Internet
+<br/>&mdash; to explore as a vector embeddings in ClickHouse!</p>
+
+<p style="margin-top: 0.5em;"><a href="https://embeddings.info/" target="_blank">Demo</a>.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide" style="background: url(https://presentations.clickhouse.com/2026-release-26.8/pictures/embeddings.png) center / contain no-repeat; background-color: #000;">
+<a href="https://embeddings.info/" target="_blank" style="display: block; position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></a>
+</section>
+
+<section class="slide" style="background: url(https://presentations.clickhouse.com/2026-release-26.6/pictures/back3.jpg); background-size: cover;">
+<h2><span class="hilite">chDB</span></h2>
+</section>
+
+<section class="slide">
+<h2>chDB in WASM</h2>
+
+<p style="margin-top: -0.3em;">The <b>clickhouse</b> binary now builds for <b style="color: green;">WebAssembly</b>
+<br/>(wasm64, via Emscripten) &mdash; and <b>chDB</b> brings it to your browser:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;"><b style="color: green;">https://wasm.chdb.io</b>   <span style="color: gray;">-- a full SQL shell, no server, no cloud</span>
+
+chdb :) CREATE TABLE t (x UInt64) ENGINE = <b style="color: green;">MergeTree</b> ORDER BY x;
+chdb :) INSERT INTO t SELECT number FROM numbers(1000000);
+chdb :) SELECT sum(x) FROM t;   <span style="color: gray;">-- everything runs in the browser tab</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; <b>clickhouse local</b> runs under Node.js ≥ 24 and in the browser,
+<br/>&emsp; including real MergeTree tables; a CI job pins the build.
+<br/>&mdash; The SQL parser also builds standalone (<b>utils/wasm-parser</b>) &mdash;
+<br/>&emsp; it powers the syntax highlighting of the Web UI and the new Fiddle.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developers: Auxten Wang (chDB), Alexey Milovidov (parser).</p>
+</section>
+
+<section class="slide" style="background: url(https://presentations.clickhouse.com/2026-release-26.8/pictures/chdb_wasm.png) center / contain no-repeat; background-color: #111;">
+<a href="https://wasm.chdb.io/" target="_blank" style="display: block; position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></a>
+</section>
+
+<section class="slide">
+<h2>Pandas API in chDB</h2>
+
+<p>In addition to SQL, chDB now implements Pandas API.</p>
+<p>It builds a lazy pipeline from Pandas transformations,
+<br/>and runs it with the ClickHouse speed!</p>
+
+<p><code style="font-size: 16pt; line-height: 1.25">import datastore as pd  <span style="color: gray;"># That's it! Use pandas API as usual</span>
+</code></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Auxten.</p>
+</section>
+
+<section class="slide" style="background: url(https://presentations.clickhouse.com/2026-release-26.3/pictures/back6.jpg); background-size: cover;">
+<h2><span class="hilite">User Defined Functions</span></h2>
+</section>
+
+<section class="slide">
+<h2>WebAssembly UDFs 🧪</h2>
+
+<p>Create user-defined functions in <b style="color: green;">WebAssembly</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -2em;">INSERT INTO system.<b style="color: green;">webassembly_modules</b> (name, code) SELECT 'collatz', '...';
+
+CREATE FUNCTION <b style="color: green;">collatz_steps</b> LANGUAGE WASM
+ARGUMENTS (n UInt32) RETURNS UInt32
+FROM 'collatz' :: 'steps';
+
+SELECT groupArray(<b style="color: green;">collatz_steps</b>(number::UInt32)) FROM numbers(1, 100);
+</code></p>
+
+<p>&mdash; Write UDFs in any language that compiles to WASM:
+<br/>&emsp; Rust, C, C++, Go, Zig, ...
+<br/>&mdash; Sandboxed execution with Wasmtime.
+<br/>&mdash; <span style="color: gray;">Experimental.</span></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Vladimir Cherkasov, Alexey Smirnov, Vasily Chekalkin.</p>
+</section>
+
+<section class="slide">
+<h2>WebAssembly UDFs 🧪</h2>
+
+<p>Rust crate: <b>clickhouse-wasm-udf</b>:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -2em;">use clickhouse_wasm_udf_bindgen::clickhouse_udf;
+
+#[clickhouse_udf]
+pub fn some_udf(data: String) -> HashMap&lt;String, String> {
+    // Your implementation here
+}</code></p>
+
+<p>Control over runtime complexity:<br/>
+&mdash; webassembly_udf_max_fuel<br/>
+&mdash; webassembly_udf_max_memory<br/>
+&mdash; webassembly_udf_max_input_block_size<br/>
+&mdash; webassembly_udf_max_instances
+</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developers: Vladimir Cherkasov, Alexey Smirnov, Vasily Chekalkin.</p>
+</section>
+
+<section class="slide">
+<h2>WebAssembly UDFs 🧪</h2>
+
+<p>A showcase:</p>
+
+<p><b>chgeos</b>: PostGIS-compatible spatial functions for ClickHouse,
+<br/>delivered as a WebAssembly UDF module powered by GEOS 3.12+.</p>
+
+<p><a href="https://github.com/bacek/chgeos">https://github.com/bacek/chgeos</a></p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Vasily Chekalkin.</p>
+</section>
+
+<section class="slide">
+<h2 style="margin-bottom: 0.5em;">Drivers for UDFs 🧪</h2>
+
+<p style="margin-top: -0.5em;">Write a UDF in <b>any programming language</b> &mdash; right in SQL.
+<br/>A "driver" compiles it at CREATE time into an executable UDF:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.2;">CREATE FUNCTION collatz_steps ARGUMENTS (n UInt64) RETURNS UInt64
+<b style="color: green;">ENGINE = GVisorC</b> AS $$
+    <span style="color: blue;">uint64_t steps = 0;
+    while (n > 1) { n = (n % 2 == 0) ? n / 2 : 3 * n + 1; ++steps; }
+    return steps;</span>
+$$;
+
+SELECT number, <b style="color: green;">collatz_steps</b>(number) FROM numbers(1, 10);
+</code></p>
+
+<p style="margin-top: -0.2em;">&mdash; The C body is compiled and runs in <b>sandboxed Docker containers</b>
+<br/>&emsp; the GVisorC, DockerC, and UnsafeC drivers are provided as examples.
+<br/>&mdash; Drivers are declared by the operator; functions survive restarts.</p>
+
+<!-- Demo (server started with user_defined_executable_function_drivers_config + allow_experimental_executable_udf_drivers=1):
+
+CREATE FUNCTION my_plus ARGUMENTS (a UInt64, b UInt64) RETURNS UInt64
+ENGINE = UnsafeC AS $$ return a + b; $$;
+
+SELECT number, my_plus(number, number) FROM numbers(10);
+
+SELECT count() FROM system.numbers_mt WHERE NOT ignore(plus(number, number));
+
+CREATE FUNCTION my_crash ARGUMENTS (a UInt64) RETURNS UInt64
+ENGINE = UnsafeC AS $$ return *(int*)a; $$;
+
+SELECT number, my_crash(number) FROM numbers(10);
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.2em;">Developers: Daniil Timižev, Alexey Milovidov.</p>
+</section>
+
+<section class="slide" style="background: url(https://presentations.clickhouse.com/2026-release-26.1/pictures/back7.jpg); background-size: cover;">
+<h2><span class="hilite">Bonus</span></h2>
+</section>
+
+<section class="slide">
+<h2>Open-source Kubernetes operator</h2>
+
+<p>The official ClickHouse Kubernetes operator:</p>
+<p><a href="https://github.com/ClickHouse/clickhouse-operator">https://github.com/ClickHouse/clickhouse-operator</a></p>
+
+<p><b>Automated Cluster Provisioning</b>: multi-node with sharding and replication.</p>
+
+<p><b>ClickHouse Keeper Support</b>: deploy and manage ClickHouse Keeper.</p>
+
+<p><b>Vertical &amp; Horizontal Scaling</b>: adjust CPU / Memory resources or shards.</p>
+
+<p><b>Configuration Management</b>: in a single manifest change.</p>
+
+<p><b>Seamless Upgrades</b>: rolling updates without dropping queries.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Grigory Pervakov.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/final.jpg); background-size: cover;">
+<h2><span class="hilite">Q&amp;A</span></h2>
+<p style="position: absolute; right: 5px; bottom: 0; color: white; font-size: 6pt; text-shadow: black 1px 1px 1px;">Photo by Kell Kell, 2013. CC-BY-SA-3.0.</p>
+</section>
+
+    <div class="progress"></div>
+    <script src="https://presentations.clickhouse.com/shower/shower.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/shower-video.css">
+    <script src="https://presentations.clickhouse.com/shower/shower-video.js"></script>
+    <!--/Video plugin-->
+<footer class="badge">
+    <a href="https://presentations.clickhouse.com/">ClickHouse Theater</a>
+</footer>
+</body>
+</html>
