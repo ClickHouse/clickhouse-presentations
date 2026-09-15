@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>What to do with vectors?</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta property="og:image" content="pictures/preview.jpg">
+    <meta property="og:title" content="What to do with vectors?">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="pictures/preview.jpg">
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/themes/clickhouse/styles/styles.css">
+
+    <style>
+        code { display: block; white-space: pre; background-color: #EEE; }
+        p.cloud { text-align: center; line-height: 1.6; font-size: 20pt; }
+        p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+        table, tr, td { border: 0; }
+        .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+        .dark { background: rgba(0, 0, 0, 60%); padding: 5px; color: white; }
+        .chart { display: block; width: 100%; margin-top: -0.5em; }
+        table.num td { padding: 0.1em 0.8em 0.1em 0; font-size: 17pt; line-height: 1.5; }
+        table.num td.n { text-align: right; font-variant-numeric: tabular-nums; }
+        table.num th { padding: 0.1em 0.8em 0.1em 0; font-size: 15pt; color: gray; text-align: left; font-weight: normal; }
+
+
+        /* compact reference table: one row per model */
+        table.models { border-collapse: collapse; width: 100%; margin: 0; line-height: 1.1; }
+        table.models th { font-size: 10pt; color: gray; font-weight: normal; text-align: left;
+                          padding: 0 0.7em 0.1em 0; border-bottom: 1px solid #CCC; }
+        table.models td { font-size: 11pt; line-height: 1.0; padding: 0.02em 0.7em;
+                          border-bottom: 1px solid #EEE; white-space: nowrap; }
+        /* beat the theme's .slide td:first-child { padding-left: 100px } */
+        table.models th:first-child, table.models td:first-child { padding-left: 0; }
+        table.models td.n { text-align: right; font-variant-numeric: tabular-nums; }
+        table.models td.m { font-family: monospace; font-size: 10pt; }
+        table.models td.grp { font-weight: bold; font-size: 11pt; padding-top: 0.3em;
+                              border-bottom: 1px solid #CCC; }
+
+        /* Token highlighting, as on https://platform.openai.com/tokenizer — the five colours cycle
+           per token, and the background covers the leading space so you can see where tokens split. */
+        .tokenizer-output { font-family: monospace; font-size: 17pt; line-height: 1.45;
+                            white-space: pre-wrap; word-break: break-all; }
+        .tokenizer-tkn { padding: 2px 0; }
+        .tokenizer-tkn-0 { background: rgba(107, 64, 216, 0.3); }
+        .tokenizer-tkn-1 { background: rgba(104, 222, 122, 0.4); }
+        .tokenizer-tkn-2 { background: rgba(244, 172, 54, 0.4); }
+        .tokenizer-tkn-3 { background: rgba(239, 65, 70, 0.4); }
+        .tokenizer-tkn-4 { background: rgba(39, 181, 234, 0.4); }
+
+        /* A scrollable block of rendered Markdown inside a slide (mouse wheel / touch / drag the bar). */
+        .scroll { height: 435px; overflow-y: scroll; overscroll-behavior: contain;
+                  margin: -0.3em -2em 0 -2em; padding: 0 2em; }
+        .scroll::-webkit-scrollbar { width: 10px; }
+        .scroll::-webkit-scrollbar-thumb { background: #BBB; border-radius: 5px; }
+        .md { font-size: 12pt; line-height: 1.3; }
+        .md h3 { font-size: 15pt; font-weight: bold; margin: 0.9em 0 0.25em 0; }
+        .md h3:first-child { margin-top: 0.1em; }
+        /* the theme bleeds tables past the slide padding; keep these inside the scroll box */
+        .md table { border-collapse: collapse; table-layout: auto;
+                    margin: 0 0 0.2em 0; width: 100%; }
+        .md th:first-child, .md td:first-child { padding-left: 0; }
+        .md th { font-size: 10pt; color: gray; font-weight: normal; text-align: left;
+                 padding: 0.1em 0.7em 0.1em 0; border-bottom: 1px solid #CCC; }
+        .md td { font-size: 11pt; line-height: 1.35; vertical-align: top; text-align: left;
+                 padding: 0.12em 0.7em 0.12em 0; border-bottom: 1px solid #EEE;
+                 overflow-wrap: break-word; }
+        /* first two columns shrink to their content (width 1% + nowrap), description takes the rest */
+        .md th:nth-child(1), .md td:nth-child(1),
+        .md th:nth-child(2), .md td:nth-child(2) { width: 1%; white-space: nowrap; }
+        .md td:nth-child(2) { color: #2a78d6; font-family: monospace; }
+        .md code { display: inline; background: none; white-space: nowrap; font-size: 11pt; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>What to do with vectors?</h1>
+        <p>Author: Alexey Milovidov, 2026.</p>
+    </header>
+
+<section class="slide" id="cover" style="background: url(pictures/title.png); background-size: cover; background-position: center;">
+<h1 style="margin-top: 0px; line-height: 150%; color: white; font-size: 52pt; text-shadow: 2px 2px black;">What to do with vectors?</h1>
+</section>
+
+<section class="slide">
+<h2>The answer</h2>
+<p style="line-height: 150%; margin-top: 2em;">Store them in <b>ClickHouse</b> and have fun!</p>
+<p><a href="https://embeddings.info/">https://embeddings.info/</a></p>
+</section>
+
+<section class="slide">
+<h2>Let's take some data</h2>
+<p>We will need an open dataset, that is large and interesting to work with.</p>
+<table class="num">
+<tr><th>dataset</th><th style="text-align: right">rows</th><th>modality</th></tr>
+<tr><td><b>Photos</b> &mdash; YFCC100M / Multimedia Commons</td><td class="n">99,155,288</td><td>images</td></tr>
+<tr><td><b>Comments</b> &mdash; Hacker News</td><td class="n">37,799,159</td><td>text</td></tr>
+<tr><td><b>Websites</b> &mdash; a web crawl</td><td class="n">18,988,131</td><td>screenshot + text</td></tr>
+</table>
+</section>
+
+<section class="slide">
+<h2>Photos</h2>
+<p><b>Y</b>ahoo <b>F</b>lickr <b>C</b>reative <b>C</b>ommons <b>100</b> <b>M</b>illion &mdash; published in 2014.</p>
+<p>Every photo is Creative Commons licensed, with metadata:<br/>
+title, description, tags, user, camera, timestamp, and often coordinates.</p>
+<p><b style="color: green;">Multimedia Commons</b> is the derived dataset on AWS Open Data &mdash;
+<br/>the images themselves, one resized JPEG per photo, in a public bucket:</p>
+<p><code style="font-size: 15pt;">s3://multimedia-commons/data/images/{a}/{bc}/{md5}.jpg</code></p>
+</section>
+
+<section class="slide">
+<h2>Photos</h2>
+<p>So I did:</p>
+<p>Downloaded all metadata:<br/>&mdash; 100M images, 13 GB compressed, 42 GB uncompressed.</p>
+<p>Downloaded all images:<br/>&mdash; 99.57M images, 12 TB JPEG, also in ClickHouse in String.</p>
+<p>Calculated thumbnails:<br/>&mdash; 99.13M images, 1.5 TB, 75x75 px RGB in Array(UInt8).</p>
+<p>
+<a href="https://adsb.exposed/?dataset=Photos&zoom=5&lat=52.3488&lng=4.8999&query=fc247be8cff140fcb77711532f587abf&box=38.1504,15.3076,37.4094,16.2451">Link 1</a> |
+<a href="https://embeddings.info/#corpus=photos&ds=siglip2&mode=thumbs&proj=linear&z=0&x=2147483648&y=2147483648">Link 2</a>
+</p>
+</section>
+
+<section class="slide">
+<h2>Comments: Hacker News</h2>
+<p>The dataset is public and self-updating in ClickHouse:</p>
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -2em;">CREATE TABLE hackernews_history UUID '259cf9f0-0c4f-451d-9029-7de661f9a085'
+(
+  update_time DateTime, id UInt32, deleted UInt8,
+  type Enum('story'=1,'comment'=2,'poll'=3,'pollopt'=4,'job'=5),
+  by LowCardinality(String), time DateTime, text String, dead UInt8,
+  parent UInt32, poll UInt32, kids Array(UInt32), url String,
+  score Int32, title String, parts Array(UInt32), descendants Int32
+)
+ENGINE = ReplacingMergeTree(update_time)
+ORDER BY id
+SETTINGS refresh_parts_interval = 60,
+  disk = disk(readonly = true, type = 's3_plain_rewritable',
+    endpoint = 'https://clicklake-test-2.s3.eu-central-1.amazonaws.com/',
+    use_environment_credentials = false);</code></p>
+</section>
+
+<section class="slide">
+<h2>Comments: Hacker News</h2>
+<p>If you copy-paste this CREATE TABLE query
+<br/>in <b>clickhouse-client</b> or <b>clickhouse-local</b>,
+<br/>it will attach prepared dataset for you with no data copying.</p>
+<p>The text is HTML, so it has to be cleaned before processing:</p>
+<p><code style="font-size: 15pt; line-height: 1.25;">SELECT id, decodeHTMLComponent(extractTextFromHTML(text))
+FROM hackernews_history</code></p>
+<p>How does it look? <a href="https://embeddings.info/#corpus=hn&ds=nomic&mode=words&proj=UMAP&z=2&x=944284062&y=3367444056">Link</a></p>
+</section>
+
+<section class="slide">
+<h2>The Internet: a web crawl</h2>
+<p>18,988,131 websites.</p>
+<p>I took the list of top websites from CrUX (Chrome UX report),
+<br/>then set up a script that requests the front page,
+<br/>records as much <b>metadata</b> about the website as possible, saves the <b>content</b>,
+<br/>and takes a <b>screenshot</b> using a headless Chrome with Playwright,
+<br/>ran it in AWS Lambda, and waited a few weeks...</p>
+
+<p>Result: 395 TB of goodness, 189 TB compressed!</p>
+<p>&mdash; AWS security kindly asked me what I'm doing 😅
+<br/>&mdash; colleagues kindly asked me what I'm doing 🥹</p>
+</section>
+
+<section class="slide">
+<h2>The Internet: a web crawl</h2>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">CREATE TABLE default.web
+(
+    data <b>JSON</b>(
+        screenshot Array(UInt8),
+        timestamp DateTime64(3),
+        url String)
+)
+ORDER BY (data.url, data.timestamp);</code></p>
+
+<p>A single JSON column with <i>everything</i> (10 MB compressed per record).</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT DISTINCT arrayJoin(JSONDynamicPaths(data)) FROM web</code></p>
+</section>
+
+<section class="slide">
+<h2>The Internet: a web crawl</h2>
+<div class="scroll"><div class="md">
+<h3>Root Fields</h3>
+<table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>url</code></td><td>String</td><td>Target URL</td></tr>
+<tr><td><code>timestamp</code></td><td>String</td><td>Collection timestamp (YYYY-MM-DD HH:MM:SS.sss)</td></tr>
+<tr><td><code>screenshot</code></td><td>Array(UInt8)</td><td>Raw RGB bitmap 1280x1280 (4,915,200 bytes)</td></tr>
+<tr><td><code>archive</code></td><td>String</td><td>Full HTML with inlined resources (images as data URLs, CSS inline)</td></tr>
+</tbody></table>
+<h3>Network Data</h3>
+<table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>requests</code></td><td>Array</td><td>All HTTP requests made</td></tr>
+<tr><td><code>requests[].url</code></td><td>String</td><td>Request URL</td></tr>
+<tr><td><code>requests[].method</code></td><td>String</td><td>HTTP method (GET, POST, etc.)</td></tr>
+<tr><td><code>requests[].headers</code></td><td>Object</td><td>Request headers</td></tr>
+<tr><td><code>requests[].postData</code></td><td>String</td><td>POST body data (if any)</td></tr>
+<tr><td><code>requests[].resourceType</code></td><td>String</td><td>Resource type (document, script, stylesheet, etc.)</td></tr>
+<tr><td><code>requests[].timestamp</code></td><td>UInt64</td><td>Request timestamp (epoch ms)</td></tr>
+<tr><td><code>responses</code></td><td>Array</td><td>All HTTP responses received</td></tr>
+<tr><td><code>responses[].url</code></td><td>String</td><td>Response URL</td></tr>
+<tr><td><code>responses[].status</code></td><td>UInt16</td><td>HTTP status code</td></tr>
+<tr><td><code>responses[].statusText</code></td><td>String</td><td>HTTP status text</td></tr>
+<tr><td><code>responses[].headers</code></td><td>Object</td><td>Response headers</td></tr>
+<tr><td><code>responses[].bodySize</code></td><td>UInt32</td><td>Response body size in bytes</td></tr>
+<tr><td><code>responses[].body</code></td><td>String</td><td>Response body (text content, up to 2MB)</td></tr>
+<tr><td><code>responses[].bodyBase64</code></td><td>String</td><td>Response body (binary content as base64)</td></tr>
+<tr><td><code>responses[].tls</code></td><td>Object</td><td>TLS security details</td></tr>
+<tr><td><code>responses[].imageMetadata</code></td><td>Object</td><td>Image metadata (for image responses)</td></tr>
+<tr><td><code>responses[].imageMetadata.exif</code></td><td>Object</td><td>EXIF data (make, model, GPS, etc.)</td></tr>
+</tbody></table>
+<h3>Performance &amp; Timing</h3>
+<table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>timing.navigation</code></td><td>Object</td><td>Navigation Timing API data</td></tr>
+<tr><td><code>timing.paint</code></td><td>Array</td><td>Paint timing entries (FP, FCP)</td></tr>
+<tr><td><code>timing.resources</code></td><td>Array</td><td>Resource timing entries</td></tr>
+<tr><td><code>timing.timing</code></td><td>Object</td><td>Derived metrics</td></tr>
+<tr><td><code>timing.timing.domContentLoaded</code></td><td>UInt32</td><td>DOMContentLoaded time (ms)</td></tr>
+<tr><td><code>timing.timing.load</code></td><td>UInt32</td><td>Load event time (ms)</td></tr>
+<tr><td><code>timing.timing.firstByte</code></td><td>UInt32</td><td>Time to first byte (ms)</td></tr>
+<tr><td><code>timing.timing.dns</code></td><td>UInt32</td><td>DNS lookup time (ms)</td></tr>
+<tr><td><code>timing.timing.tcp</code></td><td>UInt32</td><td>TCP connection time (ms)</td></tr>
+<tr><td><code>timing.timing.ssl</code></td><td>UInt32</td><td>SSL handshake time (ms)</td></tr>
+<tr><td><code>memory</code></td><td>Object</td><td>Chrome memory usage</td></tr>
+<tr><td><code>memory.usedJSHeapSizeMB</code></td><td>Float32</td><td>Used JS heap (MB)</td></tr>
+<tr><td><code>memory.totalJSHeapSizeMB</code></td><td>Float32</td><td>Total JS heap (MB)</td></tr>
+</tbody></table>
+<h3>DOM Statistics</h3>
+<table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>dom.title</code></td><td>String</td><td>Page title</td></tr>
+<tr><td><code>dom.doctype</code></td><td>String</td><td>DOCTYPE name</td></tr>
+<tr><td><code>dom.charset</code></td><td>String</td><td>Character encoding</td></tr>
+<tr><td><code>dom.lang</code></td><td>String</td><td>Document language</td></tr>
+<tr><td><code>dom.backgroundColor</code></td><td>Object</td><td>Background color {r, g, b}</td></tr>
+<tr><td><code>dom.totalElements</code></td><td>UInt32</td><td>Total DOM elements</td></tr>
+<tr><td><code>dom.maxDomDepth</code></td><td>UInt16</td><td>Maximum DOM tree depth</td></tr>
+<tr><td><code>dom.tagCounts</code></td><td>Object</td><td>Element counts by tag name</td></tr>
+<tr><td><code>dom.forms</code></td><td>UInt16</td><td>Number of forms</td></tr>
+<tr><td><code>dom.linksCount</code></td><td>UInt32</td><td>Number of links</td></tr>
+<tr><td><code>dom.links</code></td><td>Array</td><td>All links with href, text, rel, target</td></tr>
+<tr><td><code>dom.images</code></td><td>UInt32</td><td>Number of images</td></tr>
+<tr><td><code>dom.iframes</code></td><td>Array</td><td>Iframe details (src, sandbox, allow)</td></tr>
+<tr><td><code>dom.htmlSize</code></td><td>UInt32</td><td>HTML size in bytes</td></tr>
+<tr><td><code>dom.textContentLength</code></td><td>UInt32</td><td>Text content length</td></tr>
+<tr><td><code>dom.textContent</code></td><td>String</td><td>Page text (first 10KB)</td></tr>
+<tr><td><code>dom.documentWidth</code></td><td>UInt16</td><td>Document scroll width</td></tr>
+<tr><td><code>dom.documentHeight</code></td><td>UInt32</td><td>Document scroll height</td></tr>
+<tr><td><code>dom.meta</code></td><td>Object</td><td>Meta tags (name → content)</td></tr>
+</tbody></table>
+<h3>Resource Hints</h3>
+<table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>resourceHints.dnsPrefetch</code></td><td>Array</td><td>DNS prefetch hints</td></tr>
+<tr><td><code>resourceHints.preconnect</code></td><td>Array</td><td>Preconnect hints</td></tr>
+<tr><td><code>resourceHints.preload</code></td><td>Array</td><td>Preload hints (href, as, type)</td></tr>
+<tr><td><code>resourceHints.prefetch</code></td><td>Array</td><td>Prefetch hints</td></tr>
+<tr><td><code>resourceHints.modulepreload</code></td><td>Array</td><td>Module preload hints</td></tr>
+<tr><td><code>resourceHints.prerender</code></td><td>Array</td><td>Prerender hints</td></tr>
+<tr><td><code>resourceHints.speculationRules</code></td><td>Array</td><td>Speculation Rules API data</td></tr>
+</tbody></table>
+<h3>Accessibility</h3>
+<table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>accessibility.landmarks</code></td><td>Object</td><td>Landmark counts (main, header, nav, footer, etc.)</td></tr>
+<tr><td><code>accessibility.headings</code></td><td>Object</td><td>Heading counts (h1-h6) and structure</td></tr>
+<tr><td><code>accessibility.images.total</code></td><td>UInt32</td><td>Total images</td></tr>
+<tr><td><code>accessibility.images.withAlt</code></td><td>UInt32</td><td>Images with alt text</td></tr>
+<tr><td><code>accessibility.images.withoutAlt</code></td><td>UInt32</td><td>Images without alt attribute</td></tr>
+<tr><td><code>accessibility.forms.inputs</code></td><td>UInt16</td><td>Form inputs count</td></tr>
+<tr><td><code>accessibility.forms.inputsWithLabel</code></td><td>UInt16</td><td>Inputs with associated labels</td></tr>
+<tr><td><code>accessibility.aria</code></td><td>Object</td><td>ARIA attribute usage</td></tr>
+<tr><td><code>accessibility.tabindex</code></td><td>Object</td><td>Tabindex usage (positive, zero, negative)</td></tr>
+<tr><td><code>accessibility.skipLinks</code></td><td>Array</td><td>Skip link elements</td></tr>
+<tr><td><code>accessibility.lang</code></td><td>String</td><td>Document language</td></tr>
+</tbody></table>
+<h3>Structured Data</h3>
+<table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>structuredData.jsonLd</code></td><td>Array</td><td>JSON-LD structured data</td></tr>
+<tr><td><code>structuredData.microdata</code></td><td>Array</td><td>Microdata items</td></tr>
+<tr><td><code>structuredData.rdfa</code></td><td>Array</td><td>RDFa annotations</td></tr>
+<tr><td><code>structuredData.openGraph</code></td><td>Object</td><td>Open Graph meta tags</td></tr>
+<tr><td><code>structuredData.twitterCards</code></td><td>Object</td><td>Twitter Card meta tags</td></tr>
+</tbody></table>
+<h3>PWA (Progressive Web App)</h3>
+<table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>pwa.hasServiceWorker</code></td><td>Bool</td><td>Service worker registered</td></tr>
+<tr><td><code>pwa.serviceWorkerStatus</code></td><td>String</td><td>SW status (active, installing, waiting)</td></tr>
+<tr><td><code>pwa.manifest</code></td><td>Object</td><td>Parsed web manifest</td></tr>
+<tr><td><code>pwa.manifestLink</code></td><td>String</td><td>Manifest URL</td></tr>
+<tr><td><code>pwa.themeColor</code></td><td>String</td><td>Theme color</td></tr>
+<tr><td><code>pwa.appleCapable</code></td><td>String</td><td>Apple web app capable</td></tr>
+<tr><td><code>pwa.appleTouchIcons</code></td><td>Array</td><td>Apple touch icons</td></tr>
+</tbody></table>
+<h3>Scripts &amp; JavaScript</h3>
+<table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>scripts</code></td><td>Array</td><td>All script elements</td></tr>
+<tr><td><code>scripts[].src</code></td><td>String</td><td>External script URL</td></tr>
+<tr><td><code>scripts[].type</code></td><td>String</td><td>Script type (text/javascript, module)</td></tr>
+<tr><td><code>scripts[].async</code></td><td>Bool</td><td>Async attribute</td></tr>
+<tr><td><code>scripts[].defer</code></td><td>Bool</td><td>Defer attribute</td></tr>
+<tr><td><code>scripts[].integrity</code></td><td>String</td><td>SRI hash</td></tr>
+<tr><td><code>scripts[].content</code></td><td>String</td><td>Inline script content</td></tr>
+<tr><td><code>javascriptAnalysis</code></td><td>Object</td><td>JavaScript summary</td></tr>
+<tr><td><code>javascriptAnalysis.total</code></td><td>UInt16</td><td>Total scripts</td></tr>
+<tr><td><code>javascriptAnalysis.external</code></td><td>UInt16</td><td>External scripts</td></tr>
+<tr><td><code>javascriptAnalysis.inline</code></td><td>UInt16</td><td>Inline scripts</td></tr>
+<tr><td><code>javascriptAnalysis.module</code></td><td>UInt16</td><td>ES modules</td></tr>
+<tr><td><code>javascriptAnalysis.inlineSize</code></td><td>UInt32</td><td>Total inline script size</td></tr>
+<tr><td><code>globals</code></td><td>Array</td><td>Custom global variables</td></tr>
+<tr><td><code>jsChecks</code></td><td>Object</td><td>JS variable checks for tech detection</td></tr>
+</tbody></table>
+<h3>CSS &amp; Styles</h3>
+<table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>styles.sheets</code></td><td>Array</td><td>External stylesheets</td></tr>
+<tr><td><code>styles.inlineStyles</code></td><td>Array</td><td>Inline style elements</td></tr>
+<tr><td><code>cssAnalysis.externalSheets</code></td><td>UInt16</td><td>External stylesheet count</td></tr>
+<tr><td><code>cssAnalysis.inlineStyles</code></td><td>UInt16</td><td>Inline style count</td></tr>
+<tr><td><code>cssAnalysis.totalRules</code></td><td>UInt32</td><td>Total CSS rules</td></tr>
+<tr><td><code>cssAnalysis.customProperties</code></td><td>Array</td><td>CSS custom properties (variables)</td></tr>
+<tr><td><code>cssAnalysis.mediaQueries</code></td><td>Array</td><td>Media query conditions</td></tr>
+<tr><td><code>cssAnalysis.fontFaces</code></td><td>UInt16</td><td>@font-face rules</td></tr>
+<tr><td><code>cssAnalysis.keyframes</code></td><td>UInt16</td><td>@keyframes animations</td></tr>
+<tr><td><code>cssAnalysis.inlineStyleAttributes</code></td><td>UInt32</td><td>Elements with style attribute</td></tr>
+</tbody></table>
+<h3>Media &amp; Images</h3>
+<table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>media.images</code></td><td>Array</td><td>All images with dimensions, loading, srcset</td></tr>
+<tr><td><code>media.pictures</code></td><td>Array</td><td>Picture elements with sources</td></tr>
+<tr><td><code>media.videos</code></td><td>Array</td><td>Video elements with sources, poster, autoplay</td></tr>
+<tr><td><code>media.audio</code></td><td>Array</td><td>Audio elements</td></tr>
+<tr><td><code>media.svgs</code></td><td>Object</td><td>SVG counts (inline, external)</td></tr>
+<tr><td><code>media.canvases</code></td><td>Array</td><td>Canvas elements</td></tr>
+<tr><td><code>mediaAnalysis</code></td><td>Object</td><td>Media summary</td></tr>
+<tr><td><code>mediaAnalysis.lazyLoaded</code></td><td>UInt16</td><td>Images with loading=&quot;lazy&quot;</td></tr>
+<tr><td><code>mediaAnalysis.withSrcset</code></td><td>UInt16</td><td>Images with srcset</td></tr>
+<tr><td><code>mediaAnalysis.webpCount</code></td><td>UInt16</td><td>WebP images</td></tr>
+<tr><td><code>mediaAnalysis.avifCount</code></td><td>UInt16</td><td>AVIF images</td></tr>
+</tbody></table>
+<h3>Favicons</h3>
+<table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>favicons</code></td><td>Array</td><td>All favicon links</td></tr>
+<tr><td><code>favicons[].href</code></td><td>String</td><td>Favicon URL</td></tr>
+<tr><td><code>favicons[].rel</code></td><td>String</td><td>Link rel attribute</td></tr>
+<tr><td><code>favicons[].sizes</code></td><td>String</td><td>Icon sizes</td></tr>
+<tr><td><code>favicons[].bodyBase64</code></td><td>String</td><td>Favicon content (base64)</td></tr>
+<tr><td><code>favicons[].contentType</code></td><td>String</td><td>MIME type</td></tr>
+</tbody></table>
+<h3>Colors (from screenshot)</h3>
+<table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>colors.Vibrant</code></td><td>Object</td><td>Vibrant color {r, g, b, population}</td></tr>
+<tr><td><code>colors.DarkVibrant</code></td><td>Object</td><td>Dark vibrant color</td></tr>
+<tr><td><code>colors.LightVibrant</code></td><td>Object</td><td>Light vibrant color</td></tr>
+<tr><td><code>colors.Muted</code></td><td>Object</td><td>Muted color</td></tr>
+<tr><td><code>colors.DarkMuted</code></td><td>Object</td><td>Dark muted color</td></tr>
+<tr><td><code>colors.LightMuted</code></td><td>Object</td><td>Light muted color</td></tr>
+</tbody></table>
+<h3>Security Headers</h3>
+<table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>securityHeaders.strictTransportSecurity</code></td><td>String</td><td>HSTS header</td></tr>
+<tr><td><code>securityHeaders.contentSecurityPolicy</code></td><td>String</td><td>CSP header</td></tr>
+<tr><td><code>securityHeaders.cspDirectives</code></td><td>Object</td><td>Parsed CSP directives</td></tr>
+<tr><td><code>securityHeaders.xContentTypeOptions</code></td><td>String</td><td>X-Content-Type-Options</td></tr>
+<tr><td><code>securityHeaders.xFrameOptions</code></td><td>String</td><td>X-Frame-Options</td></tr>
+<tr><td><code>securityHeaders.referrerPolicy</code></td><td>String</td><td>Referrer-Policy</td></tr>
+<tr><td><code>securityHeaders.permissionsPolicy</code></td><td>String</td><td>Permissions-Policy</td></tr>
+<tr><td><code>securityHeaders.crossOriginEmbedderPolicy</code></td><td>String</td><td>COEP</td></tr>
+<tr><td><code>securityHeaders.crossOriginOpenerPolicy</code></td><td>String</td><td>COOP</td></tr>
+<tr><td><code>securityHeaders.crossOriginResourcePolicy</code></td><td>String</td><td>CORP</td></tr>
+<tr><td><code>securityHeaders.server</code></td><td>String</td><td>Server header</td></tr>
+<tr><td><code>securityHeaders.xPoweredBy</code></td><td>String</td><td>X-Powered-By</td></tr>
+<tr><td><code>securityHeaders.score</code></td><td>UInt8</td><td>Security score (0-100)</td></tr>
+</tbody></table>
+<h3>Third-Party Analysis</h3>
+<table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>thirdPartyAnalysis.firstPartyDomain</code></td><td>String</td><td>First-party domain</td></tr>
+<tr><td><code>thirdPartyAnalysis.thirdPartyDomains</code></td><td>Array</td><td>Third-party domains</td></tr>
+<tr><td><code>thirdPartyAnalysis.thirdPartyRequests</code></td><td>UInt16</td><td>Third-party request count</td></tr>
+<tr><td><code>thirdPartyAnalysis.firstPartyRequests</code></td><td>UInt16</td><td>First-party request count</td></tr>
+<tr><td><code>thirdPartyAnalysis.thirdPartyBytes</code></td><td>UInt32</td><td>Third-party bytes</td></tr>
+<tr><td><code>thirdPartyAnalysis.firstPartyBytes</code></td><td>UInt32</td><td>First-party bytes</td></tr>
+<tr><td><code>thirdPartyAnalysis.byCategory.analytics</code></td><td>Array</td><td>Analytics domains</td></tr>
+<tr><td><code>thirdPartyAnalysis.byCategory.advertising</code></td><td>Array</td><td>Advertising domains</td></tr>
+<tr><td><code>thirdPartyAnalysis.byCategory.social</code></td><td>Array</td><td>Social media domains</td></tr>
+<tr><td><code>thirdPartyAnalysis.byCategory.cdn</code></td><td>Array</td><td>CDN domains</td></tr>
+<tr><td><code>thirdPartyAnalysis.byCategory.fonts</code></td><td>Array</td><td>Font service domains</td></tr>
+</tbody></table>
+<h3>Compression Analysis</h3>
+<table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>compressionAnalysis.responses.total</code></td><td>UInt16</td><td>Total responses</td></tr>
+<tr><td><code>compressionAnalysis.responses.gzip</code></td><td>UInt16</td><td>Gzip compressed</td></tr>
+<tr><td><code>compressionAnalysis.responses.brotli</code></td><td>UInt16</td><td>Brotli compressed</td></tr>
+<tr><td><code>compressionAnalysis.responses.zstd</code></td><td>UInt16</td><td>Zstd compressed</td></tr>
+<tr><td><code>compressionAnalysis.responses.uncompressed</code></td><td>UInt16</td><td>Uncompressed</td></tr>
+<tr><td><code>compressionAnalysis.byType</code></td><td>Object</td><td>Breakdown by content type</td></tr>
+<tr><td><code>compressionAnalysis.totalTransferSize</code></td><td>UInt32</td><td>Total transfer size</td></tr>
+</tbody></table>
+<h3>Cookies Analysis</h3>
+<table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>cookiesAnalysis.total</code></td><td>UInt16</td><td>Total cookies</td></tr>
+<tr><td><code>cookiesAnalysis.firstParty</code></td><td>UInt16</td><td>First-party cookies</td></tr>
+<tr><td><code>cookiesAnalysis.thirdParty</code></td><td>UInt16</td><td>Third-party cookies</td></tr>
+<tr><td><code>cookiesAnalysis.secure</code></td><td>UInt16</td><td>Cookies with Secure flag</td></tr>
+<tr><td><code>cookiesAnalysis.httpOnly</code></td><td>UInt16</td><td>Cookies with HttpOnly flag</td></tr>
+<tr><td><code>cookiesAnalysis.sameSite</code></td><td>Object</td><td>SameSite breakdown (strict, lax, none)</td></tr>
+<tr><td><code>cookiesAnalysis.cookies</code></td><td>Array</td><td>Cookie details</td></tr>
+</tbody></table>
+<h3>Storage &amp; Web APIs</h3>
+<table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>storage.localStorage</code></td><td>Object</td><td>LocalStorage info (itemCount, keys, totalSize)</td></tr>
+<tr><td><code>storage.sessionStorage</code></td><td>Object</td><td>SessionStorage info</td></tr>
+<tr><td><code>storage.indexedDB</code></td><td>Object</td><td>IndexedDB availability</td></tr>
+<tr><td><code>storage.cookies.count</code></td><td>UInt16</td><td>Document cookie count</td></tr>
+<tr><td><code>webApis</code></td><td>Object</td><td>Web API availability</td></tr>
+<tr><td><code>webApis.geolocation</code></td><td>Bool</td><td>Geolocation API</td></tr>
+<tr><td><code>webApis.notifications</code></td><td>Bool</td><td>Notifications API</td></tr>
+<tr><td><code>webApis.webgl</code></td><td>Bool</td><td>WebGL support</td></tr>
+<tr><td><code>webApis.webgl2</code></td><td>Bool</td><td>WebGL 2 support</td></tr>
+<tr><td><code>webApis.webrtc</code></td><td>Bool</td><td>WebRTC support</td></tr>
+<tr><td><code>webApis.serviceWorkers</code></td><td>Bool</td><td>Service Workers support</td></tr>
+<tr><td><code>webApis.paymentRequest</code></td><td>Bool</td><td>Payment Request API</td></tr>
+<tr><td>...</td><td>...</td><td>(35 total APIs checked)</td></tr>
+</tbody></table>
+<h3>DNS &amp; TLS</h3>
+<table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>dns.hostname</code></td><td>String</td><td>Target hostname</td></tr>
+<tr><td><code>dns.a</code></td><td>Array</td><td>A records (IPv4 addresses)</td></tr>
+<tr><td><code>dns.mx</code></td><td>Array</td><td>MX records</td></tr>
+<tr><td><code>dns.ns</code></td><td>Array</td><td>NS records</td></tr>
+<tr><td><code>dns.txt</code></td><td>Array</td><td>TXT records</td></tr>
+<tr><td><code>tlsCertificates</code></td><td>Object</td><td>TLS certificates by hostname</td></tr>
+<tr><td><code>tlsCertificates[host].subject</code></td><td>Object</td><td>Certificate subject</td></tr>
+<tr><td><code>tlsCertificates[host].issuer</code></td><td>Object</td><td>Certificate issuer</td></tr>
+<tr><td><code>tlsCertificates[host].validFrom</code></td><td>String</td><td>Valid from date</td></tr>
+<tr><td><code>tlsCertificates[host].validTo</code></td><td>String</td><td>Valid to date</td></tr>
+<tr><td><code>tlsCertificates[host].fingerprint</code></td><td>String</td><td>Certificate fingerprint</td></tr>
+<tr><td><code>tlsCertificates[host].subjectAltNames</code></td><td>String</td><td>Subject alternative names</td></tr>
+</tbody></table>
+<h3>Well-Known URLs</h3>
+<table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>wellKnown.robots</code></td><td>Object</td><td>/robots.txt</td></tr>
+<tr><td><code>wellKnown.robotsParsed</code></td><td>Object</td><td>Parsed robots.txt (userAgents, sitemaps, disallowed, allowed)</td></tr>
+<tr><td><code>wellKnown.sitemap</code></td><td>Object</td><td>/sitemap.xml</td></tr>
+<tr><td><code>wellKnown.securityTxt</code></td><td>Object</td><td>/.well-known/security.txt</td></tr>
+<tr><td><code>wellKnown.humans</code></td><td>Object</td><td>/humans.txt</td></tr>
+<tr><td><code>wellKnown.adsTxt</code></td><td>Object</td><td>/ads.txt</td></tr>
+<tr><td><code>wellKnown.appAdsTxt</code></td><td>Object</td><td>/app-ads.txt</td></tr>
+<tr><td><code>wellKnown.assetLinks</code></td><td>Object</td><td>/.well-known/assetlinks.json</td></tr>
+<tr><td><code>wellKnown.appleAppSiteAssociation</code></td><td>Object</td><td>Apple app site association</td></tr>
+</tbody></table>
+<h3>Technology Detection</h3>
+<table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>technologies</code></td><td>Array</td><td>Detected technologies</td></tr>
+<tr><td><code>technologies[].name</code></td><td>String</td><td>Technology name</td></tr>
+<tr><td><code>technologies[].categories</code></td><td>Array</td><td>Category names</td></tr>
+<tr><td><code>technologies[].website</code></td><td>String</td><td>Technology website</td></tr>
+<tr><td><code>technologies[].description</code></td><td>String</td><td>Technology description</td></tr>
+<tr><td><code>technologies[].version</code></td><td>String</td><td>Detected version</td></tr>
+<tr><td><code>technologies[].evidence</code></td><td>Array</td><td>Detection evidence</td></tr>
+</tbody></table>
+<h3>Console &amp; Errors</h3>
+<table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>console</code></td><td>Array</td><td>Console messages</td></tr>
+<tr><td><code>console[].type</code></td><td>String</td><td>Message type (log, warn, error)</td></tr>
+<tr><td><code>console[].text</code></td><td>String</td><td>Message text</td></tr>
+<tr><td><code>errors</code></td><td>Array</td><td>Page errors</td></tr>
+</tbody></table>
+<h3>Viewport</h3>
+<table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>viewport.innerWidth</code></td><td>UInt16</td><td>Viewport width</td></tr>
+<tr><td><code>viewport.innerHeight</code></td><td>UInt16</td><td>Viewport height</td></tr>
+<tr><td><code>viewport.scrollWidth</code></td><td>UInt16</td><td>Scroll width</td></tr>
+<tr><td><code>viewport.scrollHeight</code></td><td>UInt32</td><td>Scroll height</td></tr>
+</tbody></table>
+</div></div>
+</section>
+
+<section class="slide" style="background: url(pictures/hn.png); background-size: cover; background-position: center;">
+<h2 style="color: white; text-shadow: 2px 2px black;">Vectors</h2>
+</section>
+
+<section class="slide">
+<h2>What is a vector embedding?</h2>
+<p>It can mean at least five slightly different things...</p>
+<p>1. In a general, mathematical sense:
+<br/>&mdash; embedding is an injective <b>map</b> from a set (of anything) <b>into space*</b>,
+<br/>&emsp; so that the map preserves some properties.</p>
+
+<p>Example: a geographical map is an embedding
+<br/>of a segment of sphere in a 2d plane.</p>
+
+<p>But this definition is too generic...</p>
+<p style="color: gray;">* this definition can be further generalized or specified.</p>
+</section>
+
+<section class="slide">
+<h2>What is a vector embedding?</h2>
+<p>2. Historical example (2013): <b>word2vec</b>.</p>
+<p>A map from words to vectors learned to give similar vectors to words that often have the same context (same neighbor words) in a text corpus.</p>
+<p>Examples: <b>GloVe</b>, <b>FastText</b>. Typical number of dimensions: 50..300.</p>
+<p>A vector is just a sequence of floating-point numbers:
+<br/><b>king</b> -> <span style="font-size: 14pt; font-family: monospace; word-break: break-all;"> [1.203125,-1.6953125,-0.859375,-1.0546875,0.31835938,...,0.875]</span></p>
+<p>Classic: king &plus; woman &minus; man ≈ queen</p>
+<p style="color: gray;">This is also not what we are interested in.</p>
+</section>
+
+<section class="slide">
+<h2>What is a vector embedding?</h2>
+<p style="margin-top: -1em;">3. Token embeddings in a transformer model.</p>
+<div class="tokenizer-output"><span class="tokenizer-tkn tokenizer-tkn-0">Every</span><span class="tokenizer-tkn tokenizer-tkn-1"> L</span><span class="tokenizer-tkn tokenizer-tkn-2">LM</span><span class="tokenizer-tkn tokenizer-tkn-3"> starts</span><span class="tokenizer-tkn tokenizer-tkn-4"> with</span><span class="tokenizer-tkn tokenizer-tkn-0"> token</span><span class="tokenizer-tkn tokenizer-tkn-1">izing</span><span class="tokenizer-tkn tokenizer-tkn-2"> the</span><span class="tokenizer-tkn tokenizer-tkn-3"> text</span><span class="tokenizer-tkn tokenizer-tkn-4">.</span></div>
+
+<p>Then every token (and also every position) is mapped to a vector.
+<br/>Then these vectors fed to the model layers.
+</p>
+<p><code style="font-size: 14pt;">'Every '  -> [0.55859375,-1.921875,0.74609375,1.640625,  ...,-0.64453125]
+' L'      -> [-0.625,-0.14160156,-1.2265625,-0.33398438,   ...,0.7890625]
+'LM'      -> [-1.171875,0.453125,1.25,1.59375,               ...,-1.4375]
+' starts' -> [-0.98046875,1.0625,-0.7421875,1.21875,         ...,-0.8125]
+' with'   -> [-1.6015625,-0.46679688,2.671875,0.58203125,...,-0.46484375]
+' token'  -> [-0.546875,-0.1484375,0.25390625,-0.63671875,...,0.24511719]
+'izing'   -> [0.79296875,-0.34570312,-1.0078125,0.875,         ...,0.625]
+' the'    -> [-0.00592041,0.203125,0.23535156,-0.34960938,...,-0.8984375]
+' text'   -> [-0.765625,0.11767578,1.9140625,-0.625,      ...,0.14550781]
+'.'       -> [0.31445312,1.1484375,0.74609375,0.60546875, ...,0.12695312]</code></p>
+<p style="color: gray;">This is also not what we need!</p>
+</section>
+
+<section class="slide">
+<h2>What is a vector embedding?</h2>
+<p>4. Model activations as embeddings.</p>
+<p>Run a transformer over the text and take a hidden state:</p>
+<p>&mdash; the last token's state, or the mean over all tokens, from layer <i>N</i>.</p>
+<p style="margin-top: 1em;">This works - the vector does carry meaning.</p>
+<p>This is not the best for direct usage as an embedding,
+<br/>but the best embedding models (e.g., Qwen3-Embedding-8B)
+<br/>are created by fine-tuning on top of the corresponding generative LLMs.</p>
+<p style="color: gray;">This is also not what we need!</p>
+</section>
+
+<section class="slide">
+<h2>What is a vector embedding?</h2>
+<p>5. Models trained for the job.</p>
+<p>Contrastive training: pull similar pairs together, push everything else apart.
+<br/>The training decides what "similar" means, so there are several families:</p>
+<p>&mdash; <b>similarity</b>: two sentences that mean the same thing;</p>
+<p>&mdash; <b>retrieval</b>: a <i>question</i> must be close to a <i>passage that answers it</i>
+<br/>&emsp;&mdash; which is <b>asymmetric</b>, hence prefixes:
+<code style="display: inline; background: none;">'search_query: '</code> vs <code style="display: inline; background: none;">'search_document: '</code>;</p>
+<p>&mdash; <b>multimodal retrieval</b>: CLIP, SigLIP &mdash; images and their captions
+<br/>&emsp;land in <b>one shared space</b>, so you can search photos with words;</p>
+<p>&mdash; and question answering, code search, instructions...</p>
+</section>
+
+<section class="slide">
+<h2>What is a vector embedding?</h2>
+<p><b>Bonus:</b> Sparse embeddings (bag of words model, 1970)</p>
+<p>A very large vector, where each dimension corresponds to one possibe word from the dictionary (10k+ dimensions) and contains its frequency in the given phrase (with variations like TF-IDF, BM25).</p>
+
+<p>&mdash; dimension = vocabulary size, but only tens of non-zeros per document;
+<br/>&mdash; exact lexical matching, fully interpretable;</p>
+<p>&mdash; modern versions are <b>learned</b> sparse: SPLADE expands the query
+<br/>&emsp; into related terms, keeping the inverted-index shape.</p>
+<p style="margin-top: 0.5em;">In this project I added one as a baseline: an <b>8192-dimensional hashed
+bag of words</b> over Hacker News comments &mdash; built entirely in SQL.</p>
+</section>
+
+<!--
+<section class="slide" style="background: url(pictures/hn_bow.jpg); background-size: cover; background-position: center;">
+<h2 style="color: white; text-shadow: 2px 2px black;">Bag of words, 8192 dimensions</h2>
+<p style="position: absolute; bottom: 20px; left: 100px; right: 100px; font-size: 18pt;"><span class="dark">
+Smooth, blobby, a single spike of near-duplicates. Compare with a trained model on the next slide.</span></p>
+</section>
+
+<section class="slide" style="background: url(pictures/hn_qwen.jpg); background-size: cover; background-position: center;">
+<h2 style="color: white; text-shadow: 2px 2px black;">Qwen3-Embedding-8B, 4096-d</h2>
+<p style="position: absolute; bottom: 20px; left: 100px; right: 100px; font-size: 18pt;"><span class="dark">
+Structure, filaments, distinct regions. The same 37.8 million comments.</span></p>
+</section>
+-->
+
+<section class="slide">
+<h2>I want to calculate embeddings...</h2>
+<p>All of them. And store them in ClickHouse!</p>
+<p>What models are available?</p>
+<p>&mdash; <a href="https://huggingface.co/spaces/mteb/leaderboard">MTEB leaderboard</a></p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt; margin-bottom: 0.15em;">The 22 models I used</h2>
+<table class="models">
+<tr><th>model</th><th style="text-align: right">year</th><th style="text-align: right">params</th><th style="text-align: right">dims</th><th>licence</th></tr>
+<tr><td class="grp" colspan="5">Images &mdash; 99.2M photos, 17.8M screenshots</td></tr>
+<tr><td class="m">siglip2-so400m-patch16-512</td><td class="n">2025</td><td class="n">1.1B</td><td class="n"><b>1152</b></td><td style="color: gray;">Apache-2.0</td></tr>
+<tr><td class="m">nomic-embed-vision-v1.5</td><td class="n">2024</td><td class="n">93M</td><td class="n"><b>768</b></td><td style="color: gray;">Apache-2.0</td></tr>
+<tr><td class="m">CLIP ViT-L/14</td><td class="n">2021</td><td class="n">428M</td><td class="n"><b>768</b></td><td style="color: gray;">MIT</td></tr>
+
+<tr><td class="grp" colspan="5">Text &mdash; 37.8M comments, 19.0M pages</td></tr>
+<tr><td class="m">Qwen3-Embedding-8B</td><td class="n">2025</td><td class="n">7.6B</td><td class="n"><b>4096</b></td><td style="color: gray;">Apache-2.0</td></tr>
+<tr><td class="m">embeddinggemma-300m</td><td class="n">2025</td><td class="n">303M</td><td class="n"><b>768</b></td><td style="color: gray;">Gemma</td></tr>
+<tr><td class="m">nomic-embed-text-v1.5</td><td class="n">2024</td><td class="n">137M</td><td class="n"><b>768</b></td><td style="color: gray;">Apache-2.0</td></tr>
+<tr><td class="m">KaLM-embedding-mini-instruct-v1.5</td><td class="n">2024</td><td class="n">494M</td><td class="n"><b>896</b></td><td style="color: gray;">MIT</td></tr>
+<tr><td class="m">jina-embeddings-v3</td><td class="n">2024</td><td class="n">572M</td><td class="n"><b>1024</b></td><td style="color: gray;">CC-BY-NC</td></tr>
+<tr><td class="m">jina-embeddings-v2-small-en</td><td class="n">2023</td><td class="n">33M</td><td class="n"><b>512</b></td><td style="color: gray;">Apache-2.0</td></tr>
+<tr><td class="m">granite-embedding-30m-english</td><td class="n">2024</td><td class="n">30M</td><td class="n"><b>384</b></td><td style="color: gray;">Apache-2.0</td></tr>
+<tr><td class="m">snowflake-arctic-embed-xs</td><td class="n">2024</td><td class="n">23M</td><td class="n"><b>384</b></td><td style="color: gray;">Apache-2.0</td></tr>
+<tr><td class="m">snowflake-arctic-embed-m</td><td class="n">2024</td><td class="n">109M</td><td class="n"><b>768</b></td><td style="color: gray;">Apache-2.0</td></tr>
+<tr><td class="m">e5-small-v2</td><td class="n">2023</td><td class="n">33M</td><td class="n"><b>384</b></td><td style="color: gray;">MIT</td></tr>
+<tr><td class="m">e5-base-v2</td><td class="n">2023</td><td class="n">109M</td><td class="n"><b>768</b></td><td style="color: gray;">MIT</td></tr>
+<tr><td class="m">e5-large-v2</td><td class="n">2023</td><td class="n">335M</td><td class="n"><b>1024</b></td><td style="color: gray;">MIT</td></tr>
+<tr><td class="m">gte-small</td><td class="n">2023</td><td class="n">33M</td><td class="n"><b>384</b></td><td style="color: gray;">MIT</td></tr>
+<tr><td class="m">gte-base</td><td class="n">2023</td><td class="n">109M</td><td class="n"><b>768</b></td><td style="color: gray;">MIT</td></tr>
+<tr><td class="m">bge-small-en-v1.5</td><td class="n">2023</td><td class="n">33M</td><td class="n"><b>384</b></td><td style="color: gray;">MIT</td></tr>
+<tr><td class="m">bge-base-en-v1.5</td><td class="n">2023</td><td class="n">109M</td><td class="n"><b>768</b></td><td style="color: gray;">MIT</td></tr>
+<tr><td class="m">bge-large-en-v1.5</td><td class="n">2023</td><td class="n">335M</td><td class="n"><b>1024</b></td><td style="color: gray;">MIT</td></tr>
+<tr><td class="m">all-MiniLM-L6-v2</td><td class="n">2021</td><td class="n">23M</td><td class="n"><b>384</b></td><td style="color: gray;">Apache-2.0</td></tr>
+<tr><td class="m">bag of words (hashed, TF)</td><td class="n">1970</td><td class="n">&mdash;</td><td class="n"><b>8192</b></td><td style="color: gray;">&mdash;</td></tr>
+</table>
+<p style="color: gray; font-size: 13pt; margin: 0.35em 0 0 0; line-height: 1.3;">All 22 are
+<b>open-weight</b> &mdash; the closed APIs (Gemini Embedding, Nemotron-VL over OpenRouter) were
+trialled and dropped: per-token pricing does not survive 100 million rows.</p>
+</section>
+
+<section class="slide">
+<h2>Option 1: open models on a GPU</h2>
+<p>For the 99 million photos:</p>
+<table class="num">
+<tr><th>model</th><th>dims</th><th>table</th></tr>
+<tr><td>google/siglip2-so400m-patch16-512</td><td class="n">1152</td><td>emb_siglip2</td></tr>
+<tr><td>open_clip ViT-L-14 (openai)</td><td class="n">768</td><td>emb_clip</td></tr>
+<tr><td>nomic-ai/nomic-embed-vision-v1.5</td><td class="n">768</td><td>emb_nomic</td></tr>
+</table>
+<p style="margin-top: 1em;">One <b>g6.12xlarge</b> (4&times; NVIDIA L4), spot, in <b>the same region as the bucket</b>.</p>
+<p>All three models loaded on every GPU, so the S3 read and the JPEG decode
+<br/>are amortized across them.</p>
+<p>Wall time: about a day. Cost: <b>$50&ndash;200</b> for 300 million embeddings.</p>
+</section>
+
+<section class="slide">
+<h2>Text: nineteen models</h2>
+<p>For the Hacker News comments, from smallest to largest:</p>
+<p style="font-size: 18pt; line-height: 1.25;">
+<b>384-d:</b> all-MiniLM-L6-v2, snowflake-arctic-embed-xs, bge-small-en-v1.5, gte-small, e5-small-v2, granite-embedding-30m
+<br/><b>512&ndash;768-d:</b> jina-embeddings-v2-small, arctic-embed-m, bge-base-en-v1.5, gte-base, e5-base-v2, nomic-embed-text-v1.5, embeddinggemma-300m
+<br/><b>896&ndash;1024-d:</b> KaLM-embedding-multilingual-mini, bge-large-en-v1.5, e5-large-v2, jina-embeddings-v3
+<br/><b>4096-d:</b> Qwen3-Embedding-8B
+<br/><b>8192-d sparse:</b> the bag-of-words baseline</p>
+<p style="margin-top: 0.5em;">The 30M-parameter models take hours. The 8B ones take days
+<br/>&mdash; and the 4096-dimensional table alone is 1.1 TiB.</p>
+</section>
+
+<section class="slide">
+<h2>Option 2: an API</h2>
+<p>Do it from inside ClickHouse, since 26.6:</p>
+<p><code style="font-size: 14pt; line-height: 1.22;"><span style="color: gray;"># /etc/clickhouse-server/config.d/openrouter.yaml</span>
+<b style="color: green;">named_collections</b>:
+    openrouter:
+        provider: openai        <span style="color: gray;"># OpenRouter speaks the OpenAI API</span>
+        endpoint: https://openrouter.ai/api/v1/embeddings
+        api_key: sk-or-v1-...
+</code></p>
+<p><code style="font-size: 14pt; line-height: 1.22;">SELECT <b style="color: green;">aiEmbed</b>(review_text, 'google/gemini-embedding-2',
+               map('credentials', 'openrouter')) AS embedding
+FROM reviews LIMIT 10;</code></p>
+</section>
+
+<section class="slide">
+<h2>Option 3: make them yourself</h2>
+<p>You do not always need a model. A hashed bag of words, a TF-IDF vector,
+<br/>a vector of aggregated features - these are embeddings too,
+<br/>and ClickHouse can build them with SQL.</p>
+<p>The bag of words on this map was built by one INSERT SELECT:</p>
+<p><code style="font-size: 13pt; line-height: 1.25;">INSERT INTO hackernews_embeddings_bow
+<b style="color: green;">WITH</b> 8192 AS vec_size,
+  <b style="color: green;">tokens</b>(lowerUTF8(decodeHTMLComponent(extractTextFromHTML(text)))) AS toks,
+  arrayMap(x -> <b style="color: green;">cityHash64</b>(x) % vec_size, toks) AS tokens_idx,
+  arrayMap(j -> toFloat32(<b style="color: green;">countEqual</b>(tokens_idx, j)), range(vec_size)) AS vec,
+  (vec / if(<b style="color: green;">L2Norm</b>(vec) > 0, L2Norm(vec), 1))::Array(BFloat16) AS embedding
+SELECT id, embedding FROM hackernews_history
+WHERE id >= {lo:UInt32} AND id &lt; {hi:UInt32}</code></p>
+</section>
+
+<section class="slide" style="background: url(pictures/photos_umap3d.jpg); background-size: cover; background-position: center;">
+<h2 style="color: white; text-shadow: 2px 2px black;">What embeddings can do for you?</h2>
+</section>
+
+<section class="slide">
+<h2>What can embeddings do?</h2>
+<p><b>Search.</b> Nearest neighbours by distance &mdash; text, images, or text&nbsp;&rarr;&nbsp;images.</p>
+<p><b>Classification.</b> The vector is a feature vector; a linear model on top of it
+<br/>&emsp;is usually enough, and needs only a few hundred labels.</p>
+<p><b>Mapping to other spaces.</b> Project to 2-D to look at it, reduce dimensions
+<br/>&emsp;to make it cheap, or map one model's space into another's.</p>
+<p style="margin-top: 1em;">Also: clustering, deduplication, recommendations, anomaly detection,
+<br/>and RAG (which is just search with extra steps).</p>
+</section>
+
+<section class="slide" style="background: url(pictures/classification.png); background-size: cover; background-position: center;">
+</section>
+
+<section class="slide" style="background: url(pictures/classification2.png); background-size: cover; background-position: center;">
+</section>
+
+<section class="slide" style="background: url(pictures/classification3.png); background-size: cover; background-position: center;">
+</section>
+
+<section class="slide">
+<h2>What can embeddings do?</h2>
+<p>Demo: <a href="https://embeddings.info/">https://embeddings.info/</a></p>
+</section>
+
+
+<section class="slide">
+<h2>Distances in high-dimensional spaces</h2>
+
+<p>Embeddings are trained with respect of a <i>similarity function</i>,
+<br/>which can be the L2 distance, cosine distance, or dot product.</p>
+
+<p>Almost all modern embedding models produce unit-normalized vectors,
+<br/>which means their L2 norm equals to 1 - the vectors are divided by their length before output.</p>
+
+<p>As all vectors have length 1, they are located on n-dimensional <b>sphere</b>.</p>
+
+<p>For normalized vectors, all similarity functions are in a monotonic relation with each other, so they can be used interchangingly.</p>
+
+<p style="color: gray; font-size: 10pt;">Dot product aka scalar product of two vectors is the sum of products of their i-th coordinates. L2 distance aka Euclidean distance is the L2 norm of the difference between vectors. L2 norm of a vector is the sqrt of the dot product of vec with itself - a vector length. Cosine similarity is the normalized dot product: the dot product divided by the norms of both vectors. It is the cosine of the angle between two vectors, and also the same as correlation, ranging from -1 to 1. Don't confuse cosine similarity and cosine distance which is 1 - cosineSimilarity(v, u) so it is non-negative and has the right direction.</p>
+</section>
+
+
+<section class="slide">
+<h2 style="font-size: 30pt;">How to think about high-dimensional spaces?</h2>
+<p>High dimensional spaces break the intuition:</p>
+<p>&mdash; the volume of a unit sphere (ball) converges to zero;
+<br/>&mdash; most of the volume of a cube or a ball is near its border;
+<br/>&mdash; the distance between random points of a unit cube goes to infinity;
+<br/>&mdash; random vectors are almost orthogonal;
+<br/>&mdash; random vectors on a sphere has L2 distance close to sqrt(2);
+<br/>&mdash; most of vector coordinates on a unit sphere are close to zero;
+<br/>&mdash; coordinates of a random vector on a unit sphere have a Gaussian distribution N(0, sqrt(ndims));
+</p>
+
+<p>
+<a href="https://play.clickhouse.com/play?tab=Spheres#V0lUSCAyIEFTIGQKU0VMRUNUIHgsIHksIDEuMCBBUyB2IEZST00KKAogICAgV0lUSCBhcnJheU1hcCh4IC0+IHJhbmROb3JtYWwoMCwgMSwgeCksIG1hdGVyaWFsaXplKHJhbmdlKGQpKSkgQVMgc2FtcGxlcywKICAgICAgICBhcnJheU1hcCh4IC0+IHggLyBMMk5vcm0oc2FtcGxlcyksIHNhbXBsZXMpIEFTIG5vcm1fc2FtcGxlcwogICAgU0VMRUNUICgobm9ybV9zYW1wbGVzWzFdIC8gMS4xICsgMSkgKiA1MTIpOjpVSW50MTYgQVMgeCwgKChub3JtX3NhbXBsZXNbMl0gLyAxLjEgKyAxKSAqIDUxMik6OlVJbnQxNiBBUyB5CiAgICBGUk9NIG51bWJlcnMoMTAwMDApCikKR1JPVVAgQlkgeCwgeQpGT1JNQVQgUE5HClNFVFRJTkdTIG91dHB1dF9mb3JtYXRfaW1hZ2Vfd2lkdGggPSAxMDI0LCBvdXRwdXRfZm9ybWF0X2ltYWdlX2hlaWdodCA9IDEwMjQK">Spheres</a>,
+<a href="https://play.clickhouse.com/play?tab=Cubes#V0lUSCAxMiBBUyBkLAoKKHZlYywgaSwgaiwgcGhpKSAtPiBhcnJheU1hcChrIC0+IAogICAgIGsgPSBpID8gdmVjW2ldICogY29zKHBoaSkgLSB2ZWNbal0gKiBzaW4ocGhpKQogIDogKGsgPSBqID8gdmVjW2ldICogc2luKHBoaSkgKyB2ZWNbal0gKiBjb3MocGhpKQogIDogdmVjW2tdKSwgYXJyYXlFbnVtZXJhdGUodmVjKSkgQVMgcm90YXRlQXJvdW5kUGxhbmUsCiAgCih2ZWMsIHJvdGF0aW9ucykgLT4gYXJyYXlGb2xkKChhY2MsIHJvdGF0aW9uKSAtPiByb3RhdGVBcm91bmRQbGFuZShhY2MsIHJvdGF0aW9uLmksIHJvdGF0aW9uLmosIHJvdGF0aW9uLnBoaSksIHJvdGF0aW9ucywgdmVjKSBBUyByb3RhdGVBcm91bmRQbGFuZXMsCgoxMDAgQVMgbnVtX3JvdGF0aW9ucywKKFNFTEVDVCBhcnJheU1hcCh4IC0+ICgoYXJyYXlSYW5kb21TYW1wbGUocmFuZ2UoZCArIGlnbm9yZSh4KSksIDIpIEFTIGlqKVsxXSArIDEgQVMgaSwgaWpbMl0gKyAxIEFTIGosIHJhbmRVbmlmb3JtKC1waSgpLCBwaSgpLCB4KSk6OlR1cGxlKGkgVUludDY0LCBqIFVJbnQ2NCwgcGhpIEZsb2F0MzIpLCBtYXRlcmlhbGl6ZShyYW5nZShudW1fcm90YXRpb25zKSkpKSBBUyByYW5kb21fcm90YXRpb25zLAoKLS0gYXJyYXlNYXAoeCAtPiByYW5kQmVybm91bGxpKDAuNSwgeCkgKiAyLjAgLSAxLCBtYXRlcmlhbGl6ZShyYW5nZShkKSkpIEFTIHZlYywKYXJyYXlNYXAoYiAtPiBiaXRBbmQoYml0U2hpZnRSaWdodChudW1iZXIsIGIpLCAxKSAqIDIuIC0gMS4sIHJhbmdlKGQpKSBBUyB2ZWMsCgpyb3RhdGVBcm91bmRQbGFuZXModmVjLCByYW5kb21fcm90YXRpb25zKSBBUyByb3RhdGVkCgotLSByYW5kb21IYWRhbWFyZFRyYW5zZm9ybShhcnJheU1hcCh4IC0+IHJhbmRCZXJub3VsbGkoMC41LCB4KSAqIDIuMCAtIDEsIG1hdGVyaWFsaXplKHJhbmdlKGQpKSksIDUpIEFTIHZlYwoKU0VMRUNUICgocm90YXRlZFsxXSAqIDEwMjQgLyBncmVhdGVzdChzcXJ0KGQpLCAxMCkpICsgNTEyKTo6VUludDE2IEFTIHgsIChyb3RhdGVkWzJdICogMTAyNCAvIGdyZWF0ZXN0KHNxcnQoZCksIDEwKSArIDUxMik6OlVJbnQxNiBBUyB5LCAxLjAgQVMgdiBGUk9NIG51bWJlcnMoNjU1MzYpCkZPUk1BVCBQTkcK">Cubes</a>, <a href="https://pastila.nl/?00188526/f0c2f28c79c7f6cb3fcb528e146eaa83.html">More cubes</a>.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">How to store embeddings efficiently?</h2>
+<p>For raw data, use the 16-bit data type <i>at most</i>.</p>
+<p>Do not use Float64 or Float32. ClickHouse provides <b>BFloat16</b>.</p>
+<p>16-bit floating point data type does not loss any precision on embeddings.
+<br/>And most of modern models already use no more than 16-bit for inference.</p>
+
+<p>Example: Qwen3-8B has 4096 dimensions, and on 37.8M comments,
+<br/>&mdash; the whole table without embeddings - <b style="color: green;">12 GB</b>
+<br/>&mdash; embeddings in Float64 - <b style="color: brown;">1.24 TB</b>
+<br/>&mdash; embeddings in Float32 - <b style="color: red;">62 TB</b>
+<br/>&mdash; embeddings in BFloat16 - <b style="color: orange;">31 TB</b>.</p>
+
+<p>But for most cases you will store further quantized data!</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">How to store embeddings efficiently?</h2>
+<p><b>Quantization:</b></p>
+<p>&mdash; representing vectors with a lower number of bits per coordinate.</p>
+<p>Practical options can be as low as 1..4 bit per dimension.</p>
+
+<p><b>Dimensionality reduction:</b></p>
+<p>&mdash; representing vectors with a lower number of dimensions.</p>
+<p>Good results on search and retrieval even with 384 dimensions
+<br/>out of initial 4096.</p>
+<p>Example: 2 bit with 384 dimensions takes only <b style="color: green;">29 GB</b>.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">How to store embeddings efficiently?</h2>
+<p>Check if embeddings are "good" - centered and zero-normalized.
+<br/>Most of modern models produce normalized embeddings.</p>
+<p><code style="font-size: 13pt; line-height: 1.25; margin-right: -1em;"><span style="color: gray;">-- should return something close to 1.</span>
+SELECT avg(L2Norm(embedding)) FROM hackernews_embeddings;
+
+<span style="color: gray;">-- should return values close to 0 for each coordinate.</span>
+SELECT avgForEach(embedding) FROM hackernews_embeddings;
+
+<span style="color: gray;">-- should return values close to 1 for each coordinate, ok if less on a dataset.</span>
+SELECT stddevForEach(embedding) * sqrt(any(length(embedding)))
+FROM hackernews_embeddings;
+</code></p>
+
+<p style="font-size: 10pt; color: gray;">Note: most models output unit-normalized embeddings, so that the L2Norm ≈ 1 and stddev of a coordinate ≈ 1 / sqrt(ndims),
+<br/>but some models output normalized embeddings, so that L2Norm ≈ sqrt(ndims) and stddev of a coordinate ≈ 1.
+<br/>The difference is only in scaling.</p>
+
+<p>You may need to normalize embeddings for further steps.</p>
+</section>
+
+<section class="slide">
+<h2>Rotating spaces</h2>
+<p>If we rotate the whole space randomly,
+<br/>the distances and angles don't change.</p>
+<p>But the information is better spread across coordinates, even if it was concentrated.</p>
+<p>If applied before quantization, rotation improves the search quality on quantized data.</p>
+<p>There is a family of orthogonal matrices allowing fast multiplication,<br/>
+and ClickHouse has a function for that!</p>
+<p><code>randomHadamardTransform(vec)</code></p>
+</section>
+
+<section class="slide" style="background: black url(pictures/unrotated.png) center / contain no-repeat;">
+<p style="position: absolute; bottom: 0; left: 1em; color: white;">Nomic embeddings of Flickr photos, without rotation, orthogonal projection on 2D.</p>
+</section>
+
+<section class="slide" style="background: black url(pictures/rotated.png) center / contain no-repeat;">
+<p style="position: absolute; bottom: 0; left: 1em; color: white;">Nomic embeddings of Flickr photos, with rotation, orthogonal projection on 2D.</p>
+</section>
+
+<section class="slide">
+<h2>randomHadamardTransform</h2>
+<p><code style="font-size: 14pt;">SELECT <b style="color: green;">randomHadamardTransform</b>([1., 2., 3., 4.]::Array(Float32));
+<span style="color: gray;">-- [0, 2, 1, -5]   an orthogonal, norm-preserving rotation</span>
+
+SELECT randomHadamardTransform(v, seed);       <span style="color: gray;">-- a different rotation</span>
+SELECT randomHadamardTransform(v, seed, 256);  <span style="color: gray;">-- rotate, then truncate</span></code></p>
+<p>&mdash; deterministic: the same seed always gives the same rotation,
+<br/>&emsp;so it can be a <code style="display: inline; background: none;">MATERIALIZED</code> column and a query can reproduce it;</p>
+<p>&mdash; norm-preserving, so unit vectors stay unit vectors;</p>
+<p>&mdash; the truncated form is a Johnson&ndash;Lindenstrauss random projection;</p>
+</section>
+
+<section class="slide">
+<h2>Int8 Quantization</h2>
+<p style="margin-top: -1em;">Twice less storage compared to BFloat16.</p>
+<p>Map every dimension to a number -127..128 so we can reconstruct the approximate original values,
+while minimizing the distance calculation error.</p>
+<p>The algorithm - use a lookup table, assuming that the value has Gaussian distribution N(0, 1).</p>
+<p>ClickHouse has a function for that!</p>
+<p><code style="font-size: 13pt; line-height: 1.25; margin-right: -1em;"><span style="color: gray;">-- pack Array(BFloat16) into Array(Int8)</span>
+SELECT <b style="color: green;">quantizeBFloat16ToInt8</b>(embedding * sqrt(length(embedding)))
+FROM hackernews_embeddings;
+<span style="color: gray;">-- unpack Array(Int8) into reconstructed original values of Array(BFloat16)</span>
+SELECT <b style="color: green;">dequantizeInt8ToBFloat16</b>(quantized) / sqrt(length(quantized))
+FROM hackernews_embeddings;
+</code></p>
+</section>
+
+<section class="slide">
+<h2>QBit Data Type</h2>
+
+<p>A data type for <b>vector embeddings</b>,
+<br/>that allows tuning the search precision at runtime.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -1em;">CREATE TABLE vectors (
+    id UInt64, name String, ...
+    vec <b style="color: green;">QBit(BFloat16, 1536)</b>
+) ORDER BY ();</code></p>
+
+<p><code style="font-size: 14pt; line-height: 1.25; margin-right: -1em;">SELECT id, name FROM vectors
+ORDER BY <b style="color: green;">L2DistanceTransposed</b>(vector, target, <b style="color: green;">10</b>)
+LIMIT 10;
+</code></p>
+</section>
+
+<section class="slide">
+<div style="float: right; width: 60%; height: 110%; margin-right: -100px; margin-top: -20px; background: #1a1a18;">
+<img style="width: 100%;" src="https://presentations.clickhouse.com/2026-release-26.7/pictures/qbit.jpg"/>
+</div>
+<h2 style="margin-top: 0em; font-size: 26pt;">QBit: bit-sliced layout</h2>
+
+<p>It uses a <b>bit-sliced</b> data layout:
+<br/>every number is sliced by bits,
+<br/>e.g., for 1536-dim vector of BFloat16,
+<br/>we store <b style="color: green;">16 subcolumns</b> with Nth (1..16th) bits from all dimensions.</p>
+
+<p>At the query time, we specify, how many (most significant) bits to take.</p>
+
+<p>For example, we can ask to read
+<br/>only 10 out of 16 bits.</p>
+</section>
+
+<section class="slide">
+<h2>QBit: Int8 quantization</h2>
+
+<p style="margin-top: -0.5em;"><b>QBit</b> supports <b>Int8</b>, which allows anything from binary (1 bit) to full 8 bit quantization, chosen at runtime per query.</p>
+
+<p>It can store any Int8 codes, and we also provide <b>quantizeBFloat16ToInt8</b> and <b>dequantizeInt8ToBFloat16</b> functions for optimal conversion from Float to Int8, minimizing the error on gaussian-distributed vector coordinates.</p>
+
+<p style="margin-top: -0.2em;"><code style="font-size: 13pt; line-height: 1.25;">CREATE TABLE images (id UInt64, emb <b style="color: green;">QBit(Int8, 2048)</b>) &hellip;;
+
+INSERT INTO images
+SELECT id, <b style="color: green;">quantizeBFloat16ToInt8</b>(embedding * sqrt(2048)) FROM src;
+<span style="color: gray;">-- scale unit-normalized embeddings by sqrt(dim) and convert to Int8</span>
+
+SELECT id FROM images
+ORDER BY <b style="color: green;">cosineDistanceTransposedQuantized</b>(emb, target, <b style="color: green;">4</b>) LIMIT 10;
+<span style="color: gray;">-- reads only the top 4 bit-planes — half the I/O of 8-bit</span>
+</code></p>
+</section>
+
+<section class="slide">
+<h2>QBit: strided storage</h2>
+
+<p style="margin-top: -0.5em;">The optional <b>stride</b> parameter slices dimensions into groups &mdash; each bit-plane of
+each group is <b>its own stream on disk</b>: <b style="color: green;">QBit(Int8, 1024, 256)</b>:</p>
+
+<table style="border-collapse: collapse; font-size: 10pt; margin: 0.2em 0; line-height: 1; width: auto; margin-left: 0;">
+<tr><td style="padding: 0 5px;"></td>
+<td style="padding: 0 3px; text-align: center; color: gray;">dims 1&ndash;256</td>
+<td style="padding: 0 3px; text-align: center; color: gray;">257&ndash;512</td>
+<td style="padding: 0 3px; text-align: center; color: gray;">513&ndash;768</td>
+<td style="padding: 0 3px; text-align: center; color: gray;">769&ndash;1024</td></tr>
+<tr><td style="padding: 0 5px; color: gray;">bit 1 (sign)</td><td style="padding: 0; border: 2px solid white; background: #8c4; width: 88px; height: 17px;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2; width: 88px;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2; width: 88px;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2; width: 88px;"></td></tr>
+<tr><td style="padding: 0 5px; color: gray;">bit 2</td><td style="padding: 0; border: 2px solid white; background: #8c4; height: 17px;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td></tr>
+<tr><td style="padding: 0 5px; color: gray;">bit 3</td><td style="padding: 0; border: 2px solid white; background: #8c4; height: 17px;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td></tr>
+<tr><td style="padding: 0 5px; color: gray;">bit 4</td><td style="padding: 0; border: 2px solid white; background: #8c4; height: 17px;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td></tr>
+<tr><td style="padding: 0 5px; color: gray;">bit 5 &hellip; 8</td><td style="padding: 0; border: 2px solid white; background: #e2e2e2; height: 28px;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td><td style="padding: 0; border: 2px solid white; background: #e2e2e2;"></td></tr>
+</table>
+
+<p style="margin-top: 0;"><code style="font-size: 12pt; line-height: 1.2;">&hellip; ORDER BY cosineDistanceTransposedQuantized(emb, target, <b style="color: green;">4</b>, <b style="color: green;">256</b>) &hellip;
+<span style="color: gray;">-- 4 bits × first 256 dims: reads the 4 green streams of 32 — 3% of a Float32 column</span>
+</code></p>
+
+<p>You can request reading only first N dimensions - good for:
+<br/>- rotated embeddings with randomHadamardTransform;
+<br/>- MRL (Matryoshka Representation Learning) embeddings to tune between the speed and recall.</p>
+</section>
+
+<section class="slide">
+<h2>QBit data type</h2>
+<p>Tune the precision and speed of a brute-force search at query time:</p>
+<p><a href="https://embeddings.info/recall.html">https://embeddings.info/recall.html</a></p>
+</section>
+
+<section class="slide">
+<h2>Dimensionality reduction</h2>
+
+<p><b>For search, retrieval, and analytics:</b></p>
+<p>&mdash; Use first N dimensions for distance calculation on rotated embeddings, e.g., 384 from 4096 with the QBit data type.</p>
+
+<p><b>For data exploration and visualization:</b></p>
+<p>&mdash; Use UMAP (see also: t-SNE) - learned dimensionality reduction to a low dimension space, 2D/3D.</p>
+</code></p>
+</section>
+
+<section class="slide" style="background: url(pictures/photos_linear.jpg); background-size: cover; background-position: center;">
+<h2 style="color: white; text-shadow: 2px 2px black;">Photos &mdash; linear projection</h2>
+<p style="position: absolute; bottom: 20px; left: 100px; right: 100px; font-size: 18pt;"><span class="dark">
+99 million photos, SigLIP2, Hadamard-rotated, projected to 2-D by summing slices. A sphere, as promised.</span></p>
+</section>
+
+<section class="slide" style="background: url(pictures/photos_umap.jpg); background-size: cover; background-position: center;">
+<h2 style="color: white; text-shadow: 2px 2px black;">Photos &mdash; UMAP</h2>
+<p style="position: absolute; bottom: 20px; left: 100px; right: 100px; font-size: 18pt;"><span class="dark">
+The same 99 million photos. Hue is a fourth UMAP component; brightness is density.</span></p>
+</section>
+
+<section class="slide" style="background: url(pictures/photos_clip.jpg); background-size: cover; background-position: center;">
+<h2 style="color: white; text-shadow: 2px 2px black;">The same photos &mdash; CLIP ViT-L/14</h2>
+</section>
+
+<section class="slide">
+<h2>Bonus</h2>
+<p>ClickHouse also support <b>vector indices</b>:
+</p><p>&mdash; HNSW for fast in-memory similarity search
+<br/>&emsp; (often you don't need it, as QBit solves the problem perfectly)</p>
+<p>And advanced quantization codecs:
+</p><p>&mdash; e.g., RabitQ, which is based on 8-dimensional sphere packing.
+</p>
+</section>
+
+<section class="slide">
+<h2>What Else?</h2>
+<p>ClickHouse is the best DBMS for analytic applications:</p>
+<p>&mdash; Fast, scalable, and resource efficient;</p>
+<p>&mdash; Easy to use and pleasant to work with;</p>
+<p>&mdash; Robust and reliable;</p>
+<p>&mdash; Batteries included.</p>
+<p style="margin-top: 2em;">Friends tell friends to use ClickHouse!</p>
+</section>
+
+<section class="slide" style="background: url(pictures/questions.png); background-size: cover; background-position: center;">
+<h2 style="color: white; text-shadow: 2px 2px black; margin-top: 150px; font-size: 48pt;">Questions?</h2>
+</section>
+
+    <footer class="badge">
+        <a href="https://github.com/ClickHouse/clickhouse-presentations">Fork me on GitHub</a>
+    </footer>
+    <div class="progress"></div>
+    <script src="https://presentations.clickhouse.com/shower/shower.js"></script>
+</body>
+</html>
