@@ -91,7 +91,7 @@
 
 <section class="slide">
 <h2>Let's take some data</h2>
-<p>We will need an open dataset, that is large and interesting to work with.</p>
+<p>We will need an open dataset that is large and interesting to work with.</p>
 <table class="num">
 <tr><th>dataset</th><th style="text-align: right">rows</th><th>modality</th></tr>
 <tr><td><b>Photos</b> &mdash; YFCC100M / Multimedia Commons</td><td class="n">99,155,288</td><td>images</td></tr>
@@ -145,7 +145,7 @@ SETTINGS refresh_parts_interval = 60,
 <h2>Comments: Hacker News</h2>
 <p>If you copy-paste this CREATE TABLE query
 <br/>in <b>clickhouse-client</b> or <b>clickhouse-local</b>,
-<br/>it will attach prepared dataset for you with no data copying.</p>
+<br/>it will attach the prepared dataset for you with no data copying.</p>
 <p>The text is HTML, so it has to be cleaned before processing:</p>
 <p><code style="font-size: 15pt; line-height: 1.25;">SELECT id, decodeHTMLComponent(extractTextFromHTML(text))
 FROM hackernews_history</code></p>
@@ -180,7 +180,7 @@ ORDER BY (data.url, data.timestamp);</code></p>
 
 <p>A single JSON column with <i>everything</i> (10 MB compressed per record).</p>
 
-<p><code style="font-size: 14pt; line-height: 1.25;">SELECT DISTINCT arrayJoin(JSONDynamicPaths(data)) FROM web</code></p>
+<p><code style="font-size: 14pt; line-height: 1.25;">SELECT DISTINCT arrayJoin(JSONAllPaths(data)) FROM web</code></p>
 </section>
 
 <section class="slide">
@@ -498,8 +498,8 @@ ORDER BY (data.url, data.timestamp);</code></p>
 <section class="slide">
 <h2>What is a vector embedding?</h2>
 <p>2. Historical example (2013): <b>word2vec</b>.</p>
-<p>A map from words to vectors learned to give similar vectors to words that often have the same context (same neighbor words) in a text corpus.</p>
-<p>Examples: <b>GloVe</b>, <b>FastText</b>. Typical number of dimensions: 50..300.</p>
+<p>A map from words to vectors learned to give similar vectors to words that often have the same context (same neighbour words) in a text corpus.</p>
+<p>Similar examples: <b>GloVe</b>, <b>fastText</b>. Typical number of dimensions: 50..300.</p>
 <p>A vector is just a sequence of floating-point numbers:
 <br/><b>king</b> -> <span style="font-size: 14pt; font-family: monospace; word-break: break-all;"> [1.203125,-1.6953125,-0.859375,-1.0546875,0.31835938,...,0.875]</span></p>
 <p>Classic: king &plus; woman &minus; man ≈ queen</p>
@@ -512,9 +512,9 @@ ORDER BY (data.url, data.timestamp);</code></p>
 <div class="tokenizer-output"><span class="tokenizer-tkn tokenizer-tkn-0">Every</span><span class="tokenizer-tkn tokenizer-tkn-1"> L</span><span class="tokenizer-tkn tokenizer-tkn-2">LM</span><span class="tokenizer-tkn tokenizer-tkn-3"> starts</span><span class="tokenizer-tkn tokenizer-tkn-4"> with</span><span class="tokenizer-tkn tokenizer-tkn-0"> token</span><span class="tokenizer-tkn tokenizer-tkn-1">izing</span><span class="tokenizer-tkn tokenizer-tkn-2"> the</span><span class="tokenizer-tkn tokenizer-tkn-3"> text</span><span class="tokenizer-tkn tokenizer-tkn-4">.</span></div>
 
 <p>Then every token (and also every position) is mapped to a vector.
-<br/>Then these vectors fed to the model layers.
+<br/>Then these vectors are fed to the model layers.
 </p>
-<p><code style="font-size: 14pt;">'Every '  -> [0.55859375,-1.921875,0.74609375,1.640625,  ...,-0.64453125]
+<p><code style="font-size: 14pt;">'Every'   -> [0.55859375,-1.921875,0.74609375,1.640625,  ...,-0.64453125]
 ' L'      -> [-0.625,-0.14160156,-1.2265625,-0.33398438,   ...,0.7890625]
 'LM'      -> [-1.171875,0.453125,1.25,1.59375,               ...,-1.4375]
 ' starts' -> [-0.98046875,1.0625,-0.7421875,1.21875,         ...,-0.8125]
@@ -556,7 +556,7 @@ ORDER BY (data.url, data.timestamp);</code></p>
 <section class="slide">
 <h2>What is a vector embedding?</h2>
 <p><b>Bonus:</b> Sparse embeddings (bag of words model, 1970)</p>
-<p>A very large vector, where each dimension corresponds to one possibe word from the dictionary (10k+ dimensions) and contains its frequency in the given phrase (with variations like TF-IDF, BM25).</p>
+<p>A very large vector, where each dimension corresponds to one possible word from the dictionary (10k+ dimensions) and contains its frequency in the given phrase (with variations like TF-IDF, BM25).</p>
 
 <p>&mdash; dimension = vocabulary size, but only tens of non-zeros per document;
 <br/>&mdash; exact lexical matching, fully interpretable;</p>
@@ -714,17 +714,17 @@ WHERE id >= {lo:UInt32} AND id &lt; {hi:UInt32}</code></p>
 <section class="slide">
 <h2>Distances in high-dimensional spaces</h2>
 
-<p>Embeddings are trained with respect of a <i>similarity function</i>,
+<p>Embeddings are trained with respect to a <i>similarity function</i>,
 <br/>which can be the L2 distance, cosine distance, or dot product.</p>
 
 <p>Almost all modern embedding models produce unit-normalized vectors,
-<br/>which means their L2 norm equals to 1 - the vectors are divided by their length before output.</p>
+<br/>which means their L2 norm equals 1 - the vectors are divided by their length before output.</p>
 
-<p>As all vectors have length 1, they are located on n-dimensional <b>sphere</b>.</p>
+<p>As all vectors have length 1, they are located on an n-dimensional <b>sphere</b>.</p>
 
-<p>For normalized vectors, all similarity functions are in a monotonic relation with each other, so they can be used interchangingly.</p>
+<p>For normalized vectors, all similarity functions are in a monotonic relation with each other, so they can be used interchangeably.</p>
 
-<p style="color: gray; font-size: 10pt;">Dot product aka scalar product of two vectors is the sum of products of their i-th coordinates. L2 distance aka Euclidean distance is the L2 norm of the difference between vectors. L2 norm of a vector is the sqrt of the dot product of vec with itself - a vector length. Cosine similarity is the normalized dot product: the dot product divided by the norms of both vectors. It is the cosine of the angle between two vectors, and also the same as correlation, ranging from -1 to 1. Don't confuse cosine similarity and cosine distance which is 1 - cosineSimilarity(v, u) so it is non-negative and has the right direction.</p>
+<p style="color: gray; font-size: 10pt;">Dot product aka scalar product of two vectors is the sum of products of their i-th coordinates. L2 distance aka Euclidean distance is the L2 norm of the difference between vectors. L2 norm of a vector is the sqrt of the dot product of vec with itself - a vector length. Cosine similarity is the normalized dot product: the dot product divided by the norms of both vectors. It is the cosine of the angle between two vectors, ranging from -1 to 1. Don't confuse cosine similarity and cosine distance which is 1 - cosineSimilarity(v, u) so it is non-negative and has the right direction.</p>
 </section>
 
 
@@ -735,9 +735,9 @@ WHERE id >= {lo:UInt32} AND id &lt; {hi:UInt32}</code></p>
 <br/>&mdash; most of the volume of a cube or a ball is near its border;
 <br/>&mdash; the distance between random points of a unit cube goes to infinity;
 <br/>&mdash; random vectors are almost orthogonal;
-<br/>&mdash; random vectors on a sphere has L2 distance close to sqrt(2);
+<br/>&mdash; random vectors on a sphere have L2 distance close to sqrt(2);
 <br/>&mdash; most of vector coordinates on a unit sphere are close to zero;
-<br/>&mdash; coordinates of a random vector on a unit sphere have a Gaussian distribution N(0, sqrt(ndims));
+<br/>&mdash; coordinates of a random vector on a unit sphere have a Gaussian distribution N(0, 1/sqrt(ndims));
 </p>
 
 <p>
@@ -749,16 +749,16 @@ WHERE id >= {lo:UInt32} AND id &lt; {hi:UInt32}</code></p>
 <h2 style="font-size: 30pt;">How to store embeddings efficiently?</h2>
 <p>For raw data, use the 16-bit data type <i>at most</i>.</p>
 <p>Do not use Float64 or Float32. ClickHouse provides <b>BFloat16</b>.</p>
-<p>16-bit floating point data type does not loss any precision on embeddings.
-<br/>And most of modern models already use no more than 16-bit for inference.</p>
+<p>16-bit floating point data type does not lose any precision on embeddings.
+<br/>And most modern models already use no more than 16-bit for inference.</p>
 
 <p>Example: Qwen3-8B has 4096 dimensions, and on 37.8M comments,
 <br/>&mdash; the whole table without embeddings - <b style="color: green;">12 GB</b>
 <br/>&mdash; embeddings in Float64 - <b style="color: brown;">1.24 TB</b>
-<br/>&mdash; embeddings in Float32 - <b style="color: red;">62 TB</b>
-<br/>&mdash; embeddings in BFloat16 - <b style="color: orange;">31 TB</b>.</p>
+<br/>&mdash; embeddings in Float32 - <b style="color: red;">620 GB</b>
+<br/>&mdash; embeddings in BFloat16 - <b style="color: orange;">310 GB</b>.</p>
 
-<p>But for most cases you will store further quantized data!</p>
+<p>In most cases you will store further quantized data!</p>
 </section>
 
 <section class="slide">
@@ -771,12 +771,12 @@ WHERE id >= {lo:UInt32} AND id &lt; {hi:UInt32}</code></p>
 <p>&mdash; representing vectors with a lower number of dimensions.</p>
 <p>Good results on search and retrieval even with 384 dimensions
 <br/>out of initial 4096.</p>
-<p>Example: 2 bit with 384 dimensions takes only <b style="color: green;">29 GB</b>.</p>
+<p>Example: 2 bit with 384 dimensions takes only <b style="color: green;">3.6 GB</b>.</p>
 </section>
 
 <section class="slide">
 <h2 style="font-size: 30pt;">How to store embeddings efficiently?</h2>
-<p>Check if embeddings are "good" - centered and zero-normalized.
+<p>Check if embeddings are "good" - centered and unit-normalized.
 <br/>Most of modern models produce normalized embeddings.</p>
 <p><code style="font-size: 13pt; line-height: 1.25; margin-right: -1em;"><span style="color: gray;">-- should return something close to 1.</span>
 SELECT avg(L2Norm(embedding)) FROM hackernews_embeddings;
@@ -830,8 +830,8 @@ SELECT randomHadamardTransform(v, seed, 256);  <span style="color: gray;">-- rot
 
 <section class="slide">
 <h2>Int8 Quantization</h2>
-<p style="margin-top: -1em;">Twice less storage compared to BFloat16.</p>
-<p>Map every dimension to a number -127..128 so we can reconstruct the approximate original values,
+<p style="margin-top: -1em;">Half the storage compared to BFloat16.</p>
+<p>Map every dimension to a number &minus;128..127 so we can reconstruct the approximate original values,
 while minimizing the distance calculation error.</p>
 <p>The algorithm - use a lookup table, assuming that the value has Gaussian distribution N(0, 1).</p>
 <p>ClickHouse has a function for that!</p>
@@ -852,7 +852,7 @@ FROM hackernews_embeddings;
 
 <p><code style="font-size: 14pt; line-height: 1.25; margin-right: -1em;">CREATE TABLE vectors (
     id UInt64, name String, ...
-    vec <b style="color: green;">QBit(BFloat16, 1536)</b>
+    vector <b style="color: green;">QBit(BFloat16, 1536)</b>
 ) ORDER BY ();</code></p>
 
 <p><code style="font-size: 14pt; line-height: 1.25; margin-right: -1em;">SELECT id, name FROM vectors
@@ -938,8 +938,7 @@ each group is <b>its own stream on disk</b>: <b style="color: green;">QBit(Int8,
 <p>&mdash; Use first N dimensions for distance calculation on rotated embeddings, e.g., 384 from 4096 with the QBit data type.</p>
 
 <p><b>For data exploration and visualization:</b></p>
-<p>&mdash; Use UMAP (see also: t-SNE) - learned dimensionality reduction to a low dimension space, 2D/3D.</p>
-</code></p>
+<p>&mdash; Use UMAP (see also: t-SNE) - learned dimensionality reduction to a low-dimensional space, 2D/3D.</p>
 </section>
 
 <section class="slide" style="background: url(pictures/photos_linear.jpg); background-size: cover; background-position: center;">
@@ -960,11 +959,11 @@ The same 99 million photos. Hue is a fourth UMAP component; brightness is densit
 
 <section class="slide">
 <h2>Bonus</h2>
-<p>ClickHouse also support <b>vector indices</b>:
+<p>ClickHouse also supports <b>vector indices</b>:
 </p><p>&mdash; HNSW for fast in-memory similarity search
 <br/>&emsp; (often you don't need it, as QBit solves the problem perfectly)</p>
-<p>And advanced quantization codecs:
-</p><p>&mdash; e.g., RabitQ, which is based on 8-dimensional sphere packing.
+<p>And ready-made quantization codecs:
+</p><p>&mdash; e.g., RaBitQ, Turboquant (based on 8-dimensional sphere packing).
 </p>
 </section>
 
