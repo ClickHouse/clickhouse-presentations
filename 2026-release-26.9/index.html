@@ -1351,27 +1351,7 @@ SELECT <b style="color: green;">aiTranslate</b>(comment, 'German'), <b style="co
 <p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: George Larionov, Andriy Yakovlev.</p>
 </section>
 
-<section class="slide">
-<h2 style="font-size: 30pt;">ClickHouse on the dbt platform</h2>
-
-<p style="margin-top: -0.3em;">Two announcements on September 16:</p>
-
-<p style="margin-top: 0.3em;">&mdash; The <b style="color: green;">dbt v2 adapter</b> for ClickHouse is in <b>public beta</b>: a Rust rewrite
-<br/>&emsp; on dbt's new engine with the Arrow-based ADBC driver, shipped inside
-<br/>&emsp; the dbt binary. Parse times ~30x faster than the Python v1 adapter.</p>
-
-<p>&mdash; <b style="color: green;">ClickHouse on the dbt platform</b> is in <b>private beta</b>: Studio, environments,
-<br/>&emsp; scheduled jobs, Catalog &mdash; for open-source, Cloud, and BYOC.</p>
-
-<p><code style="font-size: 14pt; line-height: 1.25;">$ python -m pip install --pre dbt
-$ dbt build
-</code></p>
-
-<p style="margin-top: 0.3em;">&mdash; Blog: <a href="https://clickhouse.com/blog/clickhouse-is-now-available-on-the-dbt-platform">ClickHouse is now available on the dbt platform</a>.</p>
-
-<!-- ClickHouse-specific configs: sorting keys, codecs, TTLs, skip indexes, materialized views. The v1 adapter stays GA with 2000+ production teams. -->
-
-<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Aditya Chidurala, José Muñoz, Alex Francoeur.</p>
+<section class="slide" style="background: url(pictures/workers.png); background-size: cover;">
 </section>
 
 
