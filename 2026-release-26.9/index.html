@@ -38,7 +38,7 @@
 </section>
 
 <section class="slide" style="background: url(pictures/back2.jpg); background-size: cover;">
-<h2><span class="hilite">Release 26.9</span></h2>
+<h2><span class="hilite">Autumn Release 26.9</span></h2>
 <p><span class="hilite">&mdash; 56 new features 🍁</span></p>
 <p><span class="hilite">&mdash; 135 performance optimizations 🍎</span></p>
 <p><span class="hilite">&mdash; 464 bug fixes 🐿️</span></p>
@@ -211,8 +211,8 @@ FROM VALUES('x Float64, y Float64',
 <span style="color: gray;">-- 1.99 │ 1.05 │ 0.9973 │ 5      — y ≈ 2x + 1</span>
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; Also <b>regr_avgx</b>, <b>regr_avgy</b>, <b>regr_sxx</b>, <b>regr_syy</b>, <b>regr_sxy</b>.
-<br/>&mdash; The same names as in PostgreSQL, Oracle, DuckDB &mdash; queries port as is.
+<p style="line-height: 1.5;">&mdash; Also <b>regr_avgx</b>, <b>regr_avgy</b>, <b>regr_sxx</b>, <b>regr_syy</b>, <b>regr_sxy</b>.
+<br/>&mdash; The same names as in PostgreSQL, Oracle, Snowflake &mdash; queries port as is.
 <br/>&mdash; Combinators, GROUP BY, and window functions work as usual.</p>
 
 <!-- Demo:
@@ -238,9 +238,9 @@ SELECT json<b style="color: green;">['user.name']</b>, json<b style="color: gree
 <span style="color: gray;">-- keys with dots and spaces — without backticks</span>
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; Translated by the parser to nested <b>arrayElement</b> calls;
+<p>&mdash; Translated by the parser to nested <b>arrayElement</b> calls;
 <br/>&emsp; the result is the same <b>Dynamic</b> subcolumn.
-<br/>&mdash; Familiar to everyone coming from Map columns.</p>
+</p><p>&mdash; Familiar to everyone coming from Map columns.</p>
 
 <!-- Demo:
 
@@ -252,7 +252,7 @@ Note: `j['a']['b'].:Int64` — the type hint after a bracket did not parse in 26
 
 -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Pavel Kruglov.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Pavel Kruglov.</p>
 </section>
 
 <section class="slide">
@@ -272,7 +272,7 @@ SELECT name, sorting_key FROM <b style="color: green;">system.hypothetical_proje
 </code></p>
 
 <p style="margin-top: 0.3em;">&mdash; Session-scoped, validated like ADD PROJECTION, never materialized.
-<br/>&mdash; Joins <b>CREATE HYPOTHETICAL INDEX</b>; cost estimates for projections are next.</p>
+<br/>&mdash; Similar to <b>CREATE HYPOTHETICAL INDEX</b>.</p>
 
 <!-- Demo (in one session, e.g. over HTTP with session_id):
 
