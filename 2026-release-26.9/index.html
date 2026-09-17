@@ -328,6 +328,7 @@ SELECT arrayFlattenedLength([[1,2],[3],[4,5,6]]), length([[1,2],[3],[4,5,6]]);  
 <p style="margin-top: 0.3em;">&mdash; Columns: <b>name</b>, <b>syntax</b>, <b>description</b>, <b>parent_name</b>, <b>related</b>.
 </p><p>&mdash; The same source that renders the docs - always matching the binary.
 </p><p>&mdash; Next to <b>system.functions</b>, <b>system.settings</b>, <b>system.formats</b>...</p>
+<p>Demo</p>
 
 <!-- Demo:
 
@@ -340,7 +341,7 @@ http://localhost:8123/docs#q=SELECT
 
 -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Robert Schulze.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Robert Schulze.</p>
 </section>
 
 <section class="slide">
@@ -372,7 +373,7 @@ curl -s 'http://127.0.0.1:8123/?session_id=demo1' --data-binary "SELECT query_id
 In clickhouse-client the interactive session works the same way.
 
 -->
-
+<p style="float: right;">Demo</p>
 <p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Vladimir Cherkasov.</p>
 </section>
 
@@ -559,9 +560,9 @@ Timings are not shown: the 356 MB table scans in milliseconds on 96 cores either
 <p style="margin-top: 0.3em;">&mdash; <b style="color: green;">memcpy</b>: the small-copy helper in string, join, and reading paths
 <br/>&emsp; compiled into a libc <b>memcpy</b> call on AArch64 &mdash; the exact call
 <br/>&emsp; it exists to avoid. Fixed on x86 in 2024; now inline on ARM too.
-<br/>&mdash; <b style="color: green;">Filters</b>: <b>countBytesInFilter</b> was a scalar loop; NEON register
+<br/>&mdash; <b style="color: green;">Filters</b>: a low-level optimization for <b>WHERE</b> using NEON register
 <br/>&emsp; accumulation makes it <b>up to 15x</b> faster.
-<br/>&mdash; Also: <b>numbers</b> fills, <b>T64</b>, 128-bit division, UTF-8 validation.</p>
+<br/>&mdash; Also: speed-up of <b>T64</b> codec, 128-bit division, UTF-8 validation.</p>
 
 <p style="margin-top: 0.5em;">Example: <b>DISTINCT</b> over 100M short strings, one thread, Graviton3:</p>
 <p><b>26.8: <span style="color: red;">12.4</span> sec.</b> &nbsp; <b>26.9: <span style="color: green;">7.6</span> sec.</b></p>
