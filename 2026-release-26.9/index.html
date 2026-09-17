@@ -77,7 +77,7 @@ Conflict detectors in the join reordering optimizer
 Faster recursive CTE
 Faster uniq, uniqCombined
 + JOIN: row-major hash table payload, key-only hash tables for SEMI/ANTI
-+ GROUP BY: prefetching without aggregates, adaptive aggregator fallback, bucket top-K in EXPLAIN
++ GROUP BY: prefetching without aggregates, adaptive aggregator fallback
 + Text index: faster merges, lazy posting lists, packed positions for phrase search
 
 Main:
@@ -128,20 +128,19 @@ Reading Corner: PromQL / TimeSeries engine, AI functions, dbt platform, replica-
 <p style="margin-top: -0.3em;">Hard limits for multi-tenant, temporary, and demo services:</p>
 
 <p><code style="font-size: 13pt; line-height: 1.25;">CREATE TABLE t (&hellip;) ENGINE = MergeTree ORDER BY id
-SETTINGS <b style="color: green;">max_table_size_rows</b> = 1000000;   <span style="color: gray;">-- also max_table_size_bytes_compressed,
-                                        -- max_table_size_bytes_uncompressed</span>
+SETTINGS <b style="color: green;">max_table_size_rows</b> = 1000000;
+<span style="color: gray;">-- also max_table_size_bytes_compressed, ..._uncompressed</span>
+
 INSERT INTO t &hellip;
-<span style="color: gray;">-- Table size limit exceeded: the total number of rows in active data parts
--- of table default.t is 1200000, which exceeds the 'max_table_size_rows' setting
--- value (1000000). (TABLE_SIZE_LIMIT_EXCEEDED)</span>
+<span style="color: gray;">-- Table size limit exceeded: ... 1200000, which exceeds
+-- the 'max_table_size_rows' setting value (1000000).</span>
 
 CREATE DATABASE tenant ENGINE = Atomic SETTINGS <b style="color: green;">max_tables</b> = 100;
-<span style="color: gray;">-- Too many tables in database `tenant`. The limit (database setting `max_tables`)
--- is set to 100, the current number is 100. (TOO_MANY_TABLES)</span>
+<span style="color: gray;">-- Too many tables in database `tenant`. (TOO_MANY_TABLES)</span>
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; Checked at the start of an INSERT and when parts are committed, including merges.
-<br/>&mdash; Tables, views, and dictionaries count; <b>ALTER DATABASE &hellip; MODIFY SETTING</b> adjusts it.</p>
+<p style="margin-top: 0.3em;">&mdash; Checked at the start of INSERT and when parts are committed.
+<br/>&mdash; Tables, views, and dictionaries count towards <b>max_tables</b>.</p>
 
 <!-- Demo:
 
@@ -152,7 +151,7 @@ INSERT INTO sz SELECT number FROM numbers(10);       -- TABLE_SIZE_LIMIT_EXCEEDE
 
 CREATE DATABASE lim ENGINE = Atomic SETTINGS max_tables = 2;
 CREATE TABLE lim.t1 (x UInt8) ENGINE = Memory; CREATE TABLE lim.t2 (x UInt8) ENGINE = Memory;
-CREATE TABLE lim.t3 (x UInt8) ENGINE = Memory;   -- TOO_MANY_TABLES
+CREATE TABLE lim.t3 (x UInt8) ENGINE = Memory;   -- TOO_MANY_TABLES: The limit (database setting `max_tables`) is set to 2, the current number is 2
 ALTER DATABASE lim MODIFY SETTING max_tables = 3;  -- then t3 succeeds
 
 Note: `CREATE DATABASE lim SETTINGS max_tables = 2` WITHOUT `ENGINE = Atomic` fails with
@@ -166,8 +165,8 @@ Note: `CREATE DATABASE lim SETTINGS max_tables = 2` WITHOUT `ENGINE = Atomic` fa
 <section class="slide">
 <h2>Parallel replicas for Merge tables</h2>
 
-<p style="margin-top: -0.3em;">A <b>Merge</b> table over several MergeTree tables can now be read
-<br/>with parallel replicas &mdash; and the aggregation above it is distributed too:</p>
+<p style="margin-top: -0.3em;">A <b>Merge</b> table can now be read with parallel replicas &mdash;
+<br/>and the aggregation above it is distributed too:</p>
 
 <p><code style="font-size: 13pt; line-height: 1.25;">CREATE TABLE logs_all ENGINE = Merge(default, '^logs_');
 
@@ -175,13 +174,13 @@ SELECT toYear(d), count() FROM logs_all GROUP BY 1
 SETTINGS enable_parallel_replicas = 1, parallel_replicas_plan_based = 1,
          <b style="color: green;">parallel_replicas_allow_merge_tables</b> = 1;
 
-<span style="color: gray;">EXPLAIN: &hellip; ReadFromParallelReplicas (Aggregating
-              Union: ReadFromMergeTree (logs_2025), ReadFromMergeTree (logs_2026))</span>
+<span style="color: gray;">EXPLAIN: ReadFromParallelReplicas (Aggregating
+           Union: ReadFromMergeTree (logs_2025), (logs_2026))</span>
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; The Merge is expanded into a union of MergeTree reads before the plan
-<br/>&emsp; is distributed, so no Merge-specific code on the replicas.
-<br/>&mdash; Falls back to a single replica for FINAL and non-MergeTree children.</p>
+<p style="margin-top: 0.3em;">&mdash; The Merge is expanded into a union of MergeTree reads
+<br/>&emsp; before the plan is distributed &mdash; nothing Merge-specific on replicas.
+<br/>&mdash; FINAL and non-MergeTree children fall back to one replica.</p>
 
 <!-- Demo (local two-replica cluster `pr` pointing at the same server twice; needs process_query_plan_packet=1 in the server config):
 
@@ -205,7 +204,7 @@ EXPLAIN ... shows ReadFromParallelReplicas (QueryPlan: Aggregating ... Union Rea
 
 <p style="margin-top: -0.3em;">The SQL-standard family, all nine of them:</p>
 
-<p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">regr_slope</b>(y, x), <b style="color: green;">regr_intercept</b>(y, x),
+<p><code style="font-size: 13pt; line-height: 1.25;">SELECT <b style="color: green;">regr_slope</b>(y, x), <b style="color: green;">regr_intercept</b>(y, x),
        <b style="color: green;">regr_r2</b>(y, x), <b style="color: green;">regr_count</b>(y, x)
 FROM VALUES('x Float64, y Float64',
     (1, 3.1), (2, 4.9), (3, 7.2), (4, 8.8), (5, 11.1));
@@ -213,9 +212,8 @@ FROM VALUES('x Float64, y Float64',
 </code></p>
 
 <p style="margin-top: 0.3em;">&mdash; Also <b>regr_avgx</b>, <b>regr_avgy</b>, <b>regr_sxx</b>, <b>regr_syy</b>, <b>regr_sxy</b>.
-<br/>&mdash; The same names as in PostgreSQL, Oracle, and DuckDB &mdash; queries port as is.
-<br/>&mdash; Work with GROUP BY, the <b>-If</b>/<b>-State</b> combinators, and window functions,
-<br/>&emsp; like every other aggregate function.</p>
+<br/>&mdash; The same names as in PostgreSQL, Oracle, DuckDB &mdash; queries port as is.
+<br/>&mdash; Combinators, GROUP BY, and window functions work as usual.</p>
 
 <!-- Demo:
 
@@ -240,10 +238,9 @@ SELECT json<b style="color: green;">['user.name']</b>, json<b style="color: gree
 <span style="color: gray;">-- keys with dots and spaces — without backticks</span>
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; The parser translates it to nested <b>arrayElement</b> calls,
-<br/>&emsp; so the result is the same <b>Dynamic</b> subcolumn, with the same type hints:
-<br/>&emsp; <b>json['a']['b'].:Int64</b>.
-<br/>&mdash; Familiar to everyone coming from Map columns or from other databases.</p>
+<p style="margin-top: 0.3em;">&mdash; Translated by the parser to nested <b>arrayElement</b> calls;
+<br/>&emsp; the result is the same <b>Dynamic</b> subcolumn.
+<br/>&mdash; Familiar to everyone coming from Map columns.</p>
 
 <!-- Demo:
 
@@ -263,7 +260,8 @@ Note: `j['a']['b'].:Int64` — the type hint after a bracket did not parse in 26
 
 <p style="margin-top: -0.3em;">Define a projection <b>without building it</b> &mdash; to check what it would do:</p>
 
-<p><code style="font-size: 13pt; line-height: 1.25;"><b style="color: green;">CREATE HYPOTHETICAL PROJECTION</b> p_user ON events (SELECT * ORDER BY user_id);
+<p><code style="font-size: 13pt; line-height: 1.25;"><b style="color: green;">CREATE HYPOTHETICAL PROJECTION</b> p_user ON events
+    (SELECT * ORDER BY user_id);
 
 SELECT name, sorting_key FROM <b style="color: green;">system.hypothetical_projections</b>;
 <span style="color: gray;">-- p_user │ ['user_id']</span>
@@ -273,9 +271,8 @@ SELECT name, sorting_key FROM <b style="color: green;">system.hypothetical_proje
 -- With p_user (projection, hypothetical): ...</span>
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; Session-scoped; validated like <b>ALTER TABLE &hellip; ADD PROJECTION</b>, never materialized.
-<br/>&mdash; Joins <b>CREATE HYPOTHETICAL INDEX</b> from earlier releases.
-<br/>&mdash; In 26.9 the definitions are listed by <b>EXPLAIN WHATIF</b>; cost estimates for them are next.</p>
+<p style="margin-top: 0.3em;">&mdash; Session-scoped, validated like ADD PROJECTION, never materialized.
+<br/>&mdash; Joins <b>CREATE HYPOTHETICAL INDEX</b>; cost estimates for projections are next.</p>
 
 <!-- Demo (in one session, e.g. over HTTP with session_id):
 
@@ -296,16 +293,16 @@ SELECT name, syntax FROM system.statements WHERE name = 'HYPOTHETICAL PROJECTION
 <section class="slide">
 <h2>arrayFlattenedLength</h2>
 
-<p style="margin-top: -0.3em;">How many elements are there in a nested array &mdash; <b>at all levels</b>?</p>
+<p style="margin-top: -0.3em;">How many elements are in a nested array &mdash; <b>at all levels</b>?</p>
 
 <p><code style="font-size: 14pt; line-height: 1.25;">SELECT <b style="color: green;">arrayFlattenedLength</b>([[1, 2], [3], [4, 5, 6]]),
        length([[1, 2], [3], [4, 5, 6]]);
 <span style="color: gray;">-- 6 │ 3</span>
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; The same as <b>length(arrayFlatten(arr))</b>, without materializing the flattened array.
-<br/>&mdash; Matches PostgreSQL's <b>cardinality</b>, which counts elements at every nesting level
-<br/>&emsp; (our <b>cardinality</b> is an alias of <b>length</b> and counts the outer array only).</p>
+<p style="margin-top: 0.3em;">&mdash; <b>length(arrayFlatten(arr))</b> without materializing the flattened array.
+<br/>&mdash; Matches PostgreSQL's <b>cardinality</b>, which counts every level;
+<br/>&emsp; our <b>cardinality</b> is an alias of <b>length</b> and counts the outer array.</p>
 
 <!-- Demo:
 
@@ -329,9 +326,9 @@ SELECT arrayFlattenedLength([[1,2],[3],[4,5,6]]), length([[1,2],[3],[4,5,6]]);  
 SELECT count() FROM system.statements;   <span style="color: gray;">-- 101</span>
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; Columns: <b>name</b>, <b>syntax</b>, <b>description</b> (with examples), <b>parent_name</b>, <b>related</b>.
-<br/>&mdash; The same source that renders <b>docs.clickhouse.com</b> &mdash; always matching the binary.
-<br/>&mdash; Joins <b>system.functions</b>, <b>system.settings</b>, <b>system.table_engines</b>, <b>system.formats</b>.</p>
+<p style="margin-top: 0.3em;">&mdash; Columns: <b>name</b>, <b>syntax</b>, <b>description</b>, <b>parent_name</b>, <b>related</b>.
+<br/>&mdash; The same source that renders the docs &mdash; always matching the binary.
+<br/>&mdash; Next to <b>system.functions</b>, <b>system.settings</b>, <b>system.formats</b>.</p>
 
 <!-- Demo:
 
@@ -347,7 +344,7 @@ DESCRIBE system.statements;   -- name syntax description parent_name related
 <section class="slide">
 <h2>system.session_query_ids</h2>
 
-<p style="margin-top: -0.3em;">"Which queries did <b>I</b> just run?" &mdash; without assigning query ids by hand:</p>
+<p style="margin-top: -0.3em;">"Which queries did <b>I</b> just run?" &mdash; without assigning ids by hand:</p>
 
 <p><code style="font-size: 13pt; line-height: 1.25;">SELECT count() FROM numbers(10);
 SELECT sum(number) FROM numbers(100);
@@ -359,9 +356,9 @@ WHERE query_id IN (SELECT query_id FROM <b style="color: green;">system.session_
 -- SELECT sum(number) FROM numbers(100) │ 112</span>
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; Query ids of the current session, in execution order (<b>sequence_number</b>).
-<br/>&mdash; For testing and benchmarking scripts; <b>session_query_ids_history_size</b> (1000)
-<br/>&emsp; bounds it, <b>TRUNCATE TABLE system.session_query_ids</b> clears it.</p>
+<p style="margin-top: 0.3em;">&mdash; Query ids of the current session, in execution order.
+<br/>&mdash; For test and benchmark scripts; bounded by
+<br/>&emsp; <b>session_query_ids_history_size</b> (1000); TRUNCATE clears it.</p>
 
 <!-- Demo (HTTP session, so that the queries share one session):
 
@@ -374,28 +371,28 @@ In clickhouse-client the interactive session works the same way.
 
 -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Vladimir Cherkasov.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Vladimir Cherkasov.</p>
 </section>
 
 <section class="slide">
 <h2>S3Queue without Keeper coordination</h2>
 
-<p style="margin-top: -0.3em;">A third mode for the <b>S3Queue</b> engine, for a single ingesting server:</p>
+<p style="margin-top: -0.3em;">A third mode for <b>S3Queue</b>, for a single ingesting server:</p>
 
-<p><code style="font-size: 13pt; line-height: 1.25;">CREATE TABLE queue (WatchID UInt64, URL String, EventDate Date)
+<p><code style="font-size: 12pt; line-height: 1.2;">CREATE TABLE queue (WatchID UInt64, URL String, EventDate Date)
 ENGINE = S3Queue('s3://bucket/landing/*.parquet', NOSIGN, 'Parquet')
 SETTINGS <b style="color: green;">mode = 'exclusive'</b>;
 
 CREATE MATERIALIZED VIEW mv TO events AS SELECT * FROM queue;
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; <b>unordered</b> and <b>ordered</b> track every file in Keeper, so that many servers
-<br/>&emsp; can share one queue. <b>exclusive</b> tracks files <b>in the memory of the server</b>:
-<br/>&emsp; no Keeper round trip per file &mdash; for high-throughput ingestion from
-<br/>&emsp; a bucket that belongs to this server alone (e.g. a local MinIO).
-<br/>&mdash; Battle-tested: the contributor ran it in production for years before upstreaming.</p>
+<p style="margin-top: 0.3em;">&mdash; <b>unordered</b> and <b>ordered</b> track every file in Keeper,
+<br/>&emsp; so that many servers can share one queue.
+<br/>&mdash; <b>exclusive</b> tracks files <b>in the memory of the server</b>: no Keeper
+<br/>&emsp; round trip per file &mdash; for a bucket that belongs to this server alone.</p>
 
-<!-- Demo (3 public ClickBench Parquet files, 3M rows):
+<!-- Ran in production at the contributor's for years before upstreaming.
+     Demo (3 public ClickBench Parquet files, 3M rows):
 
 CREATE TABLE q_excl (WatchID UInt64, URL String, EventDate Date) ENGINE = S3Queue('s3://clickhouse-public-datasets/hits_compatible/athena_partitioned/hits_{1..3}.parquet', NOSIGN, 'Parquet') SETTINGS mode = 'exclusive';
 CREATE TABLE q_dst (WatchID UInt64, URL String, EventDate Date) ENGINE = MergeTree ORDER BY WatchID;
@@ -408,7 +405,7 @@ config". Only the per-file processing state is kept out of Keeper.
 
 -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Ivan Tkatchev.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Ivan Tkatchev.</p>
 </section>
 
 
@@ -419,21 +416,20 @@ config". Only the per-file processing state is kept out of Keeper.
 <section class="slide">
 <h2 style="font-size: 30pt;">min, max, count from column statistics</h2>
 
-<p style="margin-top: -0.3em;">Column statistics (on by default since 26.4) store the exact min and max
-<br/>of every numeric-like column per part. Now aggregations read them:</p>
+<p style="margin-top: -0.3em;">Column statistics (default since 26.4) store the exact min and max
+<br/>of every numeric-like column per part. Aggregations read them now:</p>
 
 <p><code style="font-size: 14pt; line-height: 1.25;">SELECT min(EventDate), max(EventDate), count() FROM hits;
 <span style="color: gray;">-- ClickBench Q6, 100M rows: no data is read at all</span>
 
-EXPLAIN &hellip;
-<span style="color: gray;">Aggregating
-└── ReadFromPreparedSource (<b style="color: green;">_statistics_min_max_projection</b>)</span>
+<span style="color: gray;">EXPLAIN: Aggregating
+         └── ReadFromPreparedSource (<b style="color: green;">_statistics_min_max_projection</b>)</span>
 </code></p>
 
-<p style="margin-top: 0.3em;">Example: <b>26.8: <span style="color: red;">8&ndash;24</span> ms</b> &nbsp; <b>26.9: <span style="color: green;">2</span> ms</b> &mdash; a full column scan becomes a metadata lookup.</p>
+<p style="margin-top: 0.3em;">Example: <b>26.8: <span style="color: red;">8&ndash;24</span> ms.</b> &nbsp; <b>26.9: <span style="color: green;">2</span> ms.</b></p>
 
-<p style="margin-top: 0.3em;">&mdash; Parts without statistics are read normally and merged in;
-<br/>&emsp; disabled under FINAL, sampling, lightweight deletes. Setting: <b>use_statistics_for_min_max_aggregation</b>.</p>
+<p style="margin-top: 0.3em;">&mdash; Parts without statistics are read normally and merged in.
+<br/>&mdash; Setting: <b>use_statistics_for_min_max_aggregation</b>.</p>
 
 <!-- Demo (server, hits table created on 26.9 so that all parts have 'Basic' statistics):
 
@@ -441,6 +437,7 @@ SELECT column, statistics FROM system.parts_columns WHERE table = 'hits' AND act
 clickhouse client --time -q "SELECT min(EventDate), max(EventDate) FROM hits FORMAT Null"                                                    -- 0.002
 clickhouse client --time -q "SELECT min(EventDate), max(EventDate) FROM hits SETTINGS use_statistics_for_min_max_aggregation = 0 FORMAT Null"  -- 0.008 .. 0.024
 EXPLAIN SELECT min(EventDate), max(EventDate), count() FROM hits;   -- ReadFromPreparedSource (_statistics_min_max_projection)
+Disabled under FINAL, sampling, lightweight deletes.
 
 -->
 
@@ -450,22 +447,22 @@ EXPLAIN SELECT min(EventDate), max(EventDate), count() FROM hits;   -- ReadFromP
 <section class="slide">
 <h2>skip_empty_columns_on_insert</h2>
 
-<p style="margin-top: -0.3em;">Wide tables where most columns are <b>empty</b> in most inserts
-<br/>(per-tenant or per-partition schemas, sparse JSON) &mdash; stop writing the emptiness:</p>
+<p style="margin-top: -0.3em;">Wide tables where most columns are <b>empty</b> in most inserts:
+<br/>stop writing the emptiness.</p>
 
-<p><code style="font-size: 13pt; line-height: 1.25;">CREATE TABLE wide (id UInt64, a String, b UInt64, c Array(UInt32), j1 JSON, j2 JSON)
+<p><code style="font-size: 12pt; line-height: 1.25;">CREATE TABLE wide (id UInt64, a String, b UInt64, c Array(UInt32), j1 JSON, j2 JSON)
 ENGINE = MergeTree ORDER BY id
-SETTINGS <b style="color: green;">skip_empty_columns_on_insert</b> = 1, serialization_info_version = 'with_missing_columns';
+SETTINGS <b style="color: green;">skip_empty_columns_on_insert</b> = 1,
+         serialization_info_version = 'with_missing_columns';
 
 INSERT INTO wide (id, a, j1) &hellip;   <span style="color: gray;">-- b, c, j2 are all defaults in this block</span>
-<span style="color: gray;">-- serialization.json: "missing_columns": [{"name":"b","type":"UInt64"}, {"name":"c",...}, {"name":"j2",...}]
+<span style="color: gray;">-- serialization.json: "missing_columns": [{"name":"b","type":"UInt64"}, ...]
 -- files in the part: 49 → 33; no data streams at all for b, c, j2</span>
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; Reads reconstruct the default of the recorded type; the marker survives merges,
-<br/>&emsp; mutations, renames, replication, backups.
-<br/>&mdash; Opt-in: older servers cannot read such parts &mdash; keep the old
-<br/>&emsp; <b>serialization_info_version</b> during a rolling upgrade.</p>
+<p style="margin-top: 0.3em;">&mdash; Reads reconstruct the default of the recorded type; the marker
+<br/>&emsp; survives merges, mutations, replication, backups.
+<br/>&mdash; Opt-in: keep the old serialization version during a rolling upgrade.</p>
 
 <!-- Demo (wide parts, to see the files):
 
@@ -486,18 +483,18 @@ ALTER TABLE wide ADD COLUMN k UInt8; INSERT INTO wide (id, k) VALUES (1, 7); SEL
 <h2 style="font-size: 30pt;">One round trip less in the native protocol</h2>
 
 <p style="margin-top: -0.3em;">At the end of every query the server sends a burst of tiny messages:
-<br/>profile info, progress, profile events, an empty block, end of stream &hellip;
+<br/>profile info, progress, profile events, end of stream &hellip;
 <br/>Each used to be its own TCP packet:</p>
 
-<p><code style="font-size: 13pt; line-height: 1.25;"><span style="color: gray;">$ tcpdump -i lo 'tcp src port 9000'      # SELECT 1, server → client, after the handshake</span>
+<p><code style="font-size: 13pt; line-height: 1.25;"><span style="color: gray;">$ tcpdump -i lo 'tcp src port 9000'   # SELECT 1, server → client</span>
 <b>26.8</b>: 23  10  10  3133  14  10  1   <span style="color: gray;">— 7 packets</span>
 <b>26.9</b>: 23  <b style="color: green;">3278</b>                  <span style="color: gray;">— 2 packets</span>
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; After an idle period Linux shrinks the congestion window to <b>initcwnd</b>;
-<br/>&emsp; a burst longer than that waits for an ACK &mdash; a full extra round trip.
+<p style="margin-top: 0.3em;">&mdash; After an idle period Linux shrinks the congestion window;
+<br/>&emsp; a burst longer than it waits for an ACK: a full extra round trip.
 <br/>&emsp; On a 30 ms link that was ~2x latency for clients that idle between queries.
-<br/>&mdash; The end-of-query messages are now batched into <b>one socket write</b>.</p>
+<br/>&mdash; Now the end-of-query messages go in <b>one socket write</b>.</p>
 
 <!-- Demo (26.8 server on port 9100, 26.9 on 9000, one `SELECT 1 FORMAT Null` each):
 
@@ -508,26 +505,27 @@ sudo tcpdump -nn -r /tmp/pk_9100.pcap | sed -E 's/.* IP ([0-9.]+)\.([0-9]+) > ([
 
 -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Kaviraj Kanagaraj.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Kaviraj Kanagaraj.</p>
 </section>
 
 <section class="slide">
 <h2>LIKE and ILIKE with text indexes</h2>
 
-<p style="margin-top: -0.3em;">The text index answered <b>%word%</b> patterns since 26.7 by scanning its dictionary.
+<p style="margin-top: -0.3em;">The text index served <b>%word%</b> since 26.7 by scanning its dictionary.
 <br/>Now prefix and suffix patterns work too:</p>
 
-<p><code style="font-size: 13pt; line-height: 1.25;">SELECT count() FROM docs WHERE body <b style="color: green;">LIKE 'clickhouse%'</b>;   <span style="color: gray;">-- startsWith</span>
-SELECT count() FROM docs WHERE body <b style="color: green;">LIKE '%clickhouse'</b>;   <span style="color: gray;">-- endsWith</span>
+<p><code style="font-size: 13pt; line-height: 1.25;">SELECT count() FROM docs WHERE body <b style="color: green;">LIKE 'clickhouse%'</b>;  <span style="color: gray;">-- startsWith</span>
+SELECT count() FROM docs WHERE body <b style="color: green;">LIKE '%clickhouse'</b>;  <span style="color: gray;">-- endsWith</span>
 
-<span style="color: gray;">EXPLAIN indexes = 1: Prewhere: endsWith(body, 'clickhouse') AND __text_index_idx_endsWith_…
-                     Skip: Name: idx, Granules: <b style="color: green;">4</b>/2442</span>
+<span style="color: gray;">EXPLAIN indexes = 1:
+  Prewhere: endsWith(body, 'clickhouse') AND __text_index_idx_endsWith_…
+  Skip: Name: idx, Granules: <b style="color: green;">4</b>/2442</span>
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; The index works as a <b>hint</b>: the matching tokens' posting lists select the granules,
+<p style="margin-top: 0.3em;">&mdash; The index is a <b>hint</b>: posting lists select granules,
 <br/>&emsp; the original condition re-checks the rows.
-<br/>&mdash; <b>LIKE &hellip; ESCAPE</b> patterns can use text, ngram, token, and sparse-gram indexes now.
-<br/>&mdash; An index with the <b>array</b> tokenizer serves <b>arbitrary</b> LIKE/ILIKE patterns.</p>
+<br/>&mdash; <b>LIKE &hellip; ESCAPE</b> uses text, ngram, token, sparse-gram indexes now.
+<br/>&mdash; The <b>array</b> tokenizer serves <b>arbitrary</b> LIKE/ILIKE patterns.</p>
 
 <!-- Demo (20M rows, 12 random words each; ' clickhouse' appended to 1 row in 5M):
 
@@ -550,16 +548,15 @@ Timings are not shown: the 356 MB table scans in milliseconds on 96 cores either
 
 <p style="margin-top: -0.3em;">Graviton, Ampere, Apple, NVIDIA Grace &mdash; a batch of ARM-specific fixes:</p>
 
-<p style="margin-top: 0.3em;">&mdash; <b style="color: green;">memcpy</b>: the small-copy helper used in string, join, and part-reading paths
-<br/>&emsp; compiled into a libc <b>memcpy</b> call on AArch64 &mdash; the exact call it exists to avoid
-<br/>&emsp; (fixed on x86 in 2024, the NEON branch was never updated). Now inline: 1.35x at 4&ndash;16 bytes.
-<br/>&mdash; <b style="color: green;">Filters</b>: <b>countBytesInFilter</b> fell back to a scalar loop (~8 GB/s);
-<br/>&emsp; direct NEON register accumulation &mdash; <b>up to 15x</b> faster counting of filter bytes.
-<br/>&mdash; Also: <b>numbers</b> and index fills, <b>T64</b> codec, <b>roundDuration</b>/<b>roundAge</b>,
-<br/>&emsp; UTF-8 validation, 128-bit division &mdash; all vectorized or branchless now.</p>
+<p style="margin-top: 0.3em;">&mdash; <b style="color: green;">memcpy</b>: the small-copy helper in string, join, and reading paths
+<br/>&emsp; compiled into a libc <b>memcpy</b> call on AArch64 &mdash; the exact call
+<br/>&emsp; it exists to avoid. Fixed on x86 in 2024; now inline on ARM too.
+<br/>&mdash; <b style="color: green;">Filters</b>: <b>countBytesInFilter</b> was a scalar loop; NEON register
+<br/>&emsp; accumulation makes it <b>up to 15x</b> faster.
+<br/>&mdash; Also: <b>numbers</b> fills, <b>T64</b>, 128-bit division, UTF-8 validation.</p>
 
 <p style="margin-top: 0.5em;">Example: <b>DISTINCT</b> over 100M short strings, one thread, Graviton3:</p>
-<p><b>26.8: <span style="color: red;">12.4</span> sec.</b> &nbsp; <b>26.9: <span style="color: green;">7.6</span> sec.</b> (1.6x)</p>
+<p><b>26.8: <span style="color: red;">12.4</span> sec.</b> &nbsp; <b>26.9: <span style="color: green;">7.6</span> sec.</b></p>
 
 <!-- Demo (clickhouse local, taskset -c 64-95 on a loaded shared 96-core Graviton box, min of 3):
 
@@ -567,7 +564,7 @@ Q="SELECT count() FROM (SELECT DISTINCT concat('u', toString(number % 20000000))
 clickhouse-26.8 local --time --max_threads=1 -q "$Q"   # 12.395
 clickhouse-26.9 local --time --max_threads=1 -q "$Q"   # 7.556
 Filter counting: SELECT count() FROM (SELECT number AS n, toUInt8(number % 3 = 0) AS f FROM numbers(500000000)) WHERE f  -- 0.658 -> 0.523 (1 thread)
-The 1.35x / 15x figures are from the PRs (#117353 measured on Neoverse-V2 by harikrishnan94; #119555 microbenchmark).
+The 15x figure is from PR #119555 (microbenchmark); #117353 measured 1.34-1.36x at 4-16 bytes on Neoverse-V2 (harikrishnan94).
 "Test on NVIDIA" from the plan: NOT done — no Grace machine was available; the numbers above are Graviton3 and need re-testing.
 
 -->
@@ -578,17 +575,16 @@ The 1.35x / 15x figures are from the PRs (#117353 measured on Neoverse-V2 by har
 <section class="slide">
 <h2>Faster k-way merges</h2>
 
-<p style="margin-top: -0.3em;">Merging sorted streams is the core of MergeTree: background merges, <b>FINAL</b>,
-<br/>ORDER BY, <b>optimize_on_insert</b>. Three optimizations, motivated by
-<br/><a href="https://maksimkita.com/blog/k-way-merge.html">Maksim Kita's analysis</a> of k-way merge:</p>
+<p style="margin-top: -0.3em;">Merging sorted streams is the core of MergeTree: merges, <b>FINAL</b>,
+<br/>ORDER BY, <b>optimize_on_insert</b>. Three optimizations, motivated
+<br/>by <a href="https://maksimkita.com/blog/k-way-merge.html">Maksim Kita's analysis</a> of k-way merge:</p>
 
-<p style="margin-top: 0.3em;">&mdash; Multi-column and collated sorting keys: a <b style="color: green;">sorted array of cursors</b>
+<p style="margin-top: 0.3em;">&mdash; Multi-column and collated keys: a <b style="color: green;">sorted array of cursors</b>
 <br/>&emsp; instead of a heap &mdash; 7&ndash;8% faster.
-<br/>&mdash; <b style="color: green;">Non-intersecting parts</b> (the common case after time-ordered inserts):
-<br/>&emsp; the whole cursor is detected as one batch in O(1) comparisons.
-<br/>&mdash; <b style="color: green;">Runs of duplicate keys</b> inside a part are skipped:
-<br/>&emsp; <b>SELECT &hellip; FINAL</b> from ReplacingMergeTree uses up to 40% less CPU,
-<br/>&emsp; insert-time deduplication with <b>optimize_on_insert</b> is ~3x faster with many duplicates.</p>
+<br/>&mdash; <b style="color: green;">Non-intersecting parts</b> (time-ordered inserts): the whole cursor
+<br/>&emsp; is one batch, detected in O(1) comparisons.
+<br/>&mdash; <b style="color: green;">Runs of duplicate keys</b> are skipped: <b>FINAL</b> on ReplacingMergeTree
+<br/>&emsp; uses up to 40% less CPU, <b>optimize_on_insert</b> dedup is ~3x faster.</p>
 
 <!-- Demo: numbers are from PR #115869 (CI perf tests). Local attempts on the shared box under load ~130 were
      inconclusive (FINAL 0.94 -> 1.17 s, multi-column sort 2.47 -> 2.15 s, insert dedup 1.64 -> 1.68 s), so
@@ -606,20 +602,19 @@ The 1.35x / 15x figures are from the PRs (#117353 measured on Neoverse-V2 by har
 <h2>Index usage after ARRAY JOIN</h2>
 
 <p style="margin-top: -0.3em;">A condition on an <b>ARRAY JOIN</b> element now drives skip-index analysis,
-<br/>the same way <b>arrayJoin(col) IN (&hellip;)</b> already did:</p>
+<br/>as <b>arrayJoin(col) IN (&hellip;)</b> already did:</p>
 
-<p><code style="font-size: 13pt; line-height: 1.25;">CREATE TABLE t (id UInt64, tags Array(String), INDEX bf tags TYPE bloom_filter) &hellip;
+<p><code style="font-size: 13pt; line-height: 1.25;">CREATE TABLE t (id UInt64, tags Array(String),
+                INDEX bf tags TYPE bloom_filter) &hellip;
 
 SELECT count() FROM t <b style="color: green;">ARRAY JOIN tags AS tag WHERE tag IN ('rare7', 'rare8')</b>;
 <span style="color: gray;">-- 26.8: Granules 1223/1223 — full scan
 -- 26.9: Skip bf — Granules <b style="color: green;">2</b>/1223</span>
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; The <b>arrayJoin</b> function is now planned as the ARRAY JOIN operator internally,
-<br/>&emsp; so both spellings share the optimizations.
-<br/>&mdash; A WHERE on the element is applied <b>before</b> the expansion: elements that
-<br/>&emsp; do not match are never turned into rows, and other columns are not replicated for them.
-<br/>&mdash; Bloom filters on Array columns also serve <b>arrayJoin(col) = const</b> and <b>GLOBAL IN</b>.</p>
+<p style="margin-top: 0.3em;">&mdash; <b>arrayJoin</b> is now planned as the ARRAY JOIN operator internally.
+<br/>&mdash; A WHERE on the element is applied <b>before</b> the expansion:
+<br/>&emsp; non-matching elements never become rows.</p>
 
 <!-- Demo (clickhouse local, 10M rows; 'rareN' appears in one row per 100k):
 
@@ -627,32 +622,34 @@ CREATE TABLE t (id UInt64, tags Array(String), INDEX bf tags TYPE bloom_filter G
 INSERT INTO t SELECT number, [concat('tag', toString(number % 1000)), if(number % 100000 = 0, concat('rare', toString(intDiv(number, 100000))), 'common')] FROM numbers(10000000);
 EXPLAIN indexes = 1 SELECT count() FROM t ARRAY JOIN tags AS tag WHERE tag IN ('rare7', 'rare8');
 -- 26.8: Parts 9/9, Granules 1223/1223, no Skip entry.   26.9: Skip Name: bf, Parts 1/9, Granules 2/1223.   Result: 2 in both.
+Bloom filters on Array columns also serve arrayJoin(col) = const and GLOBAL IN (#109536).
 
 -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Yarik Briukhovetskyi, Groene AI.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developers: Yarik Briukhovetskyi, Groene AI.</p>
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Faster reading of subcolumns from object storage</h2>
+<h2 style="font-size: 30pt;">Faster subcolumn reads from object storage</h2>
 
-<p style="margin-top: -0.3em;">A <b>JSON</b> column is hundreds of substreams; on S3 every substream's marks
-<br/>were loaded one after another &mdash; one round trip each, in the reading thread:</p>
+<p style="margin-top: -0.3em;">A <b>JSON</b> column is hundreds of substreams; on S3 their marks
+<br/>were loaded one after another &mdash; one round trip each:</p>
 
-<p><code style="font-size: 12pt; line-height: 1.2;"><span style="color: gray;">-- the public datasets collection, attached from Cloudflare R2 as a plain_rewritable disk:</span>
+<p><code style="font-size: 12pt; line-height: 1.2;"><span style="color: gray;">-- the public datasets collection, attached from R2 as a plain_rewritable disk:</span>
 ATTACH DATABASE datasets UUID 'e053c139-f7b8-4c82-acb7-6b259c5b19e8' ENGINE = Atomic
-SETTINGS disk = disk(type = 's3_plain_rewritable', endpoint = 'https://data.clickhouse.com/public-datasets/db/',
-                     no_sign_request = true, readonly = true), lazy_load_tables = true;
+SETTINGS disk = disk(type = 's3_plain_rewritable',
+                     endpoint = 'https://data.clickhouse.com/public-datasets/db/',
+                     no_sign_request = true, readonly = true),
+         lazy_load_tables = true;
 
 SELECT data.wiki.:String AS wiki, count() AS edits FROM datasets.<b>wikipedia_edits</b>
 WHERE time &gt;= now() - INTERVAL 1 DAY AND data.type.:String = 'edit'
-GROUP BY wiki ORDER BY edits DESC LIMIT 5;   <span style="color: gray;">-- data is a JSON column, ~1M events/day</span>
+GROUP BY wiki ORDER BY edits DESC LIMIT 5;      <span style="color: gray;">-- data is a JSON column</span>
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; Marks of all streams are loaded <b style="color: green;">asynchronously and in parallel</b> by default now
-<br/>&emsp; (<b>load_marks_asynchronously</b>); marks of empty streams are not loaded at all;
-<br/>&emsp; JSON metadata streams are no longer read twice; reads in packed parts are bounded to the file.
-<br/>&mdash; In the PR's test (1104 substreams, 30 ms per request): <b><span style="color: red;">64</span> sec &rarr; <span style="color: green;">2.5</span> sec.</b></p>
+<p style="margin-top: 0.3em;">&mdash; Marks of all streams load <b style="color: green;">asynchronously, in parallel</b> by default;
+<br/>&emsp; empty streams' marks are not loaded; JSON metadata is not read twice.
+<br/>&mdash; PR test (1104 substreams, 30 ms/request): <b><span style="color: red;">64</span> sec &rarr; <span style="color: green;">2.5</span> sec.</b></p>
 
 <!-- Demo (clickhouse local from an empty directory, both binaries, github.com/ClickHouse/datasets):
 
@@ -663,57 +660,57 @@ Interleaved warm runs (query time, sum of WaitMarksLoadMicroseconds over threads
   26.9: 6.9 / 6.3 / 7.1 s,  4.3–5.1 s marks wait,  1512 GetObject,   59–60 connections
 First (cold) run of the day: 26.8 56.3 s (143 s marks wait, 3812 GetObject, 1064 connections) vs 26.9 13.7 s — but 26.9 ran second,
 after the edge cache warmed up, so the cold number is indicative only. Compact parts (the collection uses min_bytes_for_wide_part = 1Gi)
-limit the effect; the 64 -> 2.5 s figure is the Wide-part case from PR #118477.
+limit the effect; the 64 -> 2.5 s figure is the Wide-part case from PR #118477. Also: #111020 (Rory Shanks) subcolumns in wide parts,
+#118154 (Pavel Kruglov) JSON advanced shared data — each path in its own compressed block.
 
 -->
 
-<p style="color: gray; font-size: 13pt; margin-top: 0.2em;">Developers: Alexey Milovidov; Rory Shanks (subcolumns in wide parts); Pavel Kruglov (JSON shared data blocks).</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0.2em;">Developers: Alexey Milovidov, Rory Shanks, Pavel Kruglov.</p>
 </section>
 
 <section class="slide">
 <h2 style="font-size: 30pt;">Better reuse of connections to object storage</h2>
 
-<p style="margin-top: -0.3em;">A read up to the end of an object was an open-ended <b>Range: bytes=N-</b> request.
-<br/>The connection was returned to the pool only after EOF &mdash; which the MergeTree reader,
-<br/>sized to exactly the remaining bytes, <b>never observed</b>. So it stayed occupied until
-<br/>the end of the query, and every new stream opened a new TLS connection:</p>
+<p style="margin-top: -0.3em;">A read up to the end of an object was an open-ended <b>Range: bytes=N-</b>.
+<br/>The connection returned to the pool only after EOF &mdash; which a reader
+<br/>sized to exactly the remaining bytes <b>never observes</b>. So it stayed busy
+<br/>until the end of the query, and every new stream opened a new TLS connection.</p>
 
-<p><code style="font-size: 13pt; line-height: 1.25;"><span style="color: gray;">-- one row of a JSON column with ~500 substreams per part (from the PR):</span>
-26.8: <b style="color: red;">2333</b> connections for 5372 requests   <span style="color: gray;">-- "Too many active sessions in group Disk, count 1900"</span>
+<p><code style="font-size: 13pt; line-height: 1.25;"><span style="color: gray;">-- one row of a JSON column with ~500 substreams per part (PR):</span>
+26.8: <b style="color: red;">2333</b> connections for 5372 requests
+      <span style="color: gray;">"Too many active sessions in group Disk, count 1900"</span>
 
 <span style="color: gray;">-- wikipedia_edits, the query from the previous slide:</span>
 DiskConnectionsCreated: 26.8: <b style="color: red;">235</b>   26.9: <b style="color: green;">59</b>
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; The request is now <b>Range: bytes=N-M</b>; the connection is released as soon as
-<br/>&emsp; the range is read and reused by the next stream.
-<br/>&mdash; Fewer TLS handshakes, no session-limit warnings, less latency per stream.</p>
+<p style="margin-top: 0.3em;">&mdash; The request is now <b>Range: bytes=N-M</b>; the connection is released
+<br/>&emsp; as soon as the range is read and reused by the next stream.</p>
 
 <!-- Demo: see the previous slide's runs — DiskConnectionsCreated 233..239 (26.8) vs 59..60 (26.9), DiskConnectionsReused ~4400 both. -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Alexey Milovidov.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
 </section>
 
 <section class="slide">
 <h2 style="font-size: 30pt;">Conflict detectors in join reordering</h2>
 
-<p style="margin-top: -0.3em;">Which join orders are <b>valid</b> when SEMI, ANTI, and OUTER joins are involved?
-<br/>The optimizer treated every non-inner join as a barrier: inner-join islands
-<br/>were reordered independently, a selective SEMI join stayed pinned on top.</p>
+<p style="margin-top: -0.3em;">Which join orders are <b>valid</b> with SEMI, ANTI, and OUTER joins?
+<br/>Every non-inner join used to be a barrier: a selective SEMI join
+<br/>stayed pinned on top of the inner joins feeding it.</p>
 
 <p><code style="font-size: 12pt; line-height: 1.2;">SET query_plan_optimize_join_order_algorithm = 'dpsub',
     <b style="color: green;">query_plan_optimize_join_order_use_conflict_detector_c</b> = 1;
 
 EXPLAIN SELECT count() FROM big1 JOIN big2 ON big1.k = big2.k
                        LEFT SEMI JOIN small ON big1.k = small.k;
-<span style="color: gray;">-- before:  (big1 ⋈ big2) ⋉ small          -- 10M ⋈ 10M first, then filter
--- after:   big2 ⋈ (big1 <b style="color: green;">⋉ small</b>)          -- the 1000-row semi join goes first</span>
+<span style="color: gray;">-- before:  (big1 ⋈ big2) ⋉ small        -- 10M ⋈ 10M first, then filter
+-- after:   big2 ⋈ (big1 <b style="color: green;">⋉ small</b>)        -- the 1000-row semi join goes first</span>
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; CD-A and CD-C from the SIGMOD'13 paper <i>"On the Correct and Complete Enumeration
-<br/>&emsp; of the Core Search Space"</i> (Moerkotte, Fender, Eich) &mdash; the state of the art.
-<br/>&mdash; For 7 relations CD-C explores ~12x more valid plans than before.
-<br/>&mdash; Available with the <b>dpsub</b> algorithm; opt-in in 26.9.</p>
+<p style="margin-top: 0.3em;">&mdash; CD-A and CD-C from the SIGMOD'13 paper <i>"On the Correct and Complete
+<br/>&emsp; Enumeration of the Core Search Space"</i> &mdash; the state of the art.
+<br/>&mdash; For 7 relations CD-C explores ~12x more valid plans. Opt-in with <b>dpsub</b>.</p>
 
 <!-- Demo (clickhouse local):
 
@@ -732,27 +729,26 @@ EXPLAIN SELECT count() FROM big1 JOIN big2 ON big1.k = big2.k LEFT SEMI JOIN sma
 <section class="slide">
 <h2>Faster recursive CTEs</h2>
 
-<p style="margin-top: -0.3em;">Each step of a recursive CTE writes its result into an intermediate <b>Memory</b> table,
-<br/>which the next step reads &mdash; one block per produced chunk:</p>
+<p style="margin-top: -0.3em;">Each step of a recursive CTE writes its result into an intermediate
+<br/><b>Memory</b> table, which the next step reads &mdash; one block per chunk:</p>
 
 <p><code style="font-size: 13pt; line-height: 1.25;">WITH RECURSIVE frontier AS (
     SELECT 1 AS node, 0 AS depth
     UNION ALL
-    SELECT e.dst, depth + 1 FROM edges e JOIN frontier f ON e.src = f.node WHERE depth &lt; 6)
+    SELECT e.dst, depth + 1 FROM edges e JOIN frontier f ON e.src = f.node
+    WHERE depth &lt; 6)
 SELECT count() FROM frontier;
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; Graph searches whose frontier is built from many granule-sized reads
-<br/>&emsp; (or <b>ARRAY JOIN</b> expansions) accumulated thousands of <b>tiny blocks</b> per step,
-<br/>&emsp; and every following step paid the per-block overhead to scan the working table.
-<br/>&mdash; Chunks are now <b style="color: green;">squashed</b> before the write, with the same thresholds
-<br/>&emsp; as a regular INSERT into a Memory table. No new settings.</p>
+<p style="margin-top: 0.3em;">&mdash; Graph searches built from many granule-sized reads (or ARRAY JOIN
+<br/>&emsp; expansions) accumulated thousands of <b>tiny blocks</b> per step.
+<br/>&mdash; Chunks are now <b style="color: green;">squashed</b> before the write, like a regular INSERT.</p>
 
 <!-- Demo: the effect depends on the chunk shape; the query above on a 4M-edge table ran 1.07 -> 0.60 s in the first
      interleaved pair and 0.52 vs 0.54 s in the second on the loaded shared box, so no number is shown. The PR's
      test 05059_recursive_cte_squash_intermediate_table observes the working table's block layout via blockSize(). -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: Zach Naimon.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Zach Naimon.</p>
 </section>
 
 <section class="slide">
@@ -765,14 +761,12 @@ SELECT count() FROM frontier;
 SELECT k, <b style="color: green;">uniqCombined64</b>(v) FROM t GROUP BY k;
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; With many <b>interleaved</b> groups every row jumps to a different aggregation state,
+<p style="margin-top: 0.3em;">&mdash; With many <b>interleaved</b> groups every row lands in a different state,
 <br/>&emsp; and the hash set inside each state is a cache miss.
-<br/>&mdash; The hashes of a batch are now computed first and the destination cells are
-<br/>&emsp; <b style="color: green;">prefetched</b> &mdash; the same trick the aggregator uses for its own hash table.
-<br/>&mdash; Single-argument <b>uniq</b>, <b>uniqCombined</b>, <b>uniqCombined64</b> on scalar types.</p>
-
-<p style="margin-top: 0.3em;">Also in 26.9: <b>uniqExact</b> of aggregate states, <b>JSON</b>, and <b>Variant</b> hashes
-<br/>without a per-row buffer copy &mdash; 33% faster for 200-byte states.</p>
+<br/>&mdash; Hashes of a batch are computed first, destination cells are
+<br/>&emsp; <b style="color: green;">prefetched</b> &mdash; the aggregator's own trick, applied inside the states.
+<br/>&mdash; Also: hashing aggregate states, JSON, and Variant without a per-row
+<br/>&emsp; buffer copy &mdash; <b>uniqExact</b> of 200-byte states is 33% faster.</p>
 
 <!-- Demo: local runs of `SELECT k, uniq(v) FROM (SELECT number % 100000 AS k, number AS v FROM numbers(100000000)) GROUP BY k`
      (1 thread) gave 6.25 -> 6.08 s (uniq) and 6.18 -> 6.08 s (uniqCombined) on the loaded shared box — too noisy to show;
@@ -784,48 +778,48 @@ SELECT k, <b style="color: green;">uniqCombined64</b>(v) FROM t GROUP BY k;
 <section class="slide">
 <h2>JOIN: row-major hash table payload</h2>
 
-<p style="margin-top: -0.3em;">The right side of a hash join is stored column by column. Building the output
-<br/>then gathers <b>one value per column per matched row</b> &mdash; a scattered loop.</p>
+<p style="margin-top: -0.3em;">The right side of a hash join is stored column by column; building
+<br/>the output gathers <b>one value per column per matched row</b>.</p>
 
-<p><code style="font-size: 12pt; line-height: 1.2;"><span style="color: gray;">before:   col1 Int32 │ col2 String │ col3 UInt8 │ col4 Float64      — row N: col1[N], col2[N], col3[N], col4[N]
+<p style="margin-top: 0em;"><code style="font-size: 11pt; line-height: 1.15;"><span style="color: gray;">before:  col1 Int32 │ col2 String │ col3 UInt8 │ col4 Float64  — 4 gathers per row
 
-after:    ROW STORE (col1 + col3 + col4, contiguous per row)   col2 String (still columnar)
-          ┌──────┬──────┬────────┐                             ┌──────────┐
-          │ col1 │ col3 │  col4  │ ← row N: one pointer, one copy │   ....   │
-          └──────┴──────┴────────┘                             └──────────┘</span>
+after:   ROW STORE (col1 + col3 + col4, contiguous per row)   col2 String (columnar)
+         ┌──────┬──────┬────────┐
+         │ col1 │ col3 │  col4  │ ← row N: one pointer, one copy
+         └──────┴──────┴────────┘</span>
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; Fixed-size columns under a size threshold are packed into a <b style="color: green;">row store</b>;
-<br/>&emsp; output construction becomes a tight loop per column.
-<br/>&mdash; On by default: <b>enable_hash_join_row_store</b>, <b>min_rows_ratio_for_hash_join_row_store</b>.
-<br/>&mdash; Also: <b>LEFT SEMI</b> / <b>LEFT ANTI</b> joins that select no right column build a
-<br/>&emsp; <b style="color: green;">keys-only</b> hash table and release the right blocks &mdash; up to 1.5x faster, half the memory.</p>
+<p style="margin-top: 0.3em;">&mdash; Fixed-size columns are packed into a <b style="color: green;">row store</b>; on by default
+<br/>&emsp; (<b>enable_hash_join_row_store</b>).
+<br/>&mdash; <b>LEFT SEMI</b> / <b>ANTI</b> joins that select no right column build a <b style="color: green;">keys-only</b>
+<br/>&emsp; hash table and release the right blocks &mdash; up to 1.5x, half the memory.</p>
 
-<!-- Demo: EXPLAIN PIPELINE / perf counters from PR #104884 (LazyOutput::buildOutput hot loop); keys-only tables: #115301.
-     A local A/B with a 30M x 10M join under load ~130 was inconclusive; re-test:
+<p style="margin-top: 0em;">Example: 100M &times; 30M LEFT SEMI JOIN: <b>26.8: <span style="color: red;">0.50</span> sec.</b> &nbsp; <b>26.9: <span style="color: green;">0.37</span> sec.</b></p>
+
+<!-- Demo: keys-only tables (#115301), clickhouse local, 8 threads, taskset -c 64-95, min of 3 on the loaded shared box:
+     SELECT count() FROM (SELECT number AS k FROM numbers_mt(100000000)) AS l LEFT SEMI JOIN (SELECT number * 2 AS k, number AS p1, toString(number) AS p2 FROM numbers_mt(30000000)) AS r ON l.k = r.k FORMAT Null
+     26.8: 0.497 s   26.9: 0.373 s
+     Row store: perf counters from PR #104884 (LazyOutput::buildOutput hot loop); a local A/B with a 30M x 10M join under load ~130 was inconclusive; re-test:
      SELECT * FROM (SELECT number AS k FROM numbers_mt(300000000)) l JOIN (SELECT number AS k, number AS a, toUInt32(number) AS b, toFloat64(number) AS c FROM numbers_mt(10000000)) r ON l.k % 10000000 = r.k FORMAT Null
      SETTINGS enable_hash_join_row_store = 0 / 1 -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Hechem Selmi (row store), Nikita Taranov (keys-only tables).</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0em;">Developers: Hechem Selmi, Nikita Taranov.</p>
 </section>
 
 <section class="slide">
 <h2>GROUP BY: three small things</h2>
 
-<p style="margin-top: 0.3em;">&mdash; <b>GROUP BY without aggregate functions</b> (a set of keys) started <b style="color: green;">prefetching</b>
-<br/>&emsp; only at a much higher cardinality than GROUP BY with aggregates. Now both start
-<br/>&emsp; at the same point &mdash; where the hash table stops fitting in the L2 cache.
-<br/>&emsp; Plus inlining of a few hot functions on that path.</p>
+<p style="margin-top: 0.3em;">&mdash; <b>GROUP BY without aggregate functions</b> started <b style="color: green;">prefetching</b> at a much
+<br/>&emsp; higher cardinality than GROUP BY with aggregates. Now both start where
+<br/>&emsp; the hash table stops fitting in L2.</p>
 
-<p>&mdash; The <b>adaptive aggregator</b> (26.8) falls back to the ordinary algorithm when rare keys
-<br/>&emsp; or aggregate arguments are too <b>wide</b> to copy profitably &mdash; heavy string columns
-<br/>&emsp; run at the ordinary speed and memory; <b>adaptive_aggregator_freeze_threshold_bytes</b>.
-<br/>&emsp; The old sharding aggregator is removed in its favor.</p>
+<p>&mdash; The <b>adaptive aggregator</b> (26.8) falls back to the ordinary algorithm
+<br/>&emsp; when keys or arguments are too <b>wide</b> to copy profitably &mdash; heavy
+<br/>&emsp; string columns run at the ordinary speed and memory.</p>
 
-<p>&mdash; The <b>bucket top-K</b> optimization (keep each two-level bucket's best <i>n</i> groups
-<br/>&emsp; when a final aggregation feeds <b>ORDER BY &hellip; LIMIT n</b>) got its own setting,
-<br/>&emsp; <b>query_plan_aggregation_bucket_top_k</b>, is visible in <b>EXPLAIN</b>, and no longer
-<br/>&emsp; materializes every group's key for a statistic only parallel replicas consume.</p>
+<p>&mdash; The <b>bucket top-K</b> optimization (each two-level bucket keeps its best <i>n</i>
+<br/>&emsp; groups for ORDER BY &hellip; LIMIT n) is visible in <b>EXPLAIN</b> and has a setting:
+<br/>&emsp; <b>query_plan_aggregation_bucket_top_k</b>.</p>
 
 <!-- PRs: #115840, #116267 (Nikita Taranov); #115755, #116532 (Nihal Z. Miaji); #116124, #118374. Local A/B for the
      prefetch change (SELECT k FROM (SELECT cityHash64(number) % N AS k FROM numbers(300000000)) GROUP BY k, 1 thread)
@@ -837,25 +831,20 @@ after:    ROW STORE (col1 + col3 + col4, contiguous per row)   col2 String (stil
 <section class="slide">
 <h2>Text indexes: faster everything</h2>
 
-<p style="margin-top: 0.3em;">&mdash; <b style="color: green;">Merges</b> of text indexes: no bitmap allocation when deserializing embedded
-<br/>&emsp; and small posting lists, no roaring conversion when building the output list.</p>
+<p style="margin-top: 0.3em;">&mdash; <b style="color: green;">Merges</b>: no bitmap allocation for embedded and small posting
+<br/>&emsp; lists, no roaring conversion when writing the output list.</p>
 
-<p>&mdash; <b style="color: green;">Lazy posting lists</b>: <b>hasToken</b>, <b>hasAnyTokens</b>, <b>hasAllTokens</b> intersect and unite
-<br/>&emsp; posting lists at packed-block granularity instead of materializing bitmaps.</p>
+<p>&mdash; <b style="color: green;">Lazy posting lists</b>: <b>hasToken</b>, <b>hasAnyTokens</b>, <b>hasAllTokens</b> intersect
+<br/>&emsp; and unite posting lists block by block, without materializing bitmaps.</p>
 
-<p>&mdash; <b style="color: green;">Phrase search</b>: positions are stored in packed blocks; only the blocks
+<p>&mdash; <b style="color: green;">Phrase search</b>: positions in packed blocks; only the blocks
 <br/>&emsp; that cover candidate rows are read.</p>
 
-<p>&mdash; The <b>splitByNonAlpha</b> and <b>splitByString</b> tokenizers are faster; UTF-8 validation
-<br/>&emsp; in text index conditions is vectorized on x86 and ARM.</p>
+<p>&mdash; New: the <b>keyValuePairs</b> tokenizer answers <b>map['key'] = 'value'</b> from the index;
+<br/>&emsp; <b>splitByRegexp(re, 1)</b> extracts tokens by a capture group.</p>
 
-<p>&mdash; Fixed: a text index filter combined with <b>ORDER BY &hellip; LIMIT</b> stopped using the index
-<br/>&emsp; and read the whole column.</p>
-
-<p>&mdash; New: the <b>keyValuePairs</b> tokenizer indexes a <b>Map(String, String)</b> column and answers
-<br/>&emsp; <b>map['key'] = 'value'</b> from the index; <b>splitByRegexp(re, 1)</b> extracts tokens by capture group.</p>
-
-<!-- PRs: #114525, #117905 (Anton Popov), #111550 (Elmi Ahmadov), #119434 (Anton Popov), #116204 (Groene AI), #115586, #115579, #116127 (Jimmy Aguilar Mena). -->
+<!-- PRs: #114525, #117905 (Anton Popov), #111550 (Elmi Ahmadov), #119434 (Anton Popov), #116204 (Groene AI), #115586, #115579, #116127 (Jimmy Aguilar Mena).
+     Also fixed: a text index filter combined with ORDER BY ... LIMIT stopped using the index and read the whole column (#115586). -->
 
 <p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Anton Popov, Elmi Ahmadov, Jimmy Aguilar Mena.</p>
 </section>
@@ -870,46 +859,45 @@ after:    ROW STORE (col1 + col3 + col4, contiguous per row)   col2 String (stil
 
 <p style="margin-top: -0.3em;">Select rows by <b>where they are in the stream</b>, not by position:</p>
 
-<p><code style="font-size: 13pt; line-height: 1.25;">SELECT number FROM numbers(10) ORDER BY number
-<b style="color: green;">LIMIT 3 AFTER</b> number &gt;= 5;                      <span style="color: gray;">-- 5, 6, 7</span>
+<p><code style="font-size: 12pt; line-height: 1.15;">SELECT number FROM numbers(10) ORDER BY number
+<b style="color: green;">LIMIT 3 AFTER</b> number &gt;= 5;                            <span style="color: gray;">-- 5, 6, 7</span>
 
-SELECT number FROM numbers(10) <b style="color: green;">LIMIT UNTIL</b> number &gt;= 3;     <span style="color: gray;">-- 0, 1, 2</span>
-
-SELECT number FROM numbers(10)
-<b style="color: green;">LIMIT AFTER</b> number &gt;= 2 <b style="color: green;">UNTIL</b> number &gt;= 6;         <span style="color: gray;">-- 2, 3, 4, 5</span>
+SELECT number FROM numbers(10) <b style="color: green;">LIMIT UNTIL</b> number &gt;= 3;   <span style="color: gray;">-- 0, 1, 2</span>
 
 SELECT number FROM numbers(10)
-<b style="color: green;">LIMIT 2 AFTER</b> number IN (2, 6) <b style="color: green;">ALL</b>;                <span style="color: gray;">-- 2, 3, 6, 7</span>
+<b style="color: green;">LIMIT AFTER</b> number &gt;= 2 <b style="color: green;">UNTIL</b> number &gt;= 6;               <span style="color: gray;">-- 2, 3, 4, 5</span>
+
+SELECT number FROM numbers(10)
+<b style="color: green;">LIMIT 2 AFTER</b> number IN (2, 6) <b style="color: green;">ALL</b>;                     <span style="color: gray;">-- 2, 3, 6, 7</span>
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; "The rows from the first error until the next checkpoint", "N rows after every marker" &mdash;
-<br/>&emsp; in one pass over an ordered stream, instead of window functions or client-side cutting.
-<br/>&mdash; <b>AFTER</b> is inclusive, <b>UNTIL</b> exclusive; the conditions may use columns that are not selected.</p>
+<p style="margin-top: 0.3em;">&mdash; "From the first error until the next checkpoint" &mdash; in one pass,
+<br/>&emsp; instead of window functions or client-side cuts.
+<br/>&mdash; <b>AFTER</b> is inclusive, <b>UNTIL</b> exclusive; conditions may use unselected columns.</p>
 
 <!-- Demo: all four queries verified in clickhouse local 26.9.1.1592, outputs as shown. -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Zakhar Kravchuk.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0em;">Developer: Zakhar Kravchuk.</p>
 </section>
 
 <section class="slide">
 <h2>GRANTS per authentication method</h2>
 
-<p style="margin-top: -0.3em;">One user, several credentials &mdash; each with <b>its own limit</b> on what it can do:</p>
+<p style="margin-top: -0.3em;">One user, several credentials &mdash; each with <b>its own limit</b>:</p>
 
 <p><code style="font-size: 13pt; line-height: 1.25;">ALTER USER app ADD IDENTIFIED WITH sha256_password BY 'readonly_key'
     VALID FOR INTERVAL 30 DAY
     <b style="color: green;">GRANTS (SELECT ON default.sales)</b>;
 
 <span style="color: gray;">-- a session authenticated with readonly_key:</span>
-SELECT count() FROM default.sales;                <span style="color: gray;">-- 1000</span>
-INSERT INTO default.sales VALUES (1, 'x', 1);     <span style="color: gray;">-- ACCESS_DENIED: Not enough privileges</span>
+SELECT count() FROM default.sales;             <span style="color: gray;">-- 1000</span>
+INSERT INTO default.sales VALUES (1, 'x', 1);  <span style="color: gray;">-- ACCESS_DENIED</span>
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; The rights of the session are the <b>intersection</b> of the user's grants
-<br/>&emsp; with the listed ones. The clause never adds rights.
-<br/>&mdash; Tied to the user: shown as the user in query_log and processes,
-<br/>&emsp; stops working when the user is deleted, narrows when the user loses grants.
-<br/>&mdash; Visible in <b>SHOW CREATE USER</b> and <b>system.users.auth_grants</b>.</p>
+<p style="margin-top: 0.3em;">&mdash; Session rights = the user's grants <b>intersected</b> with the list.
+<br/>&emsp; The clause never adds rights.
+<br/>&mdash; Tied to the user: shown as the user in query_log, stops working
+<br/>&emsp; when the user is deleted, narrows when the user loses grants.</p>
 
 <!-- Demo:
 
@@ -945,10 +933,9 @@ Note: SHOW GRANTS in the limited session still prints the user's full grants; th
 <span style="color: gray;">$</span> clickhouse client --user app --password sbnvAg6tBx306T8mrhtLaCxwhiEKTktq
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; Sugar for <b>ALTER USER &lt;me&gt; ADD IDENTIFIED WITH sha256_password BY '&lt;random&gt;'</b>
-<br/>&emsp; with the same VALID FOR / GRANTS clauses: 32 random characters, stored hashed, shown once.
-<br/>&mdash; Without a lifetime, a token lives <b>create_token_default_ttl_seconds</b> (30 minutes).
-<br/>&mdash; Works wherever a password works: HTTP, native, MySQL, PostgreSQL protocols.</p>
+<p style="margin-top: 0.3em;">&mdash; Sugar for <b>ALTER USER &lt;me&gt; ADD IDENTIFIED WITH sha256_password BY '&lt;random&gt;'</b>:
+<br/>&emsp; 32 random characters, stored hashed, shown once.
+<br/>&mdash; No lifetime given: <b>create_token_default_ttl_seconds</b> (30 minutes).</p>
 
 <!-- Demo:
 
@@ -958,6 +945,7 @@ clickhouse client --user app --password main_secret -q "CREATE TOKEN"   -- valid
 SELECT name, auth_type, valid_until, auth_grants FROM system.users WHERE name = 'app' FORMAT Vertical;
 -- auth_type: ['plaintext_password','plaintext_password','sha256_password','sha256_password'], auth_grants: ['','SELECT ON default.sales','SELECT ON default.sales','']
 SELECT syntax FROM system.statements WHERE name = 'CREATE TOKEN';
+Works wherever a password works: HTTP, native, MySQL, PostgreSQL protocols.
 
 -->
 
@@ -967,24 +955,22 @@ SELECT syntax FROM system.statements WHERE name = 'CREATE TOKEN';
 <section class="slide">
 <h2>REFRESH &hellip; APPEND INCREMENTAL</h2>
 
-<p style="margin-top: -0.3em;">Refreshable materialized views can now process <b>only the new rows</b>
+<p style="margin-top: -0.3em;">Refreshable materialized views can process <b>only the new rows</b>
 <br/>committed to the source since the previous refresh:</p>
 
-<p><code style="font-size: 13pt; line-height: 1.25;">CREATE TABLE src (ts DateTime, k UInt32, v UInt64) ENGINE = MergeTree ORDER BY ts
+<p><code style="font-size: 12pt; line-height: 1.2;">CREATE TABLE src (ts DateTime, k UInt32, v UInt64) ENGINE = MergeTree ORDER BY ts
 SETTINGS enable_block_number_column = 1, enable_block_offset_column = 1;
 
 CREATE MATERIALIZED VIEW hourly
-REFRESH EVERY 1 HOUR <b style="color: green;">APPEND INCREMENTAL</b>
-ENGINE = MergeTree ORDER BY k
+REFRESH EVERY 1 HOUR <b style="color: green;">APPEND INCREMENTAL</b> ENGINE = MergeTree ORDER BY k
 AS SELECT k, sum(v) AS s, count() AS c FROM src GROUP BY k;
 
-<span style="color: gray;">-- system.view_refreshes.read_rows after 1000 + 10 inserted rows: 1010 — not 2010</span>
+<span style="color: gray;">-- read_rows after inserting 1000 + 10 rows: 1010, not 2010</span>
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; The refresh cursor is the source's block numbers, hence the two table settings.
-<br/>&mdash; Between the classic MV (per-insert) and a full refresh (re-read everything):
-<br/>&emsp; batch aggregation of the delta, on a schedule.
-<br/>&mdash; Into an <b>Iceberg</b> target it is <b>exactly-once</b>: the cursor is committed in the snapshot summary.</p>
+<p style="margin-top: 0.3em;">&mdash; The cursor is the source's block numbers &mdash; hence the two settings.
+<br/>&mdash; Between the classic MV (per insert) and a full refresh: the delta, on a schedule.
+<br/>&mdash; Into an <b>Iceberg</b> target it is <b>exactly-once</b>: the cursor is in the snapshot.</p>
 
 <!-- Demo:
 
@@ -1007,7 +993,7 @@ Without the two source settings: "Incremental refresh source table default.src m
 <section class="slide">
 <h2>Prometheus HTTP API</h2>
 
-<p style="margin-top: -0.3em;">A <b>TimeSeries</b> table now speaks the Prometheus HTTP API &mdash; point Grafana at it:</p>
+<p style="margin-top: -0.3em;">A <b>TimeSeries</b> table speaks the Prometheus HTTP API &mdash; point Grafana at it:</p>
 
 <p><code style="font-size: 12pt; line-height: 1.2;"><span style="color: gray;">$ cat config.d/prometheus_api.yaml</span>
 
@@ -1015,19 +1001,17 @@ http_handlers:
   defaults: {}
   rule:
     url_prefix: /prometheus/api/v1
-    handler:
-      type: <b style="color: green;">prometheus_api_v1</b>
-      database: default
-      table: metrics
+    handler: { type: <b style="color: green;">prometheus_api_v1</b>, database: default, table: metrics }
 
-<span style="color: gray;">$</span> curl 'http://server:8123/prometheus/api/v1/query?query=sum by (status) (rate(http_requests_total[5m]))'
-{"status":"success","data":{"resultType":"vector","result":[{"metric":{"status":"500"},"value":[1789606535.825,"1.52"]},
-                                                            {"metric":{"status":"200"},"value":[1789606535.825,"1.39"]}]}}
+<span style="color: gray;">$</span> curl --get 'http://server:8123/prometheus/api/v1/query' \
+       --data-urlencode 'query=sum by (status) (rate(http_requests_total[5m]))'
+{"status":"success","data":{"resultType":"vector","result":[
+  {"metric":{"status":"500"},"value":[1789606535.825,"1.52"]},
+  {"metric":{"status":"200"},"value":[1789606535.825,"1.39"]}]}}
 </code></p>
 
-<p style="margin-top: 0.2em;">&mdash; New in 26.9: <b>/metadata</b>, <b>/labels</b>, <b>/label/&lt;name&gt;/values</b>, <b>/format_query</b> &mdash;
-<br/>&emsp; next to <b>/query</b>, <b>/query_range</b>, <b>/series</b>, <b>/write</b>, <b>/read</b>.
-<br/>&mdash; Any tool that targets the Prometheus API works; remote-write feeds the table.</p>
+<p style="margin-top: 0.3em;">&mdash; New in 26.9: <b>/metadata</b>, <b>/labels</b>, <b>/label/&lt;name&gt;/values</b>, <b>/format_query</b>;
+<br/>&emsp; next to <b>/query</b>, <b>/query_range</b>, <b>/series</b>, <b>/write</b>, <b>/read</b>.</p>
 
 <!-- Demo (server config: config.d/prometheus_api.xml with the http_handlers rule above; users profile: enable_time_series_table = 1, enable_time_series_aggregate_functions = 1):
 
@@ -1041,10 +1025,11 @@ curl -s --get 'http://127.0.0.1:8123/prometheus/api/v1/format_query' --data-urle
 curl -s 'http://127.0.0.1:8123/prometheus/api/v1/metadata?limit=3'
 Remote write from a real Prometheus (prometheus.yml: remote_write url http://127.0.0.1:8123/prometheus/api/v1/write?database=default&table=ts&async_insert=1)
 could not be shown: Docker containers did not start on this machine; the table was filled with a SQL INSERT instead.
+Any tool that targets the Prometheus API works; remote-write feeds the table.
 
 -->
 
-<p style="color: gray; font-size: 13pt; margin-top: 0.2em;">Developers: Nikita Mikhaylov, Minh Vu (the original /metadata implementation), Vitaly Baranov.</p>
+<p style="color: gray; font-size: 13pt; margin-top: 0.2em;">Developers: Nikita Mikhaylov, Minh Vu, Vitaly Baranov.</p>
 </section>
 
 <section class="slide">
@@ -1053,19 +1038,19 @@ could not be shown: Docker containers did not start on this machine; the table w
 <p style="margin-top: -0.3em;">The <b>TimeSeries</b> engine, the <b>PromQL</b> dialect, and the <b>timeSeries*</b> functions
 <br/>moved from experimental to <b>private preview</b> &mdash; a drop-in Prometheus replacement:</p>
 
-<p><code style="font-size: 13pt; line-height: 1.25;">SET dialect = 'promql', promql_database = 'default', promql_table = 'metrics';
+<p><code style="font-size: 12pt; line-height: 1.2;">SET dialect = 'promql', promql_database = 'default', promql_table = 'metrics';
 <b style="color: green;">sum by (status) (rate(http_requests_total[5m]))</b>
 <span style="color: gray;">-- [('status','500')] │ 2026-09-17 00:56:28.000 │ 1.245</span>
 
 <span style="color: gray;">-- or from SQL, with a time range and a step:</span>
 SELECT tags, samples FROM <b style="color: green;">prometheusQueryRange</b>(default.metrics,
-    'sum by (status) (rate(http_requests_total[5m]))', now() - INTERVAL 1 HOUR, now(), INTERVAL 5 MINUTE);
+    'sum by (status) (rate(http_requests_total[5m]))',
+    now() - INTERVAL 1 HOUR, now(), INTERVAL 5 MINUTE);
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; 85%+ of PromQL, with exact Prometheus semantics; 26.9 adds <b>absent</b>, <b>count_values</b>,
-<br/>&emsp; <b>*_over_time</b>, <b>predict_linear</b>, <b>min/max_over_time</b>; SELECT from TimeSeries tables;
-<br/>&emsp; dictionary-encoded series ids; parallel selector scans.
-<br/>&mdash; Blog: <a href="https://clickhouse.com/blog/introducing-promql">Introducing ClickHouse's new TimeSeries engine</a>. Waitlist for ClickHouse Cloud.</p>
+<p style="margin-top: 0.3em;">&mdash; 85%+ of PromQL with exact Prometheus semantics; 26.9 adds <b>absent</b>,
+<br/>&emsp; <b>count_values</b>, <b>*_over_time</b>, <b>predict_linear</b>, SELECT from TimeSeries tables.
+<br/>&mdash; Blog: <a href="https://clickhouse.com/blog/introducing-promql">Introducing ClickHouse's new TimeSeries engine</a>.</p>
 
 <!-- Demo (same table as the previous slide):
 
@@ -1073,6 +1058,7 @@ clickhouse client --dialect=promql --promql_database=default --promql_table=ts -
 SELECT * FROM prometheusQuery(default.ts, 'sum by (status) (rate(http_requests_total[5m]))', now());          -- tags, timestamp, value
 SELECT * FROM prometheusQueryRange(default.ts, '...', now() - INTERVAL 10 MINUTE, now(), INTERVAL 5 MINUTE); -- tags Array(Tuple(String,String)), samples Array(Tuple(DateTime64(3), Float64))
 Settings renamed: allow_experimental_time_series_table -> enable_time_series_table (old names are aliases); tier: PrivatePreview.
+Also in 26.9: dictionary-encoded series ids (LowCardinality(UUID), 1.16x geomean), parallel selector scans, min/max_over_time; waitlist for ClickHouse Cloud.
 
 -->
 
@@ -1085,11 +1071,11 @@ Settings renamed: allow_experimental_time_series_table -> enable_time_series_tab
 </section>
 
 <section class="slide">
-<h2>Kusto Query Language, reimplemented 🧪</h2>
+<h2 style="font-size: 30pt;">Kusto Query Language, reimplemented 🧪</h2>
 
-<p style="margin-top: -0.3em;">The KQL dialect was contributed in 2022 and abandoned: it translated a token stream
-<br/>into <b>SQL text</b> and reparsed it &mdash; 298 format sites, no AST, an injection hole in
-<br/>string operators, 28 functions registered that did nothing.</p>
+<p style="margin-top: -0.3em;">The KQL dialect was contributed in 2022 and abandoned: it translated
+<br/>tokens into <b>SQL text</b> and reparsed it &mdash; no AST, an injection hole
+<br/>in string operators, 28 functions registered that did nothing.</p>
 
 <p><code style="font-size: 13pt; line-height: 1.25;">SET dialect = 'kusto', allow_experimental_kusto_dialect = 1;
 
@@ -1100,8 +1086,7 @@ print q = <b>7 / 2</b>, sub = <b>substring('abcdefg', -3, 2)</b>, c = <b>'50x' c
 
 <p style="margin-top: 0.3em;">&mdash; Now a dedicated <b style="color: green;">lexer, parser, and AST translation</b>: needles are literals,
 <br/>&emsp; nothing is representable as an injection.
-<br/>&mdash; The supported subset is smaller and documented; anything outside it
-<br/>&emsp; is rejected by name instead of being mistranslated.</p>
+<br/>&mdash; A smaller, documented subset; the rest is rejected by name.</p>
 
 <!-- Demo:
 
@@ -1109,7 +1094,7 @@ clickhouse local --multiquery -q "SET allow_experimental_kusto_dialect = 1, dial
 
 -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Alexey Milovidov.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
 </section>
 
 <section class="slide">
@@ -1117,12 +1102,11 @@ clickhouse local --multiquery -q "SET allow_experimental_kusto_dialect = 1, dial
 
 <p style="margin-top: -0.3em;">Queries written for <b>Trino</b> (and Presto, Athena) run as they are:</p>
 
-<p><code style="font-size: 13pt; line-height: 1.25;">SET dialect = 'trino', <b style="color: green;">enable_trino_dialect</b> = 1;
+<p><code style="font-size: 12pt; line-height: 1.15;">SET dialect = 'trino', <b style="color: green;">enable_trino_dialect</b> = 1;
 
 SELECT x, <b>TRY_CAST</b>('abc' AS INTEGER) AS c, <b>cardinality</b>(<b>ARRAY</b>[1, 2, 3]) AS n
 FROM <b>UNNEST</b>(ARRAY[10, 20, 30]) AS t(x) <b>OFFSET 1 LIMIT 5</b>;
-<span style="color: gray;">-- 20 │ NULL │ 3
--- 30 │ NULL │ 3</span>
+<span style="color: gray;">-- 20 │ NULL │ 3  /  30 │ NULL │ 3</span>
 
 SELECT <b>transform</b>(ARRAY[1, 2, 3], x -&gt; x * 2), <b>approx_percentile</b>(v, 0.9),
        <b>date_trunc</b>('month', TIMESTAMP '2026-09-17 10:00:00'), <b>ROW</b>(1, 'a')
@@ -1130,15 +1114,14 @@ FROM (<b>VALUES</b> (1), (2), (3), (10)) AS t(v);
 <span style="color: gray;">-- [2,4,6] │ 10 │ 2026-09-01 │ (1,'a')</span>
 </code></p>
 
-<p style="margin-top: 0.2em;">&mdash; Not a separate grammar: a token-level syntax translation, the standard parser,
-<br/>&emsp; and an AST-level mapping of ~340 Trino functions (renames, argument order, lambdas last).
-<br/>&mdash; Migrate dashboards and pipelines first, rewrite queries later.</p>
+<p style="margin-top: 0.3em;">&mdash; Not a separate grammar: token-level syntax translation, the standard parser,
+<br/>&emsp; and an AST-level mapping of ~340 Trino functions (renames, lambdas last).</p>
 
 <!-- Demo: both queries verified in clickhouse local 26.9.1.1592 with SET enable_trino_dialect = 1, dialect = 'trino'.
      Also: SELECT element_at(ARRAY['a','b','c'], 2), json_extract_scalar('{"a":1}', '$.a'), array_join(ARRAY['x','y'], '-'), strpos('hello', 'l')  -- b 1 x-y 3
      The changelog names the gate `enable_trino_dialect` (the PR text said allow_experimental_trino_dialect, which does not exist). -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.2em;">Developers: Alexey Milovidov, Ethan Lin.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0em;">Developers: Alexey Milovidov, Ethan Lin.</p>
 </section>
 
 
@@ -1149,24 +1132,22 @@ FROM (<b>VALUES</b> (1), (2), (3), (10)) AS t(v);
 <section class="slide">
 <h2>Create a new Delta Lake table</h2>
 
-<p style="margin-top: -0.3em;">Reading Delta Lake tables since 23.x, writing since 26.2 &mdash; now ClickHouse
-<br/>can <b>create</b> them, from scratch:</p>
+<p style="margin-top: -0.3em;">Reading Delta Lake since 23.x, writing since 26.2 &mdash; now ClickHouse
+<br/>can <b>create</b> tables from scratch:</p>
 
-<p><code style="font-size: 13pt; line-height: 1.25;">SET allow_delta_lake_writes = 1, <b style="color: green;">allow_delta_lake_create_table</b> = 1;
+<p><code style="font-size: 12pt; line-height: 1.2;">SET allow_delta_lake_writes = 1, <b style="color: green;">allow_delta_lake_create_table</b> = 1;
 
 CREATE TABLE trips (id Int64, name String, score Float64)
 ENGINE = <b style="color: green;">DeltaLake</b>('s3://bucket/warehouse/trips/', '&lt;key&gt;', '&lt;secret&gt;');
 
 INSERT INTO trips VALUES (1, 'a', 1.5), (2, 'b', 2.5);
-SELECT * FROM trips ORDER BY id;
-<span style="color: gray;">-- _delta_log/00000000000000000000.json: {"commitInfo":{"operation":"CREATE TABLE","engineInfo":"ClickHouse", ...}}
--- _delta_log/00000000000000000001.json: the INSERT; one Parquet data file</span>
+<span style="color: gray;">-- _delta_log/00000000000000000000.json:
+--   {"commitInfo":{"operation":"CREATE TABLE","engineInfo":"ClickHouse",...}}</span>
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; The initial commit is written through <b>delta-kernel-rs</b>; also attaches to an existing
-<br/>&emsp; <b>_delta_log</b>, or registers a table into a <b>Unity</b> catalog. S3, Azure, and local storage.
-<br/>&mdash; Writes now cast with an <b>accurate</b> cast: 300 into a Delta <i>byte</i> throws instead of truncating.
-<br/>&mdash; Not yet: <b>PARTITION BY</b> for new tables.</p>
+<p style="margin-top: 0.3em;">&mdash; The initial commit is written through <b>delta-kernel-rs</b>; can also attach
+<br/>&emsp; to an existing <b>_delta_log</b> or register into a <b>Unity</b> catalog. S3, Azure, local.
+<br/>&mdash; Writes cast <b>accurately</b> now: 300 into a Delta <i>byte</i> throws. No PARTITION BY yet.</p>
 
 <!-- Demo (local filesystem, DeltaLakeLocal engine):
 
@@ -1184,43 +1165,40 @@ Without allow_delta_lake_writes: "Creating a new Delta Lake table requires allow
 <section class="slide">
 <h2 style="font-size: 30pt;">Parallel decoding of Iceberg manifests</h2>
 
-<p style="margin-top: -0.3em;">Planning a query over an Iceberg table means walking its manifests: fetch, parse Avro,
-<br/>then prune every entry by partition and min/max. That walk ran <b>serially</b>:</p>
+<p style="margin-top: -0.3em;">Planning a query over Iceberg walks its manifests: fetch, parse Avro,
+<br/>prune every entry by partition and min/max. That walk ran <b>serially</b>.</p>
 
-<p style="margin-top: 0.3em;">&mdash; 26.8 prefetched the <i>next</i> manifest &mdash; overlapping only the fetch, not the decode.
-<br/>&mdash; 26.9 decodes manifests <b style="color: green;">concurrently</b>, streaming surviving entries into a bounded
-<br/>&emsp; queue as they are produced &mdash; no batch is ever materialized, backpressure applies
-<br/>&emsp; within a manifest, peak memory is the in-flight manifests plus the queue.</p>
+<p style="margin-top: 0.3em;">&mdash; 26.8 prefetched the <i>next</i> manifest &mdash; overlapping the fetch, not the decode.
+<br/>&mdash; 26.9 decodes manifests <b style="color: green;">concurrently</b>, streaming surviving entries into
+<br/>&emsp; a bounded queue &mdash; no batch is materialized, backpressure within a manifest.</p>
 
-<p style="margin-top: 0.5em;">Example (from the PR): a production table, 18 data manifests, 113 MB, ~75K entries:</p>
+<p style="margin-top: 0.2em;">Example (from the PR): 18 data manifests, 113 MB, ~75K entries:</p>
 <p><b>serial: <span style="color: red;">8.45</span> sec.</b> &nbsp; <b>4 threads: <span style="color: green;">2.55</span> sec.</b> &nbsp; <b>16 threads: <span style="color: green;">1.68</span> sec.</b></p>
 
-<p style="margin-top: 0.3em;">&mdash; <b>iceberg_manifest_decode_concurrency</b> (default 4) bounds it, for delete and data
-<br/>&emsp; manifests alike; the old <b>iceberg_delete_manifest_decode_concurrency</b> is an alias.</p>
+<p style="margin-top: 0.3em;">&mdash; <b>iceberg_manifest_decode_concurrency</b> (default 4), for delete and data manifests.</p>
 
 <!-- Numbers from PR #116723 (benchmarked in #106127 with the metadata cache disabled). The local IcebergLocal table
-     (8 inserts, 40 data files) is too small to show the effect. -->
+     (8 inserts, 40 data files) is too small to show the effect. The old iceberg_delete_manifest_decode_concurrency is an alias. -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developer: Aaron Harlap.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0.2em;">Developer: Aaron Harlap.</p>
 </section>
 
 <section class="slide">
 <h2 style="font-size: 30pt;">Pruning by the Iceberg manifest list</h2>
 
-<p style="margin-top: -0.3em;">The manifest list carries per-manifest partition summaries: <b>lower_bound</b>, <b>upper_bound</b>,
-<br/>contains_null. Now they prune whole <b>manifests</b> before any of them is opened:</p>
+<p style="margin-top: -0.3em;">The manifest list carries per-manifest partition summaries: <b>lower_bound</b>,
+<br/><b>upper_bound</b>, contains_null. They now prune whole <b>manifests</b> before any is opened:</p>
 
 <p><code style="font-size: 13pt; line-height: 1.25;">CREATE TABLE ice (id Int64, m UInt32, d Date, v Float64)
 ENGINE = Iceberg(&hellip;) <b>PARTITION BY m</b>;   <span style="color: gray;">-- 8 inserts, one month each</span>
 
 SELECT count() FROM ice WHERE m = 5;
 <span style="color: gray;">-- metadata files read: <b style="color: red;">41</b> → <b style="color: green;">7</b>   (use_iceberg_manifest_list_partition_pruning)
--- data files listed:   39 → 5   (use_iceberg_partition_pruning, per entry, as before)</span>
+-- data files listed:   39 → 5    (per-entry partition pruning, as before)</span>
 </code></p>
 
 <p style="margin-top: 0.3em;">&mdash; Three levels now: manifest list &rarr; manifest entries &rarr; Parquet row groups.
-<br/>&mdash; The fewer manifests decoded, the less there is to parallelize (previous slide).
-<br/>&mdash; ClickHouse also <b>writes</b> the partition field summaries into the manifest list since 26.9.</p>
+<br/>&mdash; ClickHouse also <b>writes</b> the partition summaries into the manifest list since 26.9.</p>
 
 <!-- Demo (IcebergLocal):
 
@@ -1252,18 +1230,18 @@ SYSTEM DROP ICEBERG METADATA CACHE; clickhouse client --print-profile-events -q 
 
 <p style="margin-top: 0.3em;">&mdash; A standalone build that talks directly to the HTTP endpoint &mdash;
 <br/>&emsp; no ClickHouse Cloud account, no separate deployment.
-<br/>&mdash; A schema browser, Monaco editor with completion, result grid, saved queries and
-<br/>&emsp; history in the browser's local storage.
-<br/>&mdash; Served as a gzipped static bundle, like ClickStack at <b>/clickstack</b>;
+<br/>&mdash; Schema browser, Monaco editor with completion, result grid;
+<br/>&emsp; saved queries and history live in the browser's local storage.
+<br/>&mdash; A gzipped static bundle, like ClickStack at <b>/clickstack</b>;
 <br/>&emsp; the classic Play UI stays at <b>/play</b>.</p>
 
 <p style="margin-top: 0.5em;">Demo &rarr;</p>
 
 <!-- Demo: open http://127.0.0.1:8123/ui, set the URL to http://127.0.0.1:8123, user default, Connect; "Start a new query";
-     the screenshot on the next slide runs ClickBench Q-like: SELECT URL, count() AS hits, uniq(UserID) AS users FROM hits
-     WHERE EventDate = '2013-07-15' AND URL LIKE 'http://%' GROUP BY URL ORDER BY hits DESC LIMIT 20.
+     the screenshot on the next slide runs: SELECT URL, count() AS hits, uniq(UserID) AS users FROM hits
+     WHERE CounterID = 62 AND URL LIKE 'http://%' GROUP BY URL ORDER BY hits DESC LIMIT 20  (0.262 s, 742,582 rows read).
      Playwright note: the console crashes to a blank page under a non-BCP47 locale (RangeError: Invalid language tag: en-US@posix);
-     use locale='en-US'. -->
+     use locale='en-US'. Monaco's autocomplete swallows newlines — type line by line with Escape before Enter. -->
 
 <p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Luis Neves.</p>
 </section>
@@ -1277,24 +1255,23 @@ SYSTEM DROP ICEBERG METADATA CACHE; clickhouse client --print-profile-events -q 
 
 <p style="margin-top: -0.3em;">Eight functions, three releases in the making, no experimental flag anymore:</p>
 
-<p><code style="font-size: 13pt; line-height: 1.25;">SELECT title, <b style="color: green;">aiClassify</b>(title, ['database', 'AI', 'security', 'other']) AS topic
+<p><code style="font-size: 13pt; line-height: 1.25;">SELECT title, <b style="color: green;">aiClassify</b>(title, ['database', 'AI', 'security', 'other'])
 FROM hackernews WHERE type = 'story' ORDER BY time DESC LIMIT 100;
 
-SELECT <b style="color: green;">aiTranslate</b>(comment, 'German'),
-       <b style="color: green;">aiRedact</b>(comment),
+SELECT <b style="color: green;">aiTranslate</b>(comment, 'German'), <b style="color: green;">aiRedact</b>(comment),
        <b style="color: green;">aiSimilarity</b>(comment, 'a complaint about latency') FROM feedback;
 </code></p>
 
 <p style="margin-top: 0.3em;">&mdash; <b>aiGenerate</b>, <b>aiClassify</b>, <b>aiExtract</b>, <b>aiTranslate</b> (26.4), <b>aiEmbed</b> (26.6),
 <br/>&emsp; <b>aiFilter</b>, <b>aiRedact</b>, <b>aiSimilarity</b> (26.8) &mdash; all <b style="color: green;">beta</b> in 26.9.
-<br/>&mdash; Credentials in named collections; per-query quotas on tokens and calls;
-<br/>&emsp; <b>ai_function_max_retries</b> = 1 by default so one transient error does not fail the query.
+<br/>&mdash; Credentials in named collections; per-query quotas on tokens and calls.
 <br/>&mdash; Blog: <a href="https://clickhouse.com/blog/ai-functions-in-clickhouse">AI Functions in ClickHouse: Upgrade your SQL to the AI age</a>.</p>
 
-<!-- Verified: SELECT name, tier FROM system.settings WHERE name LIKE 'ai_function%' — Beta; allow_experimental_ai_functions is obsolete.
+<!-- Verified: SELECT name, tier FROM system.settings WHERE name LIKE 'ai_function%' — Beta; allow_experimental_ai_functions is obsolete;
+     ai_function_max_retries defaults to 1 so one transient provider error does not fail the query.
      Provider calls were not exercised (no API key); the mock endpoint from the 26.8 rehearsal (/home/ubuntu/demos/mock_openai.py) is gone. -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.2em;">Developers: George Larionov, Andriy Yakovlev, and the AI functions team.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: George Larionov, Andriy Yakovlev.</p>
 </section>
 
 <section class="slide">
@@ -1302,22 +1279,22 @@ SELECT <b style="color: green;">aiTranslate</b>(comment, 'German'),
 
 <p style="margin-top: -0.3em;">Two announcements on September 16:</p>
 
-<p style="margin-top: 0.3em;">&mdash; The <b style="color: green;">dbt v2 adapter</b> for ClickHouse is in <b>public beta</b>: a Rust rewrite on dbt's
-<br/>&emsp; new engine, using the Arrow-based ADBC driver, shipped inside the dbt binary itself.
-<br/>&emsp; Parse times ~30x faster than the Python v1 adapter.</p>
+<p style="margin-top: 0.3em;">&mdash; The <b style="color: green;">dbt v2 adapter</b> for ClickHouse is in <b>public beta</b>: a Rust rewrite
+<br/>&emsp; on dbt's new engine with the Arrow-based ADBC driver, shipped inside
+<br/>&emsp; the dbt binary. Parse times ~30x faster than the Python v1 adapter.</p>
 
-<p>&mdash; <b style="color: green;">ClickHouse on the dbt platform</b> is in <b>private beta</b>: Studio (browser IDE), environments,
-<br/>&emsp; scheduled jobs, and Catalog &mdash; for open-source ClickHouse, ClickHouse Cloud, and BYOC.</p>
+<p>&mdash; <b style="color: green;">ClickHouse on the dbt platform</b> is in <b>private beta</b>: Studio, environments,
+<br/>&emsp; scheduled jobs, Catalog &mdash; for open-source, Cloud, and BYOC.</p>
 
 <p><code style="font-size: 14pt; line-height: 1.25;">$ python -m pip install --pre dbt
 $ dbt build
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; ClickHouse-specific configs: sorting keys, codecs, TTLs, skip indexes, materialized views.
-<br/>&mdash; The v1 adapter stays GA with 2000+ production teams.
-<br/>&mdash; Blog: <a href="https://clickhouse.com/blog/clickhouse-is-now-available-on-the-dbt-platform">ClickHouse is now available on the dbt platform</a>.</p>
+<p style="margin-top: 0.3em;">&mdash; Blog: <a href="https://clickhouse.com/blog/clickhouse-is-now-available-on-the-dbt-platform">ClickHouse is now available on the dbt platform</a>.</p>
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Aditya Chidurala, José Muñoz, Alex Francoeur.</p>
+<!-- ClickHouse-specific configs: sorting keys, codecs, TTLs, skip indexes, materialized views. The v1 adapter stays GA with 2000+ production teams. -->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Aditya Chidurala, José Muñoz, Alex Francoeur.</p>
 </section>
 
 
@@ -1335,8 +1312,8 @@ $ dbt build
 <br/><span class="hilite">&mdash; 🇺🇸 South Bay Meetup, Oct 8</span>
 <br/><span class="hilite">&mdash; 🇮🇱 Tel Aviv: AI Builders and Databases, Oct 12</span>
 <br/><span class="hilite">&mdash; 🇮🇪 Dublin: SRECon Happy Hour, Oct 13</span>
-<br/><span class="hilite">&mdash; 🇳🇴 Oslo: Training, Oct 14 &nbsp;·&nbsp; 🇦🇺 Melbourne: Build Better LLM Apps, Oct 15</span>
-<br/><span class="hilite">&mdash; 🇬🇧 London: AI Builders and Analytics, Oct 21 &nbsp;·&nbsp; 🇨🇾 Limassol, Nov 26</span>
+<br/><span class="hilite">&mdash; 🇳🇴 Oslo: Training, Oct 14 &nbsp;·&nbsp; 🇦🇺 Melbourne: LLM Apps, Oct 15</span>
+<br/><span class="hilite">&mdash; 🇬🇧 London: AI Builders, Oct 21 &nbsp;·&nbsp; 🇨🇾 Limassol, Nov 26</span>
 </p>
 </section>
 
@@ -1356,16 +1333,15 @@ $ dbt build
 <p><a href="https://clickhouse.com/blog/">https://clickhouse.com/blog/</a></p>
 
 <p style="line-height: 1.5; margin-right: -5em;">
-&mdash; The TimeSeries engine: your drop-in Prometheus replacement
-<br/>&mdash; AI Functions in ClickHouse: upgrade your SQL to the AI age
+&mdash; The TimeSeries engine: a drop-in Prometheus replacement
+<br/>&mdash; AI Functions: upgrade your SQL to the AI age
 <br/>&mdash; ClickHouse is now available on the dbt platform
 <br/>&mdash; Replica-aware routing: public beta
-<br/>&mdash; WalShadow: sub-second Postgres replication from physical WAL
-<br/>&mdash; On-Demand Compute for your most intensive workloads
-<br/>&mdash; CostBench: real-time performance per dollar under continuous load
-<br/>&mdash; ClickHouse Cloud vs. Snowflake: the performance-per-dollar gap
-<br/>&mdash; chdb Postgres extension: high-performance imports from cloud storage
-<br/>&mdash; ClickHouse as a streaming HTTP API; Pipelined SQL in 26.8
+<br/>&mdash; WalShadow: sub-second Postgres replication
+<br/>&mdash; On-Demand Compute for intensive workloads
+<br/>&mdash; CostBench: performance per dollar under load
+<br/>&mdash; ClickHouse Cloud vs. Snowflake
+<br/>&mdash; chdb Postgres extension
 </p>
 </section>
 
