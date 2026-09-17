@@ -645,7 +645,7 @@ Bloom filters on Array columns also serve arrayJoin(col) = const and GLOBAL IN (
 <p style="margin-top: -0.3em;">A <b>JSON</b> column could be hundreds of substreams; on S3 their marks
 <br/>were loaded one after another - one round trip each:</p>
 
-<p><code style="font-size: 12pt; line-height: 1.2;"><span style="color: gray;">-- github.com/ClickHouse/datasets: bluesky_car_records, 4723 substreams per part</span>
+<p><code style="font-size: 12pt; line-height: 1.15;"><span style="color: gray;">-- github.com/ClickHouse/datasets: bluesky_car_records, 4723 substreams per part</span>
 ATTACH DATABASE datasets UUID 'e053c139-f7b8-4c82-acb7-6b259c5b19e8' ENGINE = Atomic
 SETTINGS disk = disk(type = 's3_plain_rewritable',
                      endpoint = 'https://data.clickhouse.com/public-datasets/db/',
@@ -655,10 +655,10 @@ SETTINGS disk = disk(type = 's3_plain_rewritable',
 SELECT * FROM datasets.<b>bluesky_car_records</b> WHERE _part = 'all_1_38_3' LIMIT 1;
 </code></p>
 
-<p style="margin-top: 0.3em;">Example, one row from one part: <b>26.8: <span style="color: red;">fails</span> after 6 min</b>
+<p style="margin-top: 0em;">Example, one row from one part: <b>26.8: <span style="color: red;">fails</span> after 6 min</b>
 <br/>(HTTP_CONNECTION_LIMIT_REACHED). <b>26.9: <span style="color: green;">completes</span>.</b></p>
 
-<p style="margin-top: 0.3em;">&mdash; Marks of all streams load <b style="color: green;">asynchronously, in parallel</b> by default;
+<p style="margin-top: 0em;">&mdash; Marks of all streams load <b style="color: green;">asynchronously, in parallel</b> by default;
 <br/>&emsp; empty streams' marks are not loaded; JSON metadata is read only once.
 <br/>&mdash; PR test (1104 substreams, 30 ms/request): <b><span style="color: red;">64</span> sec &rarr; <span style="color: green;">2.5</span> sec.</b></p>
 
@@ -683,7 +683,7 @@ Also: #111020 (Rory Shanks) subcolumns in wide parts, #118154 (Pavel Kruglov) JS
 
 -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.2em;">Developers: Alexey Milovidov, Rory Shanks, Pavel Kruglov.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0em;">Developers: Alexey Milovidov, Rory Shanks, Pavel Kruglov.</p>
 </section>
 
 <section class="slide">
