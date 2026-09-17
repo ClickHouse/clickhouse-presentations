@@ -1168,14 +1168,14 @@ Without allow_delta_lake_writes: "Creating a new Delta Lake table requires allow
 <p style="margin-top: -0.3em;">Planning a query over Iceberg walks its manifests: fetch, parse Avro,
 <br/>prune every entry by partition and min/max. That walk ran <b>serially</b>.</p>
 
-<p style="margin-top: 0.3em;">&mdash; 26.8 prefetched the <i>next</i> manifest &mdash; overlapping the fetch, not the decode.
-<br/>&mdash; 26.9 decodes manifests <b style="color: green;">concurrently</b>, streaming surviving entries into
-<br/>&emsp; a bounded queue &mdash; no batch is materialized, backpressure within a manifest.</p>
+<p style="margin-top: 0.3em;">&mdash; 26.8 prefetched the <i>next</i> manifest &mdash; overlapping fetch only.
+<br/>&mdash; 26.9 decodes manifests <b style="color: green;">concurrently</b>, streaming the surviving
+<br/>&emsp; entries into a bounded queue with backpressure.</p>
 
 <p style="margin-top: 0.2em;">Example (from the PR): 18 data manifests, 113 MB, ~75K entries:</p>
 <p><b>serial: <span style="color: red;">8.45</span> sec.</b> &nbsp; <b>4 threads: <span style="color: green;">2.55</span> sec.</b> &nbsp; <b>16 threads: <span style="color: green;">1.68</span> sec.</b></p>
 
-<p style="margin-top: 0em;">&mdash; <b>iceberg_manifest_decode_concurrency</b> (default 4), for delete and data manifests.</p>
+<p style="margin-top: 0em;">&mdash; <b>iceberg_manifest_decode_concurrency</b> (default 4) bounds it.</p>
 
 <!-- Numbers from PR #116723 (benchmarked in #106127 with the metadata cache disabled). The local IcebergLocal table
      (8 inserts, 40 data files) is too small to show the effect. The old iceberg_delete_manifest_decode_concurrency is an alias. -->
