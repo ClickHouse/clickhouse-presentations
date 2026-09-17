@@ -576,21 +576,23 @@ The 15x figure is from PR #119555 (microbenchmark); #117353 measured 1.34-1.36x 
 
 -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Groene AI, Joshua Dorst, Harikrishnan Prabakaran.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Joshua Dorst, Harikrishnan Prabakaran.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/aarch64.png); background-size: cover;">
 </section>
 
 <section class="slide">
 <h2>Faster k-way merges</h2>
 
 <p style="margin-top: -0.3em;">Merging sorted streams is the core of MergeTree: merges, <b>FINAL</b>,
-<br/>ORDER BY, <b>optimize_on_insert</b>. Three optimizations, motivated
-<br/>by <a href="https://maksimkita.com/blog/k-way-merge.html">Maksim Kita's analysis</a> of k-way merge:</p>
+<br/>ORDER BY, <b>optimize_on_insert</b>. Three optimizations of k-way merge:</p>
 
 <p style="margin-top: 0.3em;">&mdash; Multi-column and collated keys: a <b style="color: green;">sorted array of cursors</b>
 <br/>&emsp; instead of a heap &mdash; 7&ndash;8% faster.
-<br/>&mdash; <b style="color: green;">Non-intersecting parts</b> (time-ordered inserts): the whole cursor
+</p><p>&mdash; <b style="color: green;">Non-intersecting parts</b> (time-ordered inserts): the whole cursor
 <br/>&emsp; is one batch, detected in O(1) comparisons.
-<br/>&mdash; <b style="color: green;">Runs of duplicate keys</b> are skipped: <b>FINAL</b> on ReplacingMergeTree
+</p><p>&mdash; <b style="color: green;">Runs of duplicate keys</b> are skipped: <b>FINAL</b> on ReplacingMergeTree
 <br/>&emsp; uses up to 40% less CPU, <b>optimize_on_insert</b> dedup is ~3x faster.</p>
 
 <!-- Demo: numbers are from PR #115869 (CI perf tests). Local attempts on the shared box under load ~130 were
@@ -602,7 +604,8 @@ The 15x figure is from PR #119555 (microbenchmark); #117353 measured 1.34-1.36x 
      INSERT INTO r2 SELECT number % 100000, number FROM numbers(30000000);  -- optimize_on_insert = 1 (default), 300 duplicates per key
 -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.7em;">Developer: Alexey Milovidov.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Maksim Kita's <a href="https://maksimkita.com/blog/k-way-merge.html">blog post</a> with the ideas and explanations.</p>
+<p style="color: gray; font-size: 14pt;">Developer: Alexey Milovidov.</p>
 </section>
 
 <section class="slide">
@@ -633,14 +636,14 @@ Bloom filters on Array columns also serve arrayJoin(col) = const and GLOBAL IN (
 
 -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developers: Yarik Briukhovetskyi, Groene AI.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developers: Yarik Briukhovetskyi.</p>
 </section>
 
 <section class="slide">
 <h2 style="font-size: 30pt;">Faster subcolumn reads from object storage</h2>
 
-<p style="margin-top: -0.3em;">A <b>JSON</b> column is hundreds of substreams; on S3 their marks
-<br/>were loaded one after another &mdash; one round trip each:</p>
+<p style="margin-top: -0.3em;">A <b>JSON</b> column could be hundreds of substreams; on S3 their marks
+<br/>were loaded one after another - one round trip each:</p>
 
 <p><code style="font-size: 12pt; line-height: 1.2;"><span style="color: gray;">-- the public datasets collection, attached from R2 as a plain_rewritable disk:</span>
 ATTACH DATABASE datasets UUID 'e053c139-f7b8-4c82-acb7-6b259c5b19e8' ENGINE = Atomic
@@ -655,7 +658,7 @@ GROUP BY wiki ORDER BY edits DESC LIMIT 5;      <span style="color: gray;">-- da
 </code></p>
 
 <p style="margin-top: 0.3em;">&mdash; Marks of all streams load <b style="color: green;">asynchronously, in parallel</b> by default;
-<br/>&emsp; empty streams' marks are not loaded; JSON metadata is not read twice.
+<br/>&emsp; empty streams' marks are not loaded; JSON metadata is read only once.
 <br/>&mdash; PR test (1104 substreams, 30 ms/request): <b><span style="color: red;">64</span> sec &rarr; <span style="color: green;">2.5</span> sec.</b></p>
 
 <!-- Demo (clickhouse local from an empty directory, both binaries, github.com/ClickHouse/datasets):
@@ -678,10 +681,9 @@ limit the effect; the 64 -> 2.5 s figure is the Wide-part case from PR #118477. 
 <section class="slide">
 <h2 style="font-size: 30pt;">Better reuse of connections to object storage</h2>
 
-<p style="margin-top: -0.3em;">A read up to the end of an object was an open-ended <b>Range: bytes=N-</b>.
-<br/>The connection returned to the pool only after EOF &mdash; which a reader
-<br/>sized to exactly the remaining bytes <b>never observes</b>. So it stayed busy
-<br/>until the end of the query, and every new stream opened a new TLS connection.</p>
+<p>In previous versions, connections that read to the end of a file,
+<br/>were held instead of returned to the connection pool.</p>
+<p>Unnecessary extra connections and frequent TLS handshakes.</p>
 
 <p><code style="font-size: 13pt; line-height: 1.25;"><span style="color: gray;">-- one row of a JSON column with ~500 substreams per part (PR):</span>
 26.8: <b style="color: red;">2333</b> connections for 5372 requests
@@ -691,8 +693,7 @@ limit the effect; the 64 -> 2.5 s figure is the Wide-part case from PR #118477. 
 DiskConnectionsCreated: 26.8: <b style="color: red;">235</b>   26.9: <b style="color: green;">59</b>
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; The request is now <b>Range: bytes=N-M</b>; the connection is released
-<br/>&emsp; as soon as the range is read and reused by the next stream.</p>
+<p style="margin-top: 0.3em;">&mdash; In 26.9, connections are better reused for subsequent requests.</p>
 
 <!-- Demo: see the previous slide's runs — DiskConnectionsCreated 233..239 (26.8) vs 59..60 (26.9), DiskConnectionsReused ~4400 both. -->
 
@@ -779,7 +780,7 @@ SELECT k, <b style="color: green;">uniqCombined64</b>(v) FROM t GROUP BY k;
      (1 thread) gave 6.25 -> 6.08 s (uniq) and 6.18 -> 6.08 s (uniqCombined) on the loaded shared box — too noisy to show;
      re-test with the hits table: SELECT URL, uniq(UserID) FROM hits GROUP BY URL FORMAT Null. -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developers: Manuel, Groene AI.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0.5em;">Developers: Manuel.</p>
 </section>
 
 <section class="slide">
@@ -847,7 +848,7 @@ after:   ROW STORE (col1 + col3 + col4, contiguous per row)   col2 String (colum
 <p>&mdash; <b style="color: green;">Phrase search</b>: positions in packed blocks; only the blocks
 <br/>&emsp; that cover candidate rows are read.</p>
 
-<p>&mdash; New: the <b>keyValuePairs</b> tokenizer answers <b>map['key'] = 'value'</b> from the index;
+<p style="margin-right: -3em;">&mdash; New: the <b>keyValuePairs</b> tokenizer answers <b>map['key'] = 'value'</b> from the index;
 <br/>&emsp; <b>splitByRegexp(re, 1)</b> extracts tokens by a capture group.</p>
 
 <!-- PRs: #114525, #117905 (Anton Popov), #111550 (Elmi Ahmadov), #119434 (Anton Popov), #116204 (Groene AI), #115586, #115579, #116127 (Jimmy Aguilar Mena).
@@ -858,7 +859,7 @@ after:   ROW STORE (col1 + col3 + col4, contiguous per row)   col2 String (colum
 
 
 <section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
-<h2><span class="hilite">Main Features</span></h2>
+<h2><span class="hilite">Something Interesting</span></h2>
 </section>
 
 <section class="slide">
