@@ -390,7 +390,7 @@ CREATE MATERIALIZED VIEW mv TO events AS SELECT * FROM queue;
 
 <p style="margin-top: 0.3em;">&mdash; <b>unordered</b> and <b>ordered</b> track every file in Keeper,
 <br/>&emsp; so that many servers can share one queue.
-<br/>&mdash; <b>exclusive</b> tracks files <b>in the memory of the server</b>: no Keeper
+</p><p>&mdash; <b>exclusive</b> tracks files <b>in the memory of the server</b>: no Keeper
 <br/>&emsp; round trip per file &mdash; for a bucket that belongs to this server alone.</p>
 
 <!-- Ran in production at the contributor's for years before upstreaming.
@@ -412,7 +412,7 @@ config". Only the per-file processing state is kept out of Keeper.
 
 -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Ivan Tkatchev.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Ivan Tkatchev.</p>
 </section>
 
 
@@ -421,13 +421,13 @@ config". Only the per-file processing state is kept out of Keeper.
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">min, max, count from column statistics</h2>
+<h2 style="font-size: 30pt;"><b>min</b>, <b>max</b>, <b>count</b> from column statistics</h2>
 
 <p style="margin-top: -0.3em;">Column statistics (default since 26.4) store the exact min and max
 <br/>of every numeric-like column per part. Aggregations read them now:</p>
 
 <p><code style="font-size: 14pt; line-height: 1.25;">SELECT min(EventDate), max(EventDate), count() FROM hits;
-<span style="color: gray;">-- ClickBench Q6, 100M rows: no data is read at all</span>
+<span style="color: gray;">-- no data is read, answered from statistics</span>
 
 <span style="color: gray;">EXPLAIN: Aggregating
          └── ReadFromPreparedSource (<b style="color: green;">_statistics_min_max_projection</b>)</span>
@@ -491,17 +491,17 @@ ALTER TABLE wide ADD COLUMN k UInt8; INSERT INTO wide (id, k) VALUES (1, 7); SEL
 
 <p style="margin-top: -0.3em;">At the end of every query the server sends a burst of tiny messages:
 <br/>profile info, progress, profile events, end of stream &hellip;
-<br/>Each used to be its own TCP packet:</p>
+</p><p>Each used to be its own TCP packet:</p>
 
-<p><code style="font-size: 13pt; line-height: 1.25;"><span style="color: gray;">$ tcpdump -i lo 'tcp src port 9000'   # SELECT 1, server → client</span>
-<b>26.8</b>: 23  10  10  3133  14  10  1   <span style="color: gray;">— 7 packets</span>
-<b>26.9</b>: 23  <b style="color: green;">3278</b>                  <span style="color: gray;">— 2 packets</span>
+<p><code style="font-size: 13pt; line-height: 1.25;"><span style="color: gray;">$ tcpdump -i lo 'tcp src port 9000'   # SELECT 1, server -> client</span>
+<b>26.8</b>: 23  10  10  3133  14  10  1   <span style="color: gray;">- 7 packets</span>
+<b>26.9</b>: 23  <b style="color: green;">3278</b>                      <span style="color: gray;">- 2 packets</span>
 </code></p>
 
 <p style="margin-top: 0.3em;">&mdash; After an idle period Linux shrinks the congestion window;
 <br/>&emsp; a burst longer than it waits for an ACK: a full extra round trip.
-<br/>&emsp; On a 30 ms link that was ~2x latency for clients that idle between queries.
-<br/>&mdash; Now the end-of-query messages go in <b>one socket write</b>.</p>
+</p><p>On a 30 ms link that was ~2x latency for clients that idle between queries.
+</p><p>&mdash; Now the end-of-query messages go in <b>one socket write</b>.</p>
 
 <!-- Demo (26.8 server on port 9100, 26.9 on 9000, one `SELECT 1 FORMAT Null` each):
 
@@ -547,7 +547,7 @@ Timings are not shown: the 356 MB table scans in milliseconds on 96 cores either
 
 -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Elmi Ahmadov, Groene AI.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Elmi Ahmadov.</p>
 </section>
 
 <section class="slide">
