@@ -255,6 +255,7 @@ Note: `j['a']['b'].:Int64` — the type hint after a bracket did not parse in 26
 <p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Pavel Kruglov.</p>
 </section>
 
+<!--
 <section class="slide">
 <h2>Hypothetical projections</h2>
 
@@ -273,7 +274,7 @@ SELECT name, sorting_key FROM <b style="color: green;">system.hypothetical_proje
 
 <p style="margin-top: 0.3em;">&mdash; Session-scoped, validated like ADD PROJECTION, never materialized.
 <br/>&mdash; Similar to <b>CREATE HYPOTHETICAL INDEX</b>.</p>
-
+-->
 <!-- Demo (in one session, e.g. over HTTP with session_id):
 
 CREATE TABLE events (ts DateTime, user_id UInt64, url String, dur UInt32) ENGINE = MergeTree ORDER BY ts;
@@ -286,9 +287,10 @@ EXPLAIN WHATIF SELECT count() FROM events WHERE user_id = 42;
 SELECT name, syntax FROM system.statements WHERE name = 'HYPOTHETICAL PROJECTION';
 
 -->
-
+<!--
 <p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Yarik Briukhovetskyi.</p>
 </section>
+-->
 
 <section class="slide">
 <h2>arrayFlattenedLength</h2>
@@ -301,7 +303,7 @@ SELECT name, syntax FROM system.statements WHERE name = 'HYPOTHETICAL PROJECTION
 </code></p>
 
 <p style="margin-top: 0.3em;">&mdash; <b>length(arrayFlatten(arr))</b> without materializing the flattened array.
-<br/>&mdash; Matches PostgreSQL's <b>cardinality</b>, which counts every level;
+</p><p>&mdash; Matches PostgreSQL's <b>cardinality</b>, which counts every level;
 <br/>&emsp; our <b>cardinality</b> is an alias of <b>length</b> and counts the outer array.</p>
 
 <!-- Demo:
@@ -318,27 +320,25 @@ SELECT arrayFlattenedLength([[1,2],[3],[4,5,6]]), length([[1,2],[3],[4,5,6]]);  
 
 <p style="margin-top: -0.3em;">The documentation of every SQL statement &mdash; inside the server:</p>
 
-<p><code style="font-size: 13pt; line-height: 1.25;">SELECT syntax FROM <b style="color: green;">system.statements</b> WHERE name = 'CREATE TOKEN';
-<span style="color: gray;">-- CREATE TOKEN
---     [{VALID UNTIL datetime | VALID FOR interval}]
---     [GRANTS (privilege ON object [,...])]</span>
-
-SELECT count() FROM system.statements;   <span style="color: gray;">-- 101</span>
+<p><code style="font-size: 13pt; line-height: 1.25;">SELECT syntax FROM <b style="color: green;">system.statements</b> WHERE name = 'SELECT';
 </code></p>
 
 <p style="margin-top: 0.3em;">&mdash; Columns: <b>name</b>, <b>syntax</b>, <b>description</b>, <b>parent_name</b>, <b>related</b>.
-<br/>&mdash; The same source that renders the docs &mdash; always matching the binary.
-<br/>&mdash; Next to <b>system.functions</b>, <b>system.settings</b>, <b>system.formats</b>.</p>
+</p><p>&mdash; The same source that renders the docs - always matching the binary.
+</p><p>&mdash; Next to <b>system.functions</b>, <b>system.settings</b>, <b>system.formats</b>...</p>
 
 <!-- Demo:
 
 SELECT count() FROM system.statements;   -- 101
-SELECT name, syntax, description FROM system.statements WHERE name = 'CREATE TOKEN' FORMAT Vertical;
+SELECT name, syntax, description FROM system.statements WHERE name = 'SELECT';
 DESCRIBE system.statements;   -- name syntax description parent_name related
+help select
+SYSTEM START LISTEN
+http://localhost:8123/docs#q=SELECT
 
 -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 1em;">Developer: Robert Schulze.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 5em;">Developer: Robert Schulze.</p>
 </section>
 
 <section class="slide">
@@ -375,7 +375,7 @@ In clickhouse-client the interactive session works the same way.
 </section>
 
 <section class="slide">
-<h2>S3Queue without Keeper coordination</h2>
+<h2 style="font-size: 32pt;">S3Queue without Keeper coordination</h2>
 
 <p style="margin-top: -0.3em;">A third mode for <b>S3Queue</b>, for a single ingesting server:</p>
 
