@@ -1175,12 +1175,12 @@ Without allow_delta_lake_writes: "Creating a new Delta Lake table requires allow
 <p style="margin-top: 0.2em;">Example (from the PR): 18 data manifests, 113 MB, ~75K entries:</p>
 <p><b>serial: <span style="color: red;">8.45</span> sec.</b> &nbsp; <b>4 threads: <span style="color: green;">2.55</span> sec.</b> &nbsp; <b>16 threads: <span style="color: green;">1.68</span> sec.</b></p>
 
-<p style="margin-top: 0.3em;">&mdash; <b>iceberg_manifest_decode_concurrency</b> (default 4), for delete and data manifests.</p>
+<p style="margin-top: 0em;">&mdash; <b>iceberg_manifest_decode_concurrency</b> (default 4), for delete and data manifests.</p>
 
 <!-- Numbers from PR #116723 (benchmarked in #106127 with the metadata cache disabled). The local IcebergLocal table
      (8 inserts, 40 data files) is too small to show the effect. The old iceberg_delete_manifest_decode_concurrency is an alias. -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.2em;">Developer: Aaron Harlap.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0em;">Developer: Aaron Harlap.</p>
 </section>
 
 <section class="slide">
