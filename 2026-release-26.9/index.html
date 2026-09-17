@@ -645,33 +645,41 @@ Bloom filters on Array columns also serve arrayJoin(col) = const and GLOBAL IN (
 <p style="margin-top: -0.3em;">A <b>JSON</b> column could be hundreds of substreams; on S3 their marks
 <br/>were loaded one after another - one round trip each:</p>
 
-<p><code style="font-size: 12pt; line-height: 1.2;"><span style="color: gray;">-- the public datasets collection, attached from R2 as a plain_rewritable disk:</span>
+<p><code style="font-size: 12pt; line-height: 1.2;"><span style="color: gray;">-- github.com/ClickHouse/datasets: bluesky_car_records, 4723 substreams per part</span>
 ATTACH DATABASE datasets UUID 'e053c139-f7b8-4c82-acb7-6b259c5b19e8' ENGINE = Atomic
 SETTINGS disk = disk(type = 's3_plain_rewritable',
                      endpoint = 'https://data.clickhouse.com/public-datasets/db/',
                      no_sign_request = true, readonly = true),
          lazy_load_tables = true;
 
-SELECT data.wiki.:String AS wiki, count() AS edits FROM datasets.<b>wikipedia_edits</b>
-WHERE time &gt;= now() - INTERVAL 1 DAY AND data.type.:String = 'edit'
-GROUP BY wiki ORDER BY edits DESC LIMIT 5;      <span style="color: gray;">-- data is a JSON column</span>
+SELECT * FROM datasets.<b>bluesky_car_records</b> WHERE _part = 'all_1_38_3' LIMIT 1;
 </code></p>
+
+<p style="margin-top: 0.3em;">Example, one row from one part: <b>26.8: <span style="color: red;">fails</span> after 6 min</b>
+<br/>(HTTP_CONNECTION_LIMIT_REACHED). <b>26.9: <span style="color: green;">completes</span>.</b></p>
 
 <p style="margin-top: 0.3em;">&mdash; Marks of all streams load <b style="color: green;">asynchronously, in parallel</b> by default;
 <br/>&emsp; empty streams' marks are not loaded; JSON metadata is read only once.
 <br/>&mdash; PR test (1104 substreams, 30 ms/request): <b><span style="color: red;">64</span> sec &rarr; <span style="color: green;">2.5</span> sec.</b></p>
 
-<!-- Demo (clickhouse local from an empty directory, both binaries, github.com/ClickHouse/datasets):
+<!-- Demo (clickhouse local from an empty directory, github.com/ClickHouse/datasets; run from eu-central-1 against the R2 bucket in ENAM):
 
-Q="SELECT data.wiki.:String AS wiki, count() AS edits FROM datasets.wikipedia_edits WHERE time >= now() - INTERVAL 1 DAY AND data.type.:String = 'edit' GROUP BY wiki ORDER BY edits DESC LIMIT 5"
-clickhouse-26.8 local --time --print-profile-events -q "$(cat attach.sql) $Q"   # wikidatawiki 373790, commonswiki 365976, enwiki 163759, ...
-Interleaved warm runs (query time, sum of WaitMarksLoadMicroseconds over threads, S3GetObject, DiskConnectionsCreated):
-  26.8: 8.6 / 7.6 / 8.3 s,  6.3–8.3 s marks wait,  1733 GetObject,  233–239 connections
-  26.9: 6.9 / 6.3 / 7.1 s,  4.3–5.1 s marks wait,  1512 GetObject,   59–60 connections
-First (cold) run of the day: 26.8 56.3 s (143 s marks wait, 3812 GetObject, 1064 connections) vs 26.9 13.7 s — but 26.9 ran second,
-after the edge cache warmed up, so the cold number is indicative only. Compact parts (the collection uses min_bytes_for_wide_part = 1Gi)
-limit the effect; the 64 -> 2.5 s figure is the Wide-part case from PR #118477. Also: #111020 (Rory Shanks) subcolumns in wide parts,
-#118154 (Pavel Kruglov) JSON advanced shared data — each path in its own compressed block.
+Q="SELECT * FROM datasets.bluesky_car_records WHERE _part = 'all_1_38_3' LIMIT 1 FORMAT Null"   # get a part name with: SELECT _part FROM datasets.bluesky_car_records LIMIT 1
+clickhouse-26.8 local --time --print-profile-events -q "$(cat attach.sql) $Q"
+  -- 355 s / 325 s, then: Code: 762. Cannot create new connection to data.clickhouse.com:443, hard limit 25000 for connections in group Disk is reached
+  --   (HTTP_CONNECTION_LIMIT_REACHED); DiskConnectionsCreated 29714 / 28808, LoadedMarksFiles 3004 of 4723, WaitMarksLoadMicroseconds 8267 s summed over threads
+clickhouse (master 26.10.1.14, same code as the 26.9 branch for these PRs) local ... -q "$(cat attach.sql) $Q"
+  -- 764 s / 640 s, completes; DiskConnectionsCreated 2885 / 2459, LoadedMarksFiles 4723, LoadedMarksCount 55M, S3GetObject 267533 / 216760
+Note for the author: 26.9 made ~57 GET requests per marks file (267K for 4723 files) vs ~12 per file on 26.8 (35K for 3004 files) —
+worth a look (a run with load_marks_asynchronously = 0 on the same binary was started to separate the async loader from the rest).
+The wall time is dominated by ~100 ms of transcontinental latency per request. A bare `SELECT * ... LIMIT 1` without the _part filter
+touches every part: 4723 marks files, 10100 requests, 261 s on master.
+
+Why the wikipedia_edits query cannot show it: the collection stores parts below 1 GiB as Compact (min_bytes_for_wide_part = 1Gi),
+so a part is one data file with one marks file no matter how many JSON paths it has. Measured there (edits per wiki, last day):
+26.8 8.6/7.6/8.3 s vs 26.9 6.9/6.3/7.1 s warm; S3GetObject 1733 -> 1512; DiskConnectionsCreated 235 -> 59. jsonbench has only
+typed paths (45 streams per part): 26.6 s cold vs 8.9 s, then 9.5 vs 8.8 s warm — the edge cache, not the feature.
+Also: #111020 (Rory Shanks) subcolumns in wide parts, #118154 (Pavel Kruglov) JSON advanced shared data — each path in its own block.
 
 -->
 
@@ -685,17 +693,18 @@ limit the effect; the 64 -> 2.5 s figure is the Wide-part case from PR #118477. 
 <br/>were held instead of returned to the connection pool.</p>
 <p>Unnecessary extra connections and frequent TLS handshakes.</p>
 
-<p><code style="font-size: 13pt; line-height: 1.25;"><span style="color: gray;">-- one row of a JSON column with ~500 substreams per part (PR):</span>
-26.8: <b style="color: red;">2333</b> connections for 5372 requests
-      <span style="color: gray;">"Too many active sessions in group Disk, count 1900"</span>
+<p><code style="font-size: 13pt; line-height: 1.25;"><span style="color: gray;">-- one row of the bluesky_car_records JSON column, 4723 substreams:</span>
+26.8: <b style="color: red;">29,714</b> connections created — over the hard limit of 25,000:
+      <span style="color: gray;">Cannot create new connection to data.clickhouse.com:443</span>
+26.9: <b style="color: green;">2,885</b> connections, 265,563 reused
 
-<span style="color: gray;">-- wikipedia_edits, the query from the previous slide:</span>
-DiskConnectionsCreated: 26.8: <b style="color: red;">235</b>   26.9: <b style="color: green;">59</b>
+<span style="color: gray;">-- wikipedia_edits, edits per wiki (Compact parts): 235 → 59 connections</span>
 </code></p>
 
 <p style="margin-top: 0.3em;">&mdash; In 26.9, connections are better reused for subsequent requests.</p>
 
-<!-- Demo: see the previous slide's runs — DiskConnectionsCreated 233..239 (26.8) vs 59..60 (26.9), DiskConnectionsReused ~4400 both. -->
+<!-- Demo: the runs on the previous slide — DiskConnectionsCreated 29714 / 28808 (26.8, both runs died with HTTP_CONNECTION_LIMIT_REACHED)
+     vs 2885 / 2459 (master), DiskConnectionsReused 265563 / 215216; wikipedia_edits: 233..239 (26.8) vs 59..60 (26.9), reused ~4400 both. -->
 
 <p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
 </section>
