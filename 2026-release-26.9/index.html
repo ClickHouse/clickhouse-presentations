@@ -669,8 +669,10 @@ clickhouse-26.8 local --time --print-profile-events -q "$(cat attach.sql) $Q"
   --   (HTTP_CONNECTION_LIMIT_REACHED); DiskConnectionsCreated 29714 / 28808, LoadedMarksFiles 3004 of 4723, WaitMarksLoadMicroseconds 8267 s summed over threads
 clickhouse (master 26.10.1.14, same code as the 26.9 branch for these PRs) local ... -q "$(cat attach.sql) $Q"
   -- 764 s / 640 s, completes; DiskConnectionsCreated 2885 / 2459, LoadedMarksFiles 4723, LoadedMarksCount 55M, S3GetObject 267533 / 216760
-Note for the author: 26.9 made ~57 GET requests per marks file (267K for 4723 files) vs ~12 per file on 26.8 (35K for 3004 files) —
-worth a look (a run with load_marks_asynchronously = 0 on the same binary was started to separate the async loader from the rest).
+Control run, same master binary with load_marks_asynchronously = 0: 949 s, S3GetObject 270920, DiskConnectionsCreated 2998,
+WaitMarksLoadMicroseconds 7639 s summed over threads (vs 44-63 s asynchronously). So the async loader itself gives 1.3-1.5x on this
+shape (640-764 s vs 949 s) and the request count (~57 GETs per marks file) is the same either way; 26.8's ~12 per file is not
+comparable because it died after 3004 of 4723 files. The completion itself comes from the connection reuse fix (#118480).
 The wall time is dominated by ~100 ms of transcontinental latency per request. A bare `SELECT * ... LIMIT 1` without the _part filter
 touches every part: 4723 marks files, 10100 requests, 261 s on master.
 
