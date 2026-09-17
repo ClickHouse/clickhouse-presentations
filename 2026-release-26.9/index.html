@@ -645,13 +645,12 @@ Bloom filters on Array columns also serve arrayJoin(col) = const and GLOBAL IN (
 <p style="margin-top: -0.3em;">A <b>JSON</b> column could be hundreds of substreams; on S3 their marks
 <br/>were loaded one after another - one round trip each:</p>
 
-<p><code style="font-size: 12pt; line-height: 1.15;"><span style="color: gray;">-- github.com/ClickHouse/datasets: bluesky_car_records, 4723 substreams per part</span>
+<p><code style="font-size: 11pt; line-height: 1.15;"><span style="color: gray;">-- github.com/ClickHouse/datasets: bluesky_car_records, 4723 substreams per part</span>
 ATTACH DATABASE datasets UUID 'e053c139-f7b8-4c82-acb7-6b259c5b19e8' ENGINE = Atomic
 SETTINGS disk = disk(type = 's3_plain_rewritable',
                      endpoint = 'https://data.clickhouse.com/public-datasets/db/',
                      no_sign_request = true, readonly = true),
          lazy_load_tables = true;
-
 SELECT * FROM datasets.<b>bluesky_car_records</b> WHERE _part = 'all_1_38_3' LIMIT 1;
 </code></p>
 
