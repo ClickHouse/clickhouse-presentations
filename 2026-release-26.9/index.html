@@ -714,7 +714,7 @@ Also: #111020 (Rory Shanks) subcolumns in wide parts, #118154 (Pavel Kruglov) JS
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">Conflict detectors in join reordering</h2>
+<h2>Conflict detectors in join reordering</h2>
 
 <p style="margin-top: -0.3em;">Which join orders are <b>valid</b> with SEMI, ANTI, and OUTER joins?
 <br/>Every non-inner join used to be a barrier: a selective SEMI join
@@ -730,8 +730,7 @@ EXPLAIN SELECT count() FROM big1 JOIN big2 ON big1.k = big2.k
 </code></p>
 
 <p style="margin-top: 0.3em;">&mdash; CD-A and CD-C from the SIGMOD'13 paper <i>"On the Correct and Complete
-<br/>&emsp; Enumeration of the Core Search Space"</i> &mdash; the state of the art.
-<br/>&mdash; For 7 relations CD-C explores ~12x more valid plans. Opt-in with <b>dpsub</b>.</p>
+<br/>&emsp; Enumeration of the Core Search Space"</i> &mdash; the state of the art.</p>
 
 <!-- Demo (clickhouse local):
 
@@ -799,14 +798,14 @@ SELECT k, <b style="color: green;">uniqCombined64</b>(v) FROM t GROUP BY k;
 <section class="slide">
 <h2>JOIN: row-major hash table payload</h2>
 
-<p style="margin-top: -0.3em;">The right side of a hash join is stored column by column; building
+<p style="margin-top: -1em;">The right side of a hash join is stored column by column; building
 <br/>the output gathers <b>one value per column per matched row</b>.</p>
 
 <p style="margin-top: 0em;"><code style="font-size: 11pt; line-height: 1.15;"><span style="color: gray;">before:  col1 Int32 │ col2 String │ col3 UInt8 │ col4 Float64  — 4 gathers per row
 
 after:   ROW STORE (col1 + col3 + col4, contiguous per row)   col2 String (columnar)
          ┌──────┬──────┬────────┐
-         │ col1 │ col3 │  col4  │ ← row N: one pointer, one copy
+         │ col1 │ col3 │  col4  │ &lt;- row N: one pointer, one copy
          └──────┴──────┴────────┘</span>
 </code></p>
 
@@ -878,27 +877,28 @@ after:   ROW STORE (col1 + col3 + col4, contiguous per row)   col2 String (colum
 <section class="slide">
 <h2>LIMIT with boundary conditions</h2>
 
-<p style="margin-top: -0.3em;">Select rows by <b>where they are in the stream</b>, not by position:</p>
+<p style="margin-top: -1em;">Select rows by <b>where they are in the stream</b>, not by position:</p>
 
 <p><code style="font-size: 12pt; line-height: 1.15;">SELECT number FROM numbers(10) ORDER BY number
-<b style="color: green;">LIMIT 3 AFTER</b> number &gt;= 5;                            <span style="color: gray;">-- 5, 6, 7</span>
+<b style="color: green;">LIMIT 3 AFTER</b> number &gt;= 5;                                <span style="color: gray;">-- 5, 6, 7</span>
 
 SELECT number FROM numbers(10) <b style="color: green;">LIMIT UNTIL</b> number &gt;= 3;   <span style="color: gray;">-- 0, 1, 2</span>
 
 SELECT number FROM numbers(10)
-<b style="color: green;">LIMIT AFTER</b> number &gt;= 2 <b style="color: green;">UNTIL</b> number &gt;= 6;               <span style="color: gray;">-- 2, 3, 4, 5</span>
+<b style="color: green;">LIMIT AFTER</b> number &gt;= 2 <b style="color: green;">UNTIL</b> number &gt;= 6;                <span style="color: gray;">-- 2, 3, 4, 5</span>
 
 SELECT number FROM numbers(10)
-<b style="color: green;">LIMIT 2 AFTER</b> number IN (2, 6) <b style="color: green;">ALL</b>;                     <span style="color: gray;">-- 2, 3, 6, 7</span>
+<b style="color: green;">LIMIT 2 AFTER</b> number IN (2, 6) <b style="color: green;">ALL</b>;                       <span style="color: gray;">-- 2, 3, 6, 7</span>
 </code></p>
 
 <p style="margin-top: 0.3em;">&mdash; "From the first error until the next checkpoint" &mdash; in one pass,
 <br/>&emsp; instead of window functions or client-side cuts.
-<br/>&mdash; <b>AFTER</b> is inclusive, <b>UNTIL</b> exclusive; conditions may use unselected columns.</p>
+<br/>&mdash; <b>AFTER</b> is inclusive, <b>UNTIL</b> exclusive
+<br/>&mdash; conditions may use unselected columns.</p>
 
 <!-- Demo: all four queries verified in clickhouse local 26.9.1.1592, outputs as shown. -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 0em;">Developer: Zakhar Kravchuk.</p>
+<p style="color: gray; font-size: 14pt; margin-top: -0.5em;">Developer: Zakhar Kravchuk, Nihal Miaji.</p>
 </section>
 
 <section class="slide">
@@ -946,7 +946,7 @@ Introspection: ExternalDistinctWritePart, ExternalDistinctMerge, ExternalDistinc
 <section class="slide">
 <h2>GRANTS per authentication method</h2>
 
-<p style="margin-top: -0.3em;">One user, several credentials &mdash; each with <b>its own limit</b>:</p>
+<p style="margin-top: -1em;">One user, several credentials &mdash; each with <b>its own limit</b>:</p>
 
 <p><code style="font-size: 13pt; line-height: 1.25;">ALTER USER app ADD IDENTIFIED WITH sha256_password BY 'readonly_key'
     VALID FOR INTERVAL 30 DAY
@@ -959,8 +959,9 @@ INSERT INTO default.sales VALUES (1, 'x', 1);  <span style="color: gray;">-- ACC
 
 <p style="margin-top: 0.3em;">&mdash; Session rights = the user's grants <b>intersected</b> with the list.
 <br/>&emsp; The clause never adds rights.
-<br/>&mdash; Tied to the user: shown as the user in query_log, stops working
-<br/>&emsp; when the user is deleted, narrows when the user loses grants.</p>
+<br/>&mdash; Tied to the user: shown as the user in query_log;
+<br/>&emsp; when the user is deleted, the auth is refused;
+<br/>&emsp; narrows when the user loses grants.</p>
 
 <!-- Demo:
 
@@ -983,22 +984,22 @@ Note: SHOW GRANTS in the limited session still prints the user's full grants; th
 <section class="slide">
 <h2>CREATE TOKEN</h2>
 
-<p style="margin-top: -0.3em;">Tokens for applications &mdash; generated by the server, for the current user:</p>
+<p style="margin-top: -1em;">Tokens for applications - generated by the server, for the current user:</p>
 
 <p><code style="font-size: 13pt; line-height: 1.25;">GRANT <b style="color: green;">CREATE TOKEN</b> ON *.* TO app;
 
 <span style="color: gray;">-- as app:</span>
 <b style="color: green;">CREATE TOKEN</b> VALID FOR INTERVAL 7 DAY GRANTS (SELECT ON default.sales);
-<span style="color: gray;">┌─token────────────────────────────┬─────────valid_until─┐
+<span style="color: gray;">
+┌─token────────────────────────────┬─────────valid_until─┐
 │ sbnvAg6tBx306T8mrhtLaCxwhiEKTktq │ 2026-09-24 00:25:21 │
 └──────────────────────────────────┴─────────────────────┘</span>
 
 <span style="color: gray;">$</span> clickhouse client --user app --password sbnvAg6tBx306T8mrhtLaCxwhiEKTktq
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; Sugar for <b>ALTER USER &lt;me&gt; ADD IDENTIFIED WITH sha256_password BY '&lt;random&gt;'</b>:
-<br/>&emsp; 32 random characters, stored hashed, shown once.
-<br/>&mdash; No lifetime given: <b>create_token_default_ttl_seconds</b> (30 minutes).</p>
+<p style="margin-top: 0.3em;">&mdash; Shortcut for <span style="font-family: monospace; font-size: 12pt;"><b>ALTER USER &lt;me&gt; ADD IDENTIFIED WITH sha256_password BY '&lt;random&gt;'</b></span>
+<br/>&mdash; Can be run as simple as <span style="font-family: monospace; font-size: 12pt;"><b>CREATE TOKEN</b></span>.</p>
 
 <!-- Demo:
 
@@ -1018,22 +1019,20 @@ Works wherever a password works: HTTP, native, MySQL, PostgreSQL protocols.
 <section class="slide">
 <h2>REFRESH &hellip; APPEND INCREMENTAL</h2>
 
-<p style="margin-top: -0.3em;">Refreshable materialized views can process <b>only the new rows</b>
+<p style="margin-top: -1em;">Refreshable materialized views can process <b>only the new rows</b>
 <br/>committed to the source since the previous refresh:</p>
 
 <p><code style="font-size: 12pt; line-height: 1.2;">CREATE TABLE src (ts DateTime, k UInt32, v UInt64) ENGINE = MergeTree ORDER BY ts
-SETTINGS enable_block_number_column = 1, enable_block_offset_column = 1;
+SETTINGS <b>enable_block_number_column</b> = 1, <b>enable_block_offset_column</b> = 1;
 
 CREATE MATERIALIZED VIEW hourly
 REFRESH EVERY 1 HOUR <b style="color: green;">APPEND INCREMENTAL</b> ENGINE = MergeTree ORDER BY k
 AS SELECT k, sum(v) AS s, count() AS c FROM src GROUP BY k;
-
-<span style="color: gray;">-- read_rows after inserting 1000 + 10 rows: 1010, not 2010</span>
 </code></p>
 
 <p style="margin-top: 0.3em;">&mdash; The cursor is the source's block numbers &mdash; hence the two settings.
-<br/>&mdash; Between the classic MV (per insert) and a full refresh: the delta, on a schedule.
-<br/>&mdash; Into an <b>Iceberg</b> target it is <b>exactly-once</b>: the cursor is in the snapshot.</p>
+</p><p>&mdash; Between the incremental MV (per insert) and a full refresh:
+<br/>&emsp; takes the delta from the source, on a schedule.</p>
 
 <!-- Demo:
 
@@ -1054,9 +1053,29 @@ Without the two source settings: "Incremental refresh source table default.src m
 </section>
 
 <section class="slide">
+<h2>Incremental replication to Iceberg</h2>
+
+<p style="margin-top: -1em;">Refreshable materialized views can process <b>only the new rows</b>
+<br/>committed to the source since the previous refresh:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.2;">CREATE TABLE src (ts DateTime, k UInt32, v UInt64) ENGINE = MergeTree ORDER BY ts
+SETTINGS <b>enable_block_number_column</b> = 1, <b>enable_block_offset_column</b> = 1;
+
+CREATE MATERIALIZED VIEW hourly
+REFRESH EVERY 1 HOUR <b style="color: green;">APPEND INCREMENTAL</b> ENGINE = MergeTree ORDER BY k
+AS SELECT k, sum(v) AS s, count() AS c FROM src GROUP BY k;
+</code></p>
+
+<p>A use-case: replicating <b>MergeTree</b> tables into <b>Iceberg</b>.</p>
+<p>Append into an <b>Iceberg</b> target is <b>exactly-once</b>: the cursor is in the snapshot.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.2em;">Developer: Smita Kulkarni.</p>
+</section>
+
+<section class="slide">
 <h2>Prometheus HTTP API</h2>
 
-<p style="margin-top: -0.3em;">A <b>TimeSeries</b> table speaks the Prometheus HTTP API &mdash; point Grafana at it:</p>
+<p style="margin-top: -1em;">A <b>TimeSeries</b> table speaks the Prometheus HTTP API &mdash; point Grafana at it:</p>
 
 <p><code style="font-size: 12pt; line-height: 1.2;"><span style="color: gray;">$ cat config.d/prometheus_api.yaml</span>
 
@@ -1068,13 +1087,13 @@ http_handlers:
 
 <span style="color: gray;">$</span> curl --get 'http://server:8123/prometheus/api/v1/query' \
        --data-urlencode 'query=sum by (status) (rate(http_requests_total[5m]))'
-{"status":"success","data":{"resultType":"vector","result":[
+<span style="color: blue;">{"status":"success","data":{"resultType":"vector","result":[
   {"metric":{"status":"500"},"value":[1789606535.825,"1.52"]},
-  {"metric":{"status":"200"},"value":[1789606535.825,"1.39"]}]}}
+  {"metric":{"status":"200"},"value":[1789606535.825,"1.39"]}]}}</span>
 </code></p>
 
 <p style="margin-top: 0.3em;">&mdash; New in 26.9: <b>/metadata</b>, <b>/labels</b>, <b>/label/&lt;name&gt;/values</b>, <b>/format_query</b>;
-<br/>&emsp; next to <b>/query</b>, <b>/query_range</b>, <b>/series</b>, <b>/write</b>, <b>/read</b>.</p>
+<br/>&emsp; and recent <b>/query</b>, <b>/query_range</b>, <b>/series</b>, <b>/write</b>, <b>/read</b>.</p>
 
 <!-- Demo (server config: config.d/prometheus_api.xml with the http_handlers rule above; users profile: enable_time_series_table = 1, enable_time_series_aggregate_functions = 1):
 
@@ -1094,6 +1113,8 @@ Any tool that targets the Prometheus API works; remote-write feeds the table.
 
 <p style="color: gray; font-size: 13pt; margin-top: 0.2em;">Developers: Nikita Mikhaylov, Minh Vu, Vitaly Baranov.</p>
 </section>
+
+https://clickhouse.com/_next/image?url=%2Fuploads%2FFINAL_Prom_QL_Private_Preview_fdb5025cef.jpg&w=4000&q=75
 
 <section class="slide">
 <h2>PromQL: private preview</h2>
@@ -1136,9 +1157,9 @@ Also in 26.9: dictionary-encoded series ids (LowCardinality(UUID), 1.16x geomean
 <section class="slide">
 <h2 style="font-size: 30pt;">Kusto Query Language, reimplemented 🧪</h2>
 
-<p style="margin-top: -0.3em;">The KQL dialect was contributed in 2022 and abandoned: it translated
-<br/>tokens into <b>SQL text</b> and reparsed it &mdash; no AST, an injection hole
-<br/>in string operators, 28 functions registered that did nothing.</p>
+<p style="margin-top: -0.3em;">The KQL dialect was contributed in 2022 and stalled: it translated
+<br/>tokens into <b>SQL text</b> and reparsed it,
+<br/>28 functions registered that did nothing.</p>
 
 <p><code style="font-size: 13pt; line-height: 1.25;">SET dialect = 'kusto', allow_experimental_kusto_dialect = 1;
 
@@ -1147,9 +1168,7 @@ print q = <b>7 / 2</b>, sub = <b>substring('abcdefg', -3, 2)</b>, c = <b>'50x' c
 -- now:    3   │ 'ef' │ false — what Kusto returns</span>
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; Now a dedicated <b style="color: green;">lexer, parser, and AST translation</b>: needles are literals,
-<br/>&emsp; nothing is representable as an injection.
-<br/>&mdash; A smaller, documented subset; the rest is rejected by name.</p>
+<p style="margin-top: 0.3em;">&mdash; Now a dedicated <b style="color: green;">lexer, parser, and AST translation</b>.</p>
 
 <!-- Demo:
 
@@ -1157,7 +1176,7 @@ clickhouse local --multiquery -q "SET allow_experimental_kusto_dialect = 1, dial
 
 -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 2em;">Developer: Alexey Milovidov.</p>
 </section>
 
 <section class="slide">
@@ -1177,7 +1196,7 @@ FROM (<b>VALUES</b> (1), (2), (3), (10)) AS t(v);
 <span style="color: gray;">-- [2,4,6] │ 10 │ 2026-09-01 │ (1,'a')</span>
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; Not a separate grammar: token-level syntax translation, the standard parser,
+<p style="margin-top: 0.3em; margin-right: -3em;">&mdash; Not a separate grammar: token-level syntax translation, the standard parser,
 <br/>&emsp; and an AST-level mapping of ~340 Trino functions (renames, lambdas last).</p>
 
 <!-- Demo: both queries verified in clickhouse local 26.9.1.1592 with SET enable_trino_dialect = 1, dialect = 'trino'.
@@ -1208,9 +1227,7 @@ INSERT INTO trips VALUES (1, 'a', 1.5), (2, 'b', 2.5);
 --   {"commitInfo":{"operation":"CREATE TABLE","engineInfo":"ClickHouse",...}}</span>
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; The initial commit is written through <b>delta-kernel-rs</b>; can also attach
-<br/>&emsp; to an existing <b>_delta_log</b> or register into a <b>Unity</b> catalog. S3, Azure, local.
-<br/>&mdash; Writes cast <b>accurately</b> now: 300 into a Delta <i>byte</i> throws. No PARTITION BY yet.</p>
+<p style="margin-top: 0.3em;">&mdash; Can also attach to an existing <b>_delta_log</b> or register into a <b>Unity</b> catalog. S3, Azure, local.</p>
 
 <!-- Demo (local filesystem, DeltaLakeLocal engine):
 
@@ -1256,11 +1273,11 @@ Without allow_delta_lake_writes: "Creating a new Delta Lake table requires allow
 ENGINE = Iceberg(&hellip;) <b>PARTITION BY m</b>;   <span style="color: gray;">-- 8 inserts, one month each</span>
 
 SELECT count() FROM ice WHERE m = 5;
-<span style="color: gray;">-- metadata files read: <b style="color: red;">41</b> → <b style="color: green;">7</b>   (use_iceberg_manifest_list_partition_pruning)
--- data files listed:   39 → 5    (per-entry partition pruning, as before)</span>
+<span style="color: gray;">-- metadata files read: <b style="color: red;">41</b> -> <b style="color: green;">7</b>  (use_iceberg_manifest_list_partition_pruning)
+-- data files listed:   39 -> 5  (per-entry partition pruning, as before)</span>
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; Three levels now: manifest list &rarr; manifest entries &rarr; Parquet row groups.
+<p style="margin-top: 0.3em;">&mdash; Three levels now: manifest list, manifest entries, Parquet row groups.
 <br/>&mdash; ClickHouse also <b>writes</b> the partition summaries into the manifest list since 26.9.</p>
 
 <!-- Demo (IcebergLocal):
@@ -1291,14 +1308,11 @@ SYSTEM DROP ICEBERG METADATA CACHE; clickhouse client --print-profile-events -q 
 <p><code style="font-size: 14pt; line-height: 1.25;"><b style="color: green;">http://your-server:8123/ui</b>
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; A standalone build that talks directly to the HTTP endpoint &mdash;
-<br/>&emsp; no ClickHouse Cloud account, no separate deployment.
-<br/>&mdash; Schema browser, Monaco editor with completion, result grid;
-<br/>&emsp; saved queries and history live in the browser's local storage.
-<br/>&mdash; A gzipped static bundle, like ClickStack at <b>/clickstack</b>;
-<br/>&emsp; the classic Play UI stays at <b>/play</b>.</p>
+<p style="margin-top: 0.3em;">&mdash; A standalone build that talks directly to the HTTP endpoint
+<br/>&mdash; Similar to ClickHouse Cloud Console.
+</p><p>&mdash; The main Web UI stays at <b>/play</b>.</p>
 
-<p style="margin-top: 0.5em;">Demo &rarr;</p>
+<p style="margin-top: 0.5em;">Demo</p>
 
 <!-- Demo: open http://127.0.0.1:8123/ui, set the URL to http://127.0.0.1:8123, user default, Connect; "Start a new query";
      the screenshot on the next slide runs: SELECT URL, count() AS hits, uniq(UserID) AS users FROM hits
