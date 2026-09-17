@@ -417,7 +417,8 @@ config". Only the per-file processing state is kept out of Keeper.
 
 
 <section class="slide" style="background: url(pictures/back4.jpg); background-size: cover;">
-<h2><span class="hilite">Performance Improvements</span></h2>
+<h2 style="line-height: 1.2; margin-left: -1em; color: yellow;">Performance
+<br/>Improvements</h2>
 </section>
 
 <section class="slide">
@@ -452,7 +453,7 @@ Disabled under FINAL, sampling, lightweight deletes.
 </section>
 
 <section class="slide">
-<h2>skip_empty_columns_on_insert</h2>
+<h2>Skip empty columns on inserts</h2>
 
 <p style="margin-top: -0.3em;">Wide tables where most columns are <b>empty</b> in most inserts:
 <br/>stop writing the emptiness.</p>
@@ -487,9 +488,9 @@ ALTER TABLE wide ADD COLUMN k UInt8; INSERT INTO wide (id, k) VALUES (1, 7); SEL
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">One round trip less in the native protocol</h2>
+<h2>Faster native protocol</h2>
 
-<p style="margin-top: -0.3em;">At the end of every query the server sends a burst of tiny messages:
+<p style="margin-top: -1em;">At the end of every query the server sends a burst of tiny messages:
 <br/>profile info, progress, profile events, end of stream &hellip;
 </p><p>Each used to be its own TCP packet:</p>
 
@@ -1406,7 +1407,7 @@ $ dbt build
 </section>
 
 
-<section class="slide" style="background: url(pictures/back10.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
+<section class="slide" style="background: url(pictures/back9.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
 <h2 style="color: white; margin-left: -1em;">Q&amp;A</h2>
 </section>
 
