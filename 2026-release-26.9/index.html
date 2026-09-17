@@ -394,6 +394,11 @@ CREATE MATERIALIZED VIEW mv TO events AS SELECT * FROM queue;
 <br/>&emsp; round trip per file &mdash; for a bucket that belongs to this server alone.</p>
 
 <!-- Ran in production at the contributor's for years before upstreaming.
+     Ordered or unordered? Neither — a third mode, closest to unordered: no ordering guarantee, files are taken as listed by
+     processing_threads_num threads. Processed/failed state lives only in this server's processing-state cache
+     (metadata_cache_size_elements/bytes, processing_state_cache_ttl_seconds); in-flight files are guarded by an in-process set.
+     Hence: one server per bucket (two servers would both ingest everything), state is lost on restart (files still in the
+     bucket are seen as new), evicted cache entries can be reprocessed — use after_processing = 'delete' or move files out.
      Demo (3 public ClickBench Parquet files, 3M rows):
 
 CREATE TABLE q_excl (WatchID UInt64, URL String, EventDate Date) ENGINE = S3Queue('s3://clickhouse-public-datasets/hits_compatible/athena_partitioned/hits_{1..3}.parquet', NOSIGN, 'Parquet') SETTINGS mode = 'exclusive';
