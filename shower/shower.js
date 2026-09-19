@@ -522,11 +522,15 @@
             const firstSlide = shower.slides[0];
             if (!firstSlide) return;
 
-            const { innerWidth, innerHeight } = window;
+            // The layout viewport, not window.innerWidth/innerHeight: on mobile the latter
+            // report the visual viewport (affected by pinch zoom and by shrink-to-fit of
+            // overflowing content), while the CSS of the full mode is centered against the
+            // layout viewport, and a scale larger than it makes the browser zoom out even more.
+            const { clientWidth, clientHeight } = document.documentElement;
             const { offsetWidth, offsetHeight } = firstSlide.element;
 
-            const listScale = 1 / (offsetWidth / innerWidth);
-            const fullScale = 1 / Math.max(offsetWidth / innerWidth, offsetHeight / innerHeight);
+            const listScale = 1 / (offsetWidth / clientWidth);
+            const fullScale = 1 / Math.max(offsetWidth / clientWidth, offsetHeight / clientHeight);
 
             container.style.setProperty('--shower-list-scale', listScale);
             container.style.setProperty('--shower-full-scale', fullScale);

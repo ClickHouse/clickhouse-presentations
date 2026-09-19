@@ -36,6 +36,15 @@
     display: block;
 }
 
+/* The slides are scaled, while the progress bar is not, see 'shower-full.css' */
+
+.shower.full .progress,
+.shower.full .progress::before {
+    height: calc(
+        var(--progress-size) * var(--shower-full-scale)
+    );
+}
+
 /* Print */
 
 @media print {

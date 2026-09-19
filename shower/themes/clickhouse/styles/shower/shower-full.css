@@ -1,18 +1,31 @@
 /* Shower Full */
 
+/*
+    The box is of the scaled size, and the slides inside it are scaled into it
+    from its top left corner. This way the document always takes exactly the
+    space of the viewport: a box of the unscaled size sticks out of it, and
+    mobile browsers zoom the whole page out to fit it. It also makes the scale
+    a property that affects the layout, so that the browser recalculates the
+    size of the document as soon as the scale is updated after a change of the
+    size of the viewport.
+*/
+
 .shower.full {
     position: absolute;
     top: 50%;
     left: 50%;
     overflow: hidden;
     margin-top: calc(
-        var(--slide-height) / 2 * -1
+        var(--slide-height) * var(--shower-full-scale) / 2 * -1
     );
     margin-left: calc(
-        var(--slide-width) / 2 * -1
+        var(--slide-width) * var(--shower-full-scale) / 2 * -1
     );
-    width: var(--slide-width);
-    height: var(--slide-height);
+    width: calc(
+        var(--slide-width) * var(--shower-full-scale)
+    );
+    height: calc(
+        var(--slide-height) * var(--shower-full-scale)
+    );
     background-color: black;
-    transform: scale(var(--shower-full-scale));
 }

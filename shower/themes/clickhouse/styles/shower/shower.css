@@ -15,6 +15,9 @@
     );
     --slide-side: 100px;
 
+    /* Recalculated in JavaScript for the size of the viewport, see 'shower-full.css' */
+    --shower-full-scale: 1;
+
     --color-blue: #4b86c2;
     --color-blue-lighter: #6799cb;
     --color-red: #cc0000;
