@@ -1188,7 +1188,29 @@
             }
         }
 
-        searchInput.addEventListener('input', () => { loadIndex(); applySearch(); });
+        // Keep the query in the URL (?q=...) so search results are shareable.
+        function updateURL() {
+            const url = new URL(window.location.href);
+            const query = searchInput.value.trim();
+            if (query) {
+                url.searchParams.set('q', query);
+            } else {
+                url.searchParams.delete('q');
+            }
+            try {
+                history.replaceState(null, '', url);
+            } catch (e) {
+                // Some browsers disallow this for file:// URLs.
+            }
+        }
+
+        const initialQuery = new URLSearchParams(window.location.search).get('q');
+        if (initialQuery) {
+            searchInput.value = initialQuery;
+            loadIndex();
+        }
+
+        searchInput.addEventListener('input', () => { loadIndex(); applySearch(); updateURL(); });
         searchInput.addEventListener('focus', loadIndex);
         if ('requestIdleCallback' in window) {
             requestIdleCallback(loadIndex);
