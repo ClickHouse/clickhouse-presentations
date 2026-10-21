@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 362" font-family="Helvetica, Arial, sans-serif">
+<defs><pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="#e3f3e7"/><line x1="0" y1="0" x2="0" y2="8" stroke="#2a9d4b" stroke-width="3"/></pattern><linearGradient id="fadeG" x1="0" x2="1"><stop offset="0.85" stop-color="#2a9d4b"/><stop offset="1" stop-color="#2a9d4b" stop-opacity="0"/></linearGradient><linearGradient id="fadeO" x1="0" x2="1"><stop offset="0.85" stop-color="#e8890c"/><stop offset="1" stop-color="#e8890c" stop-opacity="0"/></linearGradient><linearGradient id="fadeY" x1="0" x2="1"><stop offset="0.85" stop-color="#9aa0a6"/><stop offset="1" stop-color="#9aa0a6" stop-opacity="0"/></linearGradient></defs>
+<rect width="1000" height="362" fill="white"/>
+<line x1="30.0" y1="38" x2="30.0" y2="332" stroke="#e6e6e6" stroke-width="1"/>
+<text x="66.7" y="28" font-size="15" fill="#666" text-anchor="middle">Oct 11</text>
+<line x1="103.5" y1="38" x2="103.5" y2="332" stroke="#e6e6e6" stroke-width="1"/>
+<text x="140.2" y="28" font-size="15" fill="#666" text-anchor="middle">Oct 12</text>
+<line x1="176.9" y1="38" x2="176.9" y2="332" stroke="#e6e6e6" stroke-width="1"/>
+<text x="213.7" y="28" font-size="15" fill="#666" text-anchor="middle">Oct 13</text>
+<line x1="250.4" y1="38" x2="250.4" y2="332" stroke="#e6e6e6" stroke-width="1"/>
+<text x="287.1" y="28" font-size="15" fill="#666" text-anchor="middle">Oct 14</text>
+<line x1="323.8" y1="38" x2="323.8" y2="332" stroke="#e6e6e6" stroke-width="1"/>
+<text x="360.6" y="28" font-size="15" fill="#666" text-anchor="middle">Oct 15</text>
+<line x1="397.3" y1="38" x2="397.3" y2="332" stroke="#e6e6e6" stroke-width="1"/>
+<text x="434.0" y="28" font-size="15" fill="#666" text-anchor="middle">Oct 16</text>
+<line x1="470.8" y1="38" x2="470.8" y2="332" stroke="#e6e6e6" stroke-width="1"/>
+<text x="507.5" y="28" font-size="15" fill="#666" text-anchor="middle">Oct 17</text>
+<line x1="544.2" y1="38" x2="544.2" y2="332" stroke="#e6e6e6" stroke-width="1"/>
+<text x="581.0" y="28" font-size="15" fill="#666" text-anchor="middle">Oct 18</text>
+<line x1="617.7" y1="38" x2="617.7" y2="332" stroke="#e6e6e6" stroke-width="1"/>
+<text x="654.4" y="28" font-size="15" fill="#666" text-anchor="middle">Oct 19</text>
+<line x1="691.2" y1="38" x2="691.2" y2="332" stroke="#e6e6e6" stroke-width="1"/>
+<text x="727.9" y="28" font-size="15" fill="#666" text-anchor="middle">Oct 20</text>
+<line x1="764.6" y1="38" x2="764.6" y2="332" stroke="#e6e6e6" stroke-width="1"/>
+<text x="801.3" y="28" font-size="15" fill="#666" text-anchor="middle">Oct 21</text>
+<line x1="838.1" y1="38" x2="838.1" y2="332" stroke="#e6e6e6" stroke-width="1"/>
+<text x="874.8" y="28" font-size="15" fill="#666" text-anchor="middle">Oct 22</text>
+<line x1="911.5" y1="38" x2="911.5" y2="332" stroke="#e6e6e6" stroke-width="1"/>
+<text x="948.3" y="28" font-size="15" fill="#666" text-anchor="middle">Oct 23</text>
+<line x1="985.0" y1="38" x2="985.0" y2="332" stroke="#e6e6e6" stroke-width="1"/>
+<line x1="30" y1="38" x2="985" y2="38" stroke="#bbb"/>
+<text x="30" y="66" font-size="17" fill="#222"><tspan font-weight="bold">Oct 22, 07:34</tspan> — WHERE time &gt;= now() - INTERVAL 10 DAY AND message LIKE '%error%'</text>
+<rect x="126.6" y="76" width="734.6" height="26" rx="3" fill="#2f6fdb"/>
+<text x="134.6" y="94.0" font-size="15" fill="white" text-anchor="start">evaluates: time &gt;= Oct 12 07:34</text>
+<line x1="861.2" y1="74" x2="861.2" y2="104" stroke="#222" stroke-width="2"/>
+<text x="866.2" y="87" font-size="13" fill="#222">now</text>
+<rect x="176.9" y="108" width="808.1" height="26" rx="3" fill="url(#fadeG)"/>
+<text x="184.9" y="126.0" font-size="15" fill="white" text-anchor="start">writes to the cache: time &gt;= Oct 13 00:00   (rounded up)</text>
+<text x="30" y="160" font-size="17" fill="#222"><tspan font-weight="bold">Oct 22, 15:00</tspan> — the same query</text>
+<rect x="149.4" y="170" width="734.6" height="26" rx="3" fill="#2f6fdb"/>
+<text x="157.4" y="188.0" font-size="15" fill="white" text-anchor="start">evaluates: time &gt;= Oct 12 15:00</text>
+<line x1="884.0" y1="168" x2="884.0" y2="198" stroke="#222" stroke-width="2"/>
+<text x="889.0" y="181" font-size="13" fill="#222">now</text>
+<rect x="103.5" y="202" width="881.5" height="26" rx="3" fill="url(#fadeY)"/>
+<text x="111.5" y="220.0" font-size="15" fill="white" text-anchor="start">looks up: time &gt;= Oct 12 00:00   (rounded down)  —  miss</text>
+<text x="30" y="254" font-size="17" fill="#222"><tspan font-weight="bold">Oct 23, 09:10</tspan> — the same query</text>
+<rect x="205.0" y="264" width="734.6" height="26" rx="3" fill="#2f6fdb"/>
+<text x="213.0" y="282.0" font-size="15" fill="white" text-anchor="start">evaluates: time &gt;= Oct 13 09:10</text>
+<line x1="939.6" y1="262" x2="939.6" y2="292" stroke="#222" stroke-width="2"/>
+<text x="944.6" y="275" font-size="13" fill="#222">now</text>
+<rect x="176.9" y="296" width="808.1" height="26" rx="3" fill="url(#fadeO)"/>
+<text x="184.9" y="314.0" font-size="15" fill="white" text-anchor="start">looks up: time &gt;= Oct 13 00:00   (rounded down)  —  hit: skip granules ✔</text>
+<text x="30" y="352" font-size="16" fill="#444">An aligned bound, e.g. <tspan font-weight="bold">today() - 10</tspan>, rounds to itself both ways: it hits on every repeat.</text>
+</svg>
