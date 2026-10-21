@@ -576,19 +576,19 @@ Developers: Alexey Milovidov (#121145), Konstantin Bogdanov (#116150 share the b
 
 <p><code style="font-size: 12pt; line-height: 1.25;">SELECT URL, EventTime FROM file('hits.parquet') ORDER BY EventTime DESC LIMIT 10;
 </code></p>
-<p style="margin-top: 0.3em;">Example: <b>26.9: <span style="color: red;">6.6</span> sec.</b> &nbsp; <b>26.10: <span style="color: green;">2.3</span> sec.</b></p>
+<p style="margin-top: 0.3em;">Example: <b>26.9: <span style="color: red;">0.37</span> sec.</b> &nbsp; <b>26.10: <span style="color: green;">0.077</span> sec.</b></p>
 
 <p style="margin-top: 0.3em;">&mdash; <b>file</b>, <b>url</b>, <b>s3</b>, <b>azureBlobStorage</b>, <b>hdfs</b>, <b>Iceberg</b>, &hellip;</p>
 
-<!-- Demo (clickhouse local, ClickBench hits.parquet on local disk, 226 row groups, taskset -c 0-31, max_threads 32, 3 alternating runs):
+<!-- Demo (clickhouse local, ClickBench hits.parquet (14 GB, 226 row groups) on local disk, hot in the page cache, taskset -c 0-31,
+     max_threads 32, 5 interleaved runs, min; use_query_condition_cache = 0):
 
-SELECT URL, EventTime FROM file('hits.parquet') ORDER BY EventTime DESC LIMIT 10        -- 26.9: 6.6 / 10.8 / 6.7 s    26.10: 2.7 / 3.5 / 2.3 s
-SELECT URL FROM file('hits.parquet') ORDER BY UserID DESC LIMIT 10                      -- 26.9: 0.73 / 0.83 s         26.10: 0.32 / 0.25 s (first runs cold)
-SELECT SearchPhrase FROM file('hits.parquet') WHERE SearchPhrase <> '' ORDER BY EventTime LIMIT 10   -- 26.9: 0.84 s  26.10: 0.42 s
+SELECT URL, EventTime FROM file('hits.parquet') ORDER BY EventTime DESC LIMIT 10        -- 26.9: 0.373 s   26.10: 0.077 s
+SELECT URL FROM file('hits.parquet') ORDER BY UserID DESC LIMIT 10                      -- 26.9: 0.357 s   26.10: 0.056 s
+SELECT SearchPhrase FROM file('hits.parquet') WHERE SearchPhrase <> '' ORDER BY EventTime LIMIT 10   -- 26.9: 0.239 s   26.10: 0.077 s
+(An earlier run with the file partly evicted from the page cache gave 6.6 vs 2.3 s for the first query.)
 From s3://clickhouse-public-datasets/hits_compatible/hits.parquet (same region): ORDER BY UserID DESC LIMIT 10: 26.9 1.19 / 1.35 s, 26.10 0.93 / 0.77 s;
 profile event ParquetTopKSkippedRowGroups: 129. Floating-point sort columns are excluded for now.
-The machine is shared and loaded; please re-test with clean numbers.
-
 -->
 
 <p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
