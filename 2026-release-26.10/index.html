@@ -39,11 +39,12 @@
 
 <section class="slide" style="background: url(pictures/back2.jpg); background-size: cover;">
 <h2><span class="hilite">Autumn Release 26.10</span></h2>
-<p><span class="hilite">&mdash; 103 new features 🎃</span></p>
+<p><span class="hilite">&mdash; 104 new features 🎃</span></p>
 <p><span class="hilite">&mdash; 225 performance optimizations 🍂</span></p>
 <p><span class="hilite">&mdash; 739 bug fixes 🦉</span></p>
 </section>
 <!-- Feature count = 60 New Feature + 42 Experimental Feature + 1 new-feature backward-incompatible
+     + 1 for the Elasticsearch table engine (Experimental, #124283, backported to 26.10 in #127147 after the count — not yet in the changelog draft)
      change (the seccomp system call filter of clickhouse-server, #119545; the other 36 backward-incompatible
      entries are removals, restrictions, renames, or default flips).
      Performance = 225 Performance Improvement entries; bug fixes = 739 Bug Fix entries.
@@ -93,6 +94,7 @@ Column Cache
 PCodec
 XGBoost dictionaries
 LogsQL, /dialect
+Elasticsearch table engine
 
 Data Lakes:
 
@@ -1190,6 +1192,49 @@ Text filters need String columns; the math pipe needs numeric columns (no coerci
 -->
 
 <p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Elasticsearch table engine 🧪</h2>
+
+<p style="margin-top: -0.3em;">Read documents from an Elasticsearch index as a <b>JSON</b> column:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.25;">SET enable_elasticsearch = 1;
+
+SELECT _index, _id, document.url, document.`@timestamp`
+FROM <b style="color: green;">elasticsearch</b>('http://localhost:9200', 'hits_docs') LIMIT 2;
+
+CREATE TABLE es_hits ENGINE = <b style="color: green;">Elasticsearch</b>('http://localhost:9200', 'hits_docs');
+
+SELECT count() FROM elasticsearch('http://localhost:9200', 'hits_docs',
+    <b style="color: green;">query</b> = '{"term": {"is_mobile": "1"}}');   <span style="color: gray;">-- filtered by Elasticsearch</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; A consistent snapshot: paged with a point in time; Elasticsearch 7.12+.
+<br/>&mdash; Basic auth, bearer tokens, API keys, named collections. Read-only.</p>
+
+<!-- Demo (Elasticsearch 8.15.3 in Docker, security disabled, 127.0.0.1:19200; master build 26.11.1.385, which has #124283;
+     backported to 26.10 in #127147, version 26.10.2.60):
+
+docker run -d --name rel2610-es -p 127.0.0.1:19200:9200 -e discovery.type=single-node -e xpack.security.enabled=false docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+clickhouse client -q "SELECT concat('{\"index\":{}}\n', toJSONString(map('@timestamp', formatDateTime(EventTime, '%Y-%m-%dT%H:%i:%SZ'), 'url', URL, 'title', Title,
+  'search', SearchPhrase, 'user_id', toString(UserID), 'is_mobile', toString(IsMobile)))) FROM hits WHERE CounterID = 62 LIMIT 200000 FORMAT TSVRaw" > es_bulk.ndjson
+curl -H 'Content-Type: application/x-ndjson' -XPOST 'localhost:19200/hits_docs/_bulk' --data-binary @part   (in 40000-line parts)   -- _count: 200000
+
+SELECT count() FROM elasticsearch('http://127.0.0.1:19200', 'hits_docs');      -- 200000, 1.6 s (virtual columns only: _source is not fetched)
+SELECT _index, _id, document.url, document.`@timestamp` FROM es_hits LIMIT 2;  -- hits_docs  QwcsYKEBynxkOa0fiHAh  http://komme...  2013-07-15 07:40:04
+SELECT document.search::String AS phrase, count() ... LIMIT 3;                 -- рецепты сбербан 439 / инстанец жизнь 181 / рецепт блиноленские 79, 1.25 s
+SELECT count() FROM elasticsearch(..., query = '{"term": {"is_mobile": "1"}}'); -- 5162, 0.09 s
+SHOW CREATE TABLE es_hits   -- CREATE TABLE default.es_hits (`document` JSON) ENGINE = Elasticsearch('http://127.0.0.1:19200', 'hits_docs')
+JSONAllPathsWithTypes(document) -- {'@timestamp':'DateTime','is_mobile':'String','search':'String','title':'String','url':'String','user_id':'String'}
+GROUP BY document.search without a cast fails: "Data types Variant/Dynamic are not allowed in GROUP BY keys" — cast the subcolumn.
+WHERE is evaluated by ClickHouse; only the `query` argument filters on the Elasticsearch side. OpenSearch is not supported (no _shard_doc).
+Settings: page_size (10000), keep_alive (60 s). Credit: Kirill Kopnev (Fgrtue) — all 29 commits of #124283, and the RFC issue #121620.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Kirill Kopnev.</p>
 </section>
 
 
