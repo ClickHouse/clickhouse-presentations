@@ -41,7 +41,7 @@
 <h2><span class="hilite">Autumn Release 26.10</span></h2>
 <p><span class="hilite">&mdash; 104 new features 🎃</span></p>
 <p><span class="hilite">&mdash; 225 performance optimizations 🍂</span></p>
-<p><span class="hilite">&mdash; 739 bug fixes 🦉</span></p>
+<p><span class="hilite">&mdash; 739 fixes 🦉</span></p>
 </section>
 <!-- Feature count = 60 New Feature + 42 Experimental Feature + 1 new-feature backward-incompatible
      + 1 for the Elasticsearch table engine (Experimental, #124283, backported to 26.10 in #127147 after the count — not yet in the changelog draft)
@@ -129,7 +129,7 @@ ClickStack anomaly detection, Agentic Analytics Benchmark, Postgres posts
 
 
 <section class="slide">
-<h2>Function composition</h2>
+<h2>Function composition operator</h2>
 
 <p style="margin-top: -0.3em;">Pass a pipeline of functions where a lambda is expected:</p>
 
@@ -139,13 +139,12 @@ ClickStack anomaly detection, Agentic Analytics Benchmark, Postgres posts
 SELECT arrayMap(<b style="color: green;">plus(_, 1) | multiply(_, 2)</b>, [1, 2, 3]);
 <span style="color: gray;">-- [4, 6, 8]</span>
 
-SELECT arrayMap(<b style="color: green;">_1 * 2 + 1</b>, [1, 2, 3]);       <span style="color: gray;">-- [3, 5, 7]</span>
+SELECT arrayMap(<b style="color: green;">_1 * 2 + 1</b>, [1, 2, 3]);      <span style="color: gray;">-- [3, 5, 7]</span>
 SELECT arrayMap(<b style="color: green;">_1 + _2</b>, [1, 2], [10, 20]);  <span style="color: gray;">-- [11, 22]</span>
 </code></p>
 
 <p style="margin-top: 0.3em;">&mdash; <b>_</b>, <b>_1</b>, <b>_2</b> &hellip; are argument placeholders.
 <br/>&mdash; Resolved during query analysis into an ordinary lambda.
-<br/>&mdash; Outside a higher-order function, <b>|</b> is an error, not a bitwise OR.</p>
 
 <!-- Demo:
 
@@ -180,8 +179,7 @@ INSERT INTO events SELECT number FROM numbers(60000);
 -- written_rows = 120000/100000. (QUOTA_EXCEEDED)</span>
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; Before, only <b>written_bytes</b> &mdash; awkward when the natural unit is rows.
-<br/>&mdash; Shown in <b>system.quota_usage</b>, <b>system.quotas_usage</b>, <b>system.quota_limits</b>.</p>
+<p>As usual, shown in <b>system.quota_usage</b>, <b>system.quota_limits</b>.</p>
 
 <!-- Demo:
 
@@ -242,8 +240,8 @@ ipcryptEncrypt of IPv4/IPv6 returns IPv6; of a String returns a String. The func
 
 <p style="margin-top: -0.3em;">Turn an array into a bitmask with a lambda:</p>
 
-<p><code style="font-size: 13pt; line-height: 1.3;">SELECT bin(<b style="color: green;">arrayPackBitsToUInt64</b>(c -> c = 'Y', ['Y', 'N', 'N', 'Y']));
-<span style="color: gray;">-- 10010000</span>
+<p><code style="font-size: 13pt; line-height: 1.3;">SELECT <b style="color: green;">arrayPackBitsToUInt64</b>(c -> c = 'Y', ['Y', 'N', 'N', 'Y']) AS x, bin(x);
+<span style="color: gray;">-- 144 | 10010000</span>
 
 <span style="color: gray;">-- binary quantization of an embedding: 768 floats &rarr; 96 bytes</span>
 SELECT <b style="color: green;">arrayPackBitsToFixedString</b>(x -> x > 0, 96, embedding) AS bits,
@@ -253,7 +251,7 @@ SELECT <b style="color: green;">arrayPackBitsToFixedString</b>(x -> x > 0, 96, e
 SELECT hex(<b style="color: green;">arrayPackBitGroupsToString</b>(x -> x, 4, [1, 2, 3, 15]));
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; Six functions: <b>arrayPackBits</b>/<b>arrayPackBitGroups</b>
+<p style="margin-top: 0.3em;">Six functions: <b>arrayPackBits</b>/<b>arrayPackBitGroups</b>
 <br/>&emsp; &times; <b>ToUInt64</b>, <b>ToString</b>, <b>ToFixedString</b>.</p>
 
 <!-- Demo:
@@ -334,14 +332,14 @@ The changelog entry should be corrected.
 </section>
 
 <section class="slide">
-<h2>New array and map functions</h2>
+<h2>New Array and Map functions</h2>
 
-<p><code style="font-size: 13pt; line-height: 1.3;">SELECT <b style="color: green;">arrayMinIndex</b>([5, 2, 9, 2]),                    <span style="color: gray;">-- 2</span>
+<p><code style="font-size: 13pt; line-height: 1.3;">SELECT <b style="color: green;">arrayMinIndex</b>([5, 2, 9, 2]),                       <span style="color: gray;">-- 2</span>
        <b style="color: green;">arrayMaxIndex</b>(x -> length(x), ['a', 'abc', 'ab']); <span style="color: gray;">-- 2</span>
 SELECT <b style="color: green;">arrayRemoveAt</b>([10, 20, 30], 2), arrayRemoveAt([10, 20, 30], -1);
 <span style="color: gray;">-- [10, 30], [10, 20]</span>
 
-SELECT <b style="color: green;">mapRemove</b>(map('a', 1, 'b', 2, 'c', 3), 'b');   <span style="color: gray;">-- {'a':1, 'c':3}</span>
+SELECT <b style="color: green;">mapRemove</b>(map('a', 1, 'b', 2, 'c', 3), 'b');  <span style="color: gray;">-- {'a':1, 'c':3}</span>
 SELECT <b style="color: green;">mapEntries</b>(map('a', 1, 'b', 2));              <span style="color: gray;">-- [('a',1), ('b',2)]</span>
 SELECT <b style="color: green;">mapContainsKeyValue</b>(labels, 'env', 'prod');   <span style="color: gray;">-- uses text indexes</span>
 
@@ -349,8 +347,6 @@ SELECT <b style="color: green;">mapContainsKeyValue</b>(labels, 'env', 'prod'); 
 SELECT <b style="color: green;">sumMap</b>(value, key), <b style="color: green;">argMaxMap</b>(name, value, key) FROM t;
 <span style="color: gray;">-- {'a':8, 'b':5}, {'a':'z', 'b':'y'}</span>
 </code></p>
-
-<p style="margin-top: 0.3em;">&mdash; Also: <b>avg</b> and <b>sum</b> of <b>Interval</b>s; <b>regrSlope</b>, <b>regrR2</b>&hellip; as aliases.</p>
 
 <!-- Demo:
 
@@ -366,7 +362,7 @@ UnamedRus + Alexey Milovidov (-Map combinator, #123449 supersedes #56335), Alexe
 
 -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Minh Vu, Jimmy Aguilar Mena, UnamedRus, Alexey Milovidov.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developers: Minh Vu, Jimmy Aguilar Mena, UnamedRus, Alexey Milovidov.</p>
 </section>
 
 <section class="slide">
@@ -401,9 +397,9 @@ The choice is recorded into newly created views/table expressions; existing defi
 </section>
 
 <section class="slide">
-<h2>The obfuscate table function</h2>
+<h2>Table function for data obfuscation</h2>
 
-<p style="margin-top: -0.3em;"><b>clickhouse-obfuscator</b> (since 2017), now right inside a query:</p>
+<p style="margin-top: -0.3em;">Like <b>clickhouse-obfuscator</b> (since 2017), but right inside a query:</p>
 
 <p><code style="font-size: 12pt; line-height: 1.25;">SELECT URL, Title, SearchPhrase FROM <b style="color: green;">obfuscate</b>(
     SELECT URL, Title, SearchPhrase FROM hits WHERE SearchPhrase != '' LIMIT 100000)
