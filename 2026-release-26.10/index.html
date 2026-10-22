@@ -1193,14 +1193,22 @@ FROM hits WHERE WatchID % 100 = 1 GROUP BY IsMobile;
 
 <!-- Demo (server):
 
-CREATE TABLE train ENGINE = MergeTree ORDER BY tuple() AS SELECT toFloat64(ResolutionWidth) AS w, toFloat64(ResolutionHeight) AS h, toFloat64(OS) AS os,
-  toFloat64(UserAgent) AS ua, toFloat64(IsMobile) AS is_mobile FROM hits WHERE WatchID % 100 = 0;   -- 999714 rows, avg(is_mobile) = 0.1016
-CREATE DICTIONARY mobile_model ... as on the slide;
-SELECT predictXGBoost('mobile_model', 375, 667, 0, 0);   -- 0.8166
-Hold-out (WatchID % 100 = 1, 999314 rows): IsMobile = 0: 0.9999 of 897536; IsMobile = 1: 0.9978 of 101778; 0.665 s
-system.dictionaries: loading_duration 1.956 s. The model is not persisted: it is retrained on every load.
-Training holds the whole training set in memory and is single-threaded (bundled XGBoost has no OpenMP).
-Only for builds with the XGBoost contrib; only CREATE DICTIONARY (not config files); dictGet is not supported — use predictXGBoost.
+CREATE VIEW hits_train AS SELECT ResolutionWidth AS w, ResolutionHeight AS h, OS AS os, UserAgent AS ua, IsMobile AS is_mobile FROM hits WHERE cityHash64(WatchID) % 100 = 0;
+
+SET enable_xgboost = 1;
+
+CREATE DICTIONARY mobile_model
+    (w Float64, h Float64, os Float64, ua Float64, is_mobile Float64)
+PRIMARY KEY (w, h, os, ua)                      -- features
+SOURCE(CLICKHOUSE(TABLE 'hits_train'))               -- 1M rows of hits
+LAYOUT(XGBOOST(objective 'binary:logistic' max_depth 6 num_iterations 50))
+LIFETIME(0);
+
+SYSTEM RELOAD DICTIONARY mobile_model;
+
+SELECT IsMobile, avg((predictXGBoost('mobile_model', ResolutionWidth,
+    ResolutionHeight, OS, UserAgent) > 0.5) = IsMobile) AS accuracy
+FROM hits GROUP BY IsMobile;
 
 -->
 
@@ -1213,6 +1221,7 @@ Only for builds with the XGBoost contrib; only CREATE DICTIONARY (not config fil
 <p style="margin-top: -0.3em;">The log query language of VictoriaLogs, over ClickHouse tables:</p>
 
 <p><code style="font-size: 11pt; line-height: 1.2;">SET enable_logsql_dialect = 1, logsql_table = 'logs';
+<span style="color: gray;">-- logsql_time_column = '...', logsql_message_column = '...';</span>
 
 <span style="color: gray;">:)</span> <b style="color: green;">/dialect logsql</b>
 <span style="color: gray;">(logsql) :)</span> _time:5m error | stats by (service) count() as errors
@@ -1225,8 +1234,7 @@ Only for builds with the XGBoost contrib; only CREATE DICTIONARY (not config fil
 </code></p>
 
 <p style="margin-top: 0.3em;">&mdash; Translated into an ordinary <b>SELECT</b> at parse time.
-<br/>&mdash; <b>/dialect</b> switches the dialect in <b>clickhouse-client</b> and <b>local</b>,
-<br/>&emsp; even when the current dialect can't express <b>SET</b>.</p>
+<p>Bonus: <b>/dialect</b> switches the dialect in <b>clickhouse-client</b> and <b>clickhouse-local</b>.</p>
 
 <!-- Demo (server; table logs (_time DateTime64(3), _msg String, level, service, host, duration_ms), 1M rows ending at now()):
 
