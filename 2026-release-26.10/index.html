@@ -1808,9 +1808,9 @@ LIMIT 10
 <section class="slide">
 <h2>Client libraries</h2>
 
-<p style="margin-top: -0.3em;"><a href="https://clickhouse.com/blog/introducing-the-blazing-fast-native-tcp-client-for-net"><b>Native TCP client for .NET</b></a> &mdash; faster reads and inserts
-<br/>with fewer allocations, columnar APIs, POCO support,
-<br/>and a path to migrate from HTTP.</p>
+<p style="margin-top: -0.3em;"><a href="https://clickhouse.com/blog/introducing-the-blazing-fast-native-tcp-client-for-net"><b>Native TCP client for .NET</b></a> &mdash; 1.5&ndash;2x faster than HTTP,
+<br/>far fewer allocations; read columnar blocks
+<br/>or map rows to your own C# classes.</p>
 
 <p style="margin-top: 1em;"><a href="https://github.com/ClickHouse/clickhouse-c"><b>clickhouse-c</b></a> &mdash; a minimalist header-only library for embedded contexts:</p>
 <p style="margin-top: -0.5em;">&mdash; the Native protocol over TCP and Native format blocks;
@@ -1818,7 +1818,11 @@ LIMIT 10
 <br/>&mdash; made for PostgreSQL extensions (<b>palloc</b> arenas, <b>longjmp</b>);
 <br/>&mdash; <b>clickhouse.h</b> alone decodes <b>clickhouse-local</b> output from a pipe.</p>
 
-<!-- Sources: the blog post (title "Introducing the (blazing fast!) native TCP client for .NET", 2026-10-16; repo ClickHouse/clickhouse-cs);
+<!-- .NET client, from the post: "1.5x-2x faster than the HTTP client for typical use cases. Cuts GC allocations by over 99% in some cases."
+     Three tiers: columnar blocks (StreamAsync / InsertAsync, no per-row allocation), POCOs = Plain Old CLR Objects, i.e. your own C# classes
+     (QueryAsync<T> / InsertRowsAsync<T>, mapping compiled per column on first use, no reflection or boxing per row), and object[] rows.
+     Experimental; JSON arrives as text; no ADO.NET; both clients ship in the same package.
+     Sources: the blog post (title "Introducing the (blazing fast!) native TCP client for .NET", 2026-10-16; repo ClickHouse/clickhouse-cs);
      clickhouse-c README (created 2026-05-21, Apache-2.0, C): "Header-only C client for the ClickHouse Native wire format — the Native Protocol
      over TCP carrying Native Format blocks. One core header, plus optional follow-up headers for TCP, compression, codecs, and I/O backends.
      Designed for embedding inside PostgreSQL extensions (palloc arena, longjmp) but with no PG-specific code. Including clickhouse.h alone
