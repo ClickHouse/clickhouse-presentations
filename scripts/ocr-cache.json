@@ -29,6 +29,11 @@
   "file": "2026-ai/3.svg",
   "text": "AI-assisted coding Level 1: asking a model and copy-pasting code snippets from a chat. Level 2: using agents in command line and your IDE, hand-holding agents or vibe coding ^ we are here Level 3: running multiple agents in isolated environments, running loops with automatic feedback, spec-driven development, orchestrating multi-agent setups, ... ^ we are not there yet COPY-PASTING FROM CHATGPT AGENTIC CODING UNATTENDED AGENT SWARMS imgflip.com 3 ©2024 CLICKHOUSE INC., CONFIDENTIAL & PROPRIETARY"
  },
+ "119096c1837f3a9ad68a5e0bd3381a98b9afce6097f90c3a85b689cce8b020bd": {
+  "engine": "claude-haiku-4-5",
+  "file": "2026-cto-night-tokyo/31.svg",
+  "text": "ClickHouse Agent 真のデータの民主化を実現する会話形式でのデータ利活用 ClickHouseに格納されているデータを 自然言語で分析可能なUIインターフェース ● OSSのChat UIプロダクト LibreChat を買収し、 マネージドサービスとして提供 ● ClickHouseのDBにはMCPで接続 ○ その他のMCPサービスにも接続可能 ● グラフィカルなデータの可視化から、エージェントの作 成などもサポート 31 ©2025 CLICKHOUSE INC. Trip from 2009 in Eida — Eida Loads & Bug Total Assorted by Passenger Count ClickHouse Agent 用語 Used 3 tools — clickhouse, code_read_file plot_trips.py クリックして実行 NYC Taxi Trips in 2009 — Eida Loads & Bug Total Assorted by Passenger Count グラフを作成しました！以下が2009年の乗客数ごとの利用回数です。 データまとめ（乗客数1～8人） 乗客数 乗客数 学位利用回数 1人 1981,480万回 $10.80 2人 2,753万回 $11.92 3人 789万回 $11.03 メッセージ ClickHouse Agent コードを実行 clickhouse"
+ },
  "15b92d6dfe1a6efc3ba8fa1acab6f269b96743937b9c230c140a212a8804a2b7": {
   "engine": "claude-haiku-4-5",
   "file": "2026-openhouse-sf/great/23.svg",
@@ -64,6 +69,16 @@
   "file": "2026-openhouse-sf/great/14.svg",
   "text": "Use the Best Algorithms? – every algorithm makes different sense in different context. Example: let's take the best hash function 😜 Where you're going to use it? • in hash tables? • in bloom filters? • in hyperloglogs? • as a function in SQL? ClickHouse"
  },
+ "2c538958dfa4780723456249d1f69fac8dd7e9821b97f8e7ee6d8107d8a0622f": {
+  "engine": "claude-haiku-4-5",
+  "file": "2026-cto-night-tokyo/15.svg",
+  "text": "幅広いユースケースで利用されるデータストア ClickHouseが注目される4つのソリューションエリア リアルタイム分析 • 顧客向けアプリケーション • インタラクティブな操作 • ClickHouseを直接クエリ • 既存データベースからの リアルタイムレプリケーション Tesla shopify Bloomberg CLOUDFLARE Lyft braze AI/機械学習 • LLMオブザーバビリティ • フィーチャストア・推論ログ • RAG／ベクトルDB ANTHROPIC LangChain COGNITIV OpenAI Weights & Biases SIERRA データウェアハウス • 大規模でもコスト効率が高い • 社内向けビジネスデータ分析 • BIツール連携 • オープンデータフォーマットサポート およびカタログ連携機能 ROKT DeepL Nansen Deutsche Bank instacart IBM オブザーバビリティ • ログ、メトリクス、トレース、セッション リプレイ、アラート • OpenTelemetryのサポート • モニタリングダッシュボード連携 • AIオブザーバビリティ NETFLIX eBay COMCAST Uber GitLab DOORDASH 15 ©2026 CLICKHOUSE INC."
+ },
+ "2d11f897d7f04e7cc6e3df5cc63ee0c51ea94df2b15b481fa507a36e73bf33cc": {
+  "engine": "claude-haiku-4-5",
+  "file": "2026-cto-night-tokyo/6.svg",
+  "text": "データドリブンから ワークフロードリブンへ AIエージェントがワークフロー主体になることで、データプラットフォームの要求が変化 データドリブン アプリケーション データアナリスト SRE USER USER USER USER USER USER RDB DWH Observability サイロ化かつ個別最適化 クエリ パターン レスポンス 数十件／日 計画的・遅次的 数秒 ワークフロードリブン エージェント アプリケーション 全従業員 AI SRE USER AGENT USER AGENT USER AGENT MCP MCP クエリ パターン レスポンス 数千件／日 検索的・並列 ミリ秒 ©2026 CLICKHOUSE INC."
+ },
  "2d9535b6bc7ead59bcddd91175ace69f182aa61af8fa657eece53f7db3a089fc": {
   "engine": "claude-haiku-4-5",
   "file": "2026-openhouse-sf/great/13.svg",
@@ -79,10 +94,20 @@
   "file": "2026-openhouse-sf/great/18.svg",
   "text": "Always Dig Into Details Example: you load a website and it's loaded in 5 seconds 😢 You check a few more times and it loads instantly. Wrong: — it was a temporary glitch ⏳ — it does not reproduce 🛑 — the problem fixed by itself — why even bother? Right: — my precious request was processed slowly!!! — let's find it in the logs. I don't care if millions of other requests are processed quickly, I want to know why that request was slow. ClickHouse"
  },
+ "36702476dabcba4e088ae73f363ba3f2bb462a2658c5c17df6d5c217619cce61": {
+  "engine": "claude-haiku-4-5",
+  "file": "2026-cto-night-tokyo/7.svg",
+  "text": "ClickHouse"
+ },
  "37c2a598bd3903961d56dc282b378f89e36070cc93c66d0ce26bb3a945722ec4": {
   "engine": "claude-haiku-4-5",
   "file": "2025-p99/pictures/15.svg",
   "text": "max-sixty commented on Feb 29, 2024 Member Corner case but let's try to avoid panics. This ameliorates #4280, though I'd suggest leaving it open to track it — it's idiosyncratic but still bad. PRQL/prql on Feb 28, 2024 Panic on query x -> y #4280 What happened? Rust panic on SQL query. Source from ClickHouse fuzzer (the query migh... bug priority Verified 8b02d3d View reviewed changes You commented on this issue aljazerzen max-sixty ClickHouse"
+ },
+ "3bd274b5375eb7bc1fb9512ca0d19e0a7f6007ac60f92350e8f8b638f1c04d42": {
+  "engine": "claude-haiku-4-5",
+  "file": "2026-cto-night-tokyo/1.svg",
+  "text": "ClickHouse AWS CTO Night & Day 2026 Morning Session リアルタイム分析の適用領域は なぜ広がるのか 顧客向けサービスからログ分析、DWH、AIまで ClickHouse株式会社 Solutions Architect 大園 純平 2026.10.20"
  },
  "4018c7e9774e20db25ddbbe692faa770463f55742d0297a1e01b37a8c4ffc573": {
   "engine": "claude-haiku-4-5",
@@ -94,10 +119,20 @@
   "file": "2026-ai/9.svg",
   "text": "Resolving merge conflicts This is another case when agents will do it better than a human in close to 100% cases. Use it even for simple merge conflicts... because as a human you can make simple typos, and waste time on iterations or introduce a bug. But you will review the diff. The way that \"agent does, you review\" - makes the quality higher. Checks awaiting conflict resolution 2 expected checks CH Inc sync Expected — Waiting for status to be reported Required Mergeable Check Expected — Waiting for status to be reported Required This branch has conflicts that must be resolved Use the command line to resolve conflicts before continuing. docs/en/sql-reference/statements/select/with.md src/Analyzer/Passes/QueryAnalysisPass.cpp src/Analyzer/QueryNode.cpp src/Analyzer/QueryNode.h src/Analyzer/QueryTreeBuilder.cpp src/Analyzer/QueryTreePassManager.cpp src/Analyzer/UnionNode.cpp agents can solve it better than you! It can even re-implement the change from scratch on the fresh revision. ClickHouse"
  },
+ "43f573560022e5fff400a5d0e5e7d425df58289579b570158b3a53399be80eb2": {
+  "engine": "claude-haiku-4-5",
+  "file": "2026-cto-night-tokyo/5.svg",
+  "text": "これまでのデータ基盤は用途ごとに最適化されてきた USER APPLICATIONS USER AGENTS / AGENTS PLATFORM 業務 USER Agent管理 Agent Tracing DB DB DB AI/ML OPS モデルチューニング モニタリング 業務 USER BI / 対話分析 自然言語クエリ STORAGE / Data Lake 構造化 非構造化 Open Table Format Data Catalog DWH 共通データ基盤 バッチクエリ CS SRE ログ解析 自然言語クエリ LOG ログ基盤 ログ監視 業務/外部 データ連携 Security インシデント対応 AI解析支援 アプリ/システムセ キュリティ/ ログ収集 ©2025 CLICKHOUSE INC."
+ },
  "471ea920b9c527d124118c5513fe283cd986941ab1a625125c9dae6c1341e9ae": {
   "engine": "claude-haiku-4-5",
   "file": "2026-openhouse-sf/great/19.svg",
   "text": "Rare latency spikes on Azure ClickHouse (aws) (3×64GiB): ClickHouse (azure) (3×64GiB): The problem: rare spikes of latencies up to 5 sec, 10 sec, 15 sec, ... The reason: AWS S3 and Azure are complex distributed systems with their own shenanigans. This problem was solved for AWS many years ago by: — using multiple connections to multiple endpoints; — rotating endpoints for better distribution of the load; — running a second request on a soft timeout; — do many retries aggressively; ClickHouse (aws) ClickHouse (azure) (3×64GiB) (3×64GiB) Load time: 62s (×1.00) 107s (×1.72) Data size: 9.26 GiB (×1.00) 9.26 GiB (×1.00) Q0. 0.002s (×1.00) 0.002s (×1.00) Q1. 0.013s (×1.00) 0.017s (×1.17) Q2. 0.033s (×1.00) 0.125s (×3.14) Q3. 0.052s (×1.00) 0.387s (×6.40) Q4. 0.239s (×1.00) 0.328s (×1.36) Q5. 0.426s (×1.00) 0.926s (×2.15) Q6. 0.016s (×1.18) 0.012s (×1.00) Q7. 0.018s (×1.17) 0.014s (×1.00) Q8. 0.428s (×1.00) 5.273s (×12.06) Q9. 0.444s (×1.00) 0.454s (×1.02) Q10. 0.178s (×1.17) 0.151s (×1.00) Q11. 0.250s (×1.51) 0.162s (×1.00) Q12. 0.435s (×1.00) 0.550s (×1.26) Q13. 0.679s (×1.05) 0.646s (×1.00) Q14. 0.648s (×1.18) 0.548s (×1.00) Q15. 0.309s (×1.00) 0.357s (×1.15) Q16. 1.212s (×1.05) 1.158s (×1.00) Q17. 0.850s (×1.16) 0.730s (×1.00) Q18. 2.442s (×1.04) 2.339s (×1.00) Q19. 0.005s (×1.00) 0.005s (×1.00) Q20. 0.713s (×2.41) 0.290s (×1.00) Q21. 0.084s (×1.00) 0.114s (×1.32) ||| ClickHouse"
+ },
+ "4969e58eeda35392f22b7f6e04f3df09919a77d74e56a1f93ea22be014510c1b": {
+  "engine": "claude-haiku-4-5",
+  "file": "2026-cto-night-tokyo/3.svg",
+  "text": "データ基盤は、 プロダクトとAIの部品へ ● AIに聞く：問いが毎回変わり、事前集計では吸収できない ● 顧客が見る：同時実行が、社員数ではなくユーザー数に比例する ● 最新で答える：バッチの遅れが、そのまま答えのずれになる データ基盤の速さと鮮度が、そのままプロダクトの体験とAI回答の質になる ©2020 CLICKHOUSE INC."
  },
  "4bc663acea4a747c191a621dc3828b9badf4d8a5f6325959e59d864c6fbd2363": {
   "engine": "claude-haiku-4-5",
@@ -114,10 +149,20 @@
   "file": "2026-openhouse-sf/great/36.svg",
   "text": "https://play.clickhouse.com v26.6.1.114, uptime 26 min play password SELECT time, author, path, line FROM git_clickhouse.line_changes ORDER BY time LIMIT 100 Run (Ctrl/Cmd+Enter, +Shift to run all) ClickHouse"
  },
+ "51ad522a911993dfe4498b3f3828254d75dfd90e0fae9aa422ae972173fa7d54": {
+  "engine": "claude-haiku-4-5",
+  "file": "2026-cto-night-tokyo/19.svg",
+  "text": "ユーザ事例: Visa オブザーバビリティのモダン化と会話型BIの統合基盤 オブザーバビリティ基盤のモダン化 他社オブザーバビリティ製品からの移行。100TB+/日のログを低コスト・高速に処理するリアルタイムモニタリング基盤を構築 会話型BIの導入 Librechat + ClickHouseにより、自然言語での加盟店の収益・取引データをリアルタイムで分析・可視化 加盟店リスクの検知 分散した加盟店データを統合し、収益損失リスクの高い加盟店を事前検知・早期介入を実現 VISA 50倍 クエリの高速化 40PB 分析対象データ量 2-3日→数秒 レポート作成ラグの解消 19 ©2025 CLICKHOUSE INC."
+ },
  "533d116386449a110558fad5a1d97c6208b0d74234a797207d9084ec686e770b": {
   "engine": "claude-haiku-4-5",
   "file": "2026-ai/32.svg",
   "text": "AI FUD checklist • Heavy usage of agentic coding may become too expensive. • AI bubble may burst and the AI services will become less accessible. • Using AI will make you stupid or you lose your skills as an engineer. • Heavy adoption of AI may deteriorate the quality of the product. • Excessive usage of AI may lead to AI-induced psychosis. • AI makes it easier to write complex code, so the code will be less accessible. • Using AI for the core product may shadow our competitive advantages. • Using AI could lead to a loss of focus and influence product in a wrong direction. • The perceived boost of productivity might be not real or limited to surface-level. • You are an AI hater and don't want to touch the AI hype. • AI could take our jobs. 32 © 2024 CLICKHOUSE INC., CONFIDENTIAL & PROPRIETARY ClickHouse"
+ },
+ "54ec4894a002f12574dab0389c6b7fa71299e861f7ea5ce61c50a9f6a37692d8": {
+  "engine": "claude-haiku-4-5",
+  "file": "2026-cto-night-tokyo/33.svg",
+  "text": "Langfuse LLMオブザーバビリティによるエージェントの監視と改善 Agentアプリケーションの品質管理と分析を行うプラットフォーム ● 2026年2月にClickHouseが買収 ● トレースによるAgentボトルネックの特定、LLMコストの可視化、プロンプト管理を実現 ● LLM-as-a-JudgeによるAgentレスポンスのスコアリング機能を実装 ● プロンプト管理 ● AI Agent動作の改善プロセスを実現 33 ©2026 CLICKHOUSE INC."
  },
  "59e03c46159e080131374ca481ecfe3894c183c68335ca91001795743676432d": {
   "engine": "claude-haiku-4-5",
@@ -139,6 +184,16 @@
   "file": "2026-openhouse-sf/great/29.svg",
   "text": "Open Source Always Wins Proprietary database vendors can tell every good thing about their product: - is the database reliable? - contact sales and schedule a call - it is mostly smoke and mirrors. ClickHouse is open and transparent about its capabilities: - a product everyone can trust - no smoke and mirrors. \"In general, closed source databases are not the wave of the future and I think Oracle is very expensive and not very flexible.\" - Michael Stonebraker ClickHouse"
  },
+ "602ac94d3bbf6a1e3927d0f1cf6ec47ece7926b96a527e13aa2c7a40931034a3": {
+  "engine": "claude-haiku-4-5",
+  "file": "2026-cto-night-tokyo/17.svg",
+  "text": "ユーザー事例: Tesla テスラのギガファクトリーから車両アプリまであらゆるデータを管理 Tesla \"There's nothing out there that competes with ClickHouse.\" — Alon Tal, Senior Staff Software Engineer, Tesla ギガファクトリー 工場センサーをリアルタイム処理。品質異常を即時検知し生産ラインを止めずに対応 コネクテッドビークル 全世界数百万台の車両テレメトリデータをリアルタイムで取得。Teslaアプリの車両ステータス・充電状況などのダッシュボードにも利用 エネルギーシステム 充電ステーション・Tesla Energy製品のリアルタイム監視 800万+ 全世界のテスラ車 数千万行/秒 常時処理データ量 1,000兆行 データインジェストの実績 17 ©2025 CLICKHOUSE INC."
+ },
+ "603c5334256a083271960d102da86b8d6ec41f2795ce95abaf6b18536f76393c": {
+  "engine": "claude-haiku-4-5",
+  "file": "2026-cto-night-tokyo/24.svg",
+  "text": "clickHouse の提供形態 Cloud / BYOC / OSS ClickHouse Cloud フルマネージド DBaaS OSS 版のプロダクトを クラウドネイティブに再構築 Compute や Storage の管理は すべて clickHouse が実施 スケーラビリティとシステムの 可用性を大幅に向上 aws Google Cloud Azure BYOC (Bring Your Own Cloud) ハーフマネージド DBaaS Control Plane は clickHouse、 Data Plane はお客様のアカウント アップデート・バックアップ等の運用 は clickHouse が担当 データセキュリティや規制 コンプライアンスのニーズに対応 aws Google Cloud Azure OSS オープンソース すべて自社で 設計・構築・運用 Compute と Storage が密結合の シェアードナッシング構成が基本 拡張はシャード追加と 既存データの再配置を伴う 24 ©2025 CLICKHOUSE INC."
+ },
  "6081e4bff0feee432de89b2f452b22d5bab98910480c4ec7e2ca4a9255d90eb4": {
   "engine": "claude-haiku-4-5",
   "file": "2026-openhouse-sf/great/32.svg",
@@ -148,6 +203,11 @@
   "engine": "claude-haiku-4-5",
   "file": "2025-p99/pictures/14.svg",
   "text": "Panic! There is no big deal with panic. It is memory-safe. Similarly to abort, std::terminate, __builtin_trap, or nullptr dereference in C++ But Rust libraries tend to panic too much: • It could be an indication of a bug (failed assertion) - then the library should benefit from better testing and fuzzing, which is must have in C++ but less so in Rust • It could be mistakenly used instead of exceptions (which Rust don't favor) and it's ok to terminate on panic in batch applications, but not ok in server and interactive applications ClickHouse CI system found bugs in each and every Rust library that we used (to be honest it also found bugs in almost every C and C++ library) 14 ClickHouse"
+ },
+ "69b42c1c83dca6ccb87a8bece0ded7700a6a412be4929870d372eafbb69c3d98": {
+  "engine": "claude-haiku-4-5",
+  "file": "2026-cto-night-tokyo/20.svg",
+  "text": "ユーザー事例：Lyft 全米主要都市で展開するライドシェアサービス、需給管理をリアルタイムで最適化 450TB/日 乗車データ処理用 数千 QPS ピーク時のクエリ処理量 基盤統合 バッチとリアルタイムを統合 \"This journey [to ClickHouse] has been really revolutionary.\" — Ritesh Varyani, Staff Software Engineer, Lyft 需給リアルタイム分析 都市・地域ごとの乗車需要とドライバー稼働をリアルタイムに把握。需給の偏りを即時検知し、インセンティブ配信を自動判断 バッチ＋リアルタイム統合 従来バッチ処理とリアルタイム処理で別々に運用していた分析基盤をClickHouseの一つの環境に統合 キャンペーンターゲティング リアルタイムのユーザー行動ログを元にプロモーションを動的調整 20 ©2025 CLICKHOUSE INC."
  },
  "6ad878f8b3d475a0d45868f2f270b7015dfa372cdc8c3e976e6db9aaf7be47f5": {
   "engine": "claude-haiku-4-5",
@@ -184,6 +244,11 @@
   "file": "2026-openhouse-sf/great/35.svg",
   "text": "User Experience Ever tried installing Hadoop or Trino? - ClickHouse installs with a single command Remember configuring autovacuum parameters in Postgres or innodb buffer pool size in MySQL? - ClickHouse has optimal settings by default Discussing what connection pooler to choose for Postgres? - ClickHouse doesn't need an external connection pooler - it even provides an HTTP API by default (no need for PostgREST) It even provides a built in UI. It provides a MySQL and Postgres wire protocols. It provides Arrow Flight and SSH protocol... it provides everything. ClickHouse"
  },
+ "75c95d65a4e0ae8fd26c64fc10c37a133d9e2bf85797a8d56302282c3cc507e7": {
+  "engine": "claude-haiku-4-5",
+  "file": "2026-cto-night-tokyo/13.svg",
+  "text": "データサービングプラットフォーム USER USER 業務 USER APPLICATIONS AGENTS / AGENTS PLATFORM Agent管理 Agent Tracing 業務 USER DB 高速 クエリ ランダム クエリ AI/ML OPS モデルチューニング モニタリング BI / 対話分析 自然言語クエリ CDC Streaming MCP 高速クエリ ClickHouse MCP CS SRE ログ解析 自然言語クエリ 行動 DATA マスタ DATA Context DATA ベクトル DATA 業務 DATA 推薦 LOG SYSTEM LOG APP LOG Security LOG データ共有 ログ格納 業務／外部 データ連携 STORAGE / Data Lake 構造化 非構造化 Open Table Format Data Catalog DWH 共通データ基盤 バッチクエリ LOG ログ基盤 ログ監視 アプリ/システムセ ログ収集 © 2025 CLICKHOUSE INC. 13"
+ },
  "790c0c5d090b72b7c96af65d414bdb851374a52b501e55cd916a1f1ca8634da7": {
   "engine": "claude-haiku-4-5",
   "file": "2026-ai/8.svg",
@@ -214,10 +279,25 @@
   "file": "2025-p99/pictures/1.svg",
   "text": "Rust In ClickHouse How to avoid a full rewrite"
  },
+ "8184de30b83f5db3090cbb3bcc541639e50355abb548fd7f09912a0c3a915dc1": {
+  "engine": "claude-haiku-4-5",
+  "file": "2026-cto-night-tokyo/26.svg",
+  "text": "ClickHouseを体験してみてください アカウント作成のみで始められる、30日間の無料トライアルを実施中 clickhouse.cloud/signUp ClickHouse ©2026 CLICKHOUSE INC."
+ },
  "841dcc1f4fc9887f20db419b9a92f35379caaccce507340b5af87b976a300dc1": {
   "engine": "claude-haiku-4-5",
   "file": "2025-p99/pictures/13.svg",
   "text": "Problems with Rust DON'T PANIC"
+ },
+ "87d549a30904b1568d4eaac80ec42f963bbb718f28f3b720e12cffcc5460a449": {
+  "engine": "claude-haiku-4-5",
+  "file": "2026-cto-night-tokyo/30.svg",
+  "text": "Managed Postgres by ClickHouse 次世代ハイブリッドデータベース マネージドPostgreSQLサービス • UIからのインスタンスのサイズを指定し簡単起動 • 冗長構成、リードレプリカ、自動バックアップ、バージョンアップなどすべてマネージドで提供 • NVMeストレージを利用しており、高い同時実行性のもと19.8K TPS を実現（他社に比べ4.5倍） OLAPのClickHouseとNaitiveに連携し、PostgresのエンドポイントからClickHouseへ分析クエリーをオフロード Transactions Analytics Postgres database pg_clickhouse ・Transactional ・ACID compliant ・2x-10x faster performance ClickHouse database ・Columnar ・100x faster OLAP Native CDC NVME NVME NVME アプリケーションからは透過的にOLTPとOLAPが一つのエンドポイントで利用可能 30 ©2025 CLICKHOUSE INC."
+ },
+ "88c029680e27716596a60f39a208848e3c95c89090ab3cb84902c1e7850646a5": {
+  "engine": "claude-haiku-4-5",
+  "file": "2026-cto-night-tokyo/2.svg",
+  "text": "自己紹介 大園 純平 (Junpei Ozono) Solutions Architect, ClickHouse 外資系 IT ベンダーにて、長らく Data & AI 領域の ソリューションアーキテクトとして従事 さまざまな列指向データベース、分散処理エンジン、データと AI の統合基盤 などを活用したお客様のシステム構築を支援 現在は ClickHouse で AI 時代に求められる次世代リアルタイムデータ基盤の普及 を推進するため活動中 2 ©2026 CLICKHOUSE INC. ClickHouse"
  },
  "8c4a5c98f707691e5ac7d54fd2df950a1ed5cf9c0db8d0697f1e02fc13fc4d39": {
   "engine": "claude-haiku-4-5",
@@ -289,6 +369,26 @@
   "file": "2026-openhouse-sf/great/31.svg",
   "text": "Testing: it is never enough Every day CI runs about 20..80 million tests in 600 commits and 300 pull requests: • Functional tests (End-to-End tests for ClickHouse server and Client) • Integration tests (End-to-End tests for ClickHouse in a cluster, Kafka, MySQL, Postgres, MongoDB, Redis, HDFS, Azure, S3, RabbitMQ, LDAP, Kerberos, etc) • Unit tests (for interfaces in the code) • Performance tests (for performance regressions and benchmarks) • Stress tests (correctness under high randomized load) • Fuzzing (correctness under randomly modified queries) • Compatibility and Installation tests. • Builds for different platforms. • Logical tests (logical correctness of the query engine: SQLancer, SQLTest) • Jepsen tests (correctness of the distributed coordination) • Style and conformance tests. ClickHouse"
  },
+ "9d6ac60c39bfd1ff7adac6e270dd7fdbb85d60dd8f6ff1e4f1a70d2d85c7e37c": {
+  "engine": "claude-haiku-4-5",
+  "file": "2026-cto-night-tokyo/29.svg",
+  "text": "ClickPipes マネージドデータ統合パイプライン マネージドデータインジェストサービス ● UIで簡単に設定でき、継続的なデータの取り込みが可能 ● データ量に応じてリニアにスケール ● ストリーミングインジェスト、オブジェクトストレージ、RDBとのChange Data Captureに対応 STREAMING MSK Kafka Confluent DigitalOcean Managed Kafka Kinesis Redpanda WarpStream PubSub Event Hubs OBJECT STORAGE S3 GCS Blog Storage DigitalOcean R2 CDC (Change Data Capture) Aurora RDS Postgres SQL MySQL MariaDB Supabase AlloyDB CloudSQL ClickHouse Cloud Streaming Data Source ClickPipes Replica ClickPipes Replica ClickPipes Replica ClickHouse Service 29 ©2025 CLICKHOUSE INC."
+ },
+ "9d968336b929f7b0a6d882b4fc94b943a87a3ecc63d63b08a194dbce51b2961a": {
+  "engine": "claude-haiku-4-5",
+  "file": "2026-cto-night-tokyo/11.svg",
+  "text": "これまでのデータ基盤 USER APPLICATIONS USER AGENTS / AGENTS PLATFORM 業務 USER Agent管理 Agent Tracing DB DB DB AI/ML OPS モデルチューニング モニタリング 業務 USER BI / 対話分析 自然言語クエリ 業務 / 外部 データ連携 STORAGE / Data Lake 構造化 非構造化 Open Table Format Data Catalog DWH 共通データ基盤 バッチクエリ CS SRE ログ解析 自然言語クエリ アプリ / システムセ キュリティ / ログ収集 LOG ログ基盤 ログ監視 11 ©2025 CLICKHOUSE INC."
+ },
+ "9e090c53f4c8db5e5a094d354355bb5c93afe12f3f006f603c212613beed73b6": {
+  "engine": "claude-haiku-4-5",
+  "file": "2026-cto-night-tokyo/22.svg",
+  "text": "AIがもたらす利用者の行動変容が データ基盤にリアルタイム性を求めている ダッシュボードを開く代わりに、まずAIに聞く エージェントが反復的かつ並列にクエリを投げる。高QPSで非定型のクエリが増える バッチ前提だったワークロードにも、低レイテンシと鮮度が 求められる DWHもログも顧客向け機能も、取り込み直後のデータを、すぐ集計して返す ClickHouse なら1つのエンジンで受けられる 高速な取り込み、高い同時実行、低いコストを両立。サービングレイヤーとして 既存の基盤の横から始められる 22 ©2025 CLICKHOUSE INC."
+ },
+ "9fb16e84fa552e73036dcabb7fd5ec3fe42980b10e561ca6758c92b3c6ebc65f": {
+  "engine": "claude-haiku-4-5",
+  "file": "2026-cto-night-tokyo/4.svg",
+  "text": "ユーザーごとに、データへの要求が変わっている 社内の分析者も、顧客も、AIエージェントも、待たずに最新の答えを求める 1 社内の分析者 定型のBIから、AIに聞く形へ 前日、前月の確定データではなく、顧客の\"今\"を知りたい 2 顧客 サービスの画面から、自分のデータをすぐ見たい 3 AIエージェント ループ内できまざまなソースに並列かつ反復的にアクセス 応答速度と鮮度が重要に ©2025 CLICKHOUSE INC."
+ },
  "a0abd30305382088d5ae63a028a9c45811bfa0db3cad7504ab50cb225221f7f3": {
   "engine": "claude-haiku-4-5",
   "file": "2021-rndconf/pictures/CIE1931xy_CIERGB.svg",
@@ -309,6 +409,11 @@
   "file": "2025-p99/pictures/6.svg",
   "text": "Integrating Rust code into ClickHouse #33435 Merged vitibar merged 134 commits into ClickHouse:master from BoloniniD:BLAKE3 on Oct 3, 2022 Conversation 25 Commits 134 Checks 0 Files changed 25 BoloniniD commented on Jan 6, 2022 • edited Contributor Changelog category (leave one): • New Feature Changelog entry (a user-readable short description of the changes that goes to CHANGELOG.md): Add Rust code support into ClickHouse with BLAKE3 hash-function library as an example. Does not support shared builds for now, as corrosion-rs tries to use libraries unknown to linker while building. Currently Rust always builds as static libraries. To update a Rust library, edit its Cargo.toml. Change the version of your library to newer one, then check if library builds with CH. If something does not work, check changed functions and methods if the lib and update shim methods in lib.rs accordingly. 15 1 6 ClickHouse"
  },
+ "a8fc60e085642ccc7b89cc526fe9476f6d4adfe678729ae5beaf058b99dddc46": {
+  "engine": "claude-haiku-4-5",
+  "file": "2026-cto-night-tokyo/14.svg",
+  "text": "ClickHouse ⚡ ユースケース"
+ },
  "aac7a2d53968483a6797726f78b1b413035f2a7de2901dce7cd1e0a5f8bc76e8": {
   "engine": "claude-haiku-4-5",
   "file": "2025-p99/pictures/2.svg",
@@ -323,6 +428,11 @@
   "engine": "claude-haiku-4-5",
   "file": "2026-ai/12.svg",
   "text": "Polishing the product, addressing gaps There are many paper cuts in the product. You didn't fix them, because they were not planned. Now there is no excuse to not do it. Don't ask your manager, ask an agent! delta-kernel-rs is not build on Mac due to the Rust dependency. But it should be possible to enable it. Let's do it. Continue working on this PR: https://github.com/ClickHouse/ClickHouse/pull/58244 You can commit directly to the author's branch. As the pull request is very old and has many conflicts, you can take and reapply all the ideas from this PR. Improve help output for ClickHouse applications #96025 Merged alexey-milovidov merged 4 commits into master from clickhouse-help 2 weeks ago Conversation 2 Commits 4 Checks 129 Files changed 21 alexey-milovidov commented 2 weeks ago • edited Member 12 ClickHouse"
+ },
+ "ae63ca2abecc10452fc980ef34d734d681acc27605de5a161ee9dc0534ac992d": {
+  "engine": "claude-haiku-4-5",
+  "file": "2026-cto-night-tokyo/8.svg",
+  "text": "The Leading Database for AI 世界で最も人気のある分析データベース 2009 プロトタイプ 2016 オープン ソース 2021 ClickHouse Inc. 2022 ClickHouse Cloud 2024 AWS Tokyo Regionオープン 2025 GCP Tokyo Regionオープン ANTHROPIC instacart Microsoft twilio Meta ramp GitLab exabeam DOORDASH shopify Bloomberg mercado libre servicenow vimeo Vercel Lovable braze klaviyo わずか4年で4,000社以上の企業が利用 NETFLIX SIERRA Tesla ROBLOX lyft Vantage CISCO Nansen Walmart Weights & Biases HubSpot Canva LangChain solarwinds attentive Memorial Sloan Kettering Cancer Center Deutsche Bank Property Finder ClickHouse ©2026 CLICKHOUSE INC."
  },
  "ae7e42b1ddce132231bf97a52774a2556e4f724a3829ead15831c4720664d65f": {
   "engine": "claude-haiku-4-5",
@@ -349,6 +459,21 @@
   "file": "2025-p99/pictures/10.svg",
   "text": "delta-kernel-rs A library for the Delta Lake format Data Lake - a way of database management when the data format is independent of query engines. A set of open formats, such as Iceberg and Delta Lake. Pros: makes the data more accessible in large organizations. Cons: the ecosystem is in early development, fragmented and fragile. First implementations of Iceberg and Delta Lake were only available in Java. Then in Rust. ... and almost never in C++ delta-kernel-rs - the first Rust library we added that we actually needed. Clickhouse"
  },
+ "b8cf3e21c56df926791cb20cd378154297dca64f1bfa720f3ef04d7fb1763303": {
+  "engine": "claude-haiku-4-5",
+  "file": "2026-cto-night-tokyo/32.svg",
+  "text": "ClickStack AI SREを実現するオブザーバビリティダッシュボード ClickHouseに格納されたOpenTelemetryデータをダッシュボードで可視化 ● OSSのモニタリングツール HyperDX を買収しマネージドサービスとして提供 ● 通常のモニタリング、アラートダッシュボードに加え、クライアントセッションのリプレイ機能も実装 ● AIと連携したログの解析機能を実装 Dashboards Notebook ClickStack Search Saved Searches No favorites, first go saved Searches Chart Explorer Alert Explorer Service Map Dashboards No favorites, first go saved Dashboards Ready to deploy on ClickHouse Use Element for free Demo Traces All Services HTTP Services Databases Errors Request Error Rate Uptime Request Throughput Top 20 Most Time Consuming Endpoints Request Latency ClickStack Search Saved Searches No favorites, first go saved Searches Chart Explorer Alerts Client Sessions Service Map Notebooks Dashboards No favorites, first go saved Notebooks Help Team Settings ClickHouse Cloud バッチ処理の実行状況分析 概要 サービス co-engineer 2024/5 データベースを確認しています。実運用環境は ログ一覧に送信される形式です。 処理フロー パイプライン処理により以下のプロセスが実行されます set_process (引き継ぎ) created: 2024-07-15 modified: 2024-07-15 32 ©2025 CLICKHOUSE INC."
+ },
+ "bbf2aa100d989b5b10654af212f32e5be1a405d5113f80beb68bb9898c8681d8": {
+  "engine": "claude-haiku-4-5",
+  "file": "2026-cto-night-tokyo/9.svg",
+  "text": "The Leading Database for AI ClickHouse ClickHouseオープンソースの カラム型OLAPデータベースです。 膨大なデータをSQLで超高速に 分析できるように設計されています。 圧倒的なデータ圧縮率と 最適化されたクエリエンジンで 大幅なコスト削減を実現します。 ミリ秒での処理 ペタバイト規模でもmsでクエリ 同時処理数 高QPSによる高速同時処理 データの高圧縮 数十倍のストレージ容量の削減 簡単にスケール可能 負荷に応じてダイナミックにスケール ©2026 CLICKHOUSE INC. ClickHouse"
+ },
+ "c1a65f5c5493e1bf9390b57204ce4718d84a76e65f9ffd997a6df6e6e1a43549": {
+  "engine": "claude-haiku-4-5",
+  "file": "2026-cto-night-tokyo/34.svg",
+  "text": "Langfuse LLMオブザーバビリティツールを導入することで継続的にAI Agentの改善プロセスを回す ONLINE｜エージェントの本番稼働中 Tracing 実際の利用状況を観測し、検索可能で視覚的なTraceから原因調査を速める。 Monitoring & Alerts Online evaluationを使い、cost、latency、品質の変化を継続監視して通知する。 OFFLINE｜変更を本番へ出す前 Datasets 本番の失敗例を追加し、test dataも生成する。 Experiment 本番反映前に品質低下を検知する。 Evaluations LLM-as-a-Judgeや決定的な評価で品質を測る。 Prompt Management 再deploy不要でPromptを変更し、非エンジニアもrelease作業と分けて改善できる。 あらゆるチームがエージェントを作っている。しかし、パイロットの88%は本番に到達しない。 IDC, 2026 重大なAIの失敗も、APM上では成功に見える Hallucination is 通常の200 OKで返ったため、例外は発生しない。 ©2025 CLICKHOUSE INC."
+ },
  "c1e2bd4fd6c07202b5f1490e5cb872bd7a95010c2ab8f2f7adb1220c10c57735": {
   "engine": "claude-haiku-4-5",
   "file": "2026-ai/5.svg",
@@ -359,6 +484,16 @@
   "file": "2026-ai/26.svg",
   "text": "Accelerating feedback loops and lowering cross-team communication Using a coding agent is equivalent to working with a team of 3..7 engineers, who never go on vacation, never sleep, and don't argue too much :) ^ half true. Good engineers make sense, still. Saved for later Alexey Milovidov Monday at 01:01 FYI, I've enabled (together with @___) Integrations tests under MSan (I thought we already run them, but as it turned out it wasn't). I immediately blew up - a ton of bugs in Iceberg, SSH protocol, and other cases. I will temporary disable them. (edited) 👍 2 3 replies Alexey Milovidov Monday at 01:44 https://github.com/ClickHouse/ClickHouse/pull/97053 @___ - bug in Azure @___ - bug in query pipelines @___ - many bugs in SSH #97053 Fix MSan integration tests related to Azure and SSH protocol ### Changelog category (leave one): • Critical Bug Fix (crash, data loss, RBAC) or LOGICAL_ERROR ### Changelog entry (a user-readable short description of the changes that goes into CHANGELOG.md): Azure, SSH, and Arrow Flight had reads of uninitialized memory. Delta Lake cannot work under MSan at all due to Rust. Labels Comments pr-must-backport, submodule changed, pr-1 critical-bugfix ClickHouse/ClickHouse Feb 16th Added by GitHub 👍 2 Alexey Milovidov Monday at 14:39 Merged 26 ©2024 CLICKHOUSE INC., CONFIDENTIAL & PROPRIETARY"
  },
+ "cb1975139ea916af34d6acc12ca100987575f1869aa5c5ba67c130398f877b8d": {
+  "engine": "claude-haiku-4-5",
+  "file": "2026-cto-night-tokyo/28.svg",
+  "text": "|||| ClickHouse Appendix"
+ },
+ "cd60da57ed9de86f3f05a14dcbba7ea8a8951673384a303d5e3eb69af526c3ea": {
+  "engine": "claude-haiku-4-5",
+  "file": "2026-cto-night-tokyo/21.svg",
+  "text": "ClickHouse 社内事例: AI Native DWH \"DWAINE\" データソースを ClickHouse に集約して分析 - UI は BI ツールから AI チャットへシフト JSON stripe mitter aws Salesforce + More Data warehouse ~30% BI ツール/ SQL ~70% ClickHouse Agent LLM Langfuse データと文脈を同時に渡す MCP で DWH のデータに加えて、dbt のコードと Github ドキュメントも読む コンテキストの整備と提供 列の定義・取りうる値・データを生ずる業務・ソース間の関係を、github 上のドキュメント で管理 データ品質プロセスの強化 検証ルール・リネージ・品質監視・鮮度の表示を、dbt のモデルで実現 https://clickhouse.com/blog/ai-first-data-warehouse ©2025 CLICKHOUSE INC."
+ },
  "cd76e132ca43e5cf82f08f2d4ca37991ce7e2c63115b64d302e11fbefe3ff75c": {
   "engine": "claude-haiku-4-5",
   "file": "2026-openhouse-sf/great/16.svg",
@@ -368,6 +503,21 @@
   "engine": "claude-haiku-4-5",
   "file": "2026-openhouse-sf/great/25.svg",
   "text": "Customer Focus If the customer is \"holding it wrong\" – it is our problem. A customer created 100,000 SharedMergeTree tables in ClickHouse Cloud and the service takes a long time to start. - we implemented lazy loading of data parts and caching of primary key; A customer does cross JOINs over very wide JSONs, and queries run OOM. - we implemented ColumnReplicated which gives compact representation of repeated values after JOIN; Every customer support request is our potential win! ClickHouse"
+ },
+ "cf476eeaad62fb48ad0546c2b6ba4b27f43ffca16bbac1f0ad5f8c407726fedd": {
+  "engine": "claude-haiku-4-5",
+  "file": "2026-cto-night-tokyo/12.svg",
+  "text": "これまでのデータ基盤 USER APPLICATIONS DB USER AGENTS / AGENTS PLATFORM AI/ML OPS モデルチューニング モニタリング 業務 USER Agent管理 Agent Tracing 業務 USER BI / 対話分析 自然言語クエリ CS SRE ログ解析 自然言語クエリ 業務 / 外部 データ連携 STORAGE / Data Lake 構造化 非構造化 Open Table Format Data Catalog DWH 共通データ基盤 バッチクエリ LOG ログ基盤 ログ監視 アプリ/システムセ ンター ログ収集 12 ©2025 CLICKHOUSE INC."
+ },
+ "cfe489cf43a4d705e12cf8fac40f407c1d10227bc812fa0eb4897f9a768a238a": {
+  "engine": "claude-haiku-4-5",
+  "file": "2026-cto-night-tokyo/25.svg",
+  "text": "ClickHouse Cloud Pricing Model 使用したコンピュートとストレージの分だけお支払い Basic 厳格な信頼性保証を必要としない、小規模なデータ量の部門ワークロード向け • 最大1TBのストレージ • 合計メモリ8-12GiB • 24時間ごとのバックアップ（保持期間:1日） • 1アベイラビリティゾーン etc Scale より高いSLA、スケーラビリティ、高度なセキュリティが求められるワークロード向け • 無制限ストレージ • 構成可能なメモリサイズ • バックアップ期間ならびの設定のカスタマイズ • 2つ以上のアベイラビリティゾーン • コンピュート分離 • スケーリング(自動垂直／手動水平) • プライベートネットワーキング etc Enterprise 厳格なセキュリティ要件とコンプライアンス要件を伴う、大規模かつミッションクリティカルなデプロイメント向け • カスタムプロファイルによる柔軟なスケーリング • 最高水準のパフォーマンス保証と耐障害性保証 • SAML SSO認証 • 透過的データ暗号化/CMEK • スケジュール可能なアップグレード • HIPPAおよびPCI準拠 etc ストレージ容量(TB/月) + コンピュートユニット(CPU/Memory 時間)課金 https://clickhouse.com/docs/cloud/manage/cloud-tiers ©2025 CLICKHOUSE INC."
+ },
+ "d1f856ee0872811eae3cc0bf9b634ae0d926acfa5d7a242cd510412b5f906a8c": {
+  "engine": "claude-haiku-4-5",
+  "file": "2026-cto-night-tokyo/18.svg",
+  "text": "ユーザー事例: Cloudflare 世界のWebトラフィックを監視、脅威イベントをリアルタイムで検知・防御 1,610兆件/日 処理イベント数 DDoS検知・自動防御 世界300拠点以上のDNS・HTTPトラフィックをリアルタイム分析し、攻撃パターンを即時検知し防御ルールを自動更新。2秒以内に応答 10年 ClickHouse安定稼働年数 Cloudflare Radar 世界のインターネット状況（DDoS攻撃・障害・BGPルーティング）をリアルタイムで一般公開。このスケールのダッシュボードはClickHouseなしては成立しない 2秒以内 世界300拠点からの応答 ネットワーク・DNS分析 全Webトラフィックの約20%を保護。1,610兆件/日の処理を10年間安定稼働。全社セキュリティ分析基盤として利用 https://clickhouse.com/blog/cloudflare ©2025 CLICKHOUSE INC."
  },
  "d2fbecaf1ee9decd1558b656ef9a38abe4b0f2e8eb6e9ad2a1059c8b822a102f": {
   "engine": "claude-haiku-4-5",
@@ -383,6 +533,11 @@
   "engine": "claude-haiku-4-5",
   "file": "2026-ai/13.svg",
   "text": "Working with unfamiliar codebases Starting with a new code base? Open an agent, ask questions, ask for suggestions... llvm / llvm-project Code Issues 5k+ Pull requests 5k+ Agents Actions Security Fix demangle for char8_t literal template Open alexey-milovidov wants to merge 1 commit into llvm:main from alexey-milovidov Conversation 4 Commits 1 Checks 3 Files changed 4 alexey-milovidov commented on Dec 25, 2025 abi::__cxa_demangle couldn't correctly demangle names, such as _ZifLldu99EEiv _ZifLlds99EEiv _ZifLldi99EEiv _ZNk2DB241AggregateFunctionHelperINS_29AggregateFunctionUniqCombinedINS_4IPv4 which should become int f<(char8_t)99>() int f<(char16_t)99>() int f<(char32_t)99>() DB::IAggregateFunctionHelper<DB::AggregateFunctionUniqCombined<DB::IPv4... Continue working on the pull request https://github.com/llvm/llvm-project/pull/173579 according to the feedback I have the build directory at ../llvm-build The existing build shows the bug (returns the mangled name unchanged). The fix needs a rebuild to take effect. Let me show what changes were made. Build and validate Build complete. Now let me test the demangler. The fix works. Let me also test the longer example from the PR description. Both test cases work. Now let me run the demangle unit tests. All 28 LLVM demangle tests passed. Let me also check if there are libcxxabi tests to run. All tests pass: • LLVM demangle lit tests: 28/28 passed • Demangle unit tests: 41/41 passed • Manual verification: All test cases demangle correctly Summary of changes addressing reviewer feedback: 1. Code style fixed - Now uses LLVM 2-space indentation and proper formatting 2. Tests added - 3 new test cases in DemangleTestCases.inc 3. Copied to LLVM - Changes synced to llvm/include/llvm/Demangle/ and llvm/include/llvm/Testing/Demangle/ The changes are ready to commit. Would you like me to amend the existing commit or create a new one?"
+ },
+ "d4999493893ac7d74104dce0d50ac5994edb0e3f949026ca2df2c6af39ca0415": {
+  "engine": "claude-haiku-4-5",
+  "file": "2026-cto-night-tokyo/27.svg",
+  "text": "Thank you! llll· ClickHouse"
  },
  "dbe466e386f620339705b677b60d27c14be6fed1021477844cc0e0cd6d4313f7": {
   "engine": "claude-haiku-4-5",
@@ -433,6 +588,11 @@
   "engine": "claude-haiku-4-5",
   "file": "2026-openhouse-sf/great/5.svg",
   "text": "Not only relational databases Relational Document Key-Value Object-Oriented Object-Relational Multi-Modal Graph RDF/Triple Store XML Streaming/CEP Differential Vector Feature-Store Blob-Store Time-Series Message Queues Text Search Blockchain NoSQL NewSQL Navigational Hierarchical Filesystems Column-Oriented Wide-Column Semi Structured In-Memory Data Grid Cache Map-Reduce Geospatial Raster/Scientific Reactive Temporal Deductive Data Lake Data Mesh Data Fabric Embedded CLI Low Code Array-Oriented GPU Offline/Asynchronous Version Control CRDT Distributed Consensus P2P/DHT Serverless Edge See also: Borges Classification Of Animals. ClickHouse"
+ },
+ "e62b7c0d6dc24884378916543a0b119dd490bfb9ffa1e331809beca9708a6dcd": {
+  "engine": "claude-haiku-4-5",
+  "file": "2026-cto-night-tokyo/16.svg",
+  "text": "顧客が実証した「速さ」 スピード、スケール、コストを凌駕するデータベース NETFLIX 4万以上のマイクロサービスから生成されるあらゆるログを集計 5PB / 日 1,250万 / 秒 データインジェスト 500～1,000 QPSをミリ秒で処理 クエリの最適化で処理性能が4.3倍 ebay Druidから移行したイベントデータ基盤 10億件+ / 分 イベントインジェスト 30倍のデータ圧縮 90%のコスト削減 ANTHROPIC オブザーバビリティおよびモデル開発時の分析基盤 PB+ / 日 データインジェスト Claude 4 の開発に利用 Claudeが ClickHouseを選択 16 ©2025 CLICKHOUSE INC. ClickHouse"
  },
  "e6370eb205768b87a34ca1e493d024b7b58193a4f0a6b306ac73e4908208ed69": {
   "engine": "claude-haiku-4-5",
@@ -494,6 +654,11 @@
   "file": "2026-fosdem-geospatial/pictures/dinner.svg",
   "text": "ClickHouse Connect with ClickHouse slack ClickHouse Community Dinner Try ClickHouse for your use case ClickHouse Cloud Download open source Learn Academy / certifications Blogs / YouTube Engage with our community Community Slack Monthly Community calls Meetups / events We are Hiring. Come Work with Us! ClickHouse ©2025 CLICKHOUSE INC., CONFIDENTIAL & PROPRIETARY"
  },
+ "f2eaa2367ebfd814d5a4330bf185b26e2712c114e90172c8b5684707d2373e36": {
+  "engine": "claude-haiku-4-5",
+  "file": "2026-cto-night-tokyo/10.svg",
+  "text": "Agentic Data Stack ClickHouseが実現する次世代データスタック アプリ ユーザー Agents API ClickHouse UI ClickHouse Agent Agentic AI分析 ClickStack オフザーバビリティ Language LLMオフザーバビリティ DB ClickHouse CDC Postgres 高速分析処理 リアルタイム同期 基盤データ・トランザクション データ連携 外部ソースを直接参照 ClickPipes 外部データ取り込み O+ オープンテーブルフォーマット データレイク その他ソース LLM 直接連携 ©2025 CLICKHOUSE INC. ClickHouse"
+ },
  "f4dfc06383db8fb2b2c10cea943f44e6ef2163d3a474fe7a43ea7e6ac4cf8cf2": {
   "engine": "claude-haiku-4-5",
   "file": "2019-yatalks-moscow/pictures/flamegraph.svg",
@@ -503,5 +668,10 @@
   "engine": "claude-haiku-4-5",
   "file": "2026-openhouse-sf/great/26.svg",
   "text": "User Empathy How Kafka integration appeared in ClickHouse? - it was contributed by Marek Vavruša from Cloudflare in 2017, for their production needs. How ASOF JOIN appeared in ClickHouse? - it was contributed by Martijn Bakker from Citadel Securities in 2019. How LDAP, Kerberos, HDFS, and similar things appeared in ClickHouse? - someone needed it. ClickHouse"
+ },
+ "f9f87bd4087303fa5aa99382b160f0bd9b18acd2ae69db1d571657bc4e19de22": {
+  "engine": "claude-haiku-4-5",
+  "file": "2026-cto-night-tokyo/23.svg",
+  "text": "Q&A"
  }
 }
