@@ -1346,7 +1346,7 @@ Credit: #110939 by yanglongwei, re-landed in #119304 by Alexey Milovidov with fi
 
 <p style="margin-top: 0.5em;"><b>before: <span style="color: red;">116</span> sec.</b> &nbsp; <b>26.10: <span style="color: green;">37</span> sec.</b></p>
 
-<p style="margin-top: 0.5em;">&mdash; Listings are split by key prefix and run in parallel;
+<p style="margin-top: 0.5em; line-height: 1.5">&mdash; Listings are split by key prefix and run in parallel;
 <br/>&mdash; files of all directories come from a few listings of the whole disk;
 <br/>&mdash; per-path locks: one long <b>DROP TABLE</b> no longer blocks
 <br/>&emsp; every insert and merge on the same disk;
@@ -1377,7 +1377,7 @@ Credit: #110939 by yanglongwei, re-landed in #119304 by Alexey Milovidov with fi
 <p style="margin-top: 0.3em;">&mdash; 26.9: <b>Tuple(metadata String, value String)</b> &mdash; two binary blobs.
 <br/>&mdash; Objects become <b>JSON</b>; read the column as <b>JSON</b> if all values are objects.
 <br/>&mdash; The same for the <b>variant</b> type in <b>Iceberg</b> tables.
-<br/>&mdash; Shredded variants: not yet.</p>
+<br/>&mdash; TODO: shredded variants.</p>
 
 <!-- Demo (test files from tests/queries/0_stateless/data_parquet of the 26.10 branch, written by Spark):
 
