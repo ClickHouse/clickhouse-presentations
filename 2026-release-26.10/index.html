@@ -1440,6 +1440,7 @@ Iceberg variant (#117198, re-landed in #125458) — not tested with a real Icebe
 <p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Konstantin Vedernikov.</p>
 </section>
 
+<!--
 <section class="slide">
 <h2>Embedded Iceberg REST catalog 🧪</h2>
 
@@ -1462,25 +1463,10 @@ SETTINGS catalog_type = 'rest', warehouse = 'my_warehouse', &hellip;
 
 <p style="margin-top: 0.3em;">&mdash; Namespaces and tables: create, list, load, drop; state in Keeper.</p>
 
-<!-- Demo (server with an embedded Keeper, a local MinIO at 127.0.0.1:19000 with bucket `warehouse`, named collection warehouse_storage):
-
-curl -s -u default: 'http://127.0.0.1:8182/v1/config?warehouse=my_warehouse'    -- endpoints: GET/POST namespaces, GET/HEAD namespace, GET/POST tables, GET/HEAD/DELETE table
-curl -s -u default: -X POST -H 'Content-Type: application/json' -d '{"namespace":["analytics"]}' http://127.0.0.1:8182/v1/my_warehouse/namespaces
-curl -s -u default: -X POST ... -d '{"name":"events","schema":{...id long, name string...}}' http://127.0.0.1:8182/v1/my_warehouse/namespaces/analytics/tables
-CREATE DATABASE lake ENGINE = DataLakeCatalog('http://127.0.0.1:8182/v1', 'minioadmin', 'minioadmin')
-  SETTINGS catalog_type = 'rest', warehouse = 'my_warehouse', storage_endpoint = 'http://127.0.0.1:19000/warehouse', auth_header = 'Authorization: Basic ZGVmYXVsdDo=';
-SHOW TABLES FROM lake;   -- analytics.events
-DESCRIBE lake.`analytics.events`;   -- id Int64, name Nullable(String);   SELECT count() -> 0
-INSERT INTO lake.`analytics.events` ... SETTINGS allow_insert_into_iceberg = 1  -> fails: "Iceberg catalog commit failed ... HTTP status code: 406"
-  — commits (updating a table) are not implemented by the embedded catalog yet.
-Without a <zookeeper> section: "Not starting the Iceberg REST catalog server: The catalog state is stored in Keeper, but no <zookeeper> section is configured".
-The changelog says "stored either in memory or in Keeper" — the 26.10 code requires Keeper.
-catalog_credential = 'default:' fails (OAuth GetToken is not implemented); use auth_header with Basic auth.
-
--->
-
 <p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Asya Shneerson.</p>
 </section>
+
+-->
 
 <section class="slide">
 <h2 style="font-size: 30pt;">Unity Catalog: Delta Lake and Iceberg 🧪</h2>
