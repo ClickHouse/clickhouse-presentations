@@ -1664,7 +1664,7 @@ COPY options (#119376) and pgx ping (#125161) are from the changelog, not tested
 <section class="slide">
 <h2>FileLog improvements</h2>
 
-<p style="margin-top: -0.3em;">Tail log files into ClickHouse &mdash; now friendly to <b>logrotate</b>:</p>
+<p style="margin-top: -0.3em;">Subscribe to log files in ClickHouse. Now friendly to <b>logrotate</b>:</p>
 
 <p><code style="font-size: 12pt; line-height: 1.3;">CREATE TABLE app_logs (level String, msg String)
 ENGINE = FileLog('/var/lib/clickhouse/user_files/app/<b style="color: green;">*.log</b>', 'JSONEachRow');
