@@ -986,14 +986,14 @@ Credit: #123452 supersedes #107069 by Zach Naimon (original commits kept).
 <br/>and the <b>sqlite</b> table function &mdash; since <b>21.9</b> (2021) &mdash; for local database files.
 <br/>Schema inference since 23.5; passing a query to SQLite as is since 26.7.</p>
 
-<p style="margin-top: 0.3em;">Now a whole <b>SQLite</b> database file is also a data format:</p>
+<p style="margin-top: 0.3em;">Now a whole <b>SQLite</b> database file is also an import/export format:</p>
 
 <p><code style="font-size: 12pt; line-height: 1.25;">SELECT SearchPhrase, count() AS c FROM hits WHERE SearchPhrase != ''
 GROUP BY SearchPhrase ORDER BY c DESC LIMIT 1000
-INTO OUTFILE '<b style="color: green;">top.sqlite</b>';      <span style="color: gray;">-- the format is chosen by the extension</span>
+INTO OUTFILE '<b style="color: green;">top.sqlite</b>';         <span style="color: gray;">-- the format is chosen by the extension</span>
 <span style="color: gray;">$</span> sqlite3 top.sqlite 'SELECT * FROM "table" LIMIT 1'
 <span style="color: gray;">карелки|70263</span>
-SELECT * FROM file('top.sqlite');      <span style="color: gray;">-- schema inference</span>
+SELECT * FROM file('top.sqlite');  <span style="color: gray;">-- schema inference</span>
 </code></p>
 
 <p style="margin-top: 0.3em;">&mdash; A result set in one file that every tool can open.</p>
@@ -1044,7 +1044,7 @@ FROM (SELECT CounterID FROM hits
 ) AS t ON true;
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; The standard "top N per group" pattern; <b>CROSS APPLY</b> in SQL Server.
+<p style="margin-top: 0.3em; margin-right: -2em;">&mdash; The standard "top N per group" pattern; (<b>CROSS APPLY</b> in MS SQL Server).
 <br/>&mdash; <b>INNER</b> and <b>LEFT</b>; evaluated once per distinct outer value.</p>
 
 <!-- Demo (server, hits):
