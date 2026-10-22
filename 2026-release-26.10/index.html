@@ -988,13 +988,14 @@ Credit: #123452 supersedes #107069 by Zach Naimon (original commits kept).
 <span style="color: gray;">$</span> sqlite3 t.sqlite 'SELECT * FROM "table"'
 
 SELECT * FROM file('t.sqlite');                   <span style="color: gray;">-- schema inference</span>
-<span style="color: gray;">$</span> cat t.sqlite | clickhouse local --input-format SQLite \
-    -q "SELECT * FROM table"                      <span style="color: gray;">-- also from stdin</span>
 </code></p>
 
 <p style="margin-top: 0.3em;">&mdash; A result set in one file that every tool can open.
-<br/>&mdash; Settings: <b>output_format_sqlite_table_name</b>, <b>input_format_sqlite_table_name</b>.
-<br/>&mdash; Before: only the <b>sqlite</b> table function and engine, on local files.</p>
+<br/>&mdash; Works with any source and destination: files, stdin, HTTP, S3&hellip;</p>
+
+<p style="margin-top: 0.3em;">We already had: the <b>SQLite</b> database engine, the <b>SQLite</b> table engine,
+<br/>and the <b>sqlite</b> table function &mdash; since <b>21.9</b> (2021) &mdash; for local database files.
+<br/>Schema inference since 23.5; passing a query to SQLite as is since 26.7.</p>
 
 <!-- Demo:
 
@@ -1005,6 +1006,11 @@ clickhouse local -q "SELECT * FROM file('test.sqlite') LIMIT 3; DESCRIBE file('t
 cat t2.sqlite | clickhouse local --input-format SQLite -q "SELECT * FROM table"
 curl -s 'http://127.0.0.1:8223/?query=SELECT+number,+toString(number)+AS+s+FROM+numbers(3)+FORMAT+SQLite' -o h.sqlite; sqlite3 h.sqlite 'select * from "table"'   -- 0|0 1|1 2|2
 Credit: #104510 opened by Yue Ni (61 commits), Alexey Milovidov (184 commits).
+History: the SQLite database engine, table engine, and table function were added together in #24194 by Arslan Gumerov (g-arslan),
+merged 2021-07-13 — after the 21.8 branch was cut (v21.8.1.7409-prestable, 2021-07-09, does not contain it; v21.8.15.7-lts has no
+src/Storages/StorageSQLite.cpp) — first released in 21.9 (2021-09-09; clickhouse-docs whats-new/changelog/2021.md, v21.9 section:
+"Add SQLite table engine, table function, database engine. #24194"). Schema inference for the SQLite table engine: #50000, 23.5.
+Passing a query instead of a table name to mysql/postgresql/sqlite: 26.7 (on the 26.7 deck).
 
 -->
 
