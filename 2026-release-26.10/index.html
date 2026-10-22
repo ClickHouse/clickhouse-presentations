@@ -1073,21 +1073,43 @@ No `LATERAL unnest(...)` — use ARRAY JOIN.
 <p style="margin-top: -0.3em;">Keeps <b>deserialized</b> columns in memory &mdash; no decompression,
 <br/>no deserialization, no copying for hot data:</p>
 
-<p><code style="font-size: 13pt; line-height: 1.3;">SET <b style="color: green;">use_columns_cache</b> = 1;
-
+<p><code style="font-size: 12pt; line-height: 1.25;">SET <b style="color: green;">use_columns_cache</b> = 1;
 SELECT count() FROM hits WHERE URL LIKE '%google%';
 </code></p>
-<p style="margin-top: 0.3em;">Example, repeated run: <b><span style="color: red;">0.16</span> sec</b> &rarr; <b><span style="color: green;">0.037</span> sec.</b></p>
+<p style="margin-top: 0.3em;">Example, hot data, without &rarr; with the cache: <b><span style="color: red;">0.26</span> sec</b> &rarr; <b><span style="color: green;">0.064</span> sec.</b></p>
 
-<p style="margin-top: 0.3em;">&mdash; Unlike the uncompressed cache, it stores ready columns.
-<br/>&mdash; Wide <b>MergeTree</b> parts, and also <b>Parquet</b> from files and object storage.
-<br/>&mdash; Sized to 10% of RAM by default; gives memory back to queries.</p>
+<p><code style="font-size: 12pt; line-height: 1.25;">SELECT SearchPhrase, min(URL), count() AS c
+FROM s3('s3://clickhouse-public-datasets/hits_compatible/hits.parquet')
+WHERE URL LIKE '%google%' AND SearchPhrase != '' GROUP BY SearchPhrase &hellip;
+</code></p>
+<p style="margin-top: 0.3em;">Example, Parquet on S3: <b><span style="color: red;">1.87</span> sec</b> &rarr; <b><span style="color: green;">0.156</span> sec.</b></p>
 
-<!-- Demo (server, hits, all data in the page cache; 4 runs each, use_query_condition_cache = 0, use_query_cache = 0):
+<p style="margin-top: 0.3em;">&mdash; Wide <b>MergeTree</b> parts and <b>Parquet</b> from files and object storage.</p>
 
-SELECT count() FROM hits WHERE URL LIKE '%google%'                     -- cache=0: 0.166 0.156 0.165   cache=1: 0.037 0.038 0.036
-SELECT SearchPhrase, count() c FROM hits WHERE SearchPhrase <> '' GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10   -- 0.092 0.087 -> 0.061 0.064
-SELECT sum(ResolutionWidth), avg(UserID) FROM hits                     -- 0.021..0.035 -> 0.007..0.009
+<!-- Demo (server, 96 cores, load average ~170 at the time; each query: 2 warm-up rounds of (off, on), then 5 interleaved
+     rounds of use_columns_cache = 0 / 1; min shown; use_query_condition_cache = 0, use_query_cache = 0; script /home/ubuntu/rel2610/cc/bench.sh):
+
+MergeTree hits, data hot in the page cache:
+SELECT count() FROM hits WHERE URL LIKE '%google%'          -- off 0.259 [0.292 0.259 0.285 0.304 0.432]  on 0.064 [0.075 0.069 0.064 0.071 0.076]  4.0x
+SELECT sum(ResolutionWidth), avg(UserID) FROM hits          -- off 0.015  on 0.007  2.1x
+SELECT SearchPhrase, count() c FROM hits WHERE SearchPhrase <> '' GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10   -- 0.087 vs 0.088, no gain
+(An earlier, quieter, non-interleaved run: 0.16 -> 0.037 s for the first query; also hot vs hot.)
+
+Parquet on S3 (s3('s3://clickhouse-public-datasets/hits_compatible/hits.parquet', NOSIGN), same AWS region, 3 interleaved rounds):
+SELECT SearchPhrase, min(URL), count() AS c ... WHERE URL LIKE '%google%' AND SearchPhrase <> '' GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10
+                                                             -- off 1.869 [1.872 1.869 2.196]  on 0.156 [0.173 0.162 0.156]  12.0x
+SELECT count() FROM ... WHERE URL LIKE '%google%'            -- off 1.571  on 0.600  2.6x
+SELECT count(DISTINCT UserID) FROM ...                       -- off 0.186  on 0.110  1.7x
+SELECT SearchPhrase, count() ... GROUP BY SearchPhrase ...   -- off 0.224  on 0.202  1.1x
+(On the slide the s3() call is shown without NOSIGN for brevity: the test server refuses its own credentials in user queries.)
+
+Local Parquet, file('hits.parquet') hot in the page cache — the cache is usually SLOWER here (ColumnsCacheHits: 226 of 226 row groups, no decompression):
+count() WHERE AdvEngineID <> 0 0.066 -> 0.075; sum/count/avg 0.042 -> 0.062; count(DISTINCT UserID) 0.047 -> 0.089;
+count() WHERE URL LIKE '%google%' 0.634 -> 1.035 (without the cache the string filter is applied during the scan: 15911 rows read;
+with the cache all 100M rows go through the filter), SearchPhrase GROUP BY 0.327 -> 0.505, UserID GROUP BY 0.299 -> 0.381;
+only the URL+SearchPhrase query (1.382 -> 0.336, 4.1x) and SELECT * ... ORDER BY EventTime LIMIT 10 (0.177 -> 0.104) gain.
+Memory is much lower with the cache (2.89 GiB -> 137 MiB for the URL LIKE query). Worth reporting as a performance issue.
+
 Server settings: columns_cache_size (absent: columns_cache_size_to_ram_ratio = 0.1), columns_cache_policy SLRU.
 Only for tables in databases with UUIDs (Atomic, Replicated); only wide parts.
 
