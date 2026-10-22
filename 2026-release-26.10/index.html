@@ -1135,13 +1135,15 @@ Only for tables in databases with UUIDs (Atomic, Replicated); only wide parts.
 CREATE TABLE t (time DateTime CODEC(<b style="color: green;">PCO</b>), &hellip;)
 </code></p>
 
-<p><code style="font-size: 13pt; line-height: 1.4;"><span style="color: gray;">compression ratio:          ZSTD   DoubleDelta    PCO</span>
-EventTime (sorted hits)     1.71   2.03           <b style="color: green;">3.52</b>
-UserID                      5.46   3.47           <b style="color: green;">6.34</b>
-Float64 sensor readings     5.64   3.06           <b style="color: green;">9.61</b>
+<p><code style="font-size: 12pt; line-height: 1.35;"><span style="color: gray;">compression ratio   ZSTD(3)  DoubleDelta,  PCO    PCO,
+                             ZSTD(3)              ZSTD(3)</span>
+EventTime (sorted)  1.71     2.03          <b style="color: green;">3.52</b>   3.51
+UserID              5.46     3.47          <b style="color: green;">6.34</b>   6.32
+Float64 sensor      5.64     3.06          <b style="color: green;">9.61</b>   9.55
 </code></p>
 
-<p style="margin-top: 0.5em;">&mdash; Decompression is fast too: <b>0.086 sec</b> vs. 0.125 (ZSTD) and 0.257 (DoubleDelta).</p>
+<p style="margin-top: 0.3em;">&mdash; Decompression is fast too: <b>0.086 sec</b> vs. 0.125 for <b>ZSTD(3)</b>
+<br/>&emsp; and 0.257 for <b>DoubleDelta, ZSTD(3)</b>.</p>
 
 <p>Read: <a href="https://tomalard.github.io/posts/pcodec-is-awesome/">Pcodec is awesome! 15% smaller and 2x faster than DoubleDelta</a></p>
 
@@ -1152,6 +1154,8 @@ CREATE TABLE codecs (t_lz4 DateTime CODEC(LZ4), t_zstd DateTime CODEC(ZSTD(3)), 
 INSERT INTO codecs SELECT EventTime x4, ResolutionWidth x4, UserID x2 FROM hits ORDER BY CounterID, EventDate, UserID, EventTime, WatchID LIMIT 20000000;  OPTIMIZE ... FINAL;
 compression ratio (system.columns): t_lz4 1.18, t_zstd 1.71, t_dd 2.03, t_pco 3.52; w_lz4 4.25, w_zstd 8.18, w_t64 4.8, w_pco 8.16; u_zstd 5.46, u_pco 6.34
 Float64: round(20 + 5 * sin(number / 10000) + randNormal(0, 0.1), 2) over 10M rows: ZSTD 5.64, Gorilla+ZSTD 2.48, FPC+ZSTD 2.97, PCO 9.61
+CODEC(PCO, ZSTD(3)) on the same data: EventTime 3.51, UserID 6.32, Float64 9.55 — ZSTD after PCO gains nothing (slightly worse).
+"ZSTD(3)" = CODEC(ZSTD(3)) (system.columns: t_zstd CODEC(ZSTD(3))).
 "DoubleDelta" on the slide = CODEC(DoubleDelta, ZSTD(3)) for all three rows (DoubleDelta accepts Float64 too):
   EventTime 2.03; UserID (same 20M sorted rows) 3.47 — also Delta+ZSTD 5.34, T64+ZSTD 3.24; Float64 sensor 3.06 (vs Gorilla+ZSTD 2.48, FPC+ZSTD 2.97).
 The picture is page 1 of arXiv:2502.06112 "Pcodec: Better Compression for Numerical Sequences" (Martin Loncaric, Niels Jeppesen, Ben Zinberg),
