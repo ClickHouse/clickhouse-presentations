@@ -1302,10 +1302,11 @@ Settings: page_size (10000), keep_alive (60 s). Credit: Kirill Kopnev (Fgrtue) â
 <section class="slide">
 <h2 style="font-size: 30pt;">Hard links on plain_rewritable disks</h2>
 
-<p style="margin-top: -0.3em;"><b>s3_plain_rewritable</b> keeps all metadata in the bucket &mdash;
-<br/>but mutations and <b>ALTER</b>s were not supported. Now they are:</p>
+<p style="margin-top: -0.3em;"><b>s3_plain_rewritable</b> keeps all metadata in the bucket.
+<br/>Before 26.10: no mutations, no <b>ALTER</b>s except settings and comments.
+<br/>Now they work &mdash; and with hard links, without copying:</p>
 
-<p><code style="font-size: 13pt; line-height: 1.3;"><span style="color: gray;">$ cat config.d/disks.yaml</span>
+<p><code style="font-size: 12pt; line-height: 1.25;"><span style="color: gray;">$ cat config.d/disks.yaml</span>
 
 storage_configuration:
     disks:
@@ -1318,7 +1319,16 @@ storage_configuration:
 <p style="margin-top: 0.3em;">&mdash; A mutated part refers to the unchanged files of the old one.
 <br/>&mdash; Off by default: older servers can't read a disk with hard links.</p>
 
-<!-- Demo (server, a local object storage disk with metadata_type plain_rewritable and enable_hard_links 1):
+<!-- History (checked): plain_rewritable appeared in 24.4; 89f28f3c18f (2024-04-24) "explicitly disallow ALTERs and mutations for plain";
+81a7862ed42 (2024-05-16, Julia Kartseva) "Allow certain ALTER TABLE commands for plain_rewritable" â€” only MODIFY/RESET SETTING and comments.
+26.9.23 (local object storage disk, metadata_type plain_rewritable): ADD/DROP/MODIFY COLUMN -> "ALTER TABLE commands are not supported on
+immutable disk 'pr', except for setting and comment alteration"; ALTER UPDATE/DELETE and lightweight DELETE -> "Mutations are not supported
+for immutable disk 'pr'"; COMMENT COLUMN, DROP PARTITION, OPTIMIZE FINAL work.
+26.10: the same ALTER UPDATE / ADD COLUMN / DROP COLUMN work on a plain_rewritable disk WITHOUT enable_hard_links too (a copy of the blob
+stands in for the hard link, #119304), and with enable_hard_links = 1 the unchanged blobs are shared. So the changelog phrase "which enables
+ALTER operations and mutations" overstates the role of the setting: it makes them zero-copy.
+
+Demo (server, a local object storage disk with metadata_type plain_rewritable and enable_hard_links 1):
 
 CREATE TABLE t_pr_links (id UInt64, status String, payload String) ENGINE = MergeTree ORDER BY id SETTINGS disk = 'pr_links';
 INSERT INTO t_pr_links SELECT number, 'new', repeat('x', 100) FROM numbers(1000000);
