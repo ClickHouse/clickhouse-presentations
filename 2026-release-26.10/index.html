@@ -1271,23 +1271,59 @@ SELECT count() FROM elasticsearch('http://localhost:9200', 'hits_docs',
 <p style="margin-top: 0.3em;">&mdash; A consistent snapshot: paged with a point in time; Elasticsearch 7.12+.
 <br/>&mdash; Basic auth, bearer tokens, API keys, named collections. Read-only.</p>
 
-<!-- Demo (Elasticsearch 8.15.3 in Docker, security disabled, 127.0.0.1:19200; master build 26.11.1.385, which has #124283;
-     backported to 26.10 in #127147, version 26.10.2.60):
+<!--
 
-docker run -d --name rel2610-es -p 127.0.0.1:19200:9200 -e discovery.type=single-node -e xpack.security.enabled=false docker.elastic.co/elasticsearch/elasticsearch:8.15.3
-clickhouse client -q "SELECT concat('{\"index\":{}}\n', toJSONString(map('@timestamp', formatDateTime(EventTime, '%Y-%m-%dT%H:%i:%SZ'), 'url', URL, 'title', Title,
-  'search', SearchPhrase, 'user_id', toString(UserID), 'is_mobile', toString(IsMobile)))) FROM hits WHERE CounterID = 62 LIMIT 200000 FORMAT TSVRaw" > es_bulk.ndjson
-curl -H 'Content-Type: application/x-ndjson' -XPOST 'localhost:19200/hits_docs/_bulk' --data-binary @part   (in 40000-line parts)   -- _count: 200000
+https://pastila.clickhouse.com/?00e1b126/b5cf11c005ece7b41e37aa6d7a076a47#7fJYWbNVWrZGaPXlfwBfWw==GCM
 
-SELECT count() FROM elasticsearch('http://127.0.0.1:19200', 'hits_docs');      -- 200000, 1.6 s (virtual columns only: _source is not fetched)
-SELECT _index, _id, document.url, document.`@timestamp` FROM es_hits LIMIT 2;  -- hits_docs  QwcsYKEBynxkOa0fiHAh  http://komme...  2013-07-15 07:40:04
-SELECT document.search::String AS phrase, count() ... LIMIT 3;                 -- рецепты сбербан 439 / инстанец жизнь 181 / рецепт блиноленские 79, 1.25 s
-SELECT count() FROM elasticsearch(..., query = '{"term": {"is_mobile": "1"}}'); -- 5162, 0.09 s
-SHOW CREATE TABLE es_hits   -- CREATE TABLE default.es_hits (`document` JSON) ENGINE = Elasticsearch('http://127.0.0.1:19200', 'hits_docs')
-JSONAllPathsWithTypes(document) -- {'@timestamp':'DateTime','is_mobile':'String','search':'String','title':'String','url':'String','user_id':'String'}
-GROUP BY document.search without a cast fails: "Data types Variant/Dynamic are not allowed in GROUP BY keys" — cast the subcolumn.
-WHERE is evaluated by ClickHouse; only the `query` argument filters on the Elasticsearch side. OpenSearch is not supported (no _shard_doc).
-Settings: page_size (10000), keep_alive (60 s). Credit: Kirill Kopnev (Fgrtue) — all 29 commits of #124283, and the RFC issue #121620.
+curl -s localhost:9200/_cluster/health
+
+curl -s -XPUT localhost:9200/bluesky_posts -H 'Content-Type: application/json' -d '
+{
+  "settings": {"number_of_shards": 1, "number_of_replicas": 0},
+  "mappings": {"properties": {
+    "user":       {"type": "keyword"},
+    "created_at": {"type": "date"},
+    "text":       {"type": "text"},
+    "langs":      {"type": "keyword"}
+  }}
+}'
+
+clickhouse local -q "
+SELECT
+    JSONExtractString(line, 'did') AS user,
+    formatDateTime(fromUnixTimestamp64Micro(JSONExtractUInt(line, 'time_us')), '%Y-%m-%dT%H:%i:%SZ', 'UTC') AS created_at,
+    JSONExtractString(line, 'commit', 'record', 'text') AS text,
+    JSONExtract(line, 'commit', 'record', 'langs', 'Array(String)') AS langs
+FROM url('https://clickhouse-public-datasets.s3.amazonaws.com/bluesky/file_0001.json.gz', LineAsString)
+WHERE isValidJSON(line)
+  AND JSONExtractString(line, 'commit', 'operation') = 'create'
+  AND JSONExtractString(line, 'commit', 'collection') = 'app.bsky.feed.post'
+  AND text != ''
+LIMIT 10000
+FORMAT JSONEachRow" \
+| awk '{print "{\"index\":{}}"; print}' \
+| curl -s -XPOST 'localhost:9200/bluesky_posts/_bulk?refresh=true&filter_path=errors' \
+       -H 'Content-Type: application/x-ndjson' --data-binary @-
+
+curl -s localhost:9200/bluesky_posts/_count
+
+SET enable_elasticsearch = 1;
+
+SELECT
+    document.langs[1]::String AS lang,
+    count() AS posts,
+    round(avg(length(document.text::String))) AS avg_text_length
+FROM elasticsearch('http://localhost:9200', 'bluesky_posts')
+WHERE lang != ''
+GROUP BY lang
+ORDER BY posts DESC
+LIMIT 5;
+
+CREATE TABLE posts ENGINE = MergeTree ORDER BY tuple() AS
+SELECT * FROM elasticsearch('http://localhost:9200', 'bluesky_posts',
+                            query = '{"term": {"langs": "en"}}');
+
+SELECT count() FROM posts;
 
 -->
 
@@ -1608,7 +1644,7 @@ Search is bounded by input_format_freeform_max_search_steps (4096).
 
 <p style="margin-top: -0.3em;"><b>chdig</b> &mdash; the top-like TUI for ClickHouse, built into the binary:</p>
 
-<p><code style="font-size: 14pt; line-height: 1.3;"><span style="color: gray;">$</span> clickhouse chdig
+<p><code style="font-size: 14pt; line-height: 1.3;"><span style="color: gray;">$</span> clickhouse dig
 </code></p>
 
 <p>New in <a href="https://github.com/azat/chdig/releases/tag/v26.10.1">v26.10.1</a>:</p>
@@ -1801,7 +1837,7 @@ LIMIT 10
 </section>
 
 
-<section class="slide" style="background: url(pictures/back10.jpg); background-size: cover;">
+<section class="slide" style="background: url(pictures/back9.jpg); background-size: cover;">
 <h2><span class="hilite">Integrations</span></h2>
 </section>
 
@@ -1911,8 +1947,8 @@ LIMIT 10
 <!-- Posts of 2026-09-21 .. 2026-10-20 from https://clickhouse.com/blog — the author should pick the must-haves. QR -> https://www.youtube.com/watch?v=P7OiRMXeJf8 "ClickHouse Amsterdam Meetup: What to do with vectors - Alexey Milovidov". -->
 
 
-<section class="slide" style="background: url(pictures/back9.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
-<h2 style="color: white; margin-left: -1em;">Q&amp;A</h2>
+<section class="slide" style="background: url(pictures/back10.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
+<h2 style="color: white; margin-left: 0em;">Q&amp;A</h2>
 </section>
 
 <!--
