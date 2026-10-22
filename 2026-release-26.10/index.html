@@ -1,0 +1,1957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 26.10 Call</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta property="og:image" content="pictures/preview.jpg">
+    <meta property="og:title" content="ClickHouse: Release 26.10 Call">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="pictures/preview.jpg">
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/themes/clickhouse/styles/styles.css">
+
+    <style>
+        code { display: block; white-space: pre; background-color: #EEE; }
+        p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+        p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+        .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+        .slide table tr:not(:last-of-type)>* { background: none; }
+        .zoomable { cursor: zoom-in; }
+        .zoomable.zoomed { position: fixed; left: 0; top: 0; width: 100% !important; height: 100%; object-fit: contain; background: #000; z-index: 50; cursor: zoom-out; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 26.10 Call</h1>
+        <p>Author: Alexey Milovidov, 2026-10-22.</p>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/back1.jpg); background-size: cover;">
+        <h1 style="margin-top: 15px; line-height: 110%; font-size: 56pt; color: #FF0; text-align: center;">ClickHouse Release 26.10</h1>
+    </section>
+
+<section class="slide">
+<h2>ClickHouse release 26.10</h2>
+<p>1. (50 min) What's new in ClickHouse 26.10.</p>
+<p>2. (10 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back2.jpg); background-size: cover;">
+<h2><span class="hilite">Autumn Release 26.10</span></h2>
+<p><span class="hilite">&mdash; 104 new features 🎃</span></p>
+<p><span class="hilite">&mdash; 225 performance optimizations 🍂</span></p>
+<p><span class="hilite">&mdash; 739 fixes 🦉</span></p>
+</section>
+<!-- Feature count = 60 New Feature + 42 Experimental Feature + 1 new-feature backward-incompatible
+     + 1 for the Elasticsearch table engine (Experimental, #124283, backported to 26.10 in #127147 after the count — not yet in the changelog draft)
+     change (the seccomp system call filter of clickhouse-server, #119545; the other 36 backward-incompatible
+     entries are removals, restrictions, renames, or default flips).
+     Performance = 225 Performance Improvement entries; bug fixes = 739 Bug Fix entries.
+     Counted on 2026-10-21 from CHANGELOG.md of the branch `update-changelog-26-10` (PR #127114, "Update changelog for 26.10"),
+     dated 2026-10-22 — recount from the final changelog right before the call. -->
+<!--
+
+Small:
+
+Function composition
+Quotas on inserted rows
+Functions for ipcrypt
+Functions to pack bits
+Functions for quoted printable
+New functions for query normalization
+New array and map functions
+sql_compatible_division_for_integers
+obfuscate table function
+
+Performance:
+
+Query condition cache for conditions with the current time
+Twice lower memory usage for large hash tables
+Scan-level string filtering
+TopK dynamic filtering for GROUP BY
+TopK dynamic filtering for Parquet and Iceberg
+query_plan_join_shard_by_pk_ranges by default for JOIN
+Concurrency control lowers the pipeline width
+Faster GROUP BY over LowCardinality and over Strings
+Bloom filters filtering in Parquet; topK and lazy reading and query condition cache in Parquet
+
+Interesting:
+
+Query cache on disk
+Cluster database engine
+Overlay database engine
+Arbitrary ON in JOIN
+IN spills to disk
+Query-aware scheduling in workloads
+Materialized recursive CTE
+SQLite as IO format
+
+Experimental:
+
+LATERAL JOIN
+Column Cache
+PCodec
+XGBoost dictionaries
+LogsQL, /dialect
+Elasticsearch table engine
+
+Data Lakes:
+
+plain_rewritable supports hard links
+plain_rewritable fast metadata
+Parquet VARIANT and in Iceberg
+Embedded Iceberg REST catalog
+DataLakeCatalog with the 'unity' type
+Iceberg v3 deletion vectors from Puffin
+
+Bonus:
+
+Trino and Kusto beta
+Parts of Trino dialect in ClickHouse
+Freeform data format
+New chdig
+Better Postgres protocol compatibility
+FileLog improvements
+PromQL 100% basic compatibility and 90%+ extended compatibility
+Notebooks in Web UI. Import/Export in Web UI. Format button.
+
+Meetups
+
+Reading Corner: Iceberg on OneLake / Microsoft Fabric, Executable UDFs GA, JWT auth, SCIM, .NET native client,
+ClickStack anomaly detection, Agentic Analytics Benchmark, Postgres posts
+
+-->
+
+<section class="slide" style="background: url(pictures/back3.jpg); background-size: cover;">
+<h2 style="color: black;"><span class="hilite">Small And Nice Features</span></h2>
+</section>
+
+
+<section class="slide">
+<h2>Function composition operator</h2>
+
+<p style="margin-top: -0.3em;">Pass a pipeline of functions where a lambda is expected:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.3;">SELECT arrayMap(<b style="color: green;">lower | reverse</b>, ['Hello', 'World']);
+<span style="color: gray;">-- ['olleh', 'dlrow']</span>
+
+SELECT arrayMap(<b style="color: green;">plus(_, 1) | multiply(_, 2)</b>, [1, 2, 3]);
+<span style="color: gray;">-- [4, 6, 8]</span>
+
+SELECT arrayMap(<b style="color: green;">_1 * 2 + 1</b>, [1, 2, 3]);      <span style="color: gray;">-- [3, 5, 7]</span>
+SELECT arrayMap(<b style="color: green;">_1 + _2</b>, [1, 2], [10, 20]);  <span style="color: gray;">-- [11, 22]</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; <b>_</b>, <b>_1</b>, <b>_2</b> &hellip; are argument placeholders.
+<br/>&mdash; Resolved during query analysis into an ordinary lambda.
+
+<!-- Demo:
+
+SELECT arrayMap(lower | reverse, ['Hello', 'World']);              -- ['olleh','dlrow']
+SELECT arrayMap(plus(_, 1) | multiply(_, 2), [1, 2, 3]);            -- [4,6,8]
+SELECT arrayMap(_1 * 2 + 1, [1, 2, 3]);                             -- [3,5,7]
+SELECT arrayMap(_1 + _2, [1, 2], [10, 20]);                         -- [11,22]
+SELECT arrayFilter(length | (x -> x > 3), ['a', 'abcd', 'hello']);  -- ['abcd','hello']
+SELECT arraySort(length | negate, ['a', 'abc', 'ab']);              -- ['abc','ab','a']
+SELECT arrayMap(JSONExtractString(_, 'name') | upper, ['{"name":"alice"}']);  -- ['ALICE']
+SELECT arrayMap(trim(_) | lower | concat(_, '!'), [' Hi ', 'YO']);  -- ['hi!','yo!']
+Variadic functions need placeholders: arrayMap(trim | lower, ...) -> "Cannot compose the variadic function `trim` ... Use argument placeholders".
+SELECT arrayMap(x -> x + 1 | toString, [1, 2]) -> BAD_ARGUMENTS "can be used only where a function is expected ... For bitwise OR, use bitOr".
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Ivan Esipov, Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Quotas on inserted rows</h2>
+
+<p style="margin-top: -0.3em;">Limit what a user may write, in <b>rows</b> instead of bytes:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.3;">CREATE QUOTA ingest_limit FOR INTERVAL 1 minute
+    MAX <b style="color: green;">written_rows</b> = 100000, query_inserts = 250
+    TO ingest;
+
+INSERT INTO events SELECT number FROM numbers(60000);  <span style="color: gray;">-- Ok.</span>
+INSERT INTO events SELECT number FROM numbers(60000);
+<span style="color: gray;">-- Quota for user `ingest` for 60s has been exceeded:
+-- written_rows = 120000/100000. (QUOTA_EXCEEDED)</span>
+</code></p>
+
+<p>As usual, shown in <b>system.quota_usage</b>, <b>system.quota_limits</b>.</p>
+
+<!-- Demo:
+
+CREATE USER ingest IDENTIFIED WITH no_password;
+CREATE TABLE events (x UInt64) ENGINE = MergeTree ORDER BY x;
+GRANT INSERT, SELECT ON default.events TO ingest;
+CREATE QUOTA q_ingest FOR INTERVAL 1 minute MAX written_rows = 100000 TO ingest;
+clickhouse client --user ingest -q "INSERT INTO events SELECT number FROM numbers(60000)"   -- ok
+clickhouse client --user ingest -q "INSERT INTO events SELECT number FROM numbers(60000)"
+  -- QUOTA_EXCEEDED: written_rows = 120000/100000 ... Name of quota template: `q_ingest`.
+SELECT count() FROM events;   -- 60000: the second INSERT is not committed
+clickhouse client --user ingest -q "SELECT written_rows, max_written_rows FROM system.quota_usage"   -- 120000 100000
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Format-preserving encryption of IPs 🧪</h2>
+
+<p style="margin-top: -0.3em;">The <a href="https://ipcrypt-std.github.io/">IPCrypt</a> specification &mdash; anonymize IP addresses, keep them IPs:</p>
+
+<p><code style="font-size: 11pt; line-height: 1.25;">SET enable_ipcrypt = 1;
+
+SELECT <b style="color: green;">ipcryptEncrypt</b>('192.0.2.1', unhex('2b7e151628aed2a6abf7158809cf4f3c'));
+<span style="color: gray;">-- 1dbd:c1b9:fff1:7586:7d0b:67b4:e76e:4777   (deterministic: same IP &rarr; same output)</span>
+
+SELECT ip, <b style="color: green;">ipcryptPrefixEncrypt</b>(toIPv4(ip), key) AS enc, <b style="color: green;">ipcryptPrefixDecrypt</b>(enc, key) ...
+<span style="color: gray;">-- 10.0.0.1     19.214.210.198   10.0.0.1
+-- 10.0.0.2     19.214.210.197   10.0.0.2      &larr; the same /24
+-- 10.0.1.1     19.214.211.73    10.0.1.1      &larr; the same /16
+-- 192.168.1.1  137.62.183.100   192.168.1.1</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; Prefix-preserving: aggregate by network after anonymization.</p>
+
+<!-- Demo:
+
+SET enable_ipcrypt = 1;
+-- test vectors of the specification match:
+SELECT ipcryptEncrypt('0.0.0.0', unhex('0123456789abcdeffedcba9876543210'));     -- bde9:6789:d353:824c:d7c6:f58a:6bd2:26eb
+SELECT ipcryptEncrypt('192.0.2.1', unhex('2b7e151628aed2a6abf7158809cf4f3c'));   -- 1dbd:c1b9:fff1:7586:7d0b:67b4:e76e:4777
+WITH unhex('2b7e151628aed2a6abf7158809cf4f3ca9f5ba40db214c3798f2e1c23456789a') AS key
+SELECT ip, ipcryptPrefixEncrypt(toIPv4(ip), key) AS enc, ipcryptPrefixDecrypt(enc, key) AS dec
+FROM VALUES('ip String', '10.0.0.1', '10.0.0.2', '10.0.1.1', '192.168.1.1');
+-- 10.0.0.1 19.214.210.198 / 10.0.0.2 19.214.210.197 / 10.0.1.1 19.214.211.73 / 192.168.1.1 137.62.183.100
+The prefix-preserving key is 32 bytes and its two 16-byte halves must differ (unhex(repeat('ab', 32)) is rejected).
+ipcryptEncrypt of IPv4/IPv6 returns IPv6; of a String returns a String. The function is Experimental (enable_ipcrypt).
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Frank Denis, Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Functions to pack bits</h2>
+
+<p style="margin-top: -0.3em;">Turn an array into a bitmask with a lambda:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.3;">SELECT <b style="color: green;">arrayPackBitsToUInt64</b>(c -> c = 'Y', ['Y', 'N', 'N', 'Y']) AS x, bin(x);
+<span style="color: gray;">-- 144 | 10010000</span>
+
+<span style="color: gray;">-- binary quantization of an embedding: 768 floats &rarr; 96 bytes</span>
+SELECT <b style="color: green;">arrayPackBitsToFixedString</b>(x -> x > 0, 96, embedding) AS bits,
+       bitHammingDistance(bits, query_bits) AS distance &hellip;
+
+<span style="color: gray;">-- groups of several bits: 4-bit codes &rarr; 0x123F</span>
+SELECT hex(<b style="color: green;">arrayPackBitGroupsToString</b>(x -> x, 4, [1, 2, 3, 15]));
+</code></p>
+
+<p style="margin-top: 0.3em;">Six functions: <b>arrayPackBits</b>/<b>arrayPackBitGroups</b>
+<br/>&emsp; &times; <b>ToUInt64</b>, <b>ToString</b>, <b>ToFixedString</b>.</p>
+
+<!-- Demo:
+
+SELECT arrayPackBitsToUInt64(c -> c = 'Y', ['Y','N','N','Y']), bin(arrayPackBitsToUInt64(c -> c = 'Y', ['Y','N','N','Y']));   -- 144  10010000
+SELECT hex(arrayPackBitsToString(x -> x > 0, [0.3, -0.1, 0.7, 0.2, -0.5, -0.9, 0.1, 0.4]));   -- B3 (10110011)
+SELECT hex(arrayPackBitGroupsToString(x -> x, 4, [1, 2, 3, 15]));                             -- 123F
+WITH arrayMap(i -> sin(i), range(768)) AS e1, arrayMap(i -> sin(i + 0.3), range(768)) AS e2
+SELECT length(arrayPackBitsToString(x -> x > 0, e1)), bitHammingDistance(arrayPackBitsToString(x -> x > 0, e1), arrayPackBitsToString(x -> x > 0, e2));  -- 96  73
+Bits are MSB-first within a byte; ToUInt64 interprets those bytes as little-endian (= reinterpretAsUInt64 of the ToString result).
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Eridanus, Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Quoted-printable encoding</h2>
+
+<p style="margin-top: -0.3em;">RFC 2045, the encoding of e-mail bodies and headers:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.3;">SELECT <b style="color: green;">encodeQuotedPrintable</b>('Grüße aus München! = 100%');
+<span style="color: gray;">-- Gr=C3=BC=C3=9Fe aus M=C3=BCnchen! =3D 100%</span>
+
+SELECT <b style="color: green;">decodeQuotedPrintable</b>(
+    'This is a very long line that was wrapped by the=\r\n mail client');
+<span style="color: gray;">-- This is a very long line that was wrapped by the mail client</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; Soft line breaks (<b>=</b> at the end of a line) are removed on decoding.</p>
+
+<!-- Demo:
+
+SELECT encodeQuotedPrintable('Grüße aus München! = 100%');      -- Gr=C3=BC=C3=9Fe aus M=C3=BCnchen! =3D 100%
+SELECT decodeQuotedPrintable('Gr=C3=BC=C3=9Fe aus M=C3=BCnchen!');  -- Grüße aus München!
+SELECT decodeQuotedPrintable('This is a very long line that was wrapped by the=\r\n mail client');  -- ... by the mail client
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Jay Pokale, Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Query normalization, ignoring the order</h2>
+
+<p style="margin-top: -0.3em;">Group the workload by its shape, even if the columns are shuffled:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.25;">SELECT normalizedQueryHash('SELECT a, b FROM t GROUP BY a, b')
+     = normalizedQueryHash('SELECT b, a FROM t GROUP BY b, a');          <span style="color: gray;">-- 0</span>
+
+SELECT <b style="color: green;">normalizedQueryHashUnordered</b>('SELECT a, b FROM t WHERE x = 1 GROUP BY a, b')
+     = <b style="color: green;">normalizedQueryHashUnordered</b>('SELECT b, a FROM t WHERE x = 42 GROUP BY b, a');
+<span style="color: gray;">-- 1</span>
+
+SELECT normalizedQueryHashUnordered(query) AS shape, count(), sum(query_duration_ms)
+FROM system.query_log GROUP BY shape ORDER BY 3 DESC LIMIT 10;
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; Token hashes are summed: the order does not matter.
+<br/>&mdash; Lossy on purpose: <b>a - b</b> and <b>b - a</b> are the same shape.</p>
+
+<!-- Demo:
+
+SELECT normalizedQueryHash('SELECT a, b FROM t GROUP BY a, b') = normalizedQueryHash('SELECT b, a FROM t GROUP BY b, a') AS ordered,   -- 0
+       normalizedQueryHashUnordered('SELECT a, b FROM t WHERE x = 1 GROUP BY a, b') = normalizedQueryHashUnordered('SELECT b, a FROM t WHERE x = 42 GROUP BY b, a') AS unordered;  -- 1
+SELECT normalizedQueryHashUnordered('SELECT a - b') = normalizedQueryHashUnordered('SELECT b - a');  -- 1 (documented as lossy)
+SELECT normalizedQueryHashUnordered('SELEKT 1');  -- 6366530395891692077: never throws
+
+NOTE: the changelog entry (#116345) says the function "ignores the order of expression lists such as the SELECT list,
+GROUP BY keys, and function arguments" and mentions a `normalizedQueryHashUnorderedOrNull` variant "returning NULL when
+the input is not valid SQL". Neither matches the binary (26.11 master build and the 26.10 branch source):
+there is no ...OrNull function, and the description says the query is not parsed, only tokenized, and the token hashes are summed.
+The changelog entry should be corrected.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Yarik Briukhovetskyi.</p>
+</section>
+
+<section class="slide">
+<h2>New Array and Map functions</h2>
+
+<p><code style="font-size: 13pt; line-height: 1.3;">SELECT <b style="color: green;">arrayMinIndex</b>([5, 2, 9, 2]),                       <span style="color: gray;">-- 2</span>
+       <b style="color: green;">arrayMaxIndex</b>(x -> length(x), ['a', 'abc', 'ab']); <span style="color: gray;">-- 2</span>
+SELECT <b style="color: green;">arrayRemoveAt</b>([10, 20, 30], 2), arrayRemoveAt([10, 20, 30], -1);
+<span style="color: gray;">-- [10, 30], [10, 20]</span>
+
+SELECT <b style="color: green;">mapRemove</b>(map('a', 1, 'b', 2, 'c', 3), 'b');  <span style="color: gray;">-- {'a':1, 'c':3}</span>
+SELECT <b style="color: green;">mapEntries</b>(map('a', 1, 'b', 2));              <span style="color: gray;">-- [('a',1), ('b',2)]</span>
+SELECT <b style="color: green;">mapContainsKeyValue</b>(labels, 'env', 'prod');   <span style="color: gray;">-- uses text indexes</span>
+
+<span style="color: gray;">-- the -Map combinator without a Map column: the key is the last argument</span>
+SELECT <b style="color: green;">sumMap</b>(value, key), <b style="color: green;">argMaxMap</b>(name, value, key) FROM t;
+<span style="color: gray;">-- {'a':8, 'b':5}, {'a':'z', 'b':'y'}</span>
+</code></p>
+
+<!-- Demo:
+
+SELECT mapRemove(map('a', 1, 'b', 2, 'c', 3), 'b'), mapEntries(map('a', 1, 'b', 2));     -- {'a':1,'c':3}  [('a',1),('b',2)]
+SELECT arrayMinIndex([5, 2, 9, 2]), arrayMaxIndex([5, 2, 9, 2]), arrayRemoveAt([10, 20, 30], 2), arrayRemoveAt([10, 20, 30], -1);  -- 2 3 [10,30] [10,20]
+SELECT arrayMaxIndex(x -> length(x), ['a', 'abc', 'ab']);    -- 2
+SELECT mapContainsKeyValue(map('env', 'prod', 'region', 'eu'), 'env', 'prod');   -- 1
+SELECT sumMap(v, k), argMaxMap(name, v, k) FROM VALUES('k String, v UInt32, name String', ('a', 1, 'x'), ('b', 5, 'y'), ('a', 7, 'z'));  -- {'a':8,'b':5} {'a':'z','b':'y'}
+SELECT avg(toIntervalSecond(x)), sum(toIntervalMinute(x)), toTypeName(avg(toIntervalSecond(x))) FROM VALUES('x UInt32', 10, 20, 45);  -- 25 75 IntervalSecond
+
+Developers: Minh Vu (arrayMinIndex, arrayMaxIndex, arrayRemoveAt, mapRemove, mapEntries), Jimmy Aguilar Mena (mapContainsKeyValue),
+UnamedRus + Alexey Milovidov (-Map combinator, #123449 supersedes #56335), Alexey Milovidov (Interval aggregates), mosya415 (regr* aliases).
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developers: Minh Vu, Jimmy Aguilar Mena, UnamedRus, Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>SQL-compatible integer division</h2>
+
+<p style="margin-top: -0.3em;">In ClickHouse, <b>7 / 2</b> was always <b>3.5</b>. In PostgreSQL, it is <b>3</b>.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.3;">SELECT 7 / 2, -7 / 2, 7 / 2.0;
+<span style="color: gray;">-- 3.5   -3.5   3.5</span>
+
+SET <b style="color: green;">sql_compatible_division_for_integers</b> = 1;
+SELECT 7 / 2, -7 / 2, 7 / 2.0;
+<span style="color: gray;">-- 3     -3     3.5    (truncated toward zero)</span>
+
+SELECT 1 / 0;   <span style="color: gray;">-- Division by zero (ILLEGAL_DIVISION)</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; Works up to <b>Int256</b>; overflow and division by zero throw.
+<br/>&mdash; Disabled by default. Stored definitions keep the semantics
+<br/>&emsp; they were created with.</p>
+
+<!-- Demo:
+
+SELECT 7 / 2, -7 / 2, 7 / 2.0 SETTINGS sql_compatible_division_for_integers = 1;  -- 3  -3  3.5
+SELECT toTypeName(7 / 2) SETTINGS sql_compatible_division_for_integers = 1;       -- UInt8 (width of the first operand, signed if either is signed)
+SELECT 1 / 0 SETTINGS sql_compatible_division_for_integers = 1;                   -- ILLEGAL_DIVISION: Division by zero ... divideExact(1, 0)
+The choice is recorded into newly created views/table expressions; existing definitions keep their original semantics (from the setting description).
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Ilya Yatsishin.</p>
+</section>
+
+<section class="slide">
+<h2>Table function for data obfuscation</h2>
+
+<p style="margin-top: -0.3em;">Like <b>clickhouse-obfuscator</b> (since 2017), but right inside a query:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.25;">SELECT URL, Title, SearchPhrase FROM <b style="color: green;">obfuscate</b>(
+    SELECT URL, Title, SearchPhrase FROM hits WHERE SearchPhrase != '' LIMIT 100000)
+LIMIT 2 SETTINGS obfuscate_seed = 'demo';
+
+<span style="color: gray;">https://delo.ua/search/cuZ29vZ2xlLnJ1L3lhbmRleC5ydS8mcGF0aD0=#_=_
+    Автоюристики для Samsung        сделать электростовки 2013
+https://delov.ru/index.ua/adasy/foto/69363/12#f640d
+    Загороде                        мультфильм смотреть</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; Keeps cardinalities, distributions, lengths, compressibility;
+<br/>&emsp; replaces the values. For publishing near-real data for benchmarks.
+<br/>&mdash; Deterministic for a seed; <b>not</b> a security tool.</p>
+
+<!-- Demo (server with the hits table):
+
+SELECT URL, Title, SearchPhrase, EventTime FROM obfuscate(SELECT URL, Title, SearchPhrase, EventTime FROM hits WHERE SearchPhrase != '' LIMIT 100000) LIMIT 5 SETTINGS obfuscate_seed = 'demo' FORMAT Vertical
+-- output as on the slide (rows 1-3). Dates are kept exactly (the DateTime date part too), as in clickhouse-obfuscator.
+The function is an infinite source: always put an outer LIMIT. CREATE TABLE ... AS obfuscate(...) is rejected; use a VIEW.
+Unsupported types (Decimal, Enum, LowCardinality, Map, Tuple, IPv4...) throw NOT_IMPLEMENTED instead of passing through.
+Credit: #115004 supersedes #42701 by Nikolay Degterinsky (evillique), the same change.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Nikolay Degterinsky, Alexey Milovidov.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back4.jpg); background-size: cover;">
+<h2 style="line-height: 1.2; margin-left: -1em; color: yellow;">Performance
+<br/>Improvements</h2>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Query condition cache for <b>now()</b> conditions</h2>
+
+<p style="margin-top: -0.3em;">The bound is rounded onto a time grid, so <b>now()</b> filters can be cached:</p>
+
+<img class="zoomable" style="width: 100%; margin-top: -0.5em; display: block;" src="pictures/qcc_now.svg" alt="How a condition with now() is rounded for the query condition cache: writes round the bound up, reads round it down" onclick="this.classList.toggle('zoomed'); event.stopPropagation();"/>
+
+<p style="margin-top: 0.3em;">Example, <b>today() - 3</b> over 100M rows: reads <b><span style="color: red;">100M</span></b> &rarr; <b><span style="color: green;">3.2M</span></b> rows on repeat.</p>
+
+<!-- Demo (server; hits_now = hits with EventTime shifted to end at now(), ORDER BY (CounterID, UserID)):
+
+CREATE TABLE hits_now ENGINE = MergeTree ORDER BY (CounterID, UserID) AS
+SELECT EventTime + toIntervalSecond(dateDiff('second', toDateTime('2013-07-31 23:59:59'), now())) AS EventTime, CounterID, UserID, URL, SearchPhrase, ResolutionWidth FROM hits;
+Q="SELECT count() FROM hits_now WHERE EventTime >= today() - 3 AND URL LIKE '%google%'"
+-- use_query_condition_cache_for_time_conditions = 0: 4 runs read 99997497 rows each, 84..176 ms
+-- = 1 (default):   first run 99997497 rows, then 3211264 rows, 33..45 ms
+With `now() - INTERVAL 3 DAY` the repeated runs within the same grid cell still read everything: by design
+an unaligned bound is reused only by queries in the NEXT grid cell (writes round up, reads round down — see
+the description of use_query_condition_cache_for_time_conditions). Show it with an aligned bound.
+Context for the speaker: the query condition cache (since 25.3) remembers which granules do not match a filter, but a now() constant
+changes every second, so such conditions were never cached before.
+Settings: use_query_condition_cache_for_time_conditions (default 1), query_condition_cache_time_condition_grid_factor (default 1.0).
+The picture (pictures/qcc_now.svg, generated by a script) follows the setting description and src/Interpreters/Cache/QueryConditionCacheTimeConditions.cpp
+of the 26.10 branch: writes store the bound rounded UP (a stronger condition, so "no matching rows" stays true), reads look up the
+bound rounded DOWN; the grid step is the largest of 1 day, 6 h, 1 h, 10 min, 1 min, 10 s, 1 s not exceeding |now - constant| * grid_factor.
+Checked with a sliding bound: table `recent` (20M rows, t = now() - rand() % 3600 s, ORDER BY tuple()),
+SELECT count() FROM recent WHERE t >= now() - INTERVAL 2 MINUTE AND msg LIKE '%error%' every ~30 s (grid step: 1 min):
+  23:18:40 read 20000000 rows; 23:19:10 read 16679295 (the next minute: the rounded-down key equals the earlier rounded-up key).
+  (Later runs read 0 rows only because no new rows arrived and the part's min/max statistics pruned it.)
+The machine was heavily loaded (load average 100-270), times are indicative; rows read are exact.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Two times less memory for hash tables</h2>
+
+<p style="margin-top: -0.3em;">Large hash tables switch to <b>Robin Hood</b> hashing in place:</p>
+
+<p>&mdash; max load factor 0.5 &rarr; <b>0.9</b>: up to 2x smaller;
+<br/>&mdash; chains ordered by the ideal position: a miss stops early;
+<br/>&mdash; for <b>GROUP BY</b>, <b>uniqExact</b>, <b>JOIN</b>.</p>
+
+<p style="margin-top: 0.3em;">Example: <b>GROUP BY</b> with 10M keys, 1B rows, 48 threads:</p>
+<p style="margin-top: -0.5em;"><b>26.9: <span style="color: red;">24.7</span> GB, 1.55 sec.</b> &nbsp; <b>26.10: <span style="color: green;">16.3</span> GB, 1.28 sec.</b></p>
+
+<p style="margin-top: 0.3em;">Example: <b>uniqExact</b> of 100M distinct values:</p>
+<p style="margin-top: -0.5em;"><b>26.9: <span style="color: red;">13.5</span> GB, 1.33 sec.</b> &nbsp; <b>26.10: <span style="color: green;">4.6</span> GB, 0.31 sec.</b></p>
+
+<!-- Demo (clickhouse local, 26.9.23.15 vs master 26.11.1.385, taskset -c 0-47 max_threads 48, two alternating runs each):
+
+Q1="SELECT max(c) FROM (SELECT intHash64(number) % 10000000 AS k, count() AS c FROM numbers_mt(1000000000) GROUP BY k)"
+  26.9: 1.624 s 24686968055 B; 1.545 s 24295076247 B      master: 1.362 s 16251658423 B; 1.282 s 16269770823 B
+Q2="SELECT uniqExact(intHash64(number) % 100000000) FROM numbers_mt(1000000000)"
+  26.9: 1.334 s 13474410783 B; 1.392 s 13122879751 B      master: 0.308 s 4565457247 B; 0.330 s 4552874119 B
+clickhouse local --time --memory-usage --max_threads 48 -q "$Q FORMAT Null"
+The 4x speedup of uniqExact is more than Robin Hood alone explains — other 26.10 changes may contribute; re-test.
+With 100M or 300M distinct keys in GROUP BY the peak memory barely changed (27.0 -> 23.5 GB, 38 -> 38 GB): the peak there is
+not dominated by the per-thread tables. The PR (#125001) reports: GROUP BY UInt64 10M distinct, 2B rows: 52 -> 31 GB; uniqExact 100M: 11.4 -> 5.7 GB.
+The switch happens at 2^16 cells per bucket (256 MiB per table); single-threaded small tables are not affected.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>String filtering during the scan</h2>
+
+<p style="margin-top: -0.3em;"><b>LIKE</b>, <b>startsWith</b>, <b>endsWith</b>, <b>position</b> are checked
+<br/>while the column is deserialized; non-matching values are not copied:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.3;">SELECT count() FROM hits WHERE URL LIKE '%google%';
+</code></p>
+
+<p style="margin-top: 0.3em;">Example, peak memory of this query:</p>
+<p style="margin-top: -0.5em;"><b>before: <span style="color: red;">275</span> MB.</b> &nbsp; <b>26.10: <span style="color: green;">5</span> MB.</b></p>
+
+<p style="margin-top: 0.5em;">&mdash; For <b>MergeTree</b> and for <b>Parquet</b> pages (plain, delta, dictionary).
+<br/>&mdash; Disables itself when most of the values match.
+<br/>&mdash; Setting <b>apply_string_filters_during_scan</b>, now enabled by default.</p>
+
+<!-- Demo (server, hits; same binary, the setting toggled; query_log memory_usage):
+
+SELECT count() FROM hits WHERE URL LIKE '%google%' SETTINGS apply_string_filters_during_scan = 0 / 1, use_query_condition_cache = 0
+  memory_usage: 0 -> 259..282 MiB,   1 -> 4.6..5.9 MiB;  time: ~0.15 s both (hot data, 96 cores, loaded machine)
+SELECT count() FROM hits WHERE Title LIKE '%Google%' AND URL NOT LIKE '%.google.%'     -- 916..964 MiB -> 578..618 MiB, 0.25 -> 0.21 s
+SELECT SearchPhrase, min(URL), count() AS c FROM hits WHERE URL LIKE '%google%' AND SearchPhrase <> '' GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10   -- 214..259 MiB -> 16..29 MiB
+Single-threaded, the time did not change measurably here (6.2..6.3 s both) — the effect on this machine is memory, not speed.
+The setting existed since 26.9 (disabled), so "before" = 26.10 with the setting off.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Top-K dynamic filtering for GROUP BY</h2>
+
+<p style="margin-top: -0.3em;"><b>GROUP BY k ORDER BY k LIMIT n</b> and <b>GROUP BY k LIMIT n</b> keep a top-K heap. Now its boundary is sent to the table scan:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.3;">SELECT UserID, count(), any(URL) FROM hits
+GROUP BY UserID ORDER BY UserID LIMIT 10;
+</code></p>
+
+<p style="margin-top: 0.3em;">Example: <b>read <span style="color: red;">9.45 GB</span></b> &rarr; <b><span style="color: green;">144 MB</span></b>.</p>
+
+<p style="margin-top: 0.3em;">&mdash; Rows beyond the boundary are dropped before other columns are read.
+<br/>&mdash; Whole granules are skipped by the primary key or a <b>minmax</b> index.</p>
+
+<!-- Demo (server, hits ORDER BY (CounterID, EventDate, UserID, EventTime, WatchID); query_log, min over 3 runs):
+
+SELECT UserID, count(), any(URL) FROM hits GROUP BY UserID ORDER BY UserID LIMIT 10 SETTINGS enable_group_by_top_k_dynamic_filtering = 0 / 1, use_query_condition_cache = 0
+  = 0: read 99997497 rows, 9.45 GiB, 331 ms, 271 MiB
+  = 1: read 14543264 rows, 143.76 MiB, 141 ms, 6 MiB
+SELECT EventTime, count() FROM hits GROUP BY EventTime ORDER BY EventTime DESC LIMIT 10 — 52 -> 32 ms (same rows read)
+Times are noisy (load average 100-270 on the shared machine); bytes read are exact.
+The same primary-key granule skipping now also applies to ORDER BY column LIMIT n when the column is in the primary key.
+Developers: Alexey Milovidov (#121145), Konstantin Bogdanov (#116150 share the boundary between threads, #116163 serialized plans).
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Alexey Milovidov, Konstantin Bogdanov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 28pt;">Top-K dynamic filtering for Parquet and Iceberg</h2>
+
+<p style="margin-top: -0.3em;"><b>ORDER BY column LIMIT n</b> over Parquet files:</p>
+
+<p>&mdash; rows that cannot enter the top-K are filtered inside the reader,
+<br/>&emsp; before the other columns are read;
+<br/>&mdash; row groups are skipped by min/max; the best ones are read first.</p>
+
+<p><code style="font-size: 12pt; line-height: 1.25;">SELECT URL, EventTime FROM file('hits.parquet') ORDER BY EventTime DESC LIMIT 10;
+</code></p>
+<p style="margin-top: 0.3em;">Example: <b>26.9: <span style="color: red;">0.37</span> sec.</b> &nbsp; <b>26.10: <span style="color: green;">0.077</span> sec.</b></p>
+
+<p style="margin-top: 0.3em;">&mdash; <b>file</b>, <b>url</b>, <b>s3</b>, <b>azureBlobStorage</b>, <b>hdfs</b>, <b>Iceberg</b>, &hellip;</p>
+
+<!-- Demo (clickhouse local, ClickBench hits.parquet (14 GB, 226 row groups) on local disk, hot in the page cache, taskset -c 0-31,
+     max_threads 32, 5 interleaved runs, min; use_query_condition_cache = 0):
+
+SELECT URL, EventTime FROM file('hits.parquet') ORDER BY EventTime DESC LIMIT 10        -- 26.9: 0.373 s   26.10: 0.077 s
+SELECT URL FROM file('hits.parquet') ORDER BY UserID DESC LIMIT 10                      -- 26.9: 0.357 s   26.10: 0.056 s
+SELECT SearchPhrase FROM file('hits.parquet') WHERE SearchPhrase <> '' ORDER BY EventTime LIMIT 10   -- 26.9: 0.239 s   26.10: 0.077 s
+(An earlier run with the file partly evicted from the page cache gave 6.6 vs 2.3 s for the first query.)
+From s3://clickhouse-public-datasets/hits_compatible/hits.parquet (same region): ORDER BY UserID DESC LIMIT 10: 26.9 1.19 / 1.35 s, 26.10 0.93 / 0.77 s;
+profile event ParquetTopKSkippedRowGroups: 129. Floating-point sort columns are excluded for now.
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Merge JOIN, sharded by primary key ranges</h2>
+
+<p style="margin-top: -0.3em;">Joining two tables on a prefix of their primary keys? The merge join
+<br/>now runs as independent merge joins over key ranges, on all threads:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.25;">SELECT u.country, sum(o.amount)
+FROM orders AS o JOIN users AS u ON o.user_id = u.user_id
+GROUP BY u.country SETTINGS join_algorithm = 'full_sorting_merge';
+<span style="color: gray;">-- both tables are ORDER BY user_id</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">Example, 200M &bowtie; 50M rows:
+<br/><b>26.9: <span style="color: red;">9.1</span> sec, 1.3 GB.</b> &nbsp; <b>26.10: <span style="color: green;">0.78</span> sec, 256 MB.</b> &nbsp; (hash join: 2.2 sec, 2.1 GB)</p>
+
+<p style="margin-top: 0.3em;">&mdash; <b>query_plan_join_shard_by_pk_ranges</b> is now enabled by default.</p>
+
+<!-- Demo (server):
+
+CREATE TABLE orders (user_id UInt64, order_id UInt64, amount UInt32) ENGINE = MergeTree ORDER BY user_id;
+CREATE TABLE users (user_id UInt64, name String, country LowCardinality(String)) ENGINE = MergeTree ORDER BY user_id;
+INSERT INTO orders SELECT intHash64(number) % 50000000, number, number % 1000 FROM numbers(200000000);
+INSERT INTO users SELECT number, 'user_' || toString(number), ['US','DE','FR','JP','BR'][number % 5 + 1] FROM numbers(50000000);
+OPTIMIZE TABLE orders FINAL; OPTIMIZE TABLE users FINAL;
+Q="SELECT u.country, sum(o.amount) FROM orders o JOIN users u ON o.user_id = u.user_id GROUP BY u.country"
+$Q SETTINGS join_algorithm = 'full_sorting_merge', query_plan_join_shard_by_pk_ranges = 0   -- 9.77 / 9.14 s, 1.61 / 1.32 GiB
+$Q SETTINGS join_algorithm = 'full_sorting_merge', query_plan_join_shard_by_pk_ranges = 1   -- 0.79 / 0.79 s, 261 / 256 MiB
+$Q (default join_algorithm)                                                                  -- 2.2 s, 2.14 GiB
+"26.9" = 26.10 with the setting disabled (the previous default). EXPLAIN shows Sharding: [(user_id = user_id)], Read type: InOrder.
+Hash joins use it only when join runtime filters and spilling are disabled. The setting was added in 25.4 by Nikolai Kochetov (#74733); new in 26.10 is the default.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Nikolai Kochetov, Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Narrowing query pipelines on a high load</h2>
+
+<p style="margin-top: -0.3em;">During high load, we create a narrower query pipeline,
+<br/>so it doesn't always take, e.g., 96 processing lanes on a 96-core server.
+<br/>&mdash; fewer partial states to merge, less memory, more throughput:</p>
+
+<a href="https://benchmark.clickhouse.com/#system=+hDB|h%20D|hqa|liH|Caap|H%20%20,g|curp|Hoaus|cuwe&type=-&machine=-&cluster_size=-&opensource=-&hardware=+c&tuned=+n&storage=-&metric=hot&queries=-"><img src="pictures/qps.png" style="width: 100%;"></a>
+
+<p style="margin-top: 0.5em;">Example: 10 clients cycling over ClickBench, 96 cores:
+<br/><b>p99 memory: <span style="color: red;">9.33</span> &rarr; <span style="color: green;">7.67</span> GiB</b>,
+<b>CPU time per query: <span style="color: green;">&minus;15%</span></b>.</p>
+
+<!--
+
+Numbers are from the PR #125085 (Neoverse-V2, 96 cores, 100M-row hits, 10 clients): CPU time per query 1.18x with the old
+     behaviour, p99 memory 7.67 vs 9.33 GiB, threads per query 25 vs 38. Motivation in the PR: ClickBench concurrent QPS vs Firebolt
+     (c8g.metal-48xl 32.5 vs 42.3 QPS at equal single-query times).
+     Local attempt (server, clickhouse-benchmark -c 32 -i 320, the SearchPhrase GROUP BY query, use_concurrency_control_for_max_threads 0/1):
+     QPS 9.9 / 9.1 vs 10.1 / 11.5; avg memory 958 vs 939 MiB — load average was 166-277 on the shared machine, inconclusive. Needs a clean run.
+     Applies only when max_threads is not set explicitly. Setting: use_concurrency_control_for_max_threads (default 1). -->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Faster GROUP BY: LowCardinality, Strings</h2>
+
+<p style="margin-top: -0.3em;">&mdash; <b>LowCardinality</b> keys are serialized straight from the dictionaries;
+<br/>&mdash; repeating tuples of keys hit a cache of aggregate states.</p>
+
+<p><code style="font-size: 12pt; line-height: 1.25;">SELECT region, os, browser, source, count(), sum(ResolutionWidth)
+FROM t GROUP BY region, os, browser, source;    <span style="color: gray;">-- all LowCardinality(String)</span>
+</code></p>
+<p style="margin-top: 0.3em;">Example: <b>26.9: <span style="color: red;">0.32</span> sec.</b> &nbsp; <b>26.10: <span style="color: green;">0.22</span> sec.</b></p>
+
+<p><code style="font-size: 12pt; line-height: 1.25;">SELECT UserID, SearchPhrase, count() FROM t GROUP BY UserID, SearchPhrase LIMIT 10;
+</code></p>
+<p style="margin-top: 0.3em;">Example: <b>26.9: <span style="color: red;">0.077</span> sec.</b> &nbsp; <b>26.10: <span style="color: green;">0.026</span> sec.</b></p>
+
+<!-- Demo (clickhouse local, Memory table with 100M rows of hits exported to Native, taskset -c 48-79, max_threads 32, 3 runs, last 3 shown):
+
+clickhouse client -q "SELECT toLowCardinality(toString(RegionID)) AS region, toLowCardinality(toString(OS)) AS os, toLowCardinality(toString(UserAgent)) AS ua,
+  toLowCardinality(toString(TraficSourceID)) AS src, ResolutionWidth, UserID, SearchPhrase FROM hits INTO OUTFILE 'lc.native' FORMAT Native"
+clickhouse local --time --max_threads 32 -q "CREATE TABLE t ENGINE = Memory AS SELECT * FROM file('lc.native'); $Q1; $Q1; $Q1; $Q2; $Q2; $Q2; $Q3; $Q3; $Q3"
+Q1 = GROUP BY region, os, ua, src (4 LC keys) count(), sum():  26.9 0.416 0.336 0.324    26.10 0.249 0.223 0.215
+Q2 = GROUP BY region, os, count():                               26.9 0.126 0.134 0.147    26.10 0.092 0.088 0.087
+Q3 = GROUP BY UserID, SearchPhrase LIMIT 10 (ClickBench Q18):     26.9 0.092 0.082 0.077    26.10 0.040 0.025 0.026
+Q3 also benefits from the trivial GROUP BY LIMIT optimization extended to aggregate functions (#114690), not only from serialization.
+Developers: artemkulyk (#121795, #121998), Samuel Krempaský (#122857), Groene AI (#123655), Alexey Milovidov (co-author).
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developers: artemkulyk, Samuel Krempaský, Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Parquet: more pruning, less reading</h2>
+
+<p style="margin-top: -0.3em;">&mdash; <b>Bloom filters</b> are checked before reading the dictionary pages:</p>
+<p style="margin-top: -0.5em;"><code style="font-size: 12pt; line-height: 1.25;">SELECT UserID FROM file('hits.parquet') WHERE UserID = &hellip;
+<span style="color: gray;">-- reads 8 MB of dictionary pages &rarr; 4.6 KB of bloom filters (16 row groups)</span>
+</code></p>
+
+<p>&mdash; <b>Query condition cache</b> for <b>ORDER BY &hellip; LIMIT</b> over Parquet tables:
+<br/>&emsp; a repeated query reads only the row groups that can hold its result.</p>
+<p style="margin-top: -0.5em;"><code style="font-size: 12pt; line-height: 1.25;">SELECT SearchPhrase FROM hits_parquet WHERE SearchPhrase != ''
+ORDER BY EventTime LIMIT 10;   <span style="color: gray;">-- repeat run: 773K &rarr; 78K rows read</span>
+</code></p>
+
+<p>&mdash; <b>min</b>/<b>max</b> without filters are taken from the column statistics.
+<br/>&mdash; Top-K filtering inside the reader, lazy reading of other columns.</p>
+
+<!-- Demo:
+
+Bloom filters (#120907): numbers from the PR — hits.parquet written by ClickHouse, 16 row groups, WHERE UserID = <constant>:
+  before: 8,017,209 bytes, 48 random reads; after: 4,608 bytes, 32 random reads (= the same as with dictionary filtering off).
+  Locally: a 10M-row file written by 26.10 (output_format_parquet_row_group_size = 1000000), WHERE UserID = -7037554306773810715:
+  ParquetBloomFilterPrunedRowGroups: 17 of 18, ParquetPrefetcherReadBytes: 1841573; 26.9 has no such profile events to compare.
+
+Query condition cache (#114659, #122064) — works for a File-engine table, not for the file() table function:
+CREATE TABLE hits_pq ENGINE = File(Parquet, '/home/.../user_files/hits.parquet');
+SELECT SearchPhrase FROM hits_pq WHERE SearchPhrase <> '' ORDER BY EventTime LIMIT 10 SETTINGS use_query_condition_cache = 0 / 1
+  = 0: 773184 / 584968 / 667213 rows, 31..44 ms;   = 1: first 512638, then 78481..78513 rows, 18 ms
+  With file('hits.parquet') the rows read did not drop (437K..904K), only the time did.
+
+min/max from Parquet statistics (#124201, setting optimize_min_max_from_files) — ClickBench Q7 shape; not measured here.
+Top-K inside the reader: see the previous slide (#115798, #123639).
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
+<h2><span class="hilite">Something Interesting</span></h2>
+</section>
+
+<section class="slide">
+<h2>Query cache on disk</h2>
+
+<p style="margin-top: -0.3em;">The query cache can keep its entries in a <b>filesystem cache</b>:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.25;"><span style="color: gray;">$ cat config.d/caches.yaml</span>
+filesystem_caches:
+    <b style="color: green;">query_results</b>:
+        path: /var/lib/clickhouse/query_results_cache/
+        max_size: 100Gi
+</code></p>
+<p><code style="font-size: 12pt; line-height: 1.25;">SELECT SearchPhrase, count() AS c FROM hits &hellip; GROUP BY SearchPhrase
+SETTINGS use_query_cache = 1,
+         <b style="color: green;">query_cache_on_disk_cache_name</b> = 'query_results';
+</code></p>
+
+<p style="margin-top: 0.3em;">Example: <b>2.07 sec</b> &rarr; <b><span style="color: green;">0.033</span> sec</b> after a server restart.</p>
+
+<p style="margin-top: 0.3em;">&mdash; More space; survives restarts. In <b>ClickHouse Cloud</b> it supports distributed cache and is shared between replicas.</p>
+
+<!-- Demo (server with <filesystem_caches><qc_disk_cache><path>.../fs_cache/</path><max_size>10Gi</max_size></qc_disk_cache></filesystem_caches>):
+
+Q="SELECT SearchPhrase, count() AS c FROM hits WHERE SearchPhrase != '' GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10"
+$Q SETTINGS use_query_cache = 1, query_cache_on_disk_cache_name = 'qc_disk_cache'    -- 1.929 s, then 0.003 s
+SYSTEM DROP QUERY CACHE; $Q ...                                                      -- 0.003 s (served from disk)
+SELECT count(), formatReadableSize(sum(size)) FROM system.filesystem_cache WHERE cache_name = 'qc_disk_cache'   -- 1  442.00 B
+-- restart the server --
+$Q SETTINGS use_query_cache = 1, query_cache_on_disk_cache_name = 'qc_disk_cache'    -- 0.033 s
+$Q                                                                                    -- 2.067 s (no cache)
+ProfileEvents: QueryCacheHits 1, QueryCacheOnDiskHits 1, QueryCacheOnDiskReadBytes 442, QueryCacheAgeSeconds 29
+Settings: query_cache_on_disk_cache_name, query_cache_on_disk_codec (ZSTD(3)), enable_reads_from_query_cache_on_disk, enable_writes_to_query_cache_on_disk.
+Lookup order: memory first, then disk. Entries are ordinary filesystem cache entries, evicted by its rules.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: -0.5em;">Developers: Alexey Milovidov, Konstantin Bogdanov.</p>
+</section>
+
+<section class="slide">
+<h2>Cluster database engine</h2>
+
+<p style="margin-top: -0.3em;">The whole database of another cluster, by the cluster name:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.3;">CREATE DATABASE prod
+ENGINE = <b style="color: green;">Cluster</b>('prod_cluster', 'default');
+
+SHOW TABLES FROM prod;
+SELECT count() FROM prod.events;       <span style="color: gray;">-- reads all shards</span>
+INSERT INTO prod.events VALUES &hellip;       <span style="color: gray;">-- insert to a random shard</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; The named-cluster counterpart of the <b>Remote</b> database engine (26.9),
+<br/>&emsp; as <b>cluster</b> is to <b>remote</b> table function.
+<br/>&mdash; Tables and their structure are fetched on demand.
+<br/>&mdash; Stores no credentials: they come from the cluster configuration.</p>
+
+<!-- Demo (server with a two-shard cluster `two_shards` = 127.0.0.1:9100 and 127.0.0.2:9100, both the same server):
+
+CREATE DATABASE prod; CREATE TABLE prod.users (id UInt64, name String) ENGINE = MergeTree ORDER BY id; INSERT INTO prod.users VALUES (1, 'alice'), (2, 'bob');
+CREATE DATABASE c ENGINE = Cluster('two_shards', 'prod');
+SHOW TABLES FROM c;          -- items orders users
+SELECT * FROM c.users;       -- every row twice: both shards are the same server
+INSERT INTO c.users VALUES (3, 'carol');  SELECT count() FROM prod.users;  -- 3
+SHOW CREATE TABLE c.users -> THERE_IS_NO_QUERY (by design). DDL against a Cluster database is not supported.
+The Remote database engine already exists in 26.9.23 (system.database_engines lists Remote, RemoteSecure).
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Overlay database engine</h2>
+
+<p style="margin-top: -0.3em;">A union of the tables of several databases:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.3;">CREATE DATABASE dev ENGINE = <b style="color: green;">Overlay</b>(staging, prod);
+
+SHOW TABLES FROM dev;
+<span style="color: gray;">-- orders   &larr; from staging (the first one that has it)
+-- users    &larr; from prod</span>
+
+SHOW CREATE TABLE dev.orders;
+<span style="color: gray;">-- CREATE TABLE dev.orders ENGINE = Alias('staging', 'orders')</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; Every table is an <b>Alias</b>: reads and writes go to the source.
+<br/>&mdash; Sources are resolved on every access: new tables appear,
+<br/>&emsp; a dropped table falls through to the next database.
+</p>
+
+<!-- Demo (server):
+
+CREATE DATABASE prod; CREATE DATABASE staging;
+CREATE TABLE prod.users (id UInt64, name String) ENGINE = MergeTree ORDER BY id;
+CREATE TABLE prod.orders (id UInt64, amount UInt64) ENGINE = MergeTree ORDER BY id;
+CREATE TABLE staging.orders (id UInt64, amount UInt64, note String) ENGINE = MergeTree ORDER BY id;
+INSERT INTO prod.users VALUES (1, 'alice'); INSERT INTO prod.orders VALUES (1, 100); INSERT INTO staging.orders VALUES (1, 200, 'new');
+CREATE DATABASE dev ENGINE = Overlay(staging, prod);
+SHOW TABLES FROM dev;               -- orders users
+SELECT * FROM dev.orders;           -- 1 200 new   (staging wins)
+INSERT INTO dev.users VALUES (2, 'bob'); SELECT * FROM prod.users;   -- alice, bob
+CREATE TABLE prod.items (x UInt8) ENGINE = Memory; SHOW TABLES FROM dev;   -- items orders users
+DROP TABLE staging.orders; SELECT * FROM dev.orders;   -- 1 100 (now from prod)
+CREATE TABLE dev.newt ... -> NOT_IMPLEMENTED (an Overlay database owns no tables).
+Credit: #121878 is a compact reimplementation of #86768 by Aly Kafoury.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Aly Kafoury, Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>JOIN with an arbitrary ON condition</h2>
+
+<p style="margin-top: -0.3em;">No equality between the tables? Now it is a <b>block nested loop join</b>:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.3;">SELECT q, name FROM typos
+<b style="color: green;">LEFT JOIN</b> products ON <b style="color: green;">editDistance(q, name) &lt;= 2</b>;
+
+<span style="color: gray;">clikhouse   clickhouse
+kafak       kafka
+mysql
+postgress   postgres</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; 26.9: <i>Cannot determine join keys in JOIN ON expression</i>.
+<br/>&mdash; <b>LEFT</b>, <b>RIGHT</b>, <b>FULL</b> &mdash; any join kind; it can spill to disk.
+<br/>&mdash; As slow as a cross join; the last resort of the planner.</p>
+
+<!-- Demo (clickhouse local):
+
+CREATE TABLE products (name String) ENGINE = Memory; CREATE TABLE typos (q String) ENGINE = Memory;
+INSERT INTO products VALUES ('clickhouse'), ('postgres'), ('kafka');
+INSERT INTO typos VALUES ('clikhouse'), ('postgress'), ('kafak'), ('mysql');
+SELECT q, name FROM typos LEFT JOIN products ON editDistance(q, name) <= 2 ORDER BY q;
+  26.9.23: INVALID_JOIN_ON_EXPRESSION "Cannot determine join keys in JOIN ON expression lessOrEquals(editDistance(...), 2)"
+  26.10:   clikhouse clickhouse / kafak kafka / mysql '' / postgress postgres
+SELECT q, name FROM typos FULL JOIN products ON editDistance(q, name) <= 1 ORDER BY q;   -- '' kafka / clikhouse clickhouse / kafak '' / mysql '' / postgress postgres
+EXPLAIN ... -> BlockNestedLoopJoin, Type: LEFT, Condition: editDistance(q, name) <= 2
+Note: INNER JOIN with such a condition already worked in 26.9 (as a cross join + filter); BETWEEN conditions use IEJoin.
+Setting allow_block_nested_loop_join (default 1). A spilling block nested loop join records `join` in query_log.spilled_to_disk.
+Credit: #123642 re-applies #114184 by Vladimir Cherkasov (merged, reverted, re-landed with a fix).
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Vladimir Cherkasov, Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>IN spills to disk</h2>
+
+<p style="margin-top: -0.3em;">The set for <b>IN (subquery)</b> can also go to disk:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.3;">SELECT count() FROM numbers_mt(200000000)
+WHERE intHash64(number) IN (SELECT intHash64(number * 3) FROM numbers_mt(300000000))
+SETTINGS max_memory_usage = '4G', <b style="color: green;">max_bytes_before_external_set</b> = '1G';
+</code></p>
+
+<p style="margin-top: 0.3em;"><b>in memory: <span style="color: red;">12.9 GB</span></b>, 19.7 sec.
+<br/>with a 4 GB limit: <span style="color: red;">MEMORY_LIMIT_EXCEEDED</span>.
+<br/><b>with spilling: <span style="color: green;">1.0 GB</span></b>, 30 sec.</p>
+
+<p style="margin-top: 0.3em;">&mdash; A sorted run on disk, with a bloom filter and a cache of blocks.
+<br/>&mdash; Disabled by default: <b>max_bytes_before_external_set</b> = 0.
+<br/>&mdash; Workloads can spill all of them: <b>ORDER BY</b>, <b>GROUP BY</b>, <b>IN</b>,
+<br/>&emsp; <b>DISTINCT</b>, <b>JOIN</b> &mdash; under memory pressure (next slide).</p>
+
+<!-- Demo (clickhouse local):
+
+Q="SELECT count() FROM numbers_mt(200000000) WHERE intHash64(number) IN (SELECT intHash64(number * 3) FROM numbers_mt(300000000))"
+clickhouse-master local --time --memory-usage -q "$Q"                                           -- 66666667, 19.720 s, 12926469862 B
+clickhouse-master local --time --memory-usage --max_memory_usage 4000000000 -q "$Q"             -- MEMORY_LIMIT_EXCEEDED ... While executing CreatingSetsTransform
+clickhouse-master local --time --memory-usage --max_memory_usage 4000000000 --max_bytes_before_external_set 1000000000 -q "$Q"   -- 66666667, 30.4 s, 1032978622 B
+Profile events: ExternalSetWritePart, ExternalSetCompressedBytes, ExternalSetLookupKeys, ExternalSetBloomFilterSkippedKeys, ExternalSetReadBlocks, ExternalSetCacheHits.
+The changelog lists it under "Experimental Feature"; the settings themselves are Production tier, default 0.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Nihal Z. Miaji.</p>
+</section>
+
+<section class="slide">
+<h2>Query-aware scheduling in workloads</h2>
+
+<p style="margin-top: -0.5em;">How queries <b>inside</b> one workload share CPU and IO:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.25;">CREATE OR REPLACE WORKLOAD all SETTINGS <b style="color: green;">scheduler</b> = 'fair';
+
+SELECT &hellip; SETTINGS workload = 'all',
+    weight_lowering_cpu_seconds = 10, weight_lowering_factor = 0.1;
+</code></p>
+
+<p>&mdash; <b>fifo</b> (as before), <b>fair</b> (weighted fair queueing),
+<br/>&emsp; <b>las</b> (least attained service: short queries first), <b>priority</b>.</p>
+
+<p><code style="font-size: 12pt; line-height: 1.25;">CREATE WORKLOAD all
+SETTINGS max_memory = '16Gi', <b style="color: green;">max_memory_before_spill</b> = '8Gi';
+</code></p>
+<p style="margin-top: 0.3em;">Example: 50 concurrent 1 GB queries succeed:
+<br/>&emsp; <b>without spilling: <span style="color: red;">9%</span>, with spilling: <span style="color: green;">100%</span>.</b></p>
+
+<!-- Demo (server, CREATE RESOURCE cpu (MASTER THREAD, WORKER THREAD); CREATE OR REPLACE WORKLOAD all SETTINGS max_concurrent_threads = 8, scheduler = 'fifo' / 'las'):
+     4 long queries (SELECT sum(cityHash64(URL, Title, Referer, number)) FROM hits, numbers(3) AS n SETTINGS workload = 'all', max_threads = 32)
+     + a short one (SELECT count() FROM hits WHERE Title LIKE '%Google%' SETTINGS workload = 'all'; 0.77 s alone):
+     fifo: 6.7 / 7.5 / 23.6 s, 25.3 / 28.5 / 24.0 s;  las: 23.3 / 11.6 / 12.1 s, 22.0 / 14.4 / 11.2 s — inconclusive on the shared machine
+     (load average 150-270). Needs a clean run. cpu_slot_preemption is 1 by default, which the scheduler needs for CPU.
+     The spill numbers are from PR #119443 (max_memory=16Gi, max_memory_before_spill=8Gi, 50 concurrent queries of 1 GiB each:
+     with spilling 100 of 100 succeeded, without 27 of 282).
+     The leaf type in system.scheduler is now `request_queue` instead of `fifo`.
+     Developers: Sergei Trifonov (#116800 scheduling), Azat Khuzhin + Sergei Trifonov (#119443 spilling, based on #109367 by Sergei Trifonov). -->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Sergei Trifonov, Azat Khuzhin.</p>
+</section>
+
+<section class="slide">
+<h2>Materialized CTE in a recursive query</h2>
+
+<p style="margin-top: -0.3em;">A helper CTE is evaluated <b>once</b>, every recursive step reads the snapshot:</p>
+
+<p><code style="font-size: 11pt; line-height: 1.2;">WITH RECURSIVE
+hubs AS <b style="color: green;">MATERIALIZED</b> (
+    SELECT src FROM edges GROUP BY src ORDER BY count() DESC LIMIT 100000),
+reach AS (
+    SELECT 1::UInt32 AS v, 0 AS depth
+    UNION ALL
+    SELECT e.dst, depth + 1 FROM reach JOIN edges AS e ON e.src = reach.v
+    WHERE depth &lt; 8 AND e.dst IN (SELECT src FROM hubs))
+SELECT depth, count() FROM reach GROUP BY depth;
+</code></p>
+
+<p style="margin-top: 0.3em;">Example: <b>without: <span style="color: red;">1.49</span> sec.</b> &nbsp; <b>MATERIALIZED: <span style="color: green;">0.80</span> sec.</b></p>
+
+<p style="margin-top: 0.3em;">&mdash; Not only faster: a non-deterministic helper (<b>LIMIT</b> with ties)
+<br/>&emsp; is the same set at every step.</p>
+
+<!-- Demo (server; experimental setting enable_materialized_cte = 1):
+
+CREATE TABLE edges (src UInt32, dst UInt32, w UInt8) ENGINE = MergeTree ORDER BY src;
+INSERT INTO edges SELECT intHash32(number) % 1000000, intHash32(number + 1) % 1000000, number % 100 FROM numbers(50000000);
+WITH RECURSIVE hubs AS [MATERIALIZED] (SELECT src FROM edges GROUP BY src ORDER BY count() DESC, src LIMIT 100000),
+reach AS (SELECT 1::UInt32 AS v, 0 AS depth UNION ALL SELECT e.dst, depth + 1 FROM reach JOIN edges e ON e.src = reach.v WHERE depth < 8 AND e.dst IN (SELECT src FROM hubs))
+SELECT depth, count() FROM reach GROUP BY depth ORDER BY depth SETTINGS enable_materialized_cte = 1, max_threads = 8
+-- both: 0 1 / 1 7 / 2 60 / 3 455 / 4 3591 / 5 28245 / 6 223570 / 7 1768569 / 8 14007931;  without 1.490 s, MATERIALIZED 0.804 s
+With `ORDER BY count() DESC LIMIT 100000` (ties!) and depth < 5 the results differ: without MATERIALIZED 450/3523/27891 at depths 3-5,
+with MATERIALIZED 442/3490/27519 — each re-evaluation picked a different set of tied hubs.
+The recursive CTE itself still cannot be materialized. The materialized CTE feature is Experimental (enable_materialized_cte, default 0).
+Credit: #123452 supersedes #107069 by Zach Naimon (original commits kept).
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Zach Naimon.</p>
+</section>
+
+<section class="slide">
+<h2>SQLite as a data format</h2>
+
+<p style="margin-top: -0.3em;">We already had: the <b>SQLite</b> database engine, the <b>SQLite</b> table engine,
+<br/>and the <b>sqlite</b> table function &mdash; since <b>21.9</b> (2021) &mdash; for local database files.
+<br/>Schema inference since 23.5; passing a query to SQLite as is since 26.7.</p>
+
+<p style="margin-top: 0.3em;">Now a whole <b>SQLite</b> database file is also an import/export format:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.25;">SELECT SearchPhrase, count() AS c FROM hits WHERE SearchPhrase != ''
+GROUP BY SearchPhrase ORDER BY c DESC LIMIT 1000
+INTO OUTFILE '<b style="color: green;">top.sqlite</b>';         <span style="color: gray;">-- the format is chosen by the extension</span>
+<span style="color: gray;">$</span> sqlite3 top.sqlite 'SELECT * FROM "table" LIMIT 1'
+<span style="color: gray;">карелки|70263</span>
+SELECT * FROM file('top.sqlite');  <span style="color: gray;">-- schema inference</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; A result set in one file that every tool can open.</p>
+
+<!-- Demo:
+
+clickhouse local -q "SELECT number AS id, 'name_' || toString(number) AS name, number * 1.5 AS score, now() AS ts FROM numbers(5) INTO OUTFILE 'test.sqlite' TRUNCATE FORMAT SQLite"
+sqlite3 test.sqlite .schema   -- CREATE TABLE `table` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `score` REAL NOT NULL, `ts` TEXT NOT NULL);
+  (UInt64 is written as TEXT; UInt32/Int64 as INTEGER; Date as TEXT)
+clickhouse local -q "SELECT * FROM file('test.sqlite') LIMIT 3; DESCRIBE file('test.sqlite')"
+cat t2.sqlite | clickhouse local --input-format SQLite -q "SELECT * FROM table"
+curl -s 'http://127.0.0.1:8223/?query=SELECT+number,+toString(number)+AS+s+FROM+numbers(3)+FORMAT+SQLite' -o h.sqlite; sqlite3 h.sqlite 'select * from "table"'   -- 0|0 1|1 2|2
+clickhouse client -q "SELECT SearchPhrase, count() AS c FROM hits WHERE SearchPhrase != '' GROUP BY SearchPhrase ORDER BY c DESC LIMIT 1000 INTO OUTFILE 'top.sqlite' TRUNCATE"
+  -- the format is taken from the .sqlite extension; sqlite3 top.sqlite .schema -> CREATE TABLE `table` (`SearchPhrase` TEXT NOT NULL, `c` TEXT NOT NULL); first row карелки|70263
+clickhouse client -q "SELECT ... FORMAT SQLite" > c1.sqlite   -- also works: written to stdout
+Credit: #104510 opened by Yue Ni (61 commits), Alexey Milovidov (184 commits).
+History: the SQLite database engine, table engine, and table function were added together in #24194 by Arslan Gumerov (g-arslan),
+merged 2021-07-13 — after the 21.8 branch was cut (v21.8.1.7409-prestable, 2021-07-09, does not contain it; v21.8.15.7-lts has no
+src/Storages/StorageSQLite.cpp) — first released in 21.9 (2021-09-09; clickhouse-docs whats-new/changelog/2021.md, v21.9 section:
+"Add SQLite table engine, table function, database engine. #24194"). Schema inference for the SQLite table engine: #50000, 23.5.
+Passing a query instead of a table name to mysql/postgresql/sqlite: 26.7 (on the 26.7 deck).
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Yue Ni, Alexey Milovidov.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
+<h2><span class="hilite">Experimental Features</span></h2>
+</section>
+
+<section class="slide">
+<h2>LATERAL JOIN 🧪</h2>
+
+<p style="margin-top: -0.3em;">A subquery in <b>FROM</b> that refers to the tables on its left:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.25;">SET allow_experimental_lateral_join = 1;
+SELECT c.CounterID, t.SearchPhrase, t.c
+FROM (SELECT CounterID FROM hits
+      GROUP BY CounterID ORDER BY count() DESC LIMIT 3) AS c
+<b style="color: green;">JOIN LATERAL</b>
+(
+    SELECT SearchPhrase, count() AS c FROM hits
+    WHERE hits.CounterID = <b style="color: green;">c.CounterID</b> AND SearchPhrase != ''
+    GROUP BY SearchPhrase ORDER BY c DESC LIMIT 2
+) AS t ON true;
+</code></p>
+
+<p style="margin-top: 0.3em; margin-right: -2em;">&mdash; The standard "top N per group" pattern; (<b>CROSS APPLY</b> in MS SQL Server).
+<br/>&mdash; <b>INNER</b> and <b>LEFT</b>. Decorrelated: runs once for all outer rows,
+<br/>&emsp; <b>LIMIT</b> becomes <b>LIMIT BY</b>, then a hash join.</p>
+
+<!-- Demo (server, hits):
+
+SELECT c.CounterID, t.SearchPhrase, t.c FROM (SELECT CounterID FROM hits GROUP BY CounterID ORDER BY count() DESC LIMIT 3) AS c
+JOIN LATERAL (SELECT SearchPhrase, count() AS c FROM hits WHERE hits.CounterID = c.CounterID AND SearchPhrase != '' GROUP BY SearchPhrase ORDER BY c DESC LIMIT 2) AS t ON true
+ORDER BY c.CounterID, t.c DESC SETTINGS allow_experimental_lateral_join = 1
+-- 6 rows (2 per counter), 4.1 s
+EXPLAIN of this query: it is not evaluated per outer row. The lateral subquery is decorrelated into one query:
+  Join (inner, HashJoin), Join conditions: CounterID <=> CounterID
+  ├── LimitBy (LIMIT BY for decorrelated correlated subquery), Columns: CounterID, Length 2
+  │   └── Sorting (CounterID ASC, count() DESC) └── Aggregating Keys: SearchPhrase, CounterID └── ReadFromMergeTree (hits)
+  └── Limit 3 └── Sorting (count() DESC) └── Aggregating Keys: CounterID └── ReadFromMergeTree (hits)
+The docs' "evaluated once per distinct value of the left-side columns" describes the result, not the execution.
+Supported: INNER/LEFT JOIN LATERAL ... ON true only. "LATERAL is not supported with COMMA JOIN" / "... with CROSS JOIN".
+No `LATERAL unnest(...)` — use ARRAY JOIN.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Dimitri König, Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Columns cache 🧪</h2>
+
+<p style="margin-top: -0.3em;">Keeps <b>deserialized</b> columns in memory &mdash; no decompression,
+<br/>no deserialization, no copying for hot data:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.25;">SET <b style="color: green;">use_columns_cache</b> = 1;
+SELECT count() FROM hits WHERE URL LIKE '%google%';
+</code></p>
+<p style="margin-top: 0.3em;">Example, hot data, without &rarr; with the cache: <b><span style="color: red;">0.26</span> sec</b> &rarr; <b><span style="color: green;">0.064</span> sec.</b></p>
+
+<p><code style="font-size: 12pt; line-height: 1.25;">SELECT SearchPhrase, min(URL), count() AS c
+FROM s3('s3://clickhouse-public-datasets/hits_compatible/hits.parquet')
+WHERE URL LIKE '%google%' AND SearchPhrase != '' GROUP BY SearchPhrase &hellip;
+</code></p>
+<p style="margin-top: 0.3em;">Example, Parquet on S3, both with the filesystem cache: <b><span style="color: red;">0.8</span> sec</b> &rarr; <b><span style="color: green;">0.16</span> sec.</b></p>
+
+<p style="margin-top: 0.3em;">&mdash; Wide <b>MergeTree</b> parts and <b>Parquet</b> from files and object storage.</p>
+
+<!-- Demo (server, 96 cores, load average ~170 at the time; each query: 2 warm-up rounds of (off, on), then 5 interleaved
+     rounds of use_columns_cache = 0 / 1; min shown; use_query_condition_cache = 0, use_query_cache = 0; script /home/ubuntu/rel2610/cc/bench.sh):
+
+MergeTree hits, data hot in the page cache:
+SELECT count() FROM hits WHERE URL LIKE '%google%'          -- off 0.259 [0.292 0.259 0.285 0.304 0.432]  on 0.064 [0.075 0.069 0.064 0.071 0.076]  4.0x
+SELECT sum(ResolutionWidth), avg(UserID) FROM hits          -- off 0.015  on 0.007  2.1x
+SELECT SearchPhrase, count() c FROM hits WHERE SearchPhrase <> '' GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10   -- 0.087 vs 0.088, no gain
+(An earlier, quieter, non-interleaved run: 0.16 -> 0.037 s for the first query; also hot vs hot.)
+
+Parquet on S3 (s3('s3://clickhouse-public-datasets/hits_compatible/hits.parquet', NOSIGN), same AWS region, 3 interleaved rounds):
+SELECT SearchPhrase, min(URL), count() AS c ... WHERE URL LIKE '%google%' AND SearchPhrase <> '' GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10
+                                                             -- off 1.869 [1.872 1.869 2.196]  on 0.156 [0.173 0.162 0.156]  12.0x
+SELECT count() FROM ... WHERE URL LIKE '%google%'            -- off 1.571  on 0.600  2.6x
+SELECT count(DISTINCT UserID) FROM ...                       -- off 0.186  on 0.110  1.7x
+SELECT SearchPhrase, count() ... GROUP BY SearchPhrase ...   -- off 0.224  on 0.202  1.1x
+(On the slide the s3() call is shown without NOSIGN for brevity: the test server refuses its own credentials in user queries.)
+The numbers above are UNFAIR to the "off" side: it also downloads from S3. Fair comparison — both sides read through the local filesystem
+cache (SETTINGS enable_filesystem_cache = 1, filesystem_cache_name = 'qc_disk_cache'; after warm-up CachedReadBufferReadFromCacheBytes 2.84 GiB,
+ReadFromSourceBytes 0, ReadBufferFromS3Bytes 0), 5 interleaved rounds, min:
+  URL+SearchPhrase GROUP BY: off 0.870 (later 0.79..0.99 in isolated runs; 6-10 s outliers = interference from other load)  on 0.162  ~5x  <- on the slide
+  count() WHERE URL LIKE '%google%': off 0.533  on 0.576  no gain
+  count(DISTINCT UserID): off 0.065  on 0.107  slower (as with local Parquet)
+
+Local Parquet, file('hits.parquet') hot in the page cache — the cache is usually SLOWER here (ColumnsCacheHits: 226 of 226 row groups, no decompression):
+count() WHERE AdvEngineID <> 0 0.066 -> 0.075; sum/count/avg 0.042 -> 0.062; count(DISTINCT UserID) 0.047 -> 0.089;
+count() WHERE URL LIKE '%google%' 0.634 -> 1.035 (without the cache the string filter is applied during the scan: 15911 rows read;
+with the cache all 100M rows go through the filter), SearchPhrase GROUP BY 0.327 -> 0.505, UserID GROUP BY 0.299 -> 0.381;
+only the URL+SearchPhrase query (1.382 -> 0.336, 4.1x) and SELECT * ... ORDER BY EventTime LIMIT 10 (0.177 -> 0.104) gain.
+Memory is much lower with the cache (2.89 GiB -> 137 MiB for the URL LIKE query). Worth reporting as a performance issue.
+
+Server settings: columns_cache_size (absent: columns_cache_size_to_ram_ratio = 0.1), columns_cache_policy SLRU.
+Only for tables in databases with UUIDs (Atomic, Replicated); only wide parts.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>PCO compression codec 🧪</h2>
+
+<a href="https://arxiv.org/abs/2502.06112" target="_blank"><img style="float: right; width: 33%; margin-right: -3em; margin-top: -5.5em; border: 1px solid #ccc; box-shadow: 2px 2px 6px rgba(0,0,0,0.3);" src="pictures/pcodec_paper.png" alt="Pcodec: Better Compression for Numerical Sequences (arXiv:2502.06112), the first page"/></a>
+
+<p style="margin-top: -0.3em;"><a href="https://github.com/pcodec/pcodec">pcodec</a> &mdash; a codec for sequences of numbers:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.3;">SET enable_pco_codec = 1;
+CREATE TABLE t (time DateTime CODEC(<b style="color: green;">PCO</b>), &hellip;)
+</code></p>
+
+<p><code style="font-size: 12pt; line-height: 1.35;"><span style="color: gray;">compression ratio   ZSTD(3)  DoubleDelta,  PCO    PCO,
+                             ZSTD(3)              ZSTD(3)</span>
+EventTime (sorted)  1.71     2.03          <b style="color: green;">3.52</b>   3.51
+UserID              5.46     3.47          <b style="color: green;">6.34</b>   6.32
+Float64 sensor      5.64     3.06          <b style="color: green;">9.61</b>   9.55
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; Decompression is fast too: <b>0.086 sec</b> vs. 0.125 for <b>ZSTD(3)</b>
+<br/>&emsp; and 0.257 for <b>DoubleDelta, ZSTD(3)</b>.</p>
+
+<p>Read: <a href="https://tomalard.github.io/posts/pcodec-is-awesome/">Pcodec is awesome! 15% smaller and 2x faster than DoubleDelta</a></p>
+
+<!-- Demo (server):
+
+CREATE TABLE codecs (t_lz4 DateTime CODEC(LZ4), t_zstd DateTime CODEC(ZSTD(3)), t_dd DateTime CODEC(DoubleDelta, ZSTD(3)), t_pco DateTime CODEC(PCO),
+  w_lz4 UInt16 CODEC(LZ4), w_zstd UInt16 CODEC(ZSTD(3)), w_t64 UInt16 CODEC(T64, ZSTD(3)), w_pco UInt16 CODEC(PCO), u_zstd UInt64 CODEC(ZSTD(3)), u_pco UInt64 CODEC(PCO)) ENGINE = MergeTree ORDER BY tuple();
+INSERT INTO codecs SELECT EventTime x4, ResolutionWidth x4, UserID x2 FROM hits ORDER BY CounterID, EventDate, UserID, EventTime, WatchID LIMIT 20000000;  OPTIMIZE ... FINAL;
+compression ratio (system.columns): t_lz4 1.18, t_zstd 1.71, t_dd 2.03, t_pco 3.52; w_lz4 4.25, w_zstd 8.18, w_t64 4.8, w_pco 8.16; u_zstd 5.46, u_pco 6.34
+Float64: round(20 + 5 * sin(number / 10000) + randNormal(0, 0.1), 2) over 10M rows: ZSTD 5.64, Gorilla+ZSTD 2.48, FPC+ZSTD 2.97, PCO 9.61
+CODEC(PCO, ZSTD(3)) on the same data: EventTime 3.51, UserID 6.32, Float64 9.55 — ZSTD after PCO gains nothing (slightly worse).
+"ZSTD(3)" = CODEC(ZSTD(3)) (system.columns: t_zstd CODEC(ZSTD(3))).
+"DoubleDelta" on the slide = CODEC(DoubleDelta, ZSTD(3)) for all three rows (DoubleDelta accepts Float64 too):
+  EventTime 2.03; UserID (same 20M sorted rows) 3.47 — also Delta+ZSTD 5.34, T64+ZSTD 3.24; Float64 sensor 3.06 (vs Gorilla+ZSTD 2.48, FPC+ZSTD 2.97).
+The picture is page 1 of arXiv:2502.06112 "Pcodec: Better Compression for Numerical Sequences" (Martin Loncaric, Niels Jeppesen, Ben Zinberg),
+linked from github.com/pcodec/pcodec docs/academic_result.md; rendered with PyMuPDF at 110 dpi, grayscale.
+Decoding, SELECT sum(toUInt32(col)) FROM codecs SETTINGS max_threads = 1 (min of 3): t_lz4 0.063, t_zstd 0.125, t_dd 0.257, t_pco 0.086
+system.codecs: PCO "Lossless compression of numeric sequences (pcodec)". Tier: Beta (enable_pco_codec). The changelog lists it under Experimental.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>XGBoost dictionaries 🧪</h2>
+
+<p style="margin-top: -0.3em;">Train a gradient-boosted model at dictionary load, predict in SQL:</p>
+
+<p><code style="font-size: 11pt; line-height: 1.2;">SET enable_xgboost = 1;
+
+CREATE DICTIONARY mobile_model
+    (w Float64, h Float64, os Float64, ua Float64, is_mobile Float64)
+PRIMARY KEY (w, h, os, ua)                      <span style="color: gray;">-- features</span>
+SOURCE(CLICKHOUSE(TABLE 'train'))               <span style="color: gray;">-- 1M rows of hits</span>
+LAYOUT(<b style="color: green;">XGBOOST</b>(objective 'binary:logistic' max_depth 6 num_iterations 50))
+LIFETIME(0);
+
+SELECT IsMobile, avg((<b style="color: green;">predictXGBoost</b>('mobile_model', ResolutionWidth,
+    ResolutionHeight, OS, UserAgent) > 0.5) = IsMobile) AS accuracy
+FROM hits WHERE WatchID % 100 = 1 GROUP BY IsMobile;
+<span style="color: gray;">-- 0   0.9999
+-- 1   0.9978</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; Trains in 2 sec on load; <b>SYSTEM RELOAD DICTIONARY</b> retrains.</p>
+
+<!-- Demo (server):
+
+CREATE VIEW hits_train AS SELECT ResolutionWidth AS w, ResolutionHeight AS h, OS AS os, UserAgent AS ua, IsMobile AS is_mobile FROM hits WHERE cityHash64(WatchID) % 100 = 0;
+
+SET enable_xgboost = 1;
+
+CREATE DICTIONARY mobile_model
+    (w Float64, h Float64, os Float64, ua Float64, is_mobile Float64)
+PRIMARY KEY (w, h, os, ua)                      -- features
+SOURCE(CLICKHOUSE(TABLE 'hits_train'))               -- 1M rows of hits
+LAYOUT(XGBOOST(objective 'binary:logistic' max_depth 6 num_iterations 50))
+LIFETIME(0);
+
+SYSTEM RELOAD DICTIONARY mobile_model;
+
+SELECT IsMobile, avg((predictXGBoost('mobile_model', ResolutionWidth,
+    ResolutionHeight, OS, UserAgent) > 0.5) = IsMobile) AS accuracy
+FROM hits GROUP BY IsMobile;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Matheus Nerone.</p>
+</section>
+
+<section class="slide">
+<h2>LogsQL 🧪</h2>
+
+<p style="margin-top: -0.3em;">The log query language of VictoriaLogs, over ClickHouse tables:</p>
+
+<p><code style="font-size: 11pt; line-height: 1.2;">SET enable_logsql_dialect = 1, logsql_table = 'logs';
+<span style="color: gray;">-- logsql_time_column = '...', logsql_message_column = '...';</span>
+
+<span style="color: gray;">:)</span> <b style="color: green;">/dialect logsql</b>
+<span style="color: gray;">(logsql) :)</span> _time:5m error | stats by (service) count() as errors
+              | sort by (errors desc)
+
+<span style="color: gray;">(logsql) :)</span> "disk full" | stats by (host) count() as n, avg(duration_ms) as avg_ms
+              | sort by (n desc) | limit 3
+
+<span style="color: gray;">(logsql) :)</span> <b style="color: green;">/dialect clickhouse</b>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; Translated into an ordinary <b>SELECT</b> at parse time.
+<p>Bonus: <b>/dialect</b> switches the dialect in <b>clickhouse-client</b> and <b>clickhouse-local</b>.</p>
+
+<!-- Demo (server; table logs (_time DateTime64(3), _msg String, level, service, host, duration_ms), 1M rows ending at now()):
+
+clickhouse client --queries-file q.sql  with
+  SET enable_logsql_dialect = 1, logsql_table = 'logs', dialect = 'logsql';
+  _time:5m error | stats by (service) count() as errors | sort by (errors desc)      -- web 20 / api 20 / db 20
+  "disk full" | stats by (host) count() as n, avg(duration_ms) as avg_ms | sort by (n desc) | limit 3   -- host1 28572 500.5 / host6 ... / host3 ...
+Interactive: the prompt shows the dialect: "hostname (logsql) :)" after /dialect logsql. /dialect, /lang, /language are interactive-only
+(in a piped script "/dialect logsql" is a syntax error).
+Text filters need String columns; the math pipe needs numeric columns (no coercion of String field values).
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+
+<section class="slide">
+<h2>Elasticsearch table engine 🧪</h2>
+
+<p style="margin-top: -0.3em;">Read documents from an Elasticsearch index as a <b>JSON</b> column:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.25;">SET enable_elasticsearch = 1;
+
+SELECT _index, _id, document.url, document.`@timestamp`
+FROM <b style="color: green;">elasticsearch</b>('http://localhost:9200', 'hits_docs') LIMIT 2;
+
+CREATE TABLE es_hits ENGINE = <b style="color: green;">Elasticsearch</b>('http://localhost:9200', 'hits_docs');
+
+SELECT count() FROM elasticsearch('http://localhost:9200', 'hits_docs',
+    <b style="color: green;">query</b> = '{"term": {"is_mobile": "1"}}');   <span style="color: gray;">-- filtered by Elasticsearch</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; A consistent snapshot: paged with a point in time; Elasticsearch 7.12+.
+<br/>&mdash; Basic auth, bearer tokens, API keys, named collections. Read-only.</p>
+
+<!--
+
+https://pastila.clickhouse.com/?00e1b126/b5cf11c005ece7b41e37aa6d7a076a47#7fJYWbNVWrZGaPXlfwBfWw==GCM
+
+curl -s localhost:9200/_cluster/health
+
+curl -s -XPUT localhost:9200/bluesky_posts -H 'Content-Type: application/json' -d '
+{
+  "settings": {"number_of_shards": 1, "number_of_replicas": 0},
+  "mappings": {"properties": {
+    "user":       {"type": "keyword"},
+    "created_at": {"type": "date"},
+    "text":       {"type": "text"},
+    "langs":      {"type": "keyword"}
+  }}
+}'
+
+clickhouse local -q "
+SELECT
+    JSONExtractString(line, 'did') AS user,
+    formatDateTime(fromUnixTimestamp64Micro(JSONExtractUInt(line, 'time_us')), '%Y-%m-%dT%H:%i:%SZ', 'UTC') AS created_at,
+    JSONExtractString(line, 'commit', 'record', 'text') AS text,
+    JSONExtract(line, 'commit', 'record', 'langs', 'Array(String)') AS langs
+FROM url('https://clickhouse-public-datasets.s3.amazonaws.com/bluesky/file_0001.json.gz', LineAsString)
+WHERE isValidJSON(line)
+  AND JSONExtractString(line, 'commit', 'operation') = 'create'
+  AND JSONExtractString(line, 'commit', 'collection') = 'app.bsky.feed.post'
+  AND text != ''
+LIMIT 10000
+FORMAT JSONEachRow" \
+| awk '{print "{\"index\":{}}"; print}' \
+| curl -s -XPOST 'localhost:9200/bluesky_posts/_bulk?refresh=true&filter_path=errors' \
+       -H 'Content-Type: application/x-ndjson' --data-binary @-
+
+curl -s localhost:9200/bluesky_posts/_count
+
+SET enable_elasticsearch = 1;
+
+SELECT
+    document.langs[1]::String AS lang,
+    count() AS posts,
+    round(avg(length(document.text::String))) AS avg_text_length
+FROM elasticsearch('http://localhost:9200', 'bluesky_posts')
+WHERE lang != ''
+GROUP BY lang
+ORDER BY posts DESC
+LIMIT 5;
+
+CREATE TABLE posts ENGINE = MergeTree ORDER BY tuple() AS
+SELECT * FROM elasticsearch('http://localhost:9200', 'bluesky_posts',
+                            query = '{"term": {"langs": "en"}}');
+
+SELECT count() FROM posts;
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Kirill Kopnev.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
+<h2><span class="hilite">Data Lakes</span></h2>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Hard links on plain_rewritable disks</h2>
+
+<p style="margin-top: -0.3em;"><b>s3_plain_rewritable</b> keeps all metadata in the bucket.
+<br/>Before 26.10: no mutations, no <b>ALTER</b>s except settings and comments.
+<br/>Now they work &mdash; and with hard links, without copying:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.25;"><span style="color: gray;">$ cat config.d/disks.yaml</span>
+
+storage_configuration:
+    disks:
+        s3_plain_rewritable:
+            type: s3_plain_rewritable
+            endpoint: https://s3.eu-west-1.amazonaws.com/bucket/data/
+            <b style="color: green;">enable_hard_links</b>: 1
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; A mutated part refers to the unchanged files of the old one.
+<br/>&mdash; Off by default: older servers can't read a disk with hard links.</p>
+
+<!-- History (checked): plain_rewritable appeared in 24.4; 89f28f3c18f (2024-04-24) "explicitly disallow ALTERs and mutations for plain";
+81a7862ed42 (2024-05-16, Julia Kartseva) "Allow certain ALTER TABLE commands for plain_rewritable" — only MODIFY/RESET SETTING and comments.
+26.9.23 (local object storage disk, metadata_type plain_rewritable): ADD/DROP/MODIFY COLUMN -> "ALTER TABLE commands are not supported on
+immutable disk 'pr', except for setting and comment alteration"; ALTER UPDATE/DELETE and lightweight DELETE -> "Mutations are not supported
+for immutable disk 'pr'"; COMMENT COLUMN, DROP PARTITION, OPTIMIZE FINAL work.
+26.10: the same ALTER UPDATE / ADD COLUMN / DROP COLUMN work on a plain_rewritable disk WITHOUT enable_hard_links too (a copy of the blob
+stands in for the hard link, #119304), and with enable_hard_links = 1 the unchanged blobs are shared. So the changelog phrase "which enables
+ALTER operations and mutations" overstates the role of the setting: it makes them zero-copy.
+
+Demo (server, a local object storage disk with metadata_type plain_rewritable and enable_hard_links 1):
+
+CREATE TABLE t_pr_links (id UInt64, status String, payload String) ENGINE = MergeTree ORDER BY id SETTINGS disk = 'pr_links';
+INSERT INTO t_pr_links SELECT number, 'new', repeat('x', 100) FROM numbers(1000000);
+ALTER TABLE t_pr_links UPDATE status = 'done' WHERE id % 2 = 0 SETTINGS mutations_sync = 2;   -- done 500000 / new 500000
+ALTER TABLE t_pr_links ADD COLUMN flag UInt8; ALTER TABLE t_pr_links DROP COLUMN payload SETTINGS mutations_sync = 2;   -- part all_1_1_0_3
+cat <disk>/__meta/<dir>/prefix.path of the mutated part:
+  store/3a7/3a77281f-.../all_1_1_0_3/
+  files: 15
+  id.bin      ogaterbtbiwfsoddccenkwnhnpoownta/id.bin   4004915     <- the blob of another directory (shared)
+  status.bin  nqqlzjlicwzcmiqhjuljuydlltfczuzm/status.bin  15434
+HONEST NOTE: the same mutations also succeeded on a local plain_rewritable disk WITHOUT enable_hard_links (a copy stands in for
+the hard link there, per #119304), and the disk usage looked the same on the local object storage; the difference is copying
+blobs vs. sharing them, which matters on S3. Not tested against real S3.
+Credit: #110939 by yanglongwei, re-landed in #119304 by Alexey Milovidov with fixes.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: yanglongwei, Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Faster metadata of plain_rewritable disks</h2>
+
+<p style="margin-top: -0.3em;">Loading a disk with 36 thousand directories, 500K objects:</p>
+
+<p style="margin-top: 0.5em;"><b>before: <span style="color: red;">116</span> sec.</b> &nbsp; <b>26.10: <span style="color: green;">37</span> sec.</b></p>
+
+<p style="margin-top: 0.5em; line-height: 1.5">&mdash; Listings are split by key prefix and run in parallel;
+<br/>&mdash; files of all directories come from a few listings of the whole disk;
+<br/>&mdash; per-path locks: one long <b>DROP TABLE</b> no longer blocks
+<br/>&emsp; every insert and merge on the same disk;
+<br/>&mdash; removing a part is one batched delete, without copies.</p>
+
+<!-- Numbers from PR #121412: ATTACH DATABASE datasets ... SETTINGS disk = disk(type = 's3_plain_rewritable', endpoint = 'https://data.clickhouse.com/public-datasets/db/',
+     no_sign_request = true, readonly = true), lazy_load_tables = true; SELECT * FROM datasets.census2012_rdns LIMIT 100;
+     "Loaded metadata for 36401 directories" — 116 s before, 37 s after (501234 objects; S3ListObjects 36468, S3GetObject 45644 before).
+     Not reproduced locally (needs the public endpoint and a fresh load; network-bound).
+     Per-path locks: #118490; batched removal: #123303 (Groene AI); shared directory entries between snapshots: #119625 (Rory Shanks). -->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Parquet VARIANT, also in Iceberg</h2>
+
+<p style="margin-top: -0.3em;">The <b>VARIANT</b> type of Spark 4.0, Parquet, and Iceberg v3 &mdash; read as <b>Dynamic</b>:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.3;">SELECT n, dynamicType(v), v FROM file('variant.parquet');
+
+<span style="color: gray;">1   JSON             {"a":1,"b":{"c":"x","d":{"e":true}}}
+2   JSON             {"f":[1,"s"]}
+3   Array(JSON)      ['{"k":1}','{"k":2,"m":"z"}']
+7   Int64            42</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; 26.9: <b>Tuple(metadata String, value String)</b> &mdash; two binary blobs.
+<br/>&mdash; Objects become <b>JSON</b>; read the column as <b>JSON</b> if all values are objects.
+<br/>&mdash; The same for the <b>variant</b> type in <b>Iceberg</b> tables.
+<br/>&mdash; TODO: shredded variants.</p>
+
+<!-- Demo (test files from tests/queries/0_stateless/data_parquet of the 26.10 branch, written by Spark):
+
+SELECT n, dynamicType(v) AS type, v FROM file('05296_variant_json_objects.parquet') ORDER BY n
+  26.10: 1 JSON {"a":1,"b":{"c":"x","d":{"e":true}}} / 2 JSON {"f":[1,"s"]} / 3 Array(JSON) / 4 Array(Dynamic) / 5 JSON / 6 JSON {} / 7 Int64 42 / 8 Array(Dynamic) []
+  26.9.23: DESCRIBE -> v Tuple(metadata Nullable(String), value Nullable(String)); dynamicType(v) -> ILLEGAL_TYPE_OF_ARGUMENT
+SELECT * FROM file('05299_variant_read_as_json.parquet');   -- 1 {"a":1,"b":{"c":"x"},"s":"hello"} / 2 {"a":300,"tags":["x","y"]} / 3 \N
+Reading 05296 as JSON fails as documented: "only objects can be read as JSON. Read the column as Dynamic instead".
+Spark writes no VARIANT logical type, so the group (value, metadata) is detected by structure (input_format_parquet_detect_variant_by_structure).
+Iceberg variant (#117198, re-landed in #125458) — not tested with a real Iceberg v3 table here.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Konstantin Vedernikov.</p>
+</section>
+
+<!--
+<section class="slide">
+<h2>Embedded Iceberg REST catalog 🧪</h2>
+
+<p style="margin-top: -0.3em;">ClickHouse server can <b>be</b> an Iceberg REST catalog:</p>
+
+<p><code style="font-size: 11pt; line-height: 1.2;"><span style="color: gray;">$ cat config.d/iceberg_catalog.yaml</span>
+
+<b style="color: green;">iceberg_rest_catalog</b>:
+    port: 8182
+    warehouse: my_warehouse
+    base_location: s3://warehouse/my_warehouse
+    storage_named_collection: warehouse_storage
+</code></p>
+<p><code style="font-size: 11pt; line-height: 1.2;"><span style="color: gray;">$</span> curl -u default: -X POST -d '{"namespace":["analytics"]}' \
+    http://localhost:8182/v1/my_warehouse/namespaces
+
+CREATE DATABASE lake ENGINE = DataLakeCatalog('http://localhost:8182/v1', &hellip;)
+SETTINGS catalog_type = 'rest', warehouse = 'my_warehouse', &hellip;
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; Namespaces and tables: create, list, load, drop; state in Keeper.</p>
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Asya Shneerson.</p>
+</section>
+
+-->
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Unity Catalog: Delta Lake and Iceberg 🧪</h2>
+
+<p style="margin-top: -0.3em;">A new implementation of the <b>unity</b> catalog type:
+<br/>both table formats from a single Unity Catalog.</p>
+
+<p><code style="font-size: 13pt; line-height: 1.3;">CREATE DATABASE unity
+ENGINE = DataLakeCatalog(
+    'https://&lt;workspace-id&gt;.cloud.databricks.com/api/2.1/unity-catalog')
+SETTINGS catalog_type = 'unity', warehouse = 'main',
+         catalog_credential = '&lt;token&gt;', <b style="color: green;">use_unity_catalog_v2</b> = 1;
+
+SHOW TABLES FROM unity;  <span style="color: gray;">-- Delta Lake and Iceberg tables</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; Switch: <b>ALTER DATABASE &hellip; MODIFY SETTING use_unity_catalog_v2 = 1</b>.</p>
+
+<!-- Not tested live: no Databricks / Unity Catalog account available. The syntax follows the changelog (#115879): database setting
+     use_unity_catalog_v2 (also a session setting of the same name before CREATE DATABASE — but `use_unity_catalog_v2` is NOT
+     found in system.settings of the master build; check whether it is a database setting only), ALTER DATABASE ... MODIFY SETTING.
+     The endpoint shape and settings match docs/reference/engines/database-engines/datalake.mdx and docs/guides/.../unity-catalog.mdx
+     of the 26.10 branch; use_unity_catalog_v2 is a DataLakeCatalog database setting (DatabaseDataLakeSettings).
+     Credit: Asya Shneerson; the PR credits Melvyn Peignon for the prototype in #100669. -->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Asya Shneerson, Melvyn Peignon.</p>
+</section>
+
+<section class="slide">
+<h2>Iceberg v3 deletion vectors 🧪</h2>
+
+<p style="margin-top: -0.3em;">Iceberg v3 stores deleted rows as <b>roaring bitmaps</b> in <b>Puffin</b> files.
+<br/>Now ClickHouse applies them when reading:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.3;">SELECT count() FROM iceberg('s3://&hellip;/table_v3/');
+<span style="color: gray;">-- rows deleted by Spark are not returned</span>
+
+<span style="color: gray;">-- inspect a deletion vector (Puffin format, since 26.8):</span>
+SELECT referenced_data_file, deleted_rows FROM file('dv.puffin', Puffin);
+<span style="color: gray;">-- &hellip;/data/00000-0-15387e93-&hellip;-00001.parquet   [2,5,7,100,65536]</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; In v2, deletes were position delete files (Parquet);
+<br/>&emsp; v3 deletion vectors are smaller and are merged per data file.</p>
+
+<!-- Demo: the Puffin part is tested with tests/queries/0_stateless/data_puffin/spark_deletion_vector.puffin (26.10 branch):
+SELECT blob_type, snapshot_id, length, mapKeys(properties) FROM file('dv.puffin', PuffinMetadata);   -- deletion-vector-v1  -1  58  ['cardinality','referenced-data-file']
+SELECT referenced_data_file, deleted_rows FROM file('dv.puffin', Puffin);   -- /tmp/clickhouse_spark_puffin_.../00000-0-15387e93-...-00001.parquet  [2,5,7,100,65536]
+Reading a real Iceberg v3 table with deletion vectors (#110781) was NOT tested here: no Spark-written v3 table at hand (the integration
+tests write it with Spark). The first query is plausible syntax. The changelog lists it under Experimental.
+Credit: linjiayu (linjiayu1025-collab), Asya Shneerson (24 commits). -->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: linjiayu, Asya Shneerson.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back8.jpg); background-size: cover;">
+<h2><span class="hilite">Bonus</span></h2>
+</section>
+
+<section class="slide">
+<h2>Trino and Kusto dialects are in Beta</h2>
+
+<p><code style="font-size: 12pt; line-height: 1.3;">SET enable_trino_dialect = 1, dialect = 'trino';
+
+SELECT date_trunc('day', EventTime) AS d, count(*), approx_distinct(UserID)
+FROM hits WHERE regexp_like(URL, 'google') GROUP BY 1 ORDER BY 1 LIMIT 3;
+</code></p>
+
+<p><code style="font-size: 12pt; line-height: 1.3;">SET allow_experimental_kusto_dialect = 1, dialect = 'kusto';
+
+hits
+| where SearchPhrase != ''
+| summarize c = count(), u = dcount(UserID) by SearchPhrase
+| top 3 by c desc
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; Both were reimplemented in 26.9; now they are Beta.
+<br/>&mdash; The setting names are still the same.</p>
+
+<!-- Demo (server, hits):
+
+Trino query above -> 2013-07-01 36 19 / 2013-07-02 254 185 / 2013-07-03 623 384
+Kusto query above -> карелки 70263 23673 / албатрутдин 34675 18394 / смотреть онлайн 24580 19747
+FOUND A BUG: `hits | where URL contains 'google' | summarize c = count() by bin(EventTime, 1d)` fails with
+"Function kqlBin expects a number rounded by a number, a timespan rounded by a timespan, or a datetime rounded by a timespan,
+got DateTime and IntervalNanosecond" — bin() of a plain DateTime column; works with bin(todatetime(EventTime), 1d).
+system.settings tier: enable_trino_dialect Beta, allow_experimental_kusto_dialect Beta.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Parts of Trino SQL, in ClickHouse SQL</h2>
+
+<p style="margin-top: -0.3em;">No dialect switch needed:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.3;">SELECT <b style="color: green;">TRY_CAST</b>('abc' AS INTEGER), TRY_CAST('42' AS INTEGER);
+<span style="color: gray;">-- NULL, 42</span>
+
+SELECT <b style="color: green;">ARRAY[1, 2, 3]</b> AS a, slice(a, 2, 2);  <span style="color: gray;">-- [1,2,3], [2,3]</span>
+
+SELECT CAST(x AS <b style="color: green;">ARRAY(INTEGER)</b>), CAST(m AS <b style="color: green;">MAP(VARCHAR, BIGINT)</b>);
+
+SELECT starts_with(s, 'click'), regexp_like(s, '[0-9]+'), day_of_week(d),
+       url_extract_host(url), bitwise_and(a, b), arbitrary(x), bool_and(y);
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; Queries written for Trino, Presto, Athena run with fewer changes.</p>
+
+<!-- Demo (clickhouse local):
+
+SELECT TRY_CAST('abc' AS INTEGER), TRY_CAST('42' AS INTEGER), ARRAY[1, 2, 3] AS a, slice(a, 2, 2), starts_with('clickhouse', 'click'), regexp_like('abc123', '[0-9]+'),
+       day_of_week(DATE '2026-10-22'), url_extract_host('https://clickhouse.com/docs'), bitwise_and(12, 10);
+-- \N 42 [1,2,3] [2,3] 1 1 4 clickhouse.com 8
+SELECT CAST([1,2] AS ARRAY(INTEGER)), CAST(map('a', 1) AS MAP(VARCHAR, BIGINT));   -- [1,2] {'a':1}
+SELECT arbitrary(number), bool_and(number < 10) FROM numbers(5);                   -- 0 1
+Note: slice is Trino's slice(array, start, length).
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Freeform data format</h2>
+
+<p style="margin-top: -0.3em;">Any tabular text &mdash; figure out the columns automatically:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.3;">SELECT c0 AS ip, c5 AS request, c6 AS status, c7 AS bytes
+FROM file('access.log', <b style="color: green;">Freeform</b>);
+
+<span style="color: gray;">93.184.216.34   GET /index.html HTTP/1.1      200   5123
+10.0.0.15       POST /api/v1/query HTTP/1.1   500     87
+172.16.4.2      GET /favicon.ico HTTP/1.1     404      0</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; Tries delimiters, quoting, and types; picks the most consistent structure.
+<br/>&mdash; Logs, <b>df</b>, <b>ls -l</b>, copy-pasted tables&hellip;
+<br/>&mdash; The PR was opened in 2022 &mdash; and finally merged!</p>
+
+<!-- Demo (clickhouse local):
+
+access.log (3 nginx combined-format lines) -> DESCRIBE: c0..c5 String, c6 Int64, c7 Int64, c8 String, c9 String (c9 = user agent)
+df -h | head -6 > df.txt; DESCRIBE file('df.txt', Freeform) -> 6 String columns (the header becomes a data row)
+ls -l | tail -n +2 > ls.txt -> c1 Int64 (links), c4 Int64 (size), the time "07:00" splits into two Int64 columns
+app.log "2026-10-21 07:01:02 INFO  [main] Server started in 1.5 s" -> c0 Date, then hour/min/sec as Int64 columns
+ps output with left-padded columns and a header -> a single String column (not recognized)
+Search is bounded by input_format_freeform_max_search_steps (4096).
+#43449 opened in Nov 2022 by Tri Dao (dmtri35, 36 commits); Alexey Milovidov 24 commits.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Tri Dao, Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>chdig 26.10</h2>
+
+<p style="margin-top: -0.3em;"><b>chdig</b> &mdash; the top-like TUI for ClickHouse, built into the binary:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.3;"><span style="color: gray;">$</span> clickhouse dig
+</code></p>
+
+<p>New in <a href="https://github.com/azat/chdig/releases/tag/v26.10.1">v26.10.1</a>:</p>
+
+<p>&mdash; <b>Keeper</b> browser;
+<br/>&mdash; per-host summary for clusters;
+<br/>&mdash; better filters.</p>
+
+<p style="float: right;">Demo.</p>
+
+<!-- Tested live (chdig 26.10.1 built into the 26.11 master binary), recorded on the next slide.
+     Release notes v26.10.1: ZooKeeper browser (system.zookeeper) with integration into the replicas view; per-host summary rows in
+     --cluster mode (toggled with `1`, capacity-scale bars, resizable with [ ]); queries filter (`/`) with predicates and Tab completion. -->
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Azat Khuzhin.</p>
+</section>
+
+<section class="slide" style="background: #16181d; padding: 0;">
+<video style="width: 100%; height: 100%; object-fit: contain;" preload="metadata" loop><source src="pictures/chdig.mp4" type="video/mp4"></video>
+</section>
+<!-- chdig.mp4 (87 s, 2560x1448, H.264): chdig 26.10.1 against a 3-node cluster `demo` (ch1: 8 CPU / 16 GiB, ch2 and ch3: 4 CPU / 8 GiB),
+     `clickhouse chdig --url tcp://127.0.0.1:19901 --cluster demo -d 2000`:
+     the queries view with the per-host summary (toggled off and on with `1`), then F2 -> ZooKeeper, the `/` filter to walk
+     /clickhouse/tables/1/analytics/events (a ReplicatedMergeTree table receiving inserts), its replication `log`, the `metadata` node dialog,
+     and replicas/ch1. Recorded on the test machine: three servers in separate UTS namespaces (hostnames ch1..ch3) and systemd scopes
+     (CPUQuota, MemoryMax); tmux capture-pane every 150 ms rendered through Chromium (DejaVu Sans Mono), encoded with ffmpeg.
+     Scripts: /home/ubuntu/rel2610/chdemo/{gen.py,start_node.sh,load.sh,record.sh,render_frames.py}. -->
+
+<section class="slide">
+<h2>Better PostgreSQL compatibility</h2>
+
+<p style="margin-top: -0.3em;"><b>psql</b> just works:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.25;"><span style="color: gray;">$</span> psql -h localhost -p 9005 -U pg default
+default=> \dt
+<span style="color: gray;"> Schema  |  Name  | Type  | Owner
+---------+--------+-------+-------
+ default | hits   | table | pg  &hellip;</span>
+default=> SELECT format_type(1043, 68), current_setting('server_version');
+<span style="color: gray;"> character varying | 26.10.1.1</span>
+default=> SELECT sleepEachRow(1) FROM numbers(30);
+^C<span style="color: gray;">Cancel request sent
+ERROR:  Query was cancelled</span>      <span style="color: gray;">&larr; cancellation never worked before</span>
+</code></p>
+
+<p>&mdash; <b>postgresql</b> table function can connect to another ClickHouse.
+<br/>&mdash; <b>COPY &hellip; WITH (FORMAT csv)</b>; comment-only pings from <b>pgx</b>.</p>
+
+<!-- Demo (server, postgresql_port 9105, a user with a password — empty passwords don't work over the PostgreSQL protocol):
+
+CREATE USER pg IDENTIFIED WITH plaintext_password BY 'secret'; GRANT SELECT ON *.* TO pg;
+PGPASSWORD=secret PGSSLMODE=disable psql -h 127.0.0.1 -p 9105 -U pg -d default -c '\dt'      -- lists tables
+psql ... -c "SELECT format_type(23, NULL), format_type(1043, 68), current_setting('server_version'), current_setting('search_path')"   -- integer | character varying | 26.11.1.385 | default
+psql ... -c "SELECT sleepEachRow(1) FROM numbers(30) SETTINGS max_block_size = 1" + SIGINT after 3 s -> "Cancel request sent / ERROR: Query was cancelled"
+current_setting('max_threads') -> "Unrecognized configuration parameter" (PostgreSQL parameters only).
+SELECT * FROM postgresql('127.0.0.1:9105', 'default', 'users', 'pg', 'secret') LIMIT 2;   -- 0 user_0 US / 1 user_1 DE
+Careful: aggregations are not pushed down — count() over postgresql(..., 'hits', ...) pulls all rows.
+COPY options (#119376) and pgx ping (#125161) are from the changelog, not tested. The version on the slide is illustrative (26.10 release).
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>FileLog improvements</h2>
+
+<p style="margin-top: -0.3em;">Subscribe to log files in ClickHouse. Now friendly to <b>logrotate</b>:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.3;">CREATE TABLE app_logs (level String, msg String)
+ENGINE = FileLog('/var/lib/clickhouse/user_files/app/<b style="color: green;">*.log</b>', 'JSONEachRow');
+<span style="color: gray;">-- reads app.log, skips app.log.1, app.log.2.gz;
+-- a file renamed by rotation is read to the end</span>
+
+<b style="color: green;">SYSTEM RESET FILELOG</b> app_logs;                          <span style="color: gray;">-- all files again</span>
+SYSTEM RESET FILELOG app_logs FILE 'app.log' OFFSET 27;
+SYSTEM RESET FILELOG app_logs FILE 'app.log' TO END;    <span style="color: gray;">-- only new data</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; Globs: <b>*</b>, <b>?</b>, <b>{a,b}</b>, <b>{N..M}</b> in the file name.
+<br/>&mdash; Re-read without recreating the table; privilege <b>SYSTEM RESET FILELOG</b>.</p>
+
+<!-- Demo (server):
+
+my_app/: app.log (2 JSON lines), app.log.1 (1 line), app.log.2.gz
+CREATE TABLE fl (level String, msg String) ENGINE = FileLog('/home/ubuntu/rel2610/srv/user_files/my_app/*.log', 'JSONEachRow');
+SELECT *, _filename FROM fl SETTINGS stream_like_engine_allow_direct_select = 1;   -- info a app.log / error b app.log
+SELECT count() FROM fl ...;          -- 0 (already consumed)
+SYSTEM RESET FILELOG fl; SELECT count() FROM fl ...;   -- 2
+SYSTEM RESET FILELOG fl FILE 'app.log' OFFSET 27; SELECT * FROM fl ...;   -- error b
+Both PRs (#123545, #123590) are by the Groene AI account, from Alexey's issue #123368 — decide how to credit.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Groene AI, Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>PromQL: compatibility</h2>
+
+<p style="margin-top: -0.3em;">ClickHouse as a Prometheus: <b>TimeSeries</b> engine + <b>PromQL</b>.</p>
+
+<p style="margin-top: 0.5em;">&mdash; <b style="color: green;">100%</b> on the basic compatibility tests
+<br/>&emsp; (the Prometheus <b>compliance</b> suite of queries);</p>
+<p>&mdash; <b style="color: green;">93%</b> on the extended tests
+<br/>&emsp; (Prometheus' own <b>promqltest</b> test files).</p>
+
+<p style="margin-top: 0.5em;">New: <b>stddev_over_time</b>, <b>mad_over_time</b>, <b>first_over_time</b>, <b>timestamp</b>,
+<br/><b>min_of</b>, <b>max_of</b>, <b>step</b>, <b>range</b>; stale markers; Prometheus 3.5 semantics.</p>
+
+<!-- The 100% / 90%+ numbers are from the author's feature list. Where they come from (my reading of the 26.10 branch):
+     tests/integration/test_prometheus_protocols/test_compliance.py — "based on https://github.com/prometheus/compliance/blob/main/promql/promql-test-queries.yml",
+     runs every query against a reference Prometheus and ClickHouse and reports a score (basic);
+     tests/integration/test_prometheus_protocols/promqltest/ — Prometheus' promql/promqltest/testdata (aggregators, functions, operators,
+     selectors, staleness, subquery, ... ; histograms and native histograms excluded) (extended). Please confirm the mapping and the exact numbers.
+     PromQL is in private preview in ClickHouse Cloud (26.9 deck). Developers: Vitaly Baranov, Valery Petrov, Minh Vu, James Cunningham. -->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Vitaly Baranov, Valery Petrov, Minh Vu, James Cunningham.
+<br/>Contributions from RingCentral, Tradera. Feature requests from Mirantis, SigNoz, Tesla.</p>
+<!-- Companies from GitHub profiles of issue/PR authors mentioning PromQL in ClickHouse/ClickHouse (self-reported affiliations):
+     RingCentral — Valery Petrov ("SRE @ RingCentral"), 78 PromQL issues/PRs (clamp*, round, *_over_time, predict_linear, timestamp, the extended-support test);
+     Tradera — Fredrik Larsson, 12 PromQL PRs (May 2026: regex matchers, changes/resets, set operators, label functions, count_values, absent, histogram_quantile, @ modifiers);
+     Mirantis — Paul Basov, #70740 (TimeSeries table + Prometheus remote-read behind Grafana on Kubernetes, broken pipe);
+     SigNoz — Srikanth Chekuri, #110624 (Prometheus-compatible monotonicity repair in quantilePrometheusHistogram);
+     Tesla — "alont" (profile company Tesla), comment on #57545 asking for a tenant column. -->
+</section>
+
+<section class="slide">
+<h2>Notebooks in the Web UI</h2>
+
+<p style="margin-top: -0.3em;">After a query has run, the <b>[+]</b> button adds more cells:
+<br/>queries with their own results, or <b>Markdown</b> text.</p>
+
+<p>&mdash; Run, reorder, insert, and delete cells individually;
+<br/>&mdash; inactive editors collapse to one line; results scroll inside;
+<br/>&mdash; the notebook is restored on reload;
+<br/>&mdash; a tab with one cell looks exactly as before.</p>
+
+<p style="margin-top: 0.5em;">In the style of Jupyter and Observable &mdash; in a single HTML file
+<br/>served by every ClickHouse server at <b>/play</b>.</p>
+
+<p style="float: right;">Demo.</p>
+
+<!-- Demo on https://play.clickhouse.com/play?user=play (26.10.1.1452 there): run
+     SELECT toYear(time) AS year, count() AS posts, uniq(by) AS authors FROM hackernews WHERE year >= 2020 GROUP BY year ORDER BY year
+     then [+] -> Text: "## Who talks about ClickHouse?\nTop authors of the **comments** that mention *ClickHouse*."
+     then [+] -> Query: SELECT by, count() AS c, max(time) AS last FROM hackernews WHERE text ILIKE '%clickhouse%' GROUP BY by ORDER BY c DESC LIMIT 5
+     The next slide is the screenshot of exactly that. The URL keeps only the active query (the notebook itself lives in localStorage),
+     so the link opens the last query. -->
+
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/notebook.png) center / contain no-repeat; background-color: #071114;">
+<a href="https://play.clickhouse.com/play?user=play&amp;tab=Query%20A#U0VMRUNUIGJ5LCBjb3VudCgpIEFTIGMsIG1heCh0aW1lKSBBUyBsYXN0IEZST00gaGFja2VybmV3cyBXSEVSRSB0ZXh0IElMSUtFICclY2xpY2tob3VzZSUnIEdST1VQIEJZIGJ5IE9SREVSIEJZIGMgREVTQyBMSU1JVCA1" target="_blank" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></a>
+</section>
+
+<section class="slide">
+<h2>Web UI: save, load, format</h2>
+
+<img class="zoomable" style="float: right; width: 45%; margin-right: -2em; margin-top: -1em;" src="pictures/save_tabs.png" alt="The Save tabs dialog of the Web UI" onclick="this.classList.toggle('zoomed'); event.stopPropagation();"/>
+
+<p style="margin-top: -0.3em;">&mdash; Save all tabs, queries, and parameters
+<br/>&emsp; as a <b>Markdown</b> file; load them back.</p>
+
+<p>&mdash; The <b>Format</b> button:</p>
+
+<p><code style="font-size: 9pt; line-height: 1.2; width: 52%;"><span style="color: gray;">select by, count() c, max(time) from hackernews
+where text ilike '%clickhouse%' and type = 'comment'
+group by by having c > 10 order by c desc limit 10</span>
+&darr;
+SELECT
+    by,
+    count() AS c,
+    max(time)
+FROM hackernews
+WHERE (text ILIKE '%clickhouse%') AND (type = 'comment')
+GROUP BY by
+HAVING c > 10
+ORDER BY c DESC
+LIMIT 10
+</code></p>
+
+<!-- Demo on play.clickhouse.com (26.10.1.1452): the save icon in the tab bar opens "Save tabs" with Copy / Download; the folder icon loads a file.
+     The notebook from the previous slide saves as:
+       # Query A / ``` SELECT toYear(time) ... ``` / ```markdown ## Who talks about ClickHouse? ... ``` / ``` SELECT by, count() ... ```
+     Format button (#format-query, bottom right of the editor) calls formatQuery; the result above is what it produced. -->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back9.jpg); background-size: cover;">
+<h2><span class="hilite">Integrations</span></h2>
+</section>
+
+<section class="slide">
+<h2>Client libraries</h2>
+
+<p style="margin-top: -0.3em;"><a href="https://clickhouse.com/blog/introducing-the-blazing-fast-native-tcp-client-for-net"><b>Native TCP client for .NET</b></a> &mdash; 1.5&ndash;2x faster than HTTP,
+<br/>far fewer allocations; read columnar blocks
+<br/>or map rows to your own C# classes.</p>
+
+<p style="margin-top: 1em;"><a href="https://github.com/ClickHouse/clickhouse-c"><b>clickhouse-c</b></a> &mdash; a minimalist header-only library for embedded contexts:</p>
+<p style="margin-top: -0.5em;">&mdash; the Native protocol over TCP and Native format blocks;
+<br/>&mdash; one core header, optional headers for TCP, compression, codecs;
+<br/>&mdash; made for PostgreSQL extensions (<b>palloc</b> arenas, <b>longjmp</b>);
+<br/>&mdash; <b>clickhouse.h</b> alone decodes <b>clickhouse-local</b> output from a pipe.</p>
+
+<!-- .NET client, from the post: "1.5x-2x faster than the HTTP client for typical use cases. Cuts GC allocations by over 99% in some cases."
+     Three tiers: columnar blocks (StreamAsync / InsertAsync, no per-row allocation), POCOs = Plain Old CLR Objects, i.e. your own C# classes
+     (QueryAsync<T> / InsertRowsAsync<T>, mapping compiled per column on first use, no reflection or boxing per row), and object[] rows.
+     Experimental; JSON arrives as text; no ADO.NET; both clients ship in the same package.
+     Sources: the blog post (title "Introducing the (blazing fast!) native TCP client for .NET", 2026-10-16; repo ClickHouse/clickhouse-cs);
+     clickhouse-c README (created 2026-05-21, Apache-2.0, C): "Header-only C client for the ClickHouse Native wire format — the Native Protocol
+     over TCP carrying Native Format blocks. One core header, plus optional follow-up headers for TCP, compression, codecs, and I/O backends.
+     Designed for embedding inside PostgreSQL extensions (palloc arena, longjmp) but with no PG-specific code. Including clickhouse.h alone
+     gives a pure block decoder over caller-supplied chc_io, usable for reading clickhouse-local's FORMAT Native from a pipe". -->
+</section>
+
+<section class="slide">
+<h2>ClickHouse Cloud</h2>
+
+<p style="margin-top: -0.3em;"><a href="https://clickhouse.com/blog/executable-udfs-generally-available-on-clickhouse-cloud"><b>Executable UDFs</b> are generally available</a>:
+<br/>AWS, GCP, Azure; native runtimes, network access,
+<br/>observability, API and Terraform.</p>
+
+<p><a href="https://clickhouse.com/blog/introducing-jwt-authentication-in-clickhouse-cloud"><b>JWT authentication</b></a>: connect with short-lived tokens
+<br/>from your identity provider instead of database passwords.</p>
+
+<p><a href="https://clickhouse.com/blog/introducing-scim-provisioning-in-clickhouse-cloud"><b>SCIM 2.0 provisioning</b></a>: the identity provider creates, updates,
+<br/>and removes members and syncs groups to ClickHouse roles.</p>
+
+<!-- Descriptions condensed from the posts' summaries (2026-10-05, 2026-10-08, 2026-09-30). -->
+</section>
+
+<section class="slide">
+<h2>Ecosystem</h2>
+
+<p style="margin-top: -0.3em;"><b>Microsoft Fabric</b>:</p>
+<p style="margin-top: -0.5em;">&mdash; <a href="https://clickhouse.com/blog/clickhouse-now-writes-to-microsoft-onelake">ClickHouse writes Apache Iceberg tables to OneLake</a>;
+<br/>&mdash; <a href="https://clickhouse.com/blog/clickhouse-for-microsoft-fabric">ClickHouse Workload for Fabric</a> is in public preview.</p>
+
+<p><b>Apache Airflow</b>:</p>
+<p style="margin-top: -0.5em;">&mdash; <a href="https://clickhouse.com/blog/clickhouse-airflow-provider">the official ClickHouse provider</a>: SQL operators, bulk inserts,
+<br/>&emsp; self-managed Airflow and Astronomer.</p>
+
+<p><b>chDB</b> and <b>Postgres</b>:</p>
+<p style="margin-top: -0.5em;">&mdash; <a href="https://clickhouse.com/blog/chdb-durable-layer-for-agent-memory">chDB Durable Layer</a> for agent memory;
+<br/>&mdash; <a href="https://clickhouse.com/blog/pg_clickhouse-chdb">pg_clickhouse and the chdb extension</a>: encodings, nesting, types.</p>
+
+<!-- Descriptions condensed from the posts' summaries. All URLs checked (HTTP 200) on 2026-10-22. -->
+</section>
+
+
+<section class="slide" style="background: url(pictures/vectors.png); background-size: cover;">
+</section>
+
+
+<section class="slide" style="background: url(pictures/wing.jpg); background-size: cover;">
+<h2>Meetups</h2>
+<p style="line-height: 1.3; margin-top: -2.2em; font-size: 18pt;">
+<br/><span class="hilite">&mdash; 🇮🇪 Dublin: Training, Oct 23</span>
+<br/><span class="hilite">&mdash; 🇵🇱 Krakow: Training, Nov 3 &nbsp;·&nbsp; AI Builders and Databases, Nov 4</span>
+<br/><span class="hilite">&mdash; 🇺🇸 New York: AI Builders Night, Nov 3</span>
+<br/><span class="hilite">&mdash; 🇪🇸 Madrid: AI Builders and Databases, Nov 3</span>
+<br/><span class="hilite">&mdash; 🇺🇸 Brooklyn: LibreChat Meetup, Nov 5</span>
+<br/><span class="hilite">&mdash; 🇦🇺 Melbourne: The Agentic Data Stack, Nov 5</span>
+<br/><span class="hilite">&mdash; 🇺🇸 Salt Lake City: ClickStack Training at KubeCon, Nov 9</span>
+<br/><span class="hilite">&mdash; 🇺🇸 San Francisco: AI Builders Night, Nov 9</span>
+<br/><span class="hilite">&mdash; 🇦🇺 Sydney, Nov 10 &nbsp;·&nbsp; 🇦🇺 Brisbane, Nov 11: The Agentic Data Stack</span>
+<br/><span class="hilite">&mdash; 🇮🇳 Bengaluru: The Agentic Data Stack, Nov 12</span>
+<br/><span class="hilite">&mdash; 🇳🇿 Auckland, Nov 17 &nbsp;·&nbsp; 🇳🇿 Wellington, Nov 18: The Agentic Data Stack</span>
+<br/><span class="hilite">&mdash; 🇺🇸 San Francisco, Nov 17 &nbsp;·&nbsp; 🇨🇦 Toronto, Nov 18: Data Engineering</span>
+<br/><span class="hilite">&mdash; 🇫🇷 Paris: Training, Nov 25 &nbsp;·&nbsp; 🇨🇾 Limassol, Nov 26</span>
+</p>
+</section>
+<!-- From https://clickhouse.com/company/events on 2026-10-21, in-person events after 2026-10-22 (Dubai is on Oct 22 itself).
+     No upcoming "Open House" events are listed, so there is no Open House slide (openhouse_tour.jpg is copied but unused). -->
+
+<section class="slide">
+<h2>Reading Corner 📖</h2>
+
+<a href="https://www.youtube.com/watch?v=P7OiRMXeJf8"><img style="float: right; width: 20%; margin-right: -3em; image-rendering: pixelated; margin-top: -1em;" src="pictures/qr_vectors.png" alt="QR: youtube.com/watch?v=P7OiRMXeJf8 (ClickHouse Amsterdam Meetup: What to do with vectors)"/></a>
+
+<p><a href="https://clickhouse.com/blog/">https://clickhouse.com/blog/</a></p>
+
+<p style="line-height: 1.5; margin-right: -5em;">
+&mdash; Chasing that 32 ms tail latency
+<br/>&mdash; Postgres isn't slow. Your storage is.
+<br/>&mdash; Running ClickHouse on NVIDIA Vera
+<br/>&mdash; The Agentic Analytics Benchmark, GPT-6, Opus 5.5, Sonnet 5.5
+<br/>&mdash; OLTP is expensive, you can ClickHouse it
+<br/>&mdash; Why Redshift Serverless can’t match ClickHouse
+<br/>&mdash; Why BigQuery can’t match ClickHouse
+<br/>&mdash; Why Databricks can’t match ClickHouse
+<br/>&mdash; How LinkedIn extended ClickHouse
+</p>
+</section>
+<!-- Posts of 2026-09-21 .. 2026-10-20 from https://clickhouse.com/blog — the author should pick the must-haves. QR -> https://www.youtube.com/watch?v=P7OiRMXeJf8 "ClickHouse Amsterdam Meetup: What to do with vectors - Alexey Milovidov". -->
+
+
+<section class="slide" style="background: url(pictures/back10.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
+<h2 style="color: white; margin-left: 0em;">Q&amp;A</h2>
+</section>
+
+<!--
+<section class="slide" style="background: black; padding: 0;">
+<iframe style="width: 100%; height: 100%; position: absolute; top: 0; left: 0;" src="https://www.youtube.com/embed/VIDEO_ID" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</section>
+-->
+
+    <div class="progress"></div>
+    <script src="https://presentations.clickhouse.com/shower/shower.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/shower-video.css">
+    <script src="https://presentations.clickhouse.com/shower/shower-video.js"></script>
+    <!--/Video plugin-->
+<footer class="badge">
+    <a href="https://presentations.clickhouse.com/">ClickHouse Theater</a>
+</footer>
+</body>
+</html>
