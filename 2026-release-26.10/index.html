@@ -1082,7 +1082,7 @@ SELECT count() FROM hits WHERE URL LIKE '%google%';
 FROM s3('s3://clickhouse-public-datasets/hits_compatible/hits.parquet')
 WHERE URL LIKE '%google%' AND SearchPhrase != '' GROUP BY SearchPhrase &hellip;
 </code></p>
-<p style="margin-top: 0.3em;">Example, Parquet on S3: <b><span style="color: red;">1.87</span> sec</b> &rarr; <b><span style="color: green;">0.156</span> sec.</b></p>
+<p style="margin-top: 0.3em;">Example, Parquet on S3, both with the filesystem cache: <b><span style="color: red;">0.8</span> sec</b> &rarr; <b><span style="color: green;">0.16</span> sec.</b></p>
 
 <p style="margin-top: 0.3em;">&mdash; Wide <b>MergeTree</b> parts and <b>Parquet</b> from files and object storage.</p>
 
@@ -1102,6 +1102,12 @@ SELECT count() FROM ... WHERE URL LIKE '%google%'            -- off 1.571  on 0.
 SELECT count(DISTINCT UserID) FROM ...                       -- off 0.186  on 0.110  1.7x
 SELECT SearchPhrase, count() ... GROUP BY SearchPhrase ...   -- off 0.224  on 0.202  1.1x
 (On the slide the s3() call is shown without NOSIGN for brevity: the test server refuses its own credentials in user queries.)
+The numbers above are UNFAIR to the "off" side: it also downloads from S3. Fair comparison — both sides read through the local filesystem
+cache (SETTINGS enable_filesystem_cache = 1, filesystem_cache_name = 'qc_disk_cache'; after warm-up CachedReadBufferReadFromCacheBytes 2.84 GiB,
+ReadFromSourceBytes 0, ReadBufferFromS3Bytes 0), 5 interleaved rounds, min:
+  URL+SearchPhrase GROUP BY: off 0.870 (later 0.79..0.99 in isolated runs; 6-10 s outliers = interference from other load)  on 0.162  ~5x  <- on the slide
+  count() WHERE URL LIKE '%google%': off 0.533  on 0.576  no gain
+  count(DISTINCT UserID): off 0.065  on 0.107  slower (as with local Parquet)
 
 Local Parquet, file('hits.parquet') hot in the page cache — the cache is usually SLOWER here (ColumnsCacheHits: 226 of 226 row groups, no decompression):
 count() WHERE AdvEngineID <> 0 0.066 -> 0.075; sum/count/avg 0.042 -> 0.062; count(DISTINCT UserID) 0.047 -> 0.089;
@@ -1121,6 +1127,8 @@ Only for tables in databases with UUIDs (Atomic, Replicated); only wide parts.
 <section class="slide">
 <h2>PCO compression codec 🧪</h2>
 
+<a href="https://arxiv.org/abs/2502.06112" target="_blank"><img style="float: right; width: 17%; margin-right: -3em; margin-top: -5.5em; border: 1px solid #ccc; box-shadow: 2px 2px 6px rgba(0,0,0,0.3);" src="pictures/pcodec_paper.png" alt="Pcodec: Better Compression for Numerical Sequences (arXiv:2502.06112), the first page"/></a>
+
 <p style="margin-top: -0.3em;"><a href="https://github.com/pcodec/pcodec">pcodec</a> &mdash; a codec for sequences of numbers:</p>
 
 <p><code style="font-size: 13pt; line-height: 1.3;">SET enable_pco_codec = 1;
@@ -1129,12 +1137,13 @@ CREATE TABLE t (time DateTime CODEC(<b style="color: green;">PCO</b>), &hellip;)
 
 <p><code style="font-size: 13pt; line-height: 1.4;"><span style="color: gray;">compression ratio:          ZSTD   DoubleDelta    PCO</span>
 EventTime (sorted hits)     1.71   2.03           <b style="color: green;">3.52</b>
-UserID                      5.46                  <b style="color: green;">6.34</b>
-Float64 sensor readings     5.64   2.48 (Gorilla) <b style="color: green;">9.61</b>
+UserID                      5.46   3.47           <b style="color: green;">6.34</b>
+Float64 sensor readings     5.64   3.06           <b style="color: green;">9.61</b>
 </code></p>
 
-<p style="margin-top: 0.5em;">&mdash; Decompression is fast too: <b>0.086 sec</b> vs. 0.125 (ZSTD) and 0.257 (DoubleDelta).
-<br/>&mdash; Links the reference Rust implementation, with runtime CPU dispatch.</p>
+<p style="margin-top: 0.5em;">&mdash; Decompression is fast too: <b>0.086 sec</b> vs. 0.125 (ZSTD) and 0.257 (DoubleDelta).</p>
+
+<p>Read: <a href="https://tomalard.github.io/posts/pcodec-is-awesome/">Pcodec is awesome! 15% smaller and 2x faster than DoubleDelta</a></p>
 
 <!-- Demo (server):
 
@@ -1143,6 +1152,10 @@ CREATE TABLE codecs (t_lz4 DateTime CODEC(LZ4), t_zstd DateTime CODEC(ZSTD(3)), 
 INSERT INTO codecs SELECT EventTime x4, ResolutionWidth x4, UserID x2 FROM hits ORDER BY CounterID, EventDate, UserID, EventTime, WatchID LIMIT 20000000;  OPTIMIZE ... FINAL;
 compression ratio (system.columns): t_lz4 1.18, t_zstd 1.71, t_dd 2.03, t_pco 3.52; w_lz4 4.25, w_zstd 8.18, w_t64 4.8, w_pco 8.16; u_zstd 5.46, u_pco 6.34
 Float64: round(20 + 5 * sin(number / 10000) + randNormal(0, 0.1), 2) over 10M rows: ZSTD 5.64, Gorilla+ZSTD 2.48, FPC+ZSTD 2.97, PCO 9.61
+"DoubleDelta" on the slide = CODEC(DoubleDelta, ZSTD(3)) for all three rows (DoubleDelta accepts Float64 too):
+  EventTime 2.03; UserID (same 20M sorted rows) 3.47 — also Delta+ZSTD 5.34, T64+ZSTD 3.24; Float64 sensor 3.06 (vs Gorilla+ZSTD 2.48, FPC+ZSTD 2.97).
+The picture is page 1 of arXiv:2502.06112 "Pcodec: Better Compression for Numerical Sequences" (Martin Loncaric, Niels Jeppesen, Ben Zinberg),
+linked from github.com/pcodec/pcodec docs/academic_result.md; rendered with PyMuPDF at 110 dpi, grayscale.
 Decoding, SELECT sum(toUInt32(col)) FROM codecs SETTINGS max_threads = 1 (min of 3): t_lz4 0.063, t_zstd 0.125, t_dd 0.257, t_pco 0.086
 system.codecs: PCO "Lossless compression of numeric sequences (pcodec)". Tier: Beta (enable_pco_codec). The changelog lists it under Experimental.
 
