@@ -627,21 +627,21 @@ Hash joins use it only when join runtime filters and spilling are disabled. The 
 </section>
 
 <section class="slide">
-<h2 style="font-size: 30pt;">A fair share of CPU cores for each query</h2>
+<h2 style="font-size: 30pt;">Narrowing query pipelines on a high load</h2>
 
-<p style="margin-top: -0.3em;">A query was planned for all CPU cores, even with 10 queries running.
-<br/>Concurrency control limited the running threads, not the plan.</p>
+<p style="margin-top: -0.3em;">During high load, we create a narrower query pipeline,
+<br/>so it doesn't always take, e.g., 96 processing lanes on a 96-core server.
+<br/>&mdash; fewer partial states to merge, less memory, more throughput:</p>
 
-<p>Now a query is planned for its <b>fair share</b> of CPU slots:</p>
-
-<p>&mdash; fewer partial states to merge, less memory, more throughput;
-<br/>&mdash; on an idle server, a query still gets all cores.</p>
+<a href="https://benchmark.clickhouse.com/#system=+hDB|h%20D|hqa|liH|Caap|H%20%20,g|curp|Hoaus|cuwe&type=-&machine=-&cluster_size=-&opensource=-&hardware=+c&tuned=+n&storage=-&metric=hot&queries=-"><img src="pictures/qps.png" style="width: 100%;"></a>
 
 <p style="margin-top: 0.5em;">Example: 10 clients cycling over ClickBench, 96 cores:
-<br/><b>threads per query: <span style="color: red;">38</span> &rarr; <span style="color: green;">25</span></b>, &nbsp;<b>p99 memory: <span style="color: red;">9.33</span> &rarr; <span style="color: green;">7.67</span> GiB</b>,
-<br/><b>CPU time per query: <span style="color: green;">&minus;15%</span></b>.</p>
+<br/><b>p99 memory: <span style="color: red;">9.33</span> &rarr; <span style="color: green;">7.67</span> GiB</b>,
+<b>CPU time per query: <span style="color: green;">&minus;15%</span></b>.</p>
 
-<!-- Numbers are from the PR #125085 (Neoverse-V2, 96 cores, 100M-row hits, 10 clients): CPU time per query 1.18x with the old
+<!--
+
+Numbers are from the PR #125085 (Neoverse-V2, 96 cores, 100M-row hits, 10 clients): CPU time per query 1.18x with the old
      behaviour, p99 memory 7.67 vs 9.33 GiB, threads per query 25 vs 38. Motivation in the PR: ClickBench concurrent QPS vs Firebolt
      (c8g.metal-48xl 32.5 vs 42.3 QPS at equal single-query times).
      Local attempt (server, clickhouse-benchmark -c 32 -i 320, the SearchPhrase GROUP BY query, use_concurrency_control_for_max_threads 0/1):
@@ -655,8 +655,7 @@ Hash joins use it only when join runtime filters and spilling are disabled. The 
 <h2 style="font-size: 30pt;">Faster GROUP BY: LowCardinality, Strings</h2>
 
 <p style="margin-top: -0.3em;">&mdash; <b>LowCardinality</b> keys are serialized straight from the dictionaries;
-<br/>&mdash; repeating tuples of keys hit a cache of aggregate states;
-<br/>&mdash; a single <b>String</b> key is hashed once, not twice.</p>
+<br/>&mdash; repeating tuples of keys hit a cache of aggregate states.</p>
 
 <p><code style="font-size: 12pt; line-height: 1.25;">SELECT region, os, browser, source, count(), sum(ResolutionWidth)
 FROM t GROUP BY region, os, browser, source;    <span style="color: gray;">-- all LowCardinality(String)</span>
@@ -680,7 +679,7 @@ Developers: artemkulyk (#121795, #121998), Samuel Krempaský (#122857), Groene A
 
 -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: artemkulyk, Samuel Krempaský, Alexey Milovidov.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 3em;">Developers: artemkulyk, Samuel Krempaský, Alexey Milovidov.</p>
 </section>
 
 <section class="slide">
@@ -744,7 +743,7 @@ SETTINGS use_query_cache = 1,
 
 <p style="margin-top: 0.3em;">Example: <b>2.07 sec</b> &rarr; <b><span style="color: green;">0.033</span> sec</b> after a server restart.</p>
 
-<p style="margin-top: 0.3em;">&mdash; More space; survives restarts; can be shared between servers.</p>
+<p style="margin-top: 0.3em;">&mdash; More space; survives restarts. In <b>ClickHouse Cloud</b> it supports distributed cache and is shared between replicas.</p>
 
 <!-- Demo (server with <filesystem_caches><qc_disk_cache><path>.../fs_cache/</path><max_size>10Gi</max_size></qc_disk_cache></filesystem_caches>):
 
@@ -761,7 +760,7 @@ Lookup order: memory first, then disk. Entries are ordinary filesystem cache ent
 
 -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Alexey Milovidov, Konstantin Bogdanov.</p>
+<p style="color: gray; font-size: 14pt; margin-top: -0.5em;">Developers: Alexey Milovidov, Konstantin Bogdanov.</p>
 </section>
 
 <section class="slide">
@@ -774,7 +773,7 @@ ENGINE = <b style="color: green;">Cluster</b>('prod_cluster', 'default');
 
 SHOW TABLES FROM prod;
 SELECT count() FROM prod.events;       <span style="color: gray;">-- reads all shards</span>
-INSERT INTO prod.events VALUES &hellip;    <span style="color: gray;">-- to a random shard</span>
+INSERT INTO prod.events VALUES &hellip;       <span style="color: gray;">-- insert to a random shard</span>
 </code></p>
 
 <p style="margin-top: 0.3em;">&mdash; The named-cluster counterpart of the <b>Remote</b> database engine (26.9),
@@ -925,7 +924,7 @@ SELECT &hellip; SETTINGS workload = 'all',
 <p><code style="font-size: 12pt; line-height: 1.25;">CREATE WORKLOAD all
 SETTINGS max_memory = '16Gi', <b style="color: green;">max_memory_before_spill</b> = '8Gi';
 </code></p>
-<p style="margin-top: 0.3em;">Example (from the PR), 50 concurrent 1 GB queries succeed:
+<p style="margin-top: 0.3em;">Example: 50 concurrent 1 GB queries succeed:
 <br/>&emsp; <b>without spilling: <span style="color: red;">9%</span>, with spilling: <span style="color: green;">100%</span>.</b></p>
 
 <!-- Demo (server, CREATE RESOURCE cpu (MASTER THREAD, WORKER THREAD); CREATE OR REPLACE WORKLOAD all SETTINGS max_concurrent_threads = 8, scheduler = 'fifo' / 'las'):
