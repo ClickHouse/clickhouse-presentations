@@ -1032,7 +1032,6 @@ Passing a query instead of a table name to mysql/postgresql/sqlite: 26.7 (on the
 <p style="margin-top: -0.3em;">A subquery in <b>FROM</b> that refers to the tables on its left:</p>
 
 <p><code style="font-size: 12pt; line-height: 1.25;">SET allow_experimental_lateral_join = 1;
-
 SELECT c.CounterID, t.SearchPhrase, t.c
 FROM (SELECT CounterID FROM hits
       GROUP BY CounterID ORDER BY count() DESC LIMIT 3) AS c
@@ -1045,7 +1044,8 @@ FROM (SELECT CounterID FROM hits
 </code></p>
 
 <p style="margin-top: 0.3em; margin-right: -2em;">&mdash; The standard "top N per group" pattern; (<b>CROSS APPLY</b> in MS SQL Server).
-<br/>&mdash; <b>INNER</b> and <b>LEFT</b>; evaluated once per distinct outer value.</p>
+<br/>&mdash; <b>INNER</b> and <b>LEFT</b>. Decorrelated: runs once for all outer rows,
+<br/>&emsp; <b>LIMIT</b> becomes <b>LIMIT BY</b>, then a hash join.</p>
 
 <!-- Demo (server, hits):
 
@@ -1053,6 +1053,12 @@ SELECT c.CounterID, t.SearchPhrase, t.c FROM (SELECT CounterID FROM hits GROUP B
 JOIN LATERAL (SELECT SearchPhrase, count() AS c FROM hits WHERE hits.CounterID = c.CounterID AND SearchPhrase != '' GROUP BY SearchPhrase ORDER BY c DESC LIMIT 2) AS t ON true
 ORDER BY c.CounterID, t.c DESC SETTINGS allow_experimental_lateral_join = 1
 -- 6 rows (2 per counter), 4.1 s
+EXPLAIN of this query: it is not evaluated per outer row. The lateral subquery is decorrelated into one query:
+  Join (inner, HashJoin), Join conditions: CounterID <=> CounterID
+  ├── LimitBy (LIMIT BY for decorrelated correlated subquery), Columns: CounterID, Length 2
+  │   └── Sorting (CounterID ASC, count() DESC) └── Aggregating Keys: SearchPhrase, CounterID └── ReadFromMergeTree (hits)
+  └── Limit 3 └── Sorting (count() DESC) └── Aggregating Keys: CounterID └── ReadFromMergeTree (hits)
+The docs' "evaluated once per distinct value of the left-side columns" describes the result, not the execution.
 Supported: INNER/LEFT JOIN LATERAL ... ON true only. "LATERAL is not supported with COMMA JOIN" / "... with CROSS JOIN".
 No `LATERAL unnest(...)` — use ARRAY JOIN.
 
