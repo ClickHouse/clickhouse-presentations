@@ -1619,11 +1619,23 @@ Search is bounded by input_format_freeform_max_search_steps (4096).
 
 <p style="float: right;">Demo.</p>
 
-<!-- Not tested live here. The release notes say: ZooKeeper browser, per-host summary, and better filters (changelog #124100).
-     Demo: `clickhouse chdig --host ... --cluster ...`; press the key for the ZooKeeper browser (see the in-app help). -->
+<!-- Tested live (chdig 26.10.1 built into the 26.11 master binary), recorded on the next slide.
+     Release notes v26.10.1: ZooKeeper browser (system.zookeeper) with integration into the replicas view; per-host summary rows in
+     --cluster mode (toggled with `1`, capacity-scale bars, resizable with [ ]); queries filter (`/`) with predicates and Tab completion. -->
 
 <p style="color: gray; font-size: 14pt; margin-top: 3em;">Developer: Azat Khuzhin.</p>
 </section>
+
+<section class="slide" style="background: #16181d; padding: 0;">
+<video style="width: 100%; height: 100%; object-fit: contain;" preload="metadata" loop><source src="pictures/chdig.mp4" type="video/mp4"></video>
+</section>
+<!-- chdig.mp4 (87 s, 2560x1448, H.264): chdig 26.10.1 against a 3-node cluster `demo` (ch1: 8 CPU / 16 GiB, ch2 and ch3: 4 CPU / 8 GiB),
+     `clickhouse chdig --url tcp://127.0.0.1:19901 --cluster demo -d 2000`:
+     the queries view with the per-host summary (toggled off and on with `1`), then F2 -> ZooKeeper, the `/` filter to walk
+     /clickhouse/tables/1/analytics/events (a ReplicatedMergeTree table receiving inserts), its replication `log`, the `metadata` node dialog,
+     and replicas/ch1. Recorded on the test machine: three servers in separate UTS namespaces (hostnames ch1..ch3) and systemd scopes
+     (CPUQuota, MemoryMax); tmux capture-pane every 150 ms rendered through Chromium (DejaVu Sans Mono), encoded with ffmpeg.
+     Scripts: /home/ubuntu/rel2610/chdemo/{gen.py,start_node.sh,load.sh,record.sh,render_frames.py}. -->
 
 <section class="slide">
 <h2>Better PostgreSQL compatibility</h2>
@@ -1779,6 +1791,65 @@ LIMIT 10
      Format button (#format-query, bottom right of the editor) calls formatQuery; the result above is what it produced. -->
 
 <p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+
+<section class="slide" style="background: url(pictures/back10.jpg); background-size: cover;">
+<h2><span class="hilite">Integrations</span></h2>
+</section>
+
+<section class="slide">
+<h2>Client libraries</h2>
+
+<p style="margin-top: -0.3em;"><a href="https://clickhouse.com/blog/introducing-the-blazing-fast-native-tcp-client-for-net"><b>Native TCP client for .NET</b></a> &mdash; faster reads and inserts
+<br/>with fewer allocations, columnar APIs, POCO support,
+<br/>and a path to migrate from HTTP.</p>
+
+<p style="margin-top: 1em;"><a href="https://github.com/ClickHouse/clickhouse-c"><b>clickhouse-c</b></a> &mdash; a minimalist header-only library for embedded contexts:</p>
+<p style="margin-top: -0.5em;">&mdash; the Native protocol over TCP and Native format blocks;
+<br/>&mdash; one core header, optional headers for TCP, compression, codecs;
+<br/>&mdash; made for PostgreSQL extensions (<b>palloc</b> arenas, <b>longjmp</b>);
+<br/>&mdash; <b>clickhouse.h</b> alone decodes <b>clickhouse-local</b> output from a pipe.</p>
+
+<!-- Sources: the blog post (title "Introducing the (blazing fast!) native TCP client for .NET", 2026-10-16; repo ClickHouse/clickhouse-cs);
+     clickhouse-c README (created 2026-05-21, Apache-2.0, C): "Header-only C client for the ClickHouse Native wire format — the Native Protocol
+     over TCP carrying Native Format blocks. One core header, plus optional follow-up headers for TCP, compression, codecs, and I/O backends.
+     Designed for embedding inside PostgreSQL extensions (palloc arena, longjmp) but with no PG-specific code. Including clickhouse.h alone
+     gives a pure block decoder over caller-supplied chc_io, usable for reading clickhouse-local's FORMAT Native from a pipe". -->
+</section>
+
+<section class="slide">
+<h2>ClickHouse Cloud</h2>
+
+<p style="margin-top: -0.3em;"><a href="https://clickhouse.com/blog/executable-udfs-generally-available-on-clickhouse-cloud"><b>Executable UDFs</b> are generally available</a>:
+<br/>AWS, GCP, Azure; native runtimes, network access,
+<br/>observability, API and Terraform.</p>
+
+<p><a href="https://clickhouse.com/blog/introducing-jwt-authentication-in-clickhouse-cloud"><b>JWT authentication</b></a>: connect with short-lived tokens
+<br/>from your identity provider instead of database passwords.</p>
+
+<p><a href="https://clickhouse.com/blog/introducing-scim-provisioning-in-clickhouse-cloud"><b>SCIM 2.0 provisioning</b></a>: the identity provider creates, updates,
+<br/>and removes members and syncs groups to ClickHouse roles.</p>
+
+<!-- Descriptions condensed from the posts' summaries (2026-10-05, 2026-10-08, 2026-09-30). -->
+</section>
+
+<section class="slide">
+<h2>Ecosystem</h2>
+
+<p style="margin-top: -0.3em;"><b>Microsoft Fabric</b>:</p>
+<p style="margin-top: -0.5em;">&mdash; <a href="https://clickhouse.com/blog/clickhouse-now-writes-to-microsoft-onelake">ClickHouse writes Apache Iceberg tables to OneLake</a>;
+<br/>&mdash; <a href="https://clickhouse.com/blog/clickhouse-for-microsoft-fabric">ClickHouse Workload for Fabric</a> is in public preview.</p>
+
+<p><b>Apache Airflow</b>:</p>
+<p style="margin-top: -0.5em;">&mdash; <a href="https://clickhouse.com/blog/clickhouse-airflow-provider">the official ClickHouse provider</a>: SQL operators, bulk inserts,
+<br/>&emsp; self-managed Airflow and Astronomer.</p>
+
+<p><b>chDB</b> and <b>Postgres</b>:</p>
+<p style="margin-top: -0.5em;">&mdash; <a href="https://clickhouse.com/blog/chdb-durable-layer-for-agent-memory">chDB Durable Layer</a> for agent memory;
+<br/>&mdash; <a href="https://clickhouse.com/blog/pg_clickhouse-chdb">pg_clickhouse and the chdb extension</a>: encodings, nesting, types.</p>
+
+<!-- Descriptions condensed from the posts' summaries. All URLs checked (HTTP 200) on 2026-10-22. -->
 </section>
 
 
