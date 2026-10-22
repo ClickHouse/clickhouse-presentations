@@ -1265,7 +1265,7 @@ FROM <b style="color: green;">elasticsearch</b>('http://localhost:9200', 'hits_d
 CREATE TABLE es_hits ENGINE = <b style="color: green;">Elasticsearch</b>('http://localhost:9200', 'hits_docs');
 
 SELECT count() FROM elasticsearch('http://localhost:9200', 'hits_docs',
-    <b style="color: green;">query</b> = '{"term": {"is_mobile": "1"}}');   <span style="color: gray;">-- filtered by Elasticsearch</span>
+    <b style="color: green;">query</b>('{"term": {"is_mobile": "1"}}'));   <span style="color: gray;">-- filtered by Elasticsearch</span>
 </code></p>
 
 <p style="margin-top: 0.3em;">&mdash; A consistent snapshot: paged with a point in time; Elasticsearch 7.12+.
@@ -1594,7 +1594,7 @@ Note: slice is Trino's slice(array, start, length).
 </section>
 
 <section class="slide">
-<h2>Freeform data format</h2>
+<h2>Freeform data format 🧪</h2>
 
 <p style="margin-top: -0.3em;">Any tabular text &mdash; figure out the columns automatically:</p>
 
