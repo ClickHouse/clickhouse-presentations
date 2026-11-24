@@ -122,6 +122,13 @@ The new cost-base JOIN optimizer
 ...
 
 -->
+<!-- Slides that are not in the list above (answers to its open questions and extras; cut freely):
+     Small: "The travelling salesman, in SQL" (a demo for the array combinatorics).
+     Performance, "any other substantial items": "Faster DISTINCT" (parallel DISTINCT, radix-partitioned count(DISTINCT)); "And 350 more" (a list).
+       The JOIN item is three slides: the DPsub optimizer, other JOIN changes, the versions benchmark screenshot.
+     Interesting: a ClickBench screenshot for Vortex.
+     Security, "other security-related changes": "No memory addresses, anywhere" and "More hardening".
+     Bonus: the launches are one slide each; the FAA outage is a text slide plus the animation. -->
 
 <section class="slide" style="background: url(pictures/back3.jpg); background-size: cover;">
 <h2 style="color: black;"><span class="hilite">Small And Nice Features</span></h2>
@@ -706,13 +713,380 @@ Q5  SELECT COUNT(DISTINCT SearchPhrase) FROM hits     26.10: 0.154 s,  973 MiB  
 <p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Alexey Milovidov, Raúl Marín.</p>
 </section>
 
-<!-- SECTION:PERF2 -->
+<section class="slide">
+<h2 style="font-size: 30pt;">Columns cache for Parquet and data lakes 🧪</h2>
+
+<p style="margin-top: -0.3em;">The columns cache keeps deserialized columns in memory.
+<br/>In 26.10 it worked for MergeTree. Now also for <b>Parquet</b>:</p>
+
+<p>&mdash; local files, <b>S3</b>, <b>Azure</b>; <b>Iceberg</b>, <b>Delta Lake</b>, <b>Paimon</b> tables;
+<br/>&mdash; cached columns are shared without copying;
+<br/>&mdash; the memory belongs to the server, not to the query that filled it.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.3;">SET <b style="color: green;">use_columns_cache</b> = 1;
+</code></p>
+
+<p style="margin-top: 0.3em;">Example: ClickBench, hot runs of 43 queries, c6a.metal:</p>
+<p style="margin-top: -0.5em;"><b>Parquet: <span style="color: red;">4.46</span> &rarr; <span style="color: green;">3.07</span> sec.</b> &nbsp; <b>Parquet on S3: <span style="color: red;">8.86</span> &rarr; <span style="color: green;">5.27</span> sec.</b>
+<br/><span style="color: gray;">For comparison, MergeTree: 2.74 &rarr; 2.29 sec.</span></p>
+
+<!-- Numbers are from https://github.com/ClickHouse/ClickBench/pull/2914 ("Experiment: enable the columns cache by default in the ClickHouse entries"),
+     result files of 2026-11-15 on the PR branch against the files of the same date on main; sum of the hot runs (min of runs 2 and 3) of 43 queries:
+                                         c6a.metal        c8g.metal-48xl     c6a.4xlarge       geometric mean of the ratios (c6a.metal)
+       clickhouse (MergeTree)            2.74 -> 2.29     2.08 -> 1.55       10.78 -> 10.43    x1.12
+       clickhouse-parquet                4.46 -> 3.07     3.38 -> 2.21       15.98 -> 14.68    x1.32
+       clickhouse-parquet-partitioned    4.64 -> 3.18     3.40 -> 2.22       16.09 -> 14.39    x1.30
+       clickhouse-datalake (S3)          8.86 -> 5.27     5.70 -> 3.17       18.82 -> 17.03    x1.37
+       clickhouse-datalake-partitioned   7.15 -> 4.97     4.43 -> 3.32       17.58 -> 14.82    x1.31
+     In the PR the Parquet and data lake entries also switch from clickhouse-local to clickhouse-server (a File(Parquet) table / an S3 table),
+     because an in-memory cache cannot be reused between runs of clickhouse-local — so the baseline differs by that too.
+     The cache is sized at 10% of RAM by default (columns_cache_size_to_ram_ratio).
+     Local check (File(Parquet) table over ClickBench hits.parquet, 26.11.1.2934, 32 threads, a busy machine):
+       43 queries hot: 6.86 s without the cache, 4.59 s with use_columns_cache = 1.
+       Q22 0.337 -> 0.088 s, Q28 1.141 -> 0.290 s, Q30 0.329 -> 0.065 s, Q33 1.071 -> 0.188 s, Q35 0.481 -> 0.037 s;
+       cheap queries (Q1, Q7, Q10) were not faster in this run.
+     From the changelog: "cached scans up to 10 times faster and cache-filling runs 1.8 times faster on ClickBench"; also projection reads and
+     compact parts of MergeTree; conditions on all queried columns are moved to PREWHERE ("up to 5 times faster"). -->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Alexey Milovidov, Raúl Marín.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Parquet and Iceberg: filter earlier, read less</h2>
+
+<p style="margin-top: -0.3em;"><b>PREWHERE</b>: dictionary-encoded columns are filtered once
+<br/>per dictionary value; columns are filtered in place.</p>
+
+<p style="margin-top: -0.5em;"><code style="font-size: 12pt; line-height: 1.3;">SELECT count() FROM hits_parquet WHERE URL LIKE '%google%';
+</code></p>
+<p style="margin-top: 0.3em;"><b>26.10: <span style="color: red;">0.84</span> sec.</b> &nbsp; <b>26.11: <span style="color: green;">0.21</span> sec.</b></p>
+
+<p><b>Top-K</b>: also for String keys; one threshold for all threads.</p>
+
+<p style="margin-top: -0.5em;"><code style="font-size: 12pt; line-height: 1.3;">SELECT Title FROM hits_parquet ORDER BY Title DESC LIMIT 10;
+</code></p>
+<p style="margin-top: 0.3em;"><b>26.10: <span style="color: red;">0.32</span> sec.</b> &nbsp; <b>26.11: <span style="color: green;">0.12</span> sec.</b> &nbsp; 207 of 226 row groups skipped.</p>
+
+<p><b>Query condition cache</b>: for <b>s3</b>, <b>url</b>, <b>file</b>, <b>Iceberg</b>, <b>Delta Lake</b>.</p>
+
+<!-- Demo (two servers, 26.10.11.12 vs 26.11.1.2934, a table `hits` ENGINE = File(Parquet, 'hits.parquet') over the 14 GB ClickBench file (226 row groups),
+     as in ClickBench's clickhouse-parquet/create.sql; hot page cache, 32 threads, min of 3; the machine is shared and busy — re-test):
+
+All 43 ClickBench queries: 26.10: 11.84 s    26.11: 6.86 s    (geometric mean of the ratios x1.59)
+Q20  SELECT COUNT(*) FROM hits WHERE URL LIKE '%google%'                0.837 s -> 0.213 s
+Q22  SELECT SearchPhrase, MIN(URL), MIN(Title), COUNT(*), COUNT(DISTINCT UserID) ... WHERE Title LIKE '%Google%' AND URL NOT LIKE '%.google.%' ...   1.040 -> 0.337
+Q27  SELECT CounterID, AVG(length(URL)), COUNT(*) ... WHERE URL <> ''   0.621 s -> 0.230 s
+Q1   SELECT COUNT(*) FROM hits WHERE AdvEngineID <> 0                   0.051 s -> 0.012 s
+Q10  SELECT MobilePhoneModel, COUNT(DISTINCT UserID) ... WHERE MobilePhoneModel <> ''   0.111 s -> 0.032 s
+Q11  the same with MobilePhone                                          0.117 s -> 0.032 s
+SELECT Title FROM hits ORDER BY Title DESC LIMIT 10                     0.323 s -> 0.123 s    (file() function: 0.297 -> 0.153; with 4 threads: 0.313 -> 0.136)
+  query_log on 26.11: read_rows 6.83M of 100M, ProfileEvents ParquetTopKSkippedRowGroups = 207 (of 226)
+SELECT WatchID, URL FROM hits ORDER BY WatchID LIMIT 10                 0.027 s -> 0.013 s
+SELECT URL, EventTime FROM hits ORDER BY EventTime DESC LIMIT 10        0.025 s -> 0.016 s
+
+The changes (Performance Improvement entries): PREWHERE once per dictionary value #124131, #126397; reading after PREWHERE x1.4 #124186; in-place filtering #129188;
+no renumbering of dictionary indexes #128342; scattered rows #128287, #131935; low-cardinality strings up to ~10x #130986; multi-condition PREWHERE #128582.
+Top-K: String keys by min/max #124560; one threshold for all sorting streams; dictionary-based skipping #128290; lazy columns read in parallel #129443;
+from the columns cache #131143; INT64 read as DateTime uses statistics #124863.
+Query condition cache: ORDER BY ... LIMIT over data lake tables #124808; S3 and AzureBlobStorage #124813; URL engine and the file, s3, icebergS3 table functions #124874.
+Metadata: only for requested columns and shared between queries (count() in clickhouse-local x2.4) #124364; prefetch without an offset index
+(x2.4 with 20 ms latency) #126368; footers reused #129389; the footer of the next file is prefetched #128607.
+Developers: Groene AI (most of the PREWHERE and top-K changes), Alexey Milovidov, Murphy, Konstantin Vedernikov. -->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Groene AI, Alexey Milovidov, Murphy, Konstantin Vedernikov.</p>
+</section>
+
+<section class="slide">
+<h2>A native ORC reader and writer</h2>
+
+<p style="margin-top: -0.3em;">The Apache ORC C++ library is replaced with our own implementation,
+<br/>as it was done for Parquet and Arrow before.</p>
+
+<p>Example: 20M rows of ClickBench <b>hits</b>, 105 columns, 2 GB:</p>
+
+<p style="margin-top: -0.5em;">&mdash; a full scan: <b><span style="color: red;">23.2</span> sec</b> &rarr; <b><span style="color: green;">11.9</span> sec</b>;
+<br/>&mdash; four numeric columns: <b><span style="color: red;">0.68</span> sec</b> &rarr; <b><span style="color: green;">0.33</span> sec</b>;
+<br/>&mdash; three String columns: <b><span style="color: red;">3.81</span> sec</b> &rarr; <b><span style="color: green;">2.87</span> sec</b>.</p>
+
+<p><b>Security</b>: the library had vulnerabilities with malformed files.
+<br/>The new reader is fuzzed and hardened &mdash;
+<br/>and backported to 26.3, 26.8, 26.9, 26.10.</p>
+
+<!-- Demo (clickhouse-local, taskset to 32 cores, max_threads 32, three runs, last two shown; the file was written by ClickHouse:
+     INSERT INTO FUNCTION file('hits20m.orc') SELECT * FROM hits WHERE CounterID < 3000000 LIMIT 20000000   -- 2.03 GB):
+
+                                                                                         26.9.23.15 (Apache ORC)    26.11.1.2934 (native)
+SELECT count() FROM file('hits20m.orc') WHERE NOT ignore(*)                              23.6 / 23.2 s              11.87 / 11.87 s
+SELECT sum(length(URL)), sum(length(Title)), sum(length(Referer)) FROM file(...)         3.805 / 3.806 s            2.869 / 2.872 s
+SELECT sum(UserID), sum(WatchID), sum(CounterID), avg(ResolutionWidth) FROM file(...)    0.682 / 0.683 s            0.335 / 0.334 s
+SELECT count() FROM file(...) WHERE URL LIKE '%google%'                                  1.452 / 1.451 s            1.129 / 1.145 s
+SELECT RegionID, uniq(UserID) FROM file(...) GROUP BY RegionID ORDER BY 2 DESC LIMIT 10  0.428 / 0.431 s            0.253 / 0.252 s
+The baseline is 26.9.23.15, a build from before the backport: 26.10.11.12 already contains the native reader (identical timings to 26.11).
+Backports of #127690: #129797 (26.3), #129779 (26.8), #129781 (26.9), #129782 (26.10).
+Files written by 26.10.11.12 and by 26.11 are read identically by both (checked with sum(cityHash64(*))).
+From the PR: "Reading is 1.4–2.3 times faster and writing is about 25% faster"; "400 runs of the reader on randomly corrupted files: no crashes or
+logical errors"; the metadata is parsed with a small hand-written Protocol Buffers implementation, so the build does not need protoc for ORC;
+codecs: none, zlib, snappy, LZ4, zstd (LZO for reading). Hardening follow-up: #129345 (Raúl Marín). Also fixed: Date values after 2059-09-18.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Alexey Milovidov, Raúl Marín.</p>
+</section>
+
+
+<section class="slide">
+<h2>A new JOIN order optimizer</h2>
+
+<p style="margin-top: -0.3em;"><b>DPsub</b>: exhaustive dynamic programming over all join trees,
+<br/>now by default. A <b>conflict detector</b> lets it also reorder
+<br/><b>LEFT</b>, <b>RIGHT</b>, <b>FULL</b>, <b>SEMI</b> and <b>ANTI</b> joins &mdash; no more barriers.</p>
+
+<p><code style="font-size: 13pt; line-height: 1.3;">SELECT sum(big.v + mid.v) FROM big
+INNER JOIN mid ON big.k = mid.k
+LEFT SEMI JOIN tiny ON big.k = tiny.k;
+
+<span style="color: gray;">before:  (big &bowtie; mid) &#8905; tiny    504 million intermediate rows
+26.11:   mid &bowtie; (big &#8905; tiny)      1 million</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">Example: <b>greedy: <span style="color: red;">0.26</span> sec.</b> &nbsp; <b>DPsub: <span style="color: green;">0.008</span> sec.</b></p>
+
+<p style="margin-top: 0.3em;">&mdash; Up to 10 tables; larger queries fall back to the greedy algorithm.</p>
+
+<!-- Demo (server, 26.11.1.2934; the example is from the blog post "The new cost-based join optimizer with reordering support for non-inner joins"):
+
+CREATE TABLE big (k UInt32, v UInt32) ENGINE = MergeTree ORDER BY tuple();   INSERT INTO big SELECT number % 17857, number FROM numbers(3000000);
+CREATE TABLE mid (k UInt32, v UInt32) ENGINE = MergeTree ORDER BY tuple();   INSERT INTO mid SELECT number % 17857, number FROM numbers(3000000);
+CREATE TABLE tiny (k UInt32) ENGINE = MergeTree ORDER BY tuple();            INSERT INTO tiny SELECT number * 178 FROM numbers(100);
+SELECT count() FROM big INNER JOIN mid ON big.k = mid.k;     -- 504004056
+Q = SELECT sum(big.v + mid.v) FROM big INNER JOIN mid ON big.k = mid.k LEFT SEMI JOIN tiny ON big.k = tiny.k
+EXPLAIN Q (default):   Join inner (mid, Join left semi (big, tiny))
+EXPLAIN Q SETTINGS query_plan_optimize_join_order_algorithm = 'greedy', query_plan_optimize_join_order_conflict_detector = '':
+                       Join left semi (Join inner (big, mid), tiny)
+Timings, max_threads = 16, enable_join_runtime_filters = 0:   greedy 0.263..0.325 s    DPsub 0.008..0.009 s
+With runtime filters (the default) both are fast: 0.009 vs 0.007 s — the runtime filter already recovers the bad order on this query.
+Settings: query_plan_optimize_join_order_algorithm = 'dpsub,greedy', query_plan_optimize_join_order_conflict_detector = 'c',
+query_plan_optimize_join_order_limit = 10 (DPsub itself handles up to 12 tables).
+NOTE: #120110 (merged 2026-10-22) and the follow-up fixes were backported to 26.10: 26.10.11.12 already has these defaults, so "before" here is
+the greedy algorithm selected by the settings, not the 26.10 binary.
+The conflict detector follows "On the Correct and Complete Enumeration of the Core Search Space" (SIGMOD 2013).
+From the post: validated on 90,000+ join trees and 2.8M plans; against greedy: TPC-H Q2 -55%, TPC-DS Q73 -45%, TPC-H Q5 -44%.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Fisnik Kastrati.</p>
+</section>
+
+<section class="slide">
+<h2>Faster JOINs</h2>
+
+<p style="margin-top: -0.3em;">&mdash; <b>Merge join by cost</b>: for tables sorted by the join key,
+<br/>&emsp; the optimizer picks a merge join when it is cheaper.</p>
+
+<p style="margin-top: -0.5em;"><code style="font-size: 12pt; line-height: 1.3;">SELECT u.country, sum(o.amount) FROM orders AS o
+JOIN users AS u ON o.user_id = u.user_id GROUP BY u.country;
+</code></p>
+<p style="margin-top: 0.3em;"><b>hash join: 0.44 sec, <span style="color: red;">2.6 GB</span>.</b> &nbsp; <b>26.11: 0.52 sec, <span style="color: green;">136 MB</span>.</b></p>
+
+<p>&mdash; <b>hash</b> and <b>parallel_hash</b> are now one algorithm:
+<br/>&emsp; the layout is chosen from the estimated size of the right table.
+<br/>&mdash; Short strings are kept in the row store: 1.4&ndash;2.4 times faster.
+<br/>&mdash; String keys are packed into 16 bytes.
+<br/>&mdash; Lazy materialization for <b>JOIN &hellip; LIMIT</b>.</p>
+
+<!-- Demo (server, 26.11.1.2934, max_threads = 32, min of 3):
+
+CREATE TABLE orders (user_id UInt64, order_id UInt64, amount UInt32) ENGINE = MergeTree ORDER BY user_id;
+CREATE TABLE users (user_id UInt64, name String, country LowCardinality(String)) ENGINE = MergeTree ORDER BY user_id;
+INSERT INTO orders SELECT intHash64(number) % 50000000, number, number % 1000 FROM numbers(200000000);
+INSERT INTO users SELECT number, 'user_' || toString(number), ['US','DE','FR','JP','BR'][number % 5 + 1] FROM numbers(50000000);
+Q = SELECT u.country, sum(o.amount) FROM orders AS o JOIN users AS u ON o.user_id = u.user_id GROUP BY u.country
+default:                                                   Algorithm: FullSortingMergeJoin, Sharding: [(user_id = user_id)]    0.516 s, 136 MiB
+SETTINGS query_plan_join_order_use_interesting_orders = 0: Algorithm: SpillingHashJoin(HashJoin)                               0.441 s, 2588 MiB
+(#128519, #132507; also backported to 26.10.x: 26.10.11.12 chooses the merge join too, so the comparison is by the setting.)
+hash + parallel_hash: #115605 (Backward Incompatible entry): join_algorithm default 'direct,parallel_hash,hash,ie_join' -> 'direct,hash,ie_join';
+  the layout is picked from parallel_hash_join_threshold and the estimated size; setting hash_join_layout = auto | serial | parallel.
+Row store for strings: #125979 "Joins that output several such columns from a large right table can achieve speedups of 1.4x to 2.4x ... with about 9% to 15%
+  more memory" (average value size at most 15 bytes, from `basic` statistics). Tuple columns: #127273 (up to 1.5x).
+  A local attempt (200M rows joined to a 20M-row table with four short String columns) showed no difference (0.19 s both) — the tables were sorted
+  by the key and the merge join was used; not investigated further. The numbers on the slide are from the changelog.
+Packed String keys: #128972 ("Each key takes 16 bytes in the hash table. A key of up to 15 bytes is stored as it is. A longer key is stored as its 128-bit SipHash").
+Lazy materialization for LIMIT over JOIN: #122682, #128218, #130913, setting query_plan_lazy_materialization_for_join.
+Also: runtime filters for ASOF JOIN (#113667) and for pruning Iceberg files (#128145); ie_join no longer quadratic (#131335: 3.6 s -> 0.1 s);
+Robin Hood hashing is no longer the default for large hash joins (#128012: up to 1.8x faster, more memory).
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Fisnik Kastrati, Harikrishnan Prabakaran, Hechem Selmi, Nikolai Kochetov.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/versions_joins.png) center / contain no-repeat; background-color: #04293a;">
+<a href="https://benchmark.clickhouse.com/versions/#version=+s|2023|6..25|6..31|6..36|68.7|664|6..54|6..02|6..1.4|6..12|52.4|51.3|5.06|5.56|5..36&amp;dataset=+ph|ps&amp;metric=hot&amp;queries=-" target="_blank" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></a>
+</section>
+<!-- The ClickHouse Versions Benchmark (https://benchmark.clickhouse.com/versions/), datasets tpch (SF 40) and tpcds (SF 32), hot run, versions 25.8 .. 26.10 and master,
+     c7a.4xlarge; dark theme, scrolled to the chart; captured on 2026-11-24.
+     From the result files (sum of the hot runs): TPC-DS 100 queries: 26.10: 79.6 s -> master: 49.1 s (49 queries more than 1.2x faster, 2 slower;
+     q91 4.82 -> 0.78, q76 2.71 -> 0.44, q41 4.71 -> 0.77, q99 14.3 -> 3.6);  TPC-H 22 queries: 11.2 s -> 9.6 s (q2 0.33 -> 0.18, q18 1.47 -> 0.86);
+     Join Order Benchmark, 113 queries: 9.15 s -> 8.98 s.  "master" there is 26.12.1.339 of 2026-11-24; there is no 26.11 column yet. -->
+
+<section class="slide">
+<h2>Faster window functions</h2>
+
+<p style="margin-top: -0.3em;">&mdash; Rows are processed in batches over sliding blocks: <b>1.2&ndash;1.3x</b> faster.</p>
+
+<p>&mdash; When the window follows the order of the table,
+<br/>&emsp; it is computed in parallel, without sorting:</p>
+
+<p style="margin-top: -0.5em;"><code style="font-size: 12pt; line-height: 1.3;">SELECT sum(ResolutionWidth) OVER (PARTITION BY CounterID ORDER BY EventDate, UserID)
+FROM hits;   <span style="color: gray;">-- ORDER BY (CounterID, EventDate, UserID, ...)</span>
+</code></p>
+<p style="margin-top: 0.3em;"><b>26.10: <span style="color: red;">1.55</span> sec, <span style="color: red;">1.8</span> GB.</b> &nbsp; <b>26.11: <span style="color: green;">0.41</span> sec, <span style="color: green;">90</span> MB.</b></p>
+
+<p>&mdash; <b>row_number()</b> streams rows instead of buffering a partition.
+<br/>&mdash; A window function used several times is computed once.</p>
+
+<!-- Demo (hits, 26.10.11.12 vs 26.11.1.2934, 32 threads, min of 3, FORMAT Null):
+
+SELECT max(s) FROM (SELECT sum(ResolutionWidth) OVER (PARTITION BY CounterID ORDER BY EventDate, UserID) AS s FROM hits)       1.554 s, 1813 MiB -> 0.408 s, 90 MiB
+  (#131135: query_plan_reuse_storage_ordering_for_window_functions is enabled by default again; the read is split into ranges of the PARTITION BY prefix
+   of the primary key, each processed by its own window transform)
+SELECT sum(rn) FROM (SELECT row_number() OVER (PARTITION BY UserID ORDER BY EventTime) AS rn FROM hits)                       0.702 s -> 0.558 s   (x1.26)
+SELECT max(d) FROM (SELECT EventTime - lagInFrame(EventTime) OVER (PARTITION BY UserID ORDER BY EventTime ROWS BETWEEN 1 PRECEDING AND CURRENT ROW) AS d FROM hits)   0.614 -> 0.499 (x1.23)
+SELECT count() FROM (SELECT rank() OVER (PARTITION BY RegionID ORDER BY ResolutionWidth) AS r FROM hits) WHERE r = 1           1.214 s -> 0.995 s   (x1.22)
+SELECT max(a) FROM (SELECT avg(ResolutionWidth) OVER (ORDER BY EventTime ROWS BETWEEN 100 PRECEDING AND CURRENT ROW) AS a FROM hits)   6.097 s -> 4.930 s (x1.24)
+SELECT max(s) FROM (SELECT sum(ResolutionWidth) OVER (PARTITION BY UserID ORDER BY EventTime ROWS BETWEEN 10 PRECEDING AND CURRENT ROW) AS s FROM hits)   0.706 -> 0.659 (x1.07)
+Batched execution: #125749, #127389 (Mikhail Artemenko). row_number streaming: #120264 (Ilya Yatsishin). Computed once: #126209 (Yakov Olkhovskiy).
+Argument preparation: #128726; no peer groups when not needed: #130139; aggregate states on whole cache lines: #129432.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Mikhail Artemenko, Nikita Fomichev, Ilya Yatsishin, Yakov Olkhovskiy.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Metadata snapshots for plain_rewritable disks</h2>
+
+<p style="margin-top: -0.3em;"><b>plain_rewritable</b>: MergeTree on object storage with one writer
+<br/>and any number of read-only servers &mdash; without a metadata service.</p>
+
+<p>A read-only disk had to list the storage and read a small object
+<br/>for every directory. Now the writer publishes a compact <b>snapshot</b>:</p>
+
+<p>&mdash; readers load one object at startup and refresh it by ETag;
+<br/>&mdash; enabled by default: <b>metadata_snapshot_enabled</b>.</p>
+
+<p>Example: a read-only server attaches a table of 1000 parts:</p>
+<p style="margin-top: -0.5em;"><b>before: <span style="color: red;">1012</span> LIST + <span style="color: red;">1001</span> GET requests.</b> &nbsp; <b>26.11: <span style="color: green;">1</span> HEAD + <span style="color: green;">1</span> GET.</b></p>
+
+<!-- Demo (26.11.1.2934, a local MinIO as the object storage):
+
+CREATE TABLE pr_w (p UInt16, k UInt64, a String, b String, c Float64, d DateTime, e UInt32, f String) ENGINE = MergeTree PARTITION BY p ORDER BY k
+SETTINGS disk = disk(name = 'pr_w_disk', type = s3_plain_rewritable, endpoint = 'http://127.0.0.1:19000/warehouse/pr2611/', access_key_id = '...', secret_access_key = '...'),
+         min_bytes_for_wide_part = 0, min_rows_for_wide_part = 0;
+SYSTEM STOP MERGES pr_w;   two INSERTs of 100000 rows into 500 partitions  ->  1000 parts
+Reader: clickhouse local, ATTACH TABLE pr_r UUID '<the same uuid>' (...) ENGINE = MergeTree ... SETTINGS disk = disk(name = '...', readonly = 1,
+        metadata_snapshot_enabled = 1 / 0, type = s3_plain_rewritable, endpoint = <the same>);  SELECT count() FROM pr_r;  then system.events:
+  metadata_snapshot_enabled = 1:   S3ListObjects 2,     S3HeadObject 2,   S3GetObject 10002    1.38 sec
+  metadata_snapshot_enabled = 0:   S3ListObjects 1012,  S3HeadObject 0,   S3GetObject 11003    5.51 sec
+About 10000 of the GET requests in both cases are the loading of the 1000 data parts themselves (columns.txt, checksums, primary index, ...), not the disk
+metadata; the difference — 1010 LIST and 1001 GET against one HEAD and one GET — is the initialization of the disk. The numbers on the slide are that difference.
+From the PR (#121431): "Initialization of a plain_rewritable disk listed the __meta directory, read every prefix.path and listed every directory: tens of
+thousands of requests even for a disk with a single table"; the snapshot is __meta/snapshot.bin, ZSTD-compressed, rewritten in the background not more often
+than metadata_snapshot_write_delay_ms (default 1000); the writer never reads it; older versions ignore it.
+Related in this release: enable_hard_links is now the default for plain_rewritable (ALTER and mutations work); CREATE TABLE writes one object instead of nine (#130224).
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>And 350 more</h2>
+
+<p style="margin-top: -0.3em;">&mdash; <b>ORDER BY String LIMIT n</b> in MergeTree: top-K filtering.
+<br/>&emsp; ClickBench Q25: <b><span style="color: red;">0.068</span> sec</b> &rarr; <b><span style="color: green;">0.005</span> sec</b>.
+<br/>&mdash; <b>sum</b>, <b>avg</b>, <b>count(col)</b> without filters: from column statistics.
+<br/>&mdash; Sets for <b>IN (subquery)</b> spill to disk instead of running out of memory.
+<br/>&mdash; Lazy materialization and the query condition cache for <b>Memory</b> tables.
+<br/>&mdash; <b>ORDER BY &hellip; COLLATE</b>: up to 3 times faster.
+<br/>&mdash; Text formats: output is 5&ndash;40% faster.
+<br/>&mdash; ARM: faster <b>memcpy</b>, <b>memchr</b>, substring search, <b>min</b>/<b>max</b> with SVE.
+<br/>&mdash; Keeper: batched Raft log entries, up to +40% on writes.
+<br/>&mdash; The server starts faster: <b>quick_startup</b>, 5.5 &rarr; 2.3 sec on a cold disk.</p>
+
+<!-- 364 entries in "Performance Improvement". Sources:
+Top-K for a single String sort column in MergeTree: #125122 (Groene AI), setting use_top_k_dynamic_filtering_for_single_string_sort_column; the WHERE on the sort
+  column moves to PREWHERE so the query condition cache works: #129882.
+  Local: Q25  SELECT SearchPhrase FROM hits WHERE SearchPhrase <> '' ORDER BY SearchPhrase LIMIT 10   26.10.11.12: 0.068 s, 111 MiB   26.11: 0.005 s (repeated runs, 32 threads)
+sum/avg/count from statistics: #123950 (Samuel Krempaský), setting use_statistics_for_sum_avg_aggregation; needs `basic` statistics in the parts
+  (parts written by older versions get the sum on their next merge). Not checked locally.
+IN sets spill to disk: max_bytes_ratio_before_external_set = 0.5 by default; "Building and probing disk-backed sets is several times faster".
+Memory tables: #123798 (query condition cache), #123788 (lazy materialization) — Alexey Milovidov.
+COLLATE: #126829 (Groene AI). Text formats: #124508 (Manuel). Float formatting x1.25..2: #126007.
+ARM: #118916 (ARM's optimized routines), #124136 (StringZilla SVE), #122860 (min/max with SVE), #129204 (sipHash128, 8 values at a time).
+Keeper: #117436 (Michael Kolupaev), use_batched_log_entries — enable only after all servers are upgraded.
+Startup: #131257 quick_startup ("from about 5.5 s to 2.3 s on a cloud VM with a network disk"), #131344 (-0.25 s), #131454 (-0.3 s).
+Other candidates left out: statistics cache (#...); uniqExact in order (#129508); large inserts written with ZSTD(3) right away (#127652); group fsync (#126251);
+faster ZSTD and LZ4 (#122854, #127206, #131460); hasAny/hasAll; coalesce/ifNull short-circuit (#121457); reading in order with fewer rows (#129198);
+FINAL improvements; text index (pfor by default, phrase search); parallel replicas and distributed plans. -->
+</section>
+
+
 
 <section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
 <h2><span class="hilite">Something Interesting</span></h2>
 </section>
 
-<!-- SLIDE:VORTEX -->
+<section class="slide">
+<h2>Vortex file format</h2>
+
+<p style="margin-top: -0.3em;"><a href="https://github.com/vortex-data/vortex">Vortex</a> is a new open columnar file format
+<br/>with lightweight cascading encodings. ClickHouse can read and write it:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.3;">SELECT count() FROM file('hits.<b style="color: green;">vortex</b>') WHERE URL LIKE '%google%';
+
+INSERT INTO FUNCTION s3('s3://bucket/hits.<b style="color: green;">vortex</b>')
+SELECT * FROM hits;
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; only the queried columns are read; filters are pushed down;
+<br/>&mdash; read in parallel, on ClickHouse's own thread pools;
+<br/>&mdash; <b>count()</b> and schema inference from the file metadata;
+<br/>&mdash; anywhere a file format works: <b>file</b>, <b>s3</b>, <b>url</b>, &hellip;</p>
+
+<!-- Demo (server, 26.11.1.2934):
+
+INSERT INTO FUNCTION file('hits20m.vortex') SELECT * FROM hits WHERE CounterID < 3000000 LIMIT 20000000;    -- 113 sec (the writer is single-threaded), 3.58 GB
+INSERT INTO FUNCTION file('hits20m.parquet') SELECT ...                                                      -- 33 sec, 2.23 GB       (ORC: 1.96 GB)
+DESCRIBE file('hits20m.vortex')  -- WatchID Int64, JavaEnable Int16, Title String, ..., EventTime DateTime64(0, 'Etc/UTC')
+SELECT count() FROM file('hits20m.vortex')                                    -- 20000000, from metadata
+Read times, 32 threads, hot (Vortex / Parquet of the same data):
+  SELECT count() FROM file(...) WHERE URL LIKE '%google%'                     0.100 / 0.088 s
+  SELECT sum(UserID), avg(ResolutionWidth) FROM file(...)                     0.020 / 0.012 s
+  SELECT SearchPhrase, count() ... GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10    0.044 / 0.038 s
+  SELECT count() FROM file(...) WHERE UserID = 435090932899640449             0.018 / 0.004 s
+  SELECT count() FROM file(...) WHERE notEmpty(SearchPhrase)                  0.023 / 0.019 s
+  SELECT count() FROM file(...) WHERE NOT ignore(*)   (all 105 columns)       1.89 / 0.41 s
+So in ClickHouse today Parquet is still faster and smaller; Vortex support is about reading and writing what other tools produce.
+Settings: input_format_vortex_filter_push_down (1), input_format_vortex_preserve_order (0), output_format_vortex_string_as_string (1: String as Utf8,
+"the URL column of ClickBench's hits_0.parquet takes 24.9 MB instead of 47.0 MB").
+Implementation: the Rust `vortex` crate through a C FFI crate; data crosses the boundary through the Arrow C Data Interface; IO goes back to
+ClickHouse's read buffers; the library spawns no threads. Not writable: Map, Int128/UInt128/Int256/UInt256, IPv6, Interval.
+Parallel reading was merged from #115096 by Maksim Dergousov.
+The next slide: ClickBench, storage kind "Vortex", hot run — ClickHouse, DataFusion and DuckDB reading Vortex files.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Alexey Milovidov, Maksim Dergousov.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/cb_vortex.png) center / contain no-repeat; background-color: #04293a;">
+<a href="https://benchmark.clickhouse.com/#storage=+vortex&amp;metric=hot" target="_blank" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></a>
+</section>
+<!-- ClickBench, storage kind "Vortex", Hot Run, dark theme, captured on 2026-11-24. https://benchmark.clickhouse.com/#storage=+vortex&metric=hot
+     From the result files (sum of hot runs): c8g.metal-48xl: ClickHouse (Vortex, partitioned) 4.69 s, DataFusion (Vortex, partitioned) 5.89 s, DuckDB (Vortex) 16.02 s;
+     c6a.4xlarge: 22.1 / 37.2 / 28.3 s. For comparison, ClickHouse over Parquet: 3.11 s and 15.7 s. With a single Vortex file ClickHouse is slower (9.03 s; 34.0 s). -->
+
 
 <section class="slide">
 <h2>INSERT ... RETURNING</h2>
@@ -958,15 +1332,377 @@ MySQL, PostgreSQL, gRPC connections are not listed. Motivation from the PR (#997
 <h2><span class="hilite">Data Lakes</span></h2>
 </section>
 
-<!-- SECTION:LAKES -->
+<section class="slide">
+<h2>Variant in Iceberg</h2>
+
+<p style="margin-top: -0.3em;">Iceberg v3 has a <b>variant</b> type for semi-structured data.
+<br/>26.10 could read it. 26.11 can also <b>write</b> it:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.3;">SET allow_insert_into_iceberg = 1;
+
+CREATE TABLE events (id Int64,
+    value <b style="color: green;">Variant(Int64, String, Array(Int64))</b>, payload <b style="color: green;">Dynamic</b>)
+ENGINE = IcebergS3(...) SETTINGS iceberg_format_version = 3;
+
+INSERT INTO events VALUES
+    (1, 42, '{"user": "alice", "geo": {"city": "Amsterdam"}}'::JSON),
+    (2, 'hello', [1.5, 2.5]);
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; <b>Variant</b> and <b>Dynamic</b> columns become <b>variant</b> in the Iceberg schema;
+<br/>&mdash; stored in the Parquet <b>VARIANT</b> binary encoding; also read from Avro.</p>
+
+<!-- Demo (server, 26.11.1.2934, IcebergLocal instead of IcebergS3):
+
+SET allow_insert_into_iceberg = 1;
+CREATE TABLE ice_events (id Int64, value Variant(Int64, String, Array(Int64)), payload Dynamic)
+ENGINE = IcebergLocal('/.../user_files/lake/events/') SETTINGS iceberg_format_version = 3;
+INSERT INTO ice_events VALUES (1, 42, '{"user": "alice", "geo": {"city": "Amsterdam"}}'::JSON), (2, 'hello', [1.5, 2.5]), (3, [1, 2, 3], NULL);
+SELECT id, value, dynamicType(value), payload, dynamicType(payload) FROM ice_events ORDER BY id;
+  1   42        Int64            {"geo":{"city":"Amsterdam"},"user":"alice"}   JSON
+  2   hello     String           [1.5,2.5]                                     Array(Dynamic)
+  3   [1,2,3]   Array(Dynamic)   NULL                                          None
+metadata/v2.metadata.json: "format-version": 3, schema fields: id long, value variant, payload variant.
+The data file: columns value.metadata, value.value, payload.metadata, payload.value (BYTE_ARRAY) — the Parquet variant encoding.
+Reading back, both columns have the type Dynamic (variantType(value) does not apply).
+A column of the JSON type is rejected in CREATE ("Unsupported type for iceberg JSON"): declare it as Dynamic and insert JSON values.
+On 26.10.11.12 the same CREATE fails: "Unsupported type for iceberg Variant(Int64, String)".
+Also in 26.11: Iceberg variant in Avro data files is readable (#130078); the Puffin output format (#121982); iceberg_timezone_for_timestamptz (#130772);
+Bool, Int8..UInt16 columns in Iceberg tables; float lower/upper bounds are written (#129812).
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Konstantin Vedernikov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Iceberg: fewer requests, more threads</h2>
+
+<p style="margin-top: -0.3em;">An experiment: <a href="https://adsb.exposed/">adsb.exposed</a>, 337 billion rows, written to Iceberg
+<br/>by ClickHouse. Queries re-downloaded the table metadata every time:</p>
+
+<p style="margin-top: -0.3em;">&mdash; a <b>HEAD</b> request for every file: <b><span style="color: red;">1678</span></b> per query &rarr; <b><span style="color: green;">2</span></b>;
+<br/>&mdash; listing the metadata directory: <b><span style="color: red;">34</span></b> LIST requests &rarr; <b><span style="color: green;">0</span></b>;
+<br/>&mdash; every replica listed it again: <b><span style="color: red;">3370</span></b> LIST requests &rarr; <b><span style="color: green;">6</span></b>;
+<br/>&mdash; manifests are read ahead, 64 at a time, and parsed 3 times faster;
+<br/>&mdash; parallel replicas for data lake <b>tables</b>, not only table functions.</p>
+
+<p style="margin-top: 0.3em;">Example, a map tile over 3.3 billion rows:
+<br/><b>26.10: <span style="color: red;">10</span> sec.</b> &nbsp; <b>26.11: <span style="color: green;">1.0&ndash;1.9</span> sec.</b> &nbsp; <span style="color: gray;">MergeTree: 0.7&ndash;1.2 sec.</span></p>
+
+<!-- Source: the session https://pastila.nl/?cafebabe/b49935a7f1b270aea3605c15033ee804.claude.jsonl (2026-10-16 .. 2026-10-31), not re-measured here.
+Setup: the "Planes" dataset of adsb.exposed in three Iceberg tables written by ClickHouse (INSERT and REFRESH ... APPEND INCREMENTAL materialized views):
+full (~337.6 billion rows), _sample10 (~33.4 billion), _sample100 (~3.34 billion); Parquet, 63 columns, sorted by (mercator_morton, time);
+a plain S3 bucket, no catalog, ENGINE = IcebergS3(url, extra_credentials(role_arn = ...)); a Cloud staging service with 50 replicas.
+The query: the site's map tile at zoom 5 / 8 / 12, three runs, query cache off.
+  2026-10-20 (26.10.1): _sample100: Iceberg 10–11 s at every zoom, MergeTree 0.4–0.8 s; full table z12: 13 s vs 1.2 s.
+  2026-10-31 (26.11.1.1311): _sample100: Iceberg 1.9 / 1.3 / 1.0 s, MergeTree 1.2 / 0.9 / 0.7 s;
+                             _sample10: 4.5 / 4.3 / 3.9 s vs 2.0 / 1.7 / 1.5 s;  full: 7.9 / 16 / 13 s (fastest runs 6.8 / 5.4 / 2.4 s) vs 1.8 / 1.7 / 1.3 s.
+  CAVEAT: the state of the tables also changed between the dates (compaction, manifest merges), so the before/after is not only the code.
+  The full table is still slower: it has 3,391 manifests and the manifest cache holds 1,000.
+The changes:
+  #127099 no HEAD request per manifest or data file — sizes come from the table metadata: 1,678 HeadObject per query (1,007 data files + 671 manifests) -> 2.
+  #127094 iceberg_list_only_v_prefixed_metadata_files (off by default): the latest metadata.json is found by listing only metadata/v*;
+          before: 34 ListObjects per query (~33,850 names), ~2.6 s; with iceberg_metadata_staleness_ms most queries do 0.
+  #127085 replicas use the initiator's snapshot: 102 + 68 per replica ≈ 3,370 ListObjects per query -> 6 (3 of 50 replicas still listed).
+  #127100 manifests are read ahead on the IO pool, up to 64 at a time ("3.2 times faster on 200 manifests with 400 ms per read").
+  #127782 manifest parsing ~3x faster.  #126267 one GET and one LIST instead of three GETs and two LISTs for metadata.json.
+  #127138 parallel replicas for object storage and data lake table engines (parallel_replicas_for_object_storage_tables).
+  #128433 an idle replica no longer steals files (stable cache hits).  #128401 total rows for the progress bar from the metadata.
+  #131326 the initiator no longer serializes file listing.
+Also in 26.11: INSERT into Iceberg on S3 ~3x faster (background uploads, #129428); one manifest per INSERT (#128880); join runtime filters prune files,
+row groups and pages (#128145); the row order is kept only where position deletes need it — ORDER BY ... LIMIT up to 2.7x (#131203);
+Iceberg statistics for join reordering (use_datalake_metadata_statistics); system.iceberg_metadata_log_entries.
+Developers: Groene AI (most of the request-count fixes), Alexey Milovidov, Konstantin Vedernikov, Melvyn Peignon. -->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Groene AI, Alexey Milovidov, Konstantin Vedernikov.</p>
+</section>
+
+<section class="slide">
+<h2>Iceberg on ClickBench</h2>
+
+<p style="margin-top: -0.3em;">A new kind of entries in <a href="https://benchmark.clickhouse.com/#storage=+iceberg&amp;metric=combined">ClickBench</a>: <b>Iceberg</b>.</p>
+
+<p>&mdash; every system <b>writes</b> the dataset into an Iceberg table itself,
+<br/>&emsp; through a REST catalog, with the default settings;
+<br/>&mdash; then runs the queries over the table it has written;
+<br/>&mdash; no tuning, no compaction, no sorting after the load.</p>
+
+<p>It shows how good a system is as a writer and as a reader.</p>
+
+<p>ClickHouse, DuckDB, StarRocks, Doris, Trino, Presto, Spark,
+<br/>DataFusion, Databend, Opteryx.</p>
+
+<p>Example, c8g.metal-48xl: ClickHouse loads in <b>64 sec</b>, hot run <b>4.95 sec</b>;
+<br/>DuckDB: 69 and 10.8 sec; StarRocks: 183 and 9.1 sec.</p>
+
+<!-- From https://github.com/ClickHouse/ClickBench/blob/main/lib/iceberg/README.md: "each system creates an Iceberg table itself, writes the dataset into it,
+and runs the queries over the table it has written. The result shows how good a system is both as a writer and as a reader of Iceberg: the layout of the
+data files, their sizes, the encodings, compression and statistics that the system chooses by default all matter for the queries."
+Rules: the table is created through the Iceberg REST catalog, unpartitioned and unsorted, default table properties; a single INSERT ... SELECT from the
+Parquet files with default settings; no explicit optimization or maintenance; the load time includes the commit; cold runs restart the system.
+The storage is SeaweedFS on localhost (S3 API + a built-in Iceberg REST catalog).
+Latest results from the repository on 2026-11-24 (load time, data size, sum of cold runs, sum of hot runs):
+  c8g.metal-48xl:
+    ClickHouse   64 s   11.32 GB   cold 114.6   hot  4.95        DuckDB      69 s   14.21 GB   cold 170.3   hot 10.78
+    StarRocks   183 s   38.70 GB   cold 693.1   hot  9.11        Doris       78 s   11.51 GB   cold 331.3   hot 13.76
+    Databend    124 s   28.89 GB   cold 434.0   hot 25.94        Trino      158 s   10.61 GB   cold 263.6   hot 62.45
+    Presto     1691 s   11.45 GB   cold 317.2   hot 73.10        DataFusion  49 s    9.88 GB   cold 397.3   hot 349.75
+  c6a.4xlarge: ClickHouse 86 s, 11.20 GB, cold 92.3, hot 23.56; Opteryx 228 s, cold 111.8, hot 21.61; DuckDB 85 s, cold 229.6, hot 44.20; Spark 326 s, hot 379.8.
+  (On c6a.4xlarge Opteryx has a slightly better hot sum; in the combined metric ClickHouse is first on all three machine types.) -->
+</section>
+
+<section class="slide" style="background: url(pictures/cb_iceberg.png) center / contain no-repeat; background-color: #04293a;">
+<a href="https://benchmark.clickhouse.com/#storage=+iceberg&amp;metric=combined" target="_blank" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></a>
+</section>
+<!-- ClickBench, storage kind "Iceberg", the Combined metric (relative time and data size), dark theme, captured on 2026-11-24.
+     https://benchmark.clickhouse.com/#storage=+iceberg&metric=combined -->
+
 
 <section class="slide" style="background: url(pictures/back8.jpg); background-size: cover;">
 <h2><span class="hilite">Bonus</span></h2>
 </section>
 
-<!-- SECTION:BONUS -->
+<section class="slide">
+<h2>Loom: memory for coding agents</h2>
 
-<!-- SECTION:CLOSING -->
+<a href="https://clickhouse.com/blog/introducing-loom-agent-memory-that-keeps-up-with-your-code"><img style="float: right; width: 42%; margin: 0 -2em 0.5em 1em;" src="pictures/loom.jpg" alt="Introducing Loom: agent memory that keeps up with your code"/></a>
+
+<p style="margin-top: -0.3em;"><a href="https://github.com/ClickHouse/loom"><b>github.com/ClickHouse/loom</b></a>
+<br/>Open source, built on ClickHouse.</p>
+
+<p>&mdash; shared memory and a code index
+<br/>&emsp; in the same database;
+<br/>&mdash; facts are versioned and checked
+<br/>&emsp; against the code as it changes;
+<br/>&mdash; MCP, HTTP, SDKs,
+<br/>&emsp; plugins for Claude Code and Codex.</p>
+
+<p>Built for GroeneAI. On questions about the ClickHouse code:
+<br/>answer quality <b>0.78 &rarr; 0.84</b>, cost per question <b>$0.21 &rarr; $0.17</b>.</p>
+
+<!-- From the post "Introducing Loom: agent memory that keeps up with your code" (2026-11-13, James Cunningham, Lareb Zafar):
+"Loom is an open-source tool built on ClickHouse. It gives coding agents a shared code index and a place to keep what they learn, so the next session doesn't start from zero."
+"introducing Loom pushed the mean answer-quality score on ClickHouse code questions from 0.78 up to 0.84"; cost per question $0.212 -> $0.17;
+file-finding accuracy 91.4% -> 96.4%; LongMemEval-S: 94% vs 90% with the full history, with about 90% fewer tokens. Apache-2.0. Requires ClickHouse 26.5+.
+"Loom keeps memory and a code index in the same ClickHouse database, under one set of permissions." A memory search runs a vector search, a BM25 keyword
+search, a pass over verbatim chunks and a hop through the entity graph, all in ClickHouse. -->
+</section>
+
+<section class="slide">
+<h2>JSONBench is back</h2>
+
+<a href="https://clickhouse.com/blog/jsonbench-is-back-clickhouse-still-leads"><img style="float: right; width: 42%; margin: 0 -2em 0.5em 1em;" src="pictures/jsonbench.jpg" alt="JSONBench is back, and ClickHouse still leads"/></a>
+
+<p style="margin-top: -0.3em;"><a href="https://benchmark.clickhouse.com/json/"><b>benchmark.clickhouse.com/json</b></a></p>
+
+<p>&mdash; a billion Bluesky events,
+<br/>&emsp; five analytical queries;
+<br/>&mdash; 5 systems in January 2025,
+<br/>&emsp; <b>27</b> today;
+<br/>&mdash; ClickHouse still leads.</p>
+
+<p>Example, an aggregation over a billion documents, cold run:
+<br/><b>MongoDB: <span style="color: red;">32 min 26 sec.</span></b> &nbsp; <b>ClickHouse: <span style="color: green;">661 ms.</span></b></p>
+
+<p>178 changes in the JSON data type since the first JSONBench.
+<br/>Now also a part of the <a href="https://benchmark.clickhouse.com/versions/#version=-&amp;dataset=+jsonbench&amp;metric=hot&amp;queries=-">versions benchmark</a>.</p>
+
+<!-- From the post "JSONBench is back, and ClickHouse still leads" (2026-11-16, Tom Schreiber, Mark Needham):
+"JSONBench has grown from five to 27 engines. Almost two years after its debut, ClickHouse still leads the billion-document comparison on identical hardware."
+"ClickHouse returns the result in 661 ms on the cold run. MongoDB takes 32 minutes and 26 seconds. Both run on the same machine type."
+"Since the original JSONBench, we've shipped 178 changes to ClickHouse's native JSON type." The original five: ClickHouse, MongoDB, Elasticsearch, DuckDB, PostgreSQL.
+Versions benchmark, jsonbench (hot, 5 queries, c7a.4xlarge, from the result files): 26.10: 1.06 s; master: 0.49 s. -->
+</section>
+
+<section class="slide">
+<h2>The day the sky emptied</h2>
+
+<p style="margin-top: -0.3em;">Friday, November 13, 2026: an FAA outage grounds air traffic over the US.</p>
+
+<p>The whole day as an animation, from <a href="https://adsb.exposed/">adsb.exposed</a>:
+<br/>&mdash; 380 billion rows of ADS-B data in ClickHouse;
+<br/>&mdash; 288 frames, one per five minutes;
+<br/>&mdash; rendered by a SQL query with <b>FORMAT PNG</b>:
+<br/>&emsp; the map, the clock, the timeline, even the font are rows of the result;
+<br/>&mdash; all frames are written in 31 seconds.</p>
+
+<p>Aircraft in the air per hour: <b>14,957</b> at 14:00 ET &rarr; <b>2,131</b> at 20:00 ET.</p>
+
+<p><a href="https://clickhouse.com/blog/faa-outage-clickhouse-format-png">clickhouse.com/blog/faa-outage-clickhouse-format-png</a></p>
+
+<!-- From the post "The day the sky emptied: rendering the FAA outage with ClickHouse FORMAT PNG" (2026-11-18, Alexey Milovidov):
+animates US air traffic on 2026-11-13 (288 five-minute frames) from the 380-billion-row adsb.exposed table planes_mercator, using only SQL and FORMAT PNG,
+including a 3x5 bitmap font. Aircraft per hour (unique ICAO addresses in the frame): 14,957 at 14:00 ET, 2,131 at 20:00 ET; above FL180: 5,995 -> 559.
+42.5M positions become 9M pixel rows; the render emits about 130M rows and writes all frames in 31 s. Made with ClickHouse 26.10. -->
+</section>
+
+<section class="slide" style="background: url(pictures/faa_outage.png) center / contain no-repeat; background-color: #000;">
+<a href="https://clickhouse.com/blog/faa-outage-clickhouse-format-png" target="_blank" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></a>
+</section>
+<!-- pictures/faa_outage.png is the animated PNG from the post, as rendered by ClickHouse (1456x930, 288 frames, 80 ms per frame = 23 seconds, 24.7 MB):
+     https://raw.githubusercontent.com/ClickHouse/adsb.exposed/faa-outage-2026-11-13/faa-outage-2026-11-13/faa-outage-2026-11-13.png
+     It loops. An MP4 of the same animation: https://clickhouse.com/uploads/faa_outage_2026_11_13_57ddad198a.mp4 (27.5 MB). -->
+
+<section class="slide">
+<h2>ClickHouse Observability</h2>
+
+<a href="https://clickhouse.com/blog/announcing-clickhouse-observability"><img style="float: right; width: 42%; margin: 0 -2em 0.5em 1em;" src="pictures/launch_observability.jpg" alt="Announcing ClickHouse Observability"/></a>
+
+<p style="margin-top: -0.3em;">Launched on November 9, public beta.</p>
+
+<p>Fully managed observability
+<br/>on ClickHouse Cloud,
+<br/>powered by the open-source <b>ClickStack</b>.</p>
+
+<p>&mdash; for SREs and their agents;
+<br/>&mdash; <b>$0.20</b> per GB of logs and traces;
+<br/>&mdash; <b>$0.10</b> per million metric data points.</p>
+
+<!-- From "Announcing ClickHouse Observability - fully managed observability on ClickHouse Cloud" (2026-11-09, Mike Shi): public beta;
+"a fully managed observability solution for SREs and their agents, powered by ClickHouse Cloud and open-source ClickStack";
+pricing $0.20/GB for logs and traces, $0.10 per million metric data points. Part of the umbrella announcement "The largest expansion of ClickHouse yet"
+(https://clickhouse.com/blog/announcing-clickhouse-platform-largest-expansion, 5,000+ customers). -->
+</section>
+
+<section class="slide">
+<h2>ClickHouse Security</h2>
+
+<a href="https://clickhouse.com/blog/introducing-clickhouse-security-agentic-siem"><img style="float: right; width: 42%; margin: 0 -2em 0.5em 1em;" src="pictures/launch_security.jpg" alt="Introducing ClickHouse Security in private preview"/></a>
+
+<p style="margin-top: -0.3em;">Launched on November 9, private preview.</p>
+
+<p>An agentic <b>SIEM</b>,
+<br/>built on RunReveal.</p>
+
+<p>&mdash; runs on your own ClickHouse Cloud service;
+<br/>&mdash; 100+ integrations for log sources;
+<br/>&mdash; free during the preview.</p>
+
+<!-- From "Introducing ClickHouse Security in private preview, built on RunReveal" (2026-11-09, Evan Johnson): "an agentic SIEM" on your own
+ClickHouse Cloud service; 100+ integrations; free during preview. -->
+</section>
+
+<section class="slide">
+<h2>AI Gateway in Langfuse</h2>
+
+<a href="https://clickhouse.com/blog/langfuse-ai-gateway"><img style="float: right; width: 42%; margin: 0 -2em 0.5em 1em;" src="pictures/launch_gateway.jpg" alt="Introducing Langfuse AI Gateway"/></a>
+
+<p style="margin-top: -0.3em;">Launched on November 9, public beta.</p>
+
+<p>&laquo;One open source entry point
+<br/>for all AI usage in your company&raquo;.</p>
+
+<p>&mdash; MIT license;
+<br/>&mdash; a 22 MB Docker image;
+<br/>&mdash; Langfuse stores its traces in ClickHouse.</p>
+
+<!-- From "Langfuse launches AI Gateway" (2026-11-09; canonical https://langfuse.com/blog/introducing-gateway; Marc Klingen, Tobias Wochinger,
+Hassieb Pakzad, Leonard Wolters): public beta; "One open source entry point for all AI usage in your company"; MIT-licensed, 22MB Docker image.
+Langfuse runs on ClickHouse (and joined ClickHouse earlier this year). -->
+</section>
+
+<section class="slide">
+<h2>Managed Postgres is GA</h2>
+
+<a href="https://clickhouse.com/blog/managed-postgres-ga-xata-acquisition"><img style="float: right; width: 42%; margin: 0 -2em 0.5em 1em;" src="pictures/launch_postgres.jpg" alt="ClickHouse Managed Postgres is GA and Xata acquisition"/></a>
+
+<p style="margin-top: -0.3em;">November 9: generally available on AWS.</p>
+
+<p>&mdash; Postgres on local NVMe:
+<br/>&emsp; 2&ndash;10x faster on OLTP workloads;
+<br/>&mdash; natively connected to ClickHouse;
+<br/>&mdash; hundreds of production customers.</p>
+
+<p><b>Xata</b> joins ClickHouse: instant branches
+<br/>and clones, automatic idling, scale to zero &mdash; Postgres for agents.</p>
+
+<!-- From "ClickHouse Managed Postgres goes GA and Xata acquisition brings agentic capabilities to the service" (2026-11-09, Sai Srirampur):
+"our local NVMe-backed Postgres service has delivered up to 10x performance improvements ... It now supports hundreds of production customers";
+"Local NVMe-backed storage delivers 2–10X performance improvements for OLTP workloads"; GA on AWS, GCP in private preview;
+"With Xata ... Instant branches and clones, automatic idling, and scale to zero, powered by Xatastor's copy-on-write storage". -->
+</section>
+
+<section class="slide">
+<h2>The observability UI is dead</h2>
+
+<a href="https://clickhouse.com/blog/observability-ui-is-dead-whats-next"><img style="float: right; width: 42%; margin: 0 -2em 0.5em 1em;" src="pictures/obs_ui.jpg" alt="The observability UI as we know it is dead. So what comes next?"/></a>
+
+<p style="margin-top: -0.3em;">The happiest observability users
+<br/>build their own UI.</p>
+
+<p><b>Observability Apps</b>, private preview:</p>
+
+<p>&mdash; describe an app in a prompt;
+<br/>&mdash; an agent builds an interactive app
+<br/>&emsp; over your live data, with SQL;
+<br/>&mdash; it runs in a sandbox, with read-only queries
+<br/>&emsp; under the permissions of the viewer.</p>
+
+<!-- From "The observability UI as we know it is dead. So what comes next?" (2026-11-09, Alex Fedotyev): argues the happiest observability users build
+their own UI (Anthropic, DoorDash, Tesla, Netflix); introduces ClickHouse Observability Apps (private preview): describe an app in a prompt and an agent
+builds an interactive app over live data with SQL; apps run in a sandboxed iframe with read-only queries under the viewer's permissions. -->
+</section>
+
+
+<section class="slide" style="background: url(pictures/wing.jpg); background-size: cover;">
+<h2>Meetups</h2>
+<p style="line-height: 1.3; margin-top: -2.2em; font-size: 18pt;">
+<br/><span class="hilite">&mdash; 🇦🇪 Dubai: Langfuse Workshop, Nov 25 &nbsp;·&nbsp; 🇰🇷 Seoul, Nov 25</span>
+<br/><span class="hilite">&mdash; 🇨🇾 Limassol: Scaling Data Systems with ClickHouse, Nov 26</span>
+<br/><span class="hilite">&mdash; 🇨🇦 Montréal, Nov 26 &nbsp;·&nbsp; 🇮🇳 Bengaluru, Nov 26 &nbsp;·&nbsp; 🇸🇬 Singapore, Nov 26</span>
+<br/><span class="hilite">&mdash; 🇺🇸 Las Vegas: House Party at AWS re:Invent, Dec 1</span>
+<br/><span class="hilite">&mdash; 🇩🇪 Berlin: Langfuse Hack, Dec 1 &nbsp;·&nbsp; 🇩🇪 Munich: AI Builders, Dec 3</span>
+<br/><span class="hilite">&mdash; 🇫🇷 Paris: Hackathon by Mistral and ClickHouse, Dec 5</span>
+<br/><span class="hilite">&mdash; 🇦🇺 Melbourne, Dec 8 &nbsp;·&nbsp; 🇦🇺 Sydney, Dec 9 &nbsp;·&nbsp; 🇮🇳 Bengaluru, Dec 10</span>
+<br/><span class="hilite">&mdash; 🇺🇸 Dallas, Dec 9 &nbsp;·&nbsp; 🇺🇸 New York, Dec 10: Holiday House</span>
+<br/><span class="hilite">&mdash; 🇨🇴 Bogotá: ClickStack Training and Meetup, Dec 15</span>
+<br/><span class="hilite">&mdash; 🇦🇺 Melbourne: Data Night, Dec 15</span>
+<br/><span class="hilite">&mdash; 🇬🇧 London: kickoff() at Craven Cottage, Dec 17</span>
+<br/><span class="hilite">&mdash; 🇺🇸 Salt Lake City: Holiday House, Dec 17</span>
+</p>
+</section>
+<!-- From https://clickhouse.com/company/events and the Luma calendar "ClickHouse Events" on 2026-11-24: in-person events after the call (Nov 24).
+     Limassol, Nov 26: on Luma "Scaling Data Systems with ClickHouse Cyprus Meetup", 18:30, The Warehouse by IT Quarter (the events page calls it
+     "AI Builders and Databases Cyprus"). Montréal: Maxa x ClickHouse Data Developer Meetup (the events page labels it Toronto; Luma says Montréal).
+     Seoul: ClickHouse x OliveYoung x NxtCloud. Singapore: "See What Your Agent Did: Trace it. Debug it. Ship it." Bengaluru Nov 26: The Agentic Data Stack.
+     re:Invent: the only listing is the House Party (Dec 1, 9 PM, Intrigue Nightclub, invite-only). The three-city series is "Logs, metrics and traces at scale,
+     without the bill shock" (Melbourne Dec 8, Sydney Dec 9, Bengaluru Dec 10). Dallas = Grapevine (Gaylord Texan). Nothing is listed for January-February 2027 yet.
+     No upcoming "Open House" events are listed, so there is no Open House slide (openhouse_tour.jpg is copied but unused). -->
+
+<section class="slide">
+<h2>Reading Corner 📖</h2>
+
+<a href="https://clickhouse.com/blog/meet-groeneai-our-autonomous-contributor-to-clickhouse"><img style="float: right; width: 20%; margin-right: -3em; image-rendering: pixelated; margin-top: -1em;" src="pictures/qr_groeneai.png" alt="QR: clickhouse.com/blog/meet-groeneai-our-autonomous-contributor-to-clickhouse"/></a>
+
+<p><a href="https://clickhouse.com/blog/">https://clickhouse.com/blog/</a></p>
+
+<p style="line-height: 1.5; margin-right: -5em;">
+&mdash; Meet GroeneAI: our autonomous contributor to ClickHouse
+<br/>&mdash; Introducing Loom: agent memory that keeps up with your code
+<br/>&mdash; The observability UI as we know it is dead
+<br/>&mdash; The Agentic Analytics Benchmark: round two, and Jev
+<br/>&mdash; The new cost-based JOIN optimizer
+<br/>&mdash; JSONBench is back, and ClickHouse still leads
+<br/>&mdash; The day the sky emptied: the FAA outage in FORMAT PNG
+<br/>&mdash; Forecasting with time series foundation models
+<br/>&mdash; Node reliability across three clouds
+</p>
+</section>
+<!-- The first five are the author's list. The rest are posts of 2026-10-22 .. 2026-11-23 from https://clickhouse.com/blog — pick the must-haves.
+     Other candidates: "More load is faster: Tuning Postgres read replicas" (Nov 17), "Why Front migrated from Elasticsearch to ClickHouse" (Nov 18),
+     "How OpenRouter observes 740 million LLM requests a day" (Nov 2), "ClickHouse and Amazon S3 Tables" (Nov 11), "Power BI Arrow Flight connector" (Nov 19),
+     "Fencing a Postgres primary that might still be alive" (Nov 4), "The largest expansion of ClickHouse yet" (Nov 9), "$1.5 billion-plus agreement with AWS" (Nov 23).
+     URLs (all return 200 on 2026-11-24):
+     https://clickhouse.com/blog/meet-groeneai-our-autonomous-contributor-to-clickhouse (Oct 29; 4,400+ PRs opened, 3,100+ merged, 86.5% merge rate)
+     https://clickhouse.com/blog/introducing-loom-agent-memory-that-keeps-up-with-your-code (Nov 13)
+     https://clickhouse.com/blog/observability-ui-is-dead-whats-next (Nov 9)
+     https://clickhouse.com/blog/agentic-analytics-benchmark-round-two (Oct 20), https://clickhouse.com/blog/agentic-analytics-benchmark-jev (Oct 27)
+     https://clickhouse.com/blog/the-new-cost-based-join-optimizer-with-reordering-support-for-non-inner-joins (Oct 28)
+     https://clickhouse.com/blog/jsonbench-is-back-clickhouse-still-leads (Nov 16), https://clickhouse.com/blog/faa-outage-clickhouse-format-png (Nov 18)
+     https://clickhouse.com/blog/clickhouse-time-series-foundation-models (Nov 17), https://clickhouse.com/blog/node-reliability-across-three-clouds (Nov 19)
+     QR -> https://clickhouse.com/blog/meet-groeneai-our-autonomous-contributor-to-clickhouse -->
+
 
 <section class="slide" style="background: url(pictures/back10.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
 <h2 style="color: white; margin-left: 0em;">Q&amp;A</h2>
