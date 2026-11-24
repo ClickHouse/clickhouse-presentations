@@ -1203,6 +1203,56 @@ http_allow_filters_as_path (all 1 by default) control the path-style requests; d
 </section>
 
 <section class="slide">
+<h2>A fully static binary</h2>
+
+<p style="margin-top: -0.3em;"><code style="font-size: 11pt; line-height: 1.3;"><span style="color: gray;">$ ldd clickhouse    # 26.10</span>
+    linux-vdso.so.1
+    librt.so.1 => /usr/lib/aarch64-linux-gnu/librt.so.1
+    libpthread.so.0 => /usr/lib/aarch64-linux-gnu/libpthread.so.0
+    libc.so.6 => /usr/lib/aarch64-linux-gnu/libc.so.6
+    /lib/ld-linux-aarch64.so.1
+    libm.so.6 => /usr/lib/aarch64-linux-gnu/libm.so.6
+    libdl.so.2 => /usr/lib/aarch64-linux-gnu/libdl.so.2
+
+<span style="color: gray;">$ ldd clickhouse    # 26.11</span>
+    <b style="color: green;">statically linked</b>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; built with <b>musl</b> libc as a static PIE: ASLR still applies;
+<br/>&mdash; no dynamic loader and no shared libraries:
+<br/>&emsp; nothing to preload, nothing to replace;
+<br/>&mdash; does not depend on the libc of the system.</p>
+
+<!-- Demo (aarch64; 26.10.11.12 from the GitHub release tgz, 26.11.1.2934 from https://builds.clickhouse.com/26.11/aarch64/clickhouse):
+
+$ ldd clickhouse-common-static-26.10.11.12/usr/bin/clickhouse
+	linux-vdso.so.1 (0x0000ed9ba06bc000)
+	librt.so.1 => /usr/lib/aarch64-linux-gnu/librt.so.1 (0x0000ed9b79ed0000)
+	libpthread.so.0 => /usr/lib/aarch64-linux-gnu/libpthread.so.0 (0x0000ed9b79ea0000)
+	libc.so.6 => /usr/lib/aarch64-linux-gnu/libc.so.6 (0x0000ed9b79cd0000)
+	/lib/ld-linux-aarch64.so.1 (0x0000ed9ba0670000)
+	libm.so.6 => /usr/lib/aarch64-linux-gnu/libm.so.6 (0x0000ed9b79c00000)
+	libdl.so.2 => /usr/lib/aarch64-linux-gnu/libdl.so.2 (0x0000ed9b79bd0000)
+$ ldd clickhouse-2611
+	statically linked
+(The load addresses are omitted on the slide.)
+$ file:   26.10: "ELF 64-bit LSB pie executable, ARM aarch64, dynamically linked, interpreter /lib/ld-linux-aarch64.so.1, for GNU/Linux 3.7.0"
+          26.11: "ELF 64-bit LSB pie executable, ARM aarch64, static-pie linked"
+readelf: 26.11 has no INTERP segment and no NEEDED entries; FLAGS_1: NOW NOOPEN PIE.  system.build_options: USE_MUSL = ON (26.10: USE_GLIBC_COMPATIBILITY = ON).
+The same for amd64 (https://builds.clickhouse.com/26.11/amd64/clickhouse, 26.11.1.2942: "static-pie linked").
+In an empty root (sudo chroot), the 26.10 binary cannot start at all ("No such file or directory": there is no dynamic loader);
+the 26.11 binary starts and then needs only /dev/urandom (my test stopped there: the device node was on a nodev filesystem).
+PR: "Statically linked binary" (#109239, Konstantin Bogdanov, merged 2026-11-18, "included in 26.11 and later"), closes #75847; static PIE: #125669;
+packed relative relocations (34 MB smaller): #127256; sanitizers with static musl: #127217. ci/jobs/build_clickhouse.py of the 26.11 branch asserts that the
+release build types are fully static. Not checked: the deb/rpm/tgz packages of 26.11 (not published yet; they are made from the same release builds).
+Before 26.11 the binary was linked dynamically with glibc (with a compatibility layer to run on old versions of it).
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Konstantin Bogdanov.</p>
+</section>
+
+<section class="slide">
 <h2>Filesystem isolation</h2>
 
 <p style="margin-top: -0.3em;">At startup, the server confines itself to a private view of the filesystem,
@@ -1282,9 +1332,7 @@ Checked on 26.11.1.2934: SELECT hex(trace[1]) FROM system.stack_trace -> 095DE6C
 <section class="slide">
 <h2>More hardening</h2>
 
-<p style="margin-top: -0.3em;">&mdash; The official binary is <b>static</b>: no dynamic loader to hijack;
-<br/>&emsp; it refuses to start with <b>ld.so.preload</b> or audit libraries.
-<br/>&mdash; ARM: return addresses are signed (<b>PAC</b>).
+<p style="margin-top: -0.3em;">&mdash; ARM: return addresses are signed (<b>PAC</b>).
 <br/>&mdash; Secrets are excluded from core dumps.
 <br/>&mdash; The allocator aborts on a double free or a wrong size.
 <br/>&mdash; Outbound TLS verifies the host name by default.
@@ -1303,7 +1351,7 @@ Static binary: "Build statically linked binaries with musl libc for amd64 and aa
   are both "static-pie linked" with no INTERP and no NEEDED entries; ci/jobs/build_clickhouse.py of the 26.11 branch asserts this for the release build types
   (AMD_RELEASE, ARM_RELEASE, AMD_COMPAT, ARM_V80COMPAT: "Published binaries must be fully static"). No revert was found.
   Not checked: the deb/rpm/tgz packages of 26.11 — they are not published yet (they are made from the same release builds).
-ld.so.preload: #129501 (Alexey Milovidov), Backward Incompatible: "ClickHouse refuses to start if shared objects are injected into its process with
+ld.so.preload (not on the slide; the static binary has its own slide now): #129501 (Alexey Milovidov), Backward Incompatible: "ClickHouse refuses to start if shared objects are injected into its process with
   /etc/ld.so.preload, ld.so preload, or auditing libraries. Previously only the LD_PRELOAD and similar environment variables were handled".
 Link flags: #127981 "-z noexecstack and -z nodlopen"; #128007 "-fstrict-flex-arrays=3" (Groene AI).
 PAC: #131784, #131996 "Build ARM binaries with return-address signing (-mbranch-protection=pac-ret) ... retaining compatibility with cores without
@@ -1412,7 +1460,7 @@ Bool, Int8..UInt16 columns in Iceberg tables; float lower/upper bounds are writt
 <p style="margin-top: -0.3em;">An experiment: <a href="https://adsb.exposed/">adsb.exposed</a>, 337 billion rows, written to Iceberg
 <br/>by ClickHouse. Queries re-downloaded the table metadata every time:</p>
 
-<p style="margin-top: -0.3em;">&mdash; a <b>HEAD</b> request for every file: <b><span style="color: red;">1678</span></b> per query &rarr; <b><span style="color: green;">2</span></b>;
+<p style="margin-top: -0.3em; line-height: 1.5;">&mdash; a <b>HEAD</b> request for every file: <b><span style="color: red;">1678</span></b> per query &rarr; <b><span style="color: green;">2</span></b>;
 <br/>&mdash; listing the metadata directory: <b><span style="color: red;">34</span></b> LIST requests &rarr; <b><span style="color: green;">0</span></b>;
 <br/>&mdash; every replica listed it again: <b><span style="color: red;">3370</span></b> LIST requests &rarr; <b><span style="color: green;">6</span></b>;
 <br/>&mdash; manifests are read ahead, 64 at a time, and parsed 3 times faster;
