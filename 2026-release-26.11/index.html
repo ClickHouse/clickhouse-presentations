@@ -267,7 +267,7 @@ SELECT polygonMinimumRotatedRectangleCartesian([[(0,0),(2,1),(4,4),(1,3),(0,0)]]
   -- [[(-0.69,0.46),(2.38,5.08),(4,4),(0.92,-0.62),(-0.69,0.46)]]   (like ST_OrientedEnvelope in PostGIS; rotating calipers over the convex hull)
 SELECT readWKT('LINESTRING (0 0, 3 4, 3 10)') AS g, toTypeName(g), lengthCartesian(g), ST_Length(g);   -- Geometry 11 11
 Coordinates are (longitude, latitude). Polygons have no "length": use the perimeter* functions.
-CAST to Multi- types: #... "CAST can now convert Point, LineString and Polygon to MultiPoint, MultiLineString and MultiPolygon" (Improvement).
+CAST to Multi- types: #127140 (Groene AI): "CAST can now convert Point, LineString and Polygon to MultiPoint, MultiLineString and MultiPolygon" (Improvement).
 
 -->
 
@@ -950,6 +950,9 @@ FROM hits;   <span style="color: gray;">-- ORDER BY (CounterID, EventDate, UserI
 SELECT max(s) FROM (SELECT sum(ResolutionWidth) OVER (PARTITION BY CounterID ORDER BY EventDate, UserID) AS s FROM hits)       1.554 s, 1813 MiB -> 0.408 s, 90 MiB
   (#131135: query_plan_reuse_storage_ordering_for_window_functions is enabled by default again; the read is split into ranges of the PARTITION BY prefix
    of the primary key, each processed by its own window transform)
+  EXPLAIN on 26.11: ReadFromMergeTree, Read type: InOrder; the Sorting step has "Prefix sort description" equal to the result sort description (nothing left to sort);
+    EXPLAIN PIPELINE: WindowTransform × 29 over FilterSortedStreamByRange / MergeTreeSelect(pool: ReadPoolInOrder) — no sorting transforms.
+  EXPLAIN PIPELINE on 26.10: WindowTransform × 54 over MergeSortingTransform × 54 / PartialSortingTransform × 54 (a full sort).
 SELECT sum(rn) FROM (SELECT row_number() OVER (PARTITION BY UserID ORDER BY EventTime) AS rn FROM hits)                       0.702 s -> 0.558 s   (x1.26)
 SELECT max(d) FROM (SELECT EventTime - lagInFrame(EventTime) OVER (PARTITION BY UserID ORDER BY EventTime ROWS BETWEEN 1 PRECEDING AND CURRENT ROW) AS d FROM hits)   0.614 -> 0.499 (x1.23)
 SELECT count() FROM (SELECT rank() OVER (PARTITION BY RegionID ORDER BY ResolutionWidth) AS r FROM hits) WHERE r = 1           1.214 s -> 0.995 s   (x1.22)
@@ -1026,7 +1029,7 @@ COLLATE: #126829 (Groene AI). Text formats: #124508 (Manuel). Float formatting x
 ARM: #118916 (ARM's optimized routines), #124136 (StringZilla SVE), #122860 (min/max with SVE), #129204 (sipHash128, 8 values at a time).
 Keeper: #117436 (Michael Kolupaev), use_batched_log_entries — enable only after all servers are upgraded.
 Startup: #131257 quick_startup ("from about 5.5 s to 2.3 s on a cloud VM with a network disk"), #131344 (-0.25 s), #131454 (-0.3 s).
-Other candidates left out: statistics cache (#...); uniqExact in order (#129508); large inserts written with ZSTD(3) right away (#127652); group fsync (#126251);
+Other candidates left out: statistics cache (#120758, #126389); uniqExact in order (#129508); large inserts written with ZSTD(3) right away (#127652); group fsync (#126251);
 faster ZSTD and LZ4 (#122854, #127206, #131460); hasAny/hasAll; coalesce/ifNull short-circuit (#121457); reading in order with fewer rows (#129198);
 FINAL improvements; text index (pfor by default, phrase search); parallel replicas and distributed plans. -->
 </section>
