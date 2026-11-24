@@ -1727,28 +1727,32 @@ their own UI (Anthropic, DoorDash, Tesla, Netflix); introduces ClickHouse Observ
 builds an interactive app over live data with SQL; apps run in a sandboxed iframe with read-only queries under the viewer's permissions. -->
 </section>
 
-<section class="slide" style="background: black; padding: 0;">
-<iframe style="width: 100%; height: 100%; position: absolute; top: 0; left: 0;" src="https://www.youtube.com/embed/tS0uNbeAtBU" title="ClickHouse Observability Apps" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+<section class="slide" data-youtube="tS0uNbeAtBU" style="background: #000 url(pictures/obs_video_overview.jpg) center / contain no-repeat; padding: 0;">
+<a href="https://www.youtube.com/watch?v=tS0uNbeAtBU" target="_blank" title="ClickHouse Observability Apps" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%;"><span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 110px; height: 76px; border-radius: 18px; background: rgba(255, 0, 0, 0.85); color: white; font-size: 40px; line-height: 76px; text-align: center;">&#9654;</span></a>
 </section>
 <!-- Video: "ClickHouse Observability Apps", https://www.youtube.com/watch?v=tS0uNbeAtBU -->
 
-<section class="slide" style="background: black; padding: 0;">
-<iframe style="width: 100%; height: 100%; position: absolute; top: 0; left: 0;" src="https://www.youtube.com/embed/nccDU730ud4" title="Map infrastructure to user journeys with ClickHouse Observability Apps" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+<section class="slide" data-youtube="nccDU730ud4" style="background: #000 url(pictures/obs_video_journeys.jpg) center / contain no-repeat; padding: 0;">
+<a href="https://www.youtube.com/watch?v=nccDU730ud4" target="_blank" title="Map infrastructure to user journeys with ClickHouse Observability Apps" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%;"><span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 110px; height: 76px; border-radius: 18px; background: rgba(255, 0, 0, 0.85); color: white; font-size: 40px; line-height: 76px; text-align: center;">&#9654;</span></a>
 </section>
 <!-- Video: "Map infrastructure to user journeys with ClickHouse Observability Apps", https://www.youtube.com/watch?v=nccDU730ud4 -->
 
-<section class="slide" style="background: black; padding: 0;">
-<iframe style="width: 100%; height: 100%; position: absolute; top: 0; left: 0;" src="https://www.youtube.com/embed/0qqL6UONWZU" title="Investigate feature flag changes with ClickHouse Observability Apps" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+<section class="slide" data-youtube="0qqL6UONWZU" style="background: #000 url(pictures/obs_video_flags.jpg) center / contain no-repeat; padding: 0;">
+<a href="https://www.youtube.com/watch?v=0qqL6UONWZU" target="_blank" title="Investigate feature flag changes with ClickHouse Observability Apps" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%;"><span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 110px; height: 76px; border-radius: 18px; background: rgba(255, 0, 0, 0.85); color: white; font-size: 40px; line-height: 76px; text-align: center;">&#9654;</span></a>
 </section>
 <!-- Video: "Investigate feature flag changes with ClickHouse Observability Apps", https://www.youtube.com/watch?v=0qqL6UONWZU -->
 
-<section class="slide" style="background: black; padding: 0;">
-<iframe style="width: 100%; height: 100%; position: absolute; top: 0; left: 0;" src="https://www.youtube.com/embed/y36V30U_sTo" title="Investigate payment failures with ClickHouse Observability Apps" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+<section class="slide" data-youtube="y36V30U_sTo" style="background: #000 url(pictures/obs_video_payments.jpg) center / contain no-repeat; padding: 0;">
+<a href="https://www.youtube.com/watch?v=y36V30U_sTo" target="_blank" title="Investigate payment failures with ClickHouse Observability Apps" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%;"><span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 110px; height: 76px; border-radius: 18px; background: rgba(255, 0, 0, 0.85); color: white; font-size: 40px; line-height: 76px; text-align: center;">&#9654;</span></a>
 </section>
 <!-- Video: "Investigate payment failures with ClickHouse Observability Apps", https://www.youtube.com/watch?v=y36V30U_sTo -->
 
 <!-- The four videos above are the ones embedded in the post https://clickhouse.com/blog/observability-ui-is-dead-whats-next (YouTube, channel ClickHouse):
-     the overview and the three example apps (infrastructure by user journeys, feature flag rollouts, failed payments). -->
+     the overview and the three example apps (infrastructure by user journeys, feature flag rollouts, failed payments).
+     A YouTube player does not work in a page opened from file:// (the player gets no referrer and shows an error), so each slide is a frame of the
+     video with a link that opens it on YouTube in a new tab; the script at the end of the file replaces these with inline players when the deck is
+     served over http(s), as on presentations.clickhouse.com. The frames are YouTube's own 1280x720 preview images.
+     Downloading the videos to play them from local files was not possible from the test machine (YouTube asks to sign in). -->
 
 
 <section class="slide" style="background: url(pictures/wing.jpg); background-size: cover;">
@@ -1819,6 +1823,17 @@ builds an interactive app over live data with SQL; apps run in a sandboxed ifram
 <iframe style="width: 100%; height: 100%; position: absolute; top: 0; left: 0;" src="https://www.youtube.com/embed/VIDEO_ID" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 </section>
 -->
+
+    <script>
+        /// YouTube players do not work from file://, so the slides with data-youtube are links by default; over http(s) they become inline players.
+        if (location.protocol !== 'file:') {
+            document.querySelectorAll('section[data-youtube]').forEach(slide => {
+                slide.style.background = 'black';
+                slide.innerHTML = '<iframe style="width: 100%; height: 100%; position: absolute; top: 0; left: 0;" src="https://www.youtube.com/embed/'
+                    + slide.dataset.youtube + '" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
+            });
+        }
+    </script>
 
     <div class="progress"></div>
     <script src="https://presentations.clickhouse.com/shower/shower.js"></script>
