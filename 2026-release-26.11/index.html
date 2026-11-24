@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickHouse: Release 26.11 Call</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta property="og:image" content="pictures/preview.jpg">
+    <meta property="og:title" content="ClickHouse: Release 26.11 Call">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="pictures/preview.jpg">
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/themes/clickhouse/styles/styles.css">
+
+    <style>
+        code { display: block; white-space: pre; background-color: #EEE; }
+        p.cloud { text-align: center; line-height: 1.6; font-size: 12pt; }
+        p.cloud span { color: gray; padding: 0 20px 0 20px; white-space: nowrap; }
+        .hilite { background: rgba(255, 255, 255, 80%); padding: 5px; }
+        .slide table tr:not(:last-of-type)>* { background: none; }
+        .zoomable { cursor: zoom-in; }
+        .zoomable.zoomed { position: fixed; left: 0; top: 0; width: 100% !important; height: 100%; object-fit: contain; background: #000; z-index: 50; cursor: zoom-out; }
+    </style>
+</head>
+<body class="shower list">
+    <header class="caption">
+        <h1>ClickHouse: Release 26.11 Call</h1>
+        <p>Author: Alexey Milovidov, 2026-11-24.</p>
+    </header>
+    <section class="slide" id="cover" style="background: url(pictures/back1.jpg); background-size: cover;">
+        <h1 style="margin-top: 15px; line-height: 110%; font-size: 56pt; color: #FF0; text-align: center;">ClickHouse Release 26.11</h1>
+    </section>
+
+<section class="slide">
+<h2>ClickHouse release 26.11</h2>
+<p>1. (50 min) What's new in ClickHouse 26.11.</p>
+<p>2. (10 min) Q&amp;A.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/back2.jpg); background-size: cover;">
+<h2><span class="hilite">Thanksgiving Release 26.11</span></h2>
+<p><span class="hilite">&mdash; 95 new features 🥧</span></p>
+<p><span class="hilite">&mdash; 364 performance optimizations 🌽</span></p>
+<p><span class="hilite">&mdash; 932 bug fixes 🧣</span></p>
+</section>
+<!-- Feature count = 40 New Feature + 54 Experimental Feature + 1 backward-incompatible entry that is a new capability
+     (clickhouse-local keeps its data between runs in ~/.local/share/clickhouse-local, #116042; the other 47 backward-incompatible
+     entries are removals, restrictions, hardening, renames, or default flips).
+     Performance = 364 Performance Improvement entries; bug fixes = 932 Bug Fix entries.
+     Counted on 2026-11-24 from the "ClickHouse release 26.11, 2026-11-24" section of CHANGELOG.md on master
+     — recount if the changelog changes before the call. -->
+<!--
+
+Small:
+
+Array combinatorics
+JSONRemove, JSONExtractLeafValues
+New Geo functions: length*, polygonMinimumRotatedRectangleCartesian, exteriorRing*, ...
+GEOMETRY and GEOGRAPHY in Parquet
+Vim mode in CLI
+FirstApplicable compression codec
+Quotas over any profile event
+SHARED paths in JSON
+/federate endpoint for Prometheus
+SHUFFLE
+Declarative function signatures
+
+Performance:
+
+Faster adaptive aggregator - also show the ClickBench pages, including QPS
+Faster GROUP BY
+Columns Cache for Parquet, Iceberg, ... use https://github.com/ClickHouse/ClickBench/pull/2914
+TopK, PREWHERE, Query Condition Cache for Parquet, Iceberg (multiple changes)
+Faster ORC format and fixing its vulnerabilities
+Faster JOINs (DPSub algorithm, etc): show it on the versions benchmark
+Faster window functions
+Snapshots in plain_rewritable disks
+... could you point to any other substantial items?
+
+Interesting:
+
+Vortex
+INSERT RETURNING
+PUT uploads
+
+Security:
+
+Filesystem Isolation
+What are other security-related changes - around hiding pointers, ASLR, etc.?
+system.connections
+
+Data Lakes:
+
+Support for Variant in Iceberg
+Iceberg optimizations: take from https://pastila.nl/?cafebabe/b49935a7f1b270aea3605c15033ee804.claude.jsonl#0u0HD2Eo5QoS9EyHQTYMpw==
+Iceberg on ClickBench
+
+Bonus:
+
+Loom
+JSONBench is back https://clickhouse.com/blog/jsonbench-is-back-clickhouse-still-leads
+FAA outage https://clickhouse.com/blog/faa-outage-clickhouse-format-png
+The launch of ClickHouse Observability
+The launch of ClickHouse Security
+The launch of AI Gateway in Langfuse
+The launch of Postgres GA
+The Observability UI https://clickhouse.com/blog/observability-ui-is-dead-whats-next
+
+Meetups
+
+Cyprus
+re:Invent
+...
+
+Reading Corner:
+
+Meet GroeneAI
+Loom
+The Observability UI is dead
+The agentic analytics benchmark
+The new cost-base JOIN optimizer
+...
+
+-->
+
+<section class="slide" style="background: url(pictures/back3.jpg); background-size: cover;">
+<h2 style="color: black;"><span class="hilite">Small And Nice Features</span></h2>
+</section>
+
+<section class="slide">
+<h2>Permutations and combinations</h2>
+
+<p style="margin-top: -0.3em;">Three new functions for arrays:</p>
+
+<p><code style="font-size: 11.5pt; line-height: 1.3;">SELECT <b style="color: green;">arrayPermutations</b>(['a', 'b', 'c']);
+<span style="color: gray;">-- [['a','b','c'],['a','c','b'],['b','a','c'],['b','c','a'],['c','a','b'],['c','b','a']]</span>
+
+SELECT <b style="color: green;">arrayPartialPermutations</b>(['gold', 'silver', 'bronze'], 2);
+<span style="color: gray;">-- [['gold','silver'],['gold','bronze'],['silver','gold'],['silver','bronze'], ...]</span>
+
+SELECT <b style="color: green;">arrayCombinations</b>(['🍕', '🍔', '🌮', '🍣'], 2);
+<span style="color: gray;">-- [['🍕','🍔'],['🍕','🌮'],['🍕','🍣'],['🍔','🌮'],['🍔','🍣'],['🌮','🍣']]</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; Enumerated by positions: equal elements give repeated results.
+<br/>&mdash; The result size is limited by <b>function_range_max_elements_in_block</b>.</p>
+
+<!-- Demo:
+
+SELECT arrayPermutations(['a','b','c']);                     -- [['a','b','c'],['a','c','b'],['b','a','c'],['b','c','a'],['c','a','b'],['c','b','a']]
+SELECT arrayPartialPermutations([1,2,3], 2);                 -- [[1,2],[1,3],[2,1],[2,3],[3,1],[3,2]]
+SELECT arrayPartialPermutations(['gold','silver','bronze'], 2);
+  -- [['gold','silver'],['gold','bronze'],['silver','gold'],['silver','bronze'],['bronze','gold'],['bronze','silver']]
+SELECT arrayCombinations(['a','b','c','d'], 2);              -- [['a','b'],['a','c'],['a','d'],['b','c'],['b','d'],['c','d']]
+SELECT arrayCombinations([1,1,2], 2);                        -- [[1,1],[1,2],[1,2]]  (by positions, not by values)
+SELECT length(arrayPermutations(range(8)));                  -- 40320
+SELECT length(arrayCombinations(range(49), 6));              -- 13983816 (the lottery), 0.4 sec.
+k = 0 gives [[]]. Every generated array counts as its size plus one towards function_range_max_elements_in_block (default 500 million).
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: ArtemovMichael.</p>
+</section>
+
+<section class="slide">
+<h2>The travelling salesman, in SQL</h2>
+
+<p><code style="font-size: 11pt; line-height: 1.3;">WITH [('Amsterdam', 4.90, 52.37), ('Berlin', 13.40, 52.52), ('Paris', 2.35, 48.86),
+      ('Madrid', -3.70, 40.42), ('Rome', 12.50, 41.90), ('Vienna', 16.37, 48.21),
+      ('Prague', 14.42, 50.09), ('Lisbon', -9.14, 38.72), ('London', -0.13, 51.51)] AS cities
+SELECT arrayMap(c -> c.1, route) AS path,
+       round(arraySum(arrayMap((a, b) -> geoDistance(a.2, a.3, b.2, b.3),
+           route, arrayRotateLeft(route, 1))) / 1000) AS km
+FROM (SELECT arrayJoin(<b style="color: green;">arrayPermutations</b>(cities)) AS route)
+WHERE route[1].1 = 'Amsterdam'
+ORDER BY km LIMIT 1;
+
+<span style="color: gray;">path: ['Amsterdam','Berlin','Prague','Vienna','Rome','Madrid','Lisbon','Paris','London']
+km:   5904</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">9 cities, 362&thinsp;880 routes: <b>0.2 sec.</b></p>
+
+<!-- Demo: the query on the slide, as is (FORMAT Vertical). Tested on 26.11.1.2934: 0.203 sec on the test machine.
+The route is closed (arrayRotateLeft pairs every city with the next one and the last with the first).
+The WHERE fixes the starting city, so each cycle is listed once per direction. -->
+</section>
+
+<section class="slide">
+<h2>Functions for JSON in strings</h2>
+
+<p style="margin-top: -0.3em;"><b>JSONRemove</b> (<b>JSON_REMOVE</b>) &mdash; remove members by JSONPath:</p>
+
+<p style="margin-top: -0.5em;"><code style="font-size: 12pt; line-height: 1.3;">SELECT <b style="color: green;">JSONRemove</b>('{"user":"alice","password":"qwerty","tags":["a","b","c"]}',
+                  '$.password', '$.tags[0]');
+<span style="color: gray;">-- {"user":"alice","tags":["b","c"]}</span>
+</code></p>
+
+<p><b>JSONExtractLeafValues</b> &mdash; all the scalar values, for a text index:</p>
+
+<p style="margin-top: -0.5em;"><code style="font-size: 12pt; line-height: 1.3;">SELECT <b style="color: green;">JSONExtractLeafValues</b>(
+    '{"level":"error","msg":"disk full","ctx":{"host":"db-7","codes":[28,5]}}');
+<span style="color: gray;">-- ['error','disk full','db-7','28','5']</span>
+
+CREATE TABLE logs (ts DateTime, body String,
+    INDEX idx <b style="color: green;">JSONExtractLeafValues(body)</b> TYPE text(tokenizer = 'splitByNonAlpha'))
+</code></p>
+
+<!-- Demo:
+
+SELECT JSONRemove('{"user":"alice","password":"qwerty","tags":["a","b","c"]}', '$.password', '$.tags[0]');   -- {"user":"alice","tags":["b","c"]}
+SELECT JSON_REMOVE('{"a":{"b":1,"c":2},"d":[1,2,3]}', '$.a.b', '$.d[1]');                                     -- {"a":{"c":2},"d":[1,3]}
+SELECT JSONRemove('{"a":1}', '$.x');                                                                          -- {"a":1}  (a missing path removes nothing)
+SELECT JSONExtractLeafValues('{"level":"error","msg":"disk full","ctx":{"host":"db-7","codes":[28,5]}}');     -- ['error','disk full','db-7','28','5']
+SELECT JSONExtractLeafPathsAndValues('{"level":"error","msg":"disk full","ctx":{"host":"db-7","codes":[28,5]}}');
+  -- [('level','error'),('msg','disk full'),('ctx.host','db-7'),('ctx.codes[0]','28'),('ctx.codes[1]','5')]
+SELECT JSONExtractLeafValues('{"level":"error","secret":{"token":"abc"},"ctx":{"host":"db-7"}}', '^secret');  -- ['error','db-7']  (skip_regex)
+Third argument: how arrays are handled — 'elements' (default), 'string', 'skip'.
+
+CREATE TABLE logs_raw (ts DateTime, body String, INDEX idx JSONExtractLeafValues(body) TYPE text(tokenizer = 'splitByNonAlpha')) ENGINE = MergeTree ORDER BY ts;
+INSERT INTO logs_raw SELECT now() - number, format('{{"level":"{}","msg":"request {} done","ctx":{{"host":"db-{}","user":"u{}"}}}}',
+    ['info','warn','error'][number % 3 + 1], number, number % 100, number % 1000) FROM numbers(1000000);
+SELECT count() FROM logs_raw WHERE hasAnyTokens(JSONExtractLeafValues(body), 'u777');     -- 1000
+EXPLAIN indexes = 1 ...  ->  ReadFromTextIndexCount (Trivial count from text index (idx, token = "u777"))
+For columns of the JSON data type, the counterpart is JSONAllValues.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Minh Vu, rohit.</p>
+</section>
+
+<section class="slide">
+<h2>New geo functions</h2>
+
+<p style="margin-top: -0.3em;">The length of a line: on a plane, on a sphere, on the WGS84 spheroid.</p>
+
+<p><code style="font-size: 12pt; line-height: 1.3;">WITH [(4.9041, 52.3676), (2.3522, 48.8566), (-0.1276, 51.5072)]::LineString AS route
+SELECT <b style="color: green;">lengthSpheroid</b>(route) / 1000;   <span style="color: gray;">-- 774 km: Amsterdam &rarr; Paris &rarr; London</span>
+</code></p>
+
+<p>&mdash; <b>lengthCartesian</b> (<b>ST_Length</b>), <b>lengthSpherical</b>, <b>lengthSpheroid</b>;
+<br/>&mdash; <b>exteriorRing</b>, <b>interiorRingN</b>, <b>pointN</b>
+<br/>&emsp; (<b>ST_ExteriorRing</b>, <b>ST_InteriorRingN</b>, <b>ST_PointN</b>);
+<br/>&mdash; <b>polygonMinimumRotatedRectangleCartesian</b> &mdash;
+<br/>&emsp; the smallest rotated rectangle that contains a geometry.</p>
+
+<p>Also: <b>CAST</b> from Point, LineString, Polygon to their Multi- types.</p>
+
+<!-- Demo:
+
+WITH [(4.9041, 52.3676), (2.3522, 48.8566), (-0.1276, 51.5072)]::LineString AS route
+SELECT lengthCartesian(route), lengthSpherical(route), round(lengthSpheroid(route) / 1000) AS km;
+  -- 7.9701783891060245   0.1213924431316363 (radians)   774
+SELECT lengthSpheroid([(4.9041, 52.3676), (2.3522, 48.8566)]::LineString) / 1000, geoDistance(4.9041, 52.3676, 2.3522, 48.8566) / 1000;
+  -- 430.2432 (geodesic on the spheroid, Karney's algorithm)   430.3155 (great circle)
+WITH [[(0,0),(10,0),(10,10),(0,10),(0,0)],[(2,2),(4,2),(4,4),(2,4),(2,2)]]::Polygon AS p
+SELECT exteriorRing(p), interiorRingN(p, 1), pointN(exteriorRing(p)::LineString, 2);
+  -- [(0,0),(10,0),(10,10),(0,10),(0,0)]   [(2,2),(4,2),(4,4),(2,4),(2,2)]   (10,0)
+SELECT polygonMinimumRotatedRectangleCartesian([[(0,0),(2,1),(4,4),(1,3),(0,0)]]::Polygon);
+  -- [[(-0.69,0.46),(2.38,5.08),(4,4),(0.92,-0.62),(-0.69,0.46)]]   (like ST_OrientedEnvelope in PostGIS; rotating calipers over the convex hull)
+SELECT readWKT('LINESTRING (0 0, 3 4, 3 10)') AS g, toTypeName(g), lengthCartesian(g), ST_Length(g);   -- Geometry 11 11
+Coordinates are (longitude, latitude). Polygons have no "length": use the perimeter* functions.
+CAST to Multi- types: #... "CAST can now convert Point, LineString and Polygon to MultiPoint, MultiLineString and MultiPolygon" (Improvement).
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Pulkit Chauhan.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">GEOMETRY and GEOGRAPHY in Parquet</h2>
+
+<p style="margin-top: -0.3em;">The new logical types of the Parquet format, for reading and writing:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.3;">INSERT INTO FUNCTION file('places.parquet')
+SELECT name, loc FROM places   <span style="color: gray;">-- loc Point</span>
+SETTINGS <b style="color: green;">output_format_parquet_geometry_logical_type</b> = 1;
+
+SELECT count() FROM file('places.parquet')
+WHERE pointInPolygon(loc, [(10., 10.), (11., 10.), (11., 11.), (10., 11.)]);
+<span style="color: gray;">-- 76 of 77 row groups are skipped by the bounding boxes</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; read as ClickHouse geo types: <b>Point</b>, <b>Polygon</b>, &hellip;, <b>Geometry</b>;
+<br/>&mdash; <b>GeospatialStatistics</b> (bounding boxes) prune row groups;
+<br/>&mdash; GeoParquet 1.1 native (GeoArrow) encodings are also readable.</p>
+
+<!-- Demo:
+
+INSERT INTO FUNCTION file('cities_geo.parquet') SELECT 'p' || number AS name, (number / 1e6 * 360 - 180, sin(number) * 80)::Point AS loc
+FROM numbers(10000000) SETTINGS output_format_parquet_geometry_logical_type = 1, engine_file_truncate_on_insert = 1, output_format_parquet_row_group_size = 100000;
+SELECT num_row_groups, columns[2].logical_type, row_groups[1].columns[2].geospatial_statistics FROM file('cities_geo.parquet', ParquetMetadata);
+  -- 77   Geometry(crs=)   (-180,-132.90588,-79.99999999878669,79.99999997572104,NULL,NULL,NULL,NULL,[1])
+SELECT count() FROM file('cities_geo.parquet') WHERE pointInPolygon(loc, [(10., 10.), (11., 10.), (11., 11.), (10., 11.)]);   -- 7
+  -- query_log: read_rows 130818, ProfileEvents ParquetPrunedRowGroups = 76, ParquetReadRowGroups = 1, 322 ms
+Without the setting the geo columns are written as WKB BYTE_ARRAY with the GeoParquet `geo` metadata (as before); with it,
+the column's logical type is Geometry and the file carries GeospatialStatistics instead of min/max.
+The setting is disabled by default because readers that do not know the logical type (Arrow C++ / pyarrow before 20) cannot open the file.
+GEOGRAPHY is read into the same types; CRS and edge interpolation are not represented.
+GeoParquet 1.1 native encodings: #129121.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Vim mode in the client</h2>
+
+<p><code style="font-size: 16pt; line-height: 1.4;">$ clickhouse-client <b style="color: green;">--vim</b>
+</code></p>
+
+<p style="margin-top: 0.5em;">&mdash; starts in insert mode; <b>Esc</b> switches to normal mode;
+<br/>&mdash; motions: <b>h j k l w b e 0 $ f t % gg G</b> &hellip;
+<br/>&mdash; operators <b>d</b>, <b>c</b> with counts and text objects: <b>d2w</b>, <b>ciw</b>, <b>dd</b>, &hellip;
+<br/>&mdash; <b>Enter</b> inserts a new line; <b>Ctrl+J</b> runs the query;
+<br/>&mdash; <b>v</b> opens the query in your <b>$EDITOR</b>.</p>
+
+<p style="float: right;">Demo.</p>
+
+<!-- Demo: clickhouse-client --vim   (also works in clickhouse-local)
+Type: SELECT 123 AS x  Esc  bbb  cw456  Esc  Ctrl+J    -> 456
+      XSELECT 7  Esc  0  x   -> SELECT 7;    SELECT 1  Esc  A  " + 41"   -> SELECT 1 + 41;    "SELECT 5 5 AS y"  Esc 0 w dw   -> SELECT 5 AS y
+Checked through a pseudo-terminal on 26.11.1.2934: x, A, dw, cw edit the line as expected.
+From the docs added by the PR (#111218): "The input starts in insert mode; Esc switches to normal mode, where motions (h, j, k, l, w, b, e, 0, $, f, t, %, gg, G, ...),
+operators (d, c) with counts and text objects (iw, aw, ...) ... In vim mode, Enter inserts a new line in insert mode and moves to the next line in normal mode;
+press Ctrl + j to submit the query. In normal mode, v opens the current query in the editor (not available in the embedded client).
+The history search shortcuts (Ctrl + r, Ctrl + s, Ctrl + t, Alt + r) and Alt + # work in normal mode as well."
+Implemented in the ClickHouse fork of replxx.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Isak Ellmer.</p>
+</section>
+
+<section class="slide">
+<h2>A codec that depends on the data type</h2>
+
+<p style="margin-top: -0.3em;"><b>FirstApplicable</b> picks the first codec that fits the type of a column:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.3;">CREATE TABLE t (id UInt64, x Float32, s String)
+ENGINE = MergeTree ORDER BY id
+SETTINGS default_compression_codec = '<b style="color: green;">FirstApplicable(PCO, ZSTD(3))</b>';
+
+<span style="color: gray;">-- id, x: PCO;  s: ZSTD(3);  the sizes of strings: PCO</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; per column: <b>CODEC(FirstApplicable(PCO, ZSTD(3)))</b>;
+<br/>&mdash; an alternative can be a pipeline: <b>Multiple(T64, ZSTD(3))</b>.</p>
+
+<p style="margin-top: 0.3em;">Example: 1M sequential ids: <b>LZ4: <span style="color: red;">3.82 MiB</span></b>, <b>PCO: <span style="color: green;">7.69 KiB</span></b>.</p>
+
+<!-- Demo:
+
+SET enable_pco_codec = 1;   -- PCO is still gated by this setting (disabled by default); with ALP (now GA) or T64 no setting is needed
+CREATE TABLE fa3 (id UInt64, x Float32, s String) ENGINE = MergeTree ORDER BY id SETTINGS default_compression_codec = 'FirstApplicable(PCO, ZSTD(3))';
+INSERT INTO fa3 SELECT number, number / 7, toString(number) FROM numbers(1000000);
+SELECT name, formatReadableSize(data_compressed_bytes) FROM system.columns WHERE table = 'fa3';   -- id 7.69 KiB, x 109.07 KiB, s 623.18 KiB
+The same id column with the default LZ4: 3.82 MiB (table `fa`, 7.63 MiB uncompressed).
+CREATE TABLE fa (..., ts DateTime CODEC(FirstApplicable(PCO, ZSTD(3))), name String CODEC(FirstApplicable(PCO, ZSTD(3))), tags Array(String) CODEC(...))   -- accepted
+CREATE TABLE fa2 (id UInt64 CODEC(FirstApplicable(Multiple(Delta, ZSTD(3)), ZSTD(3))), s String CODEC(FirstApplicable(Multiple(T64, ZSTD(3)), LZ4)))      -- accepted
+From the description of the MergeTree setting default_compression_codec: "At least one of its alternatives must be applicable to any data type,
+and lossy codecs are not allowed among them."
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Quotas over any profile event</h2>
+
+<p style="margin-top: -0.3em;">Limit any of the 1800+ counters of <b>system.events</b>, by name:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.3;">CREATE QUOTA network_egress FOR INTERVAL 1 day
+    MAX <b style="color: green;">S3GetObject</b> = 100000, <b style="color: green;">NetworkSendBytes</b> = '100G' TO user1;
+
+CREATE QUOTA scan_budget FOR INTERVAL 1 hour
+    MAX <b style="color: green;">SelectedMarks</b> = 2000, <b style="color: green;">OSCPUVirtualTimeMicroseconds</b> = '10M' TO analyst;
+
+<span style="color: gray;">-- Quota for user `analyst` for 3600s has been exceeded:
+-- SelectedMarks = 2445/2000. (QUOTA_EXCEEDED)</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; in SQL and in the <b>users.yaml</b> configuration;
+<br/>&mdash; usage: <b>profile_events</b>, <b>max_profile_events</b> in <b>system.quota_usage</b>.</p>
+
+<!-- Demo:
+
+CREATE USER analyst IDENTIFIED WITH no_password;
+CREATE TABLE events (x UInt64) ENGINE = MergeTree ORDER BY x;  INSERT INTO events SELECT number FROM numbers(10000000);
+GRANT SELECT ON default.events TO analyst;  GRANT SELECT ON system.quota_usage TO analyst;
+CREATE QUOTA scan_budget FOR INTERVAL 1 hour MAX SelectedMarks = 2000, OSCPUVirtualTimeMicroseconds = '10M' TO analyst;
+SHOW CREATE QUOTA scan_budget;   -- CREATE QUOTA scan_budget FOR INTERVAL 1 hour MAX OSCPUVirtualTimeMicroseconds = 10000000, SelectedMarks = 2000 TO analyst
+clickhouse client --user analyst -q "SELECT count() FROM events WHERE NOT ignore(x)"     -- ok (1223 marks)
+clickhouse client --user analyst -q "SELECT profile_events, max_profile_events FROM system.quota_usage"
+  -- {'OSCPUVirtualTimeMicroseconds':219340,'SelectedMarks':1223}   {'OSCPUVirtualTimeMicroseconds':10000000,'SelectedMarks':2000}
+clickhouse client --user analyst -q "SELECT count() FROM events WHERE NOT ignore(x)"     -- ok: the usage becomes 2445, checked for the next query
+clickhouse client --user analyst -q "SELECT count() FROM events WHERE NOT ignore(x)"
+  -- Code: 201. Quota for user `analyst` for 3600s has been exceeded: SelectedMarks = 2445/2000. Interval will end at ... Name of quota template: `scan_budget`. (QUOTA_EXCEEDED)
+The first example on the slide is from the changelog entry (#117004).
+SELECT count() FROM system.events SETTINGS system_events_show_zero_values = 1;   -- 1878 on 26.11.1.2934
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>SHARED typed paths in JSON</h2>
+
+<p style="margin-top: -0.3em;">Typed paths are fast, but each one is a separate set of files.
+<br/>With hundreds of them, parts have too many files:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.3;">CREATE TABLE t (data JSON(
+    <b style="color: green;">SHARED</b> user_id UInt32,
+    <b style="color: green;">SHARED</b> status String,
+    ...))
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; shared paths are stored together, in a constant number of files;
+<br/>&mdash; a read of one path still decodes only that path.</p>
+
+<p>Example, 200 typed paths: <b><span style="color: red;">431</span> files per part</b> &rarr; <b><span style="color: green;">37</span> files</b>.</p>
+
+<!-- Demo (server, 26.11.1.2934):
+
+CREATE TABLE j_typed  (id UInt64, data JSON(k0 UInt32, k1 UInt32, ..., k199 UInt32)) ENGINE = MergeTree ORDER BY id SETTINGS min_bytes_for_wide_part = 0, min_rows_for_wide_part = 0;
+CREATE TABLE j_shared (id UInt64, data JSON(SHARED k0 UInt32, ..., SHARED k199 UInt32)) ENGINE = MergeTree ORDER BY id SETTINGS min_bytes_for_wide_part = 0, min_rows_for_wide_part = 0;
+INSERT INTO ... SELECT number, toJSONString(mapFromArrays(arrayMap(i -> 'k' || toString(i), range(200)), arrayMap(i -> number * i % 1000, range(200)))) FROM numbers(1000000);
+OPTIMIZE TABLE ... FINAL;
+ls <part> | wc -l:   j_typed 431 files (data.k0.bin, data.k0.cmrk2, ...),   j_shared 37 files (data.object_shared_data.0.data.bin, ...paths_marks..., ...structure...)
+Size on disk: j_typed 34.12 MiB, j_shared 53.61 MiB (random-ish UInt32 values; the shared format compresses all paths of a granule together).
+SELECT sum(data.k77): 0.002..0.003 sec for both (hot); ReadCompressedBytes: 268 KB (typed) vs 829 KB (shared); FileOpen 1 vs 3.
+MergeTree setting object_typed_shared_data_serialization_version = 'v1': "for each granule the data of every SHARED path in path order,
+with the start of every path's data recorded in a marks stream, so that a read of some paths decodes only them".
+The gain is the number of files and of object storage requests per part, not the scan speed.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Pavel Kruglov.</p>
+</section>
+
+<section class="slide">
+<h2>Prometheus federation</h2>
+
+<p style="margin-top: -0.3em;">A Prometheus server can scrape series from a <b>TimeSeries</b> table 🧪
+<br/>through the standard <b>/federate</b> endpoint:</p>
+
+<p style="margin-top: -0.5em;"><code style="font-size: 11pt; line-height: 1.25;">$ curl 'http://clickhouse:9363<b style="color: green;">/federate</b>?match[]=node_load1'
+
+<span style="color: gray;"># TYPE node_load1 untyped
+node_load1{instance="db-1:9100",job="node"} 0.316 1795485442726
+node_load1{instance="db-2:9100",job="node"} 0.416 1795485442726
+node_load1{instance="db-3:9100",job="node"} 0.516 1795485442726</span>
+</code></p>
+
+<p style="margin-top: -0.5em;"><code style="font-size: 11pt; line-height: 1.25;"><span style="color: gray;">$ cat prometheus.yml</span>
+
+scrape_configs:
+  - job_name: clickhouse
+    honor_labels: true
+    metrics_path: <b style="color: green;">/federate</b>
+    params: { 'match[]': ['{job="node"}'] }
+    static_configs: [{ targets: ['clickhouse:9363'] }]
+</code></p>
+
+<!-- Demo (server config.d/prometheus.xml on the test server; the YAML equivalent):
+
+prometheus:
+    port: 9263
+    handlers:
+        w:   { url: /write, handler: { type: write, table: default.prom } }
+        api: { url_prefix: /prometheus, handler: { type: api_v1, table: default.prom } }
+        fed: { url: /federate, handler: { type: query, table: default.prom } }
+Profile settings needed: allow_experimental_time_series_table = 1, enable_time_series_aggregate_functions = 1 (both PrivatePreview tier).
+CREATE TABLE prom ENGINE = TimeSeries;
+Data: a hand-rolled Prometheus remote-write request (protobuf + snappy) with node_cpu_seconds_total, node_load1, up for 3 instances -> POST /write -> 204.
+curl 'http://127.0.0.1:9263/federate?match[]=node_load1'
+  # TYPE node_load1 untyped
+  node_load1{instance="db-1:9100",job="node"} 0.316 1795485442726
+  node_load1{instance="db-2:9100",job="node"} 0.41600000000000004 1795485442726
+  node_load1{instance="db-3:9100",job="node"} 0.516 1795485442726
+curl -g 'http://127.0.0.1:9263/federate?match[]={job="node",__name__=~"up|node_cpu.*"}'    -- 9 series, grouped under # TYPE lines
+curl 'http://127.0.0.1:9263/prometheus/api/v1/federate?match[]=up'                          -- also served by the combined api_v1 handler
+The newest sample of the last 5 minutes for every matched series; stale series are skipped; no match[] -> empty response (as in Prometheus).
+The PR compared the output to Prometheus 3.5.0: byte-identical for single-family queries.
+The prometheus.yml on the slide is the standard Prometheus federation config, not run here (no Prometheus server on the test machine).
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Valery Petrov.</p>
+</section>
+
+<section class="slide">
+<h2>SHUFFLE 🧪</h2>
+
+<p style="margin-top: -0.3em;">A clause in place of <b>ORDER BY</b>: rows in a uniformly random order.</p>
+
+<p><code style="font-size: 14pt; line-height: 1.3;">SET allow_experimental_shuffle_query = 1;
+
+SELECT * FROM hits <b style="color: green;">SHUFFLE</b>;
+SELECT * FROM hits <b style="color: green;">SHUFFLE LIMIT 10</b>;  <span style="color: gray;">-- a uniform random sample</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; O(n) instead of O(n log n); parallel; works in distributed queries;
+<br/>&mdash; with <b>LIMIT</b>: reservoir sampling in every thread, no sorting at all;
+<br/>&mdash; <b>ORDER BY rand()</b> is now executed the same way.</p>
+
+<p>Example: <b>ORDER BY rand()</b> of 300M numbers:
+<br/><b>26.10: <span style="color: red;">18.8</span> sec.</b> &nbsp; <b>26.11: <span style="color: green;">0.94</span> sec.</b></p>
+
+<!-- Demo (server, 26.11.1.2934 vs 26.10.11.12, max_threads = 16, three runs):
+
+SELECT number FROM numbers_mt(300000000) ORDER BY rand() SETTINGS max_bytes_before_external_sort = 0, max_bytes_ratio_before_external_sort = 0 FORMAT Null
+  26.10: 18.76 sec      26.11: 1.02 / 0.94 sec      26.11 with query_plan_use_shuffle_for_order_by_rand = 0: 18.4 sec
+  EXPLAIN on 26.11:  Shuffle (Shuffle for ORDER BY rand())  /  Shuffle key: rand() ASC
+  NOTE: the rewrite of a full ORDER BY rand() applies only when external sorting is disabled (the shuffle does not spill to disk) or there is a LIMIT:
+  with the default max_bytes_ratio_before_external_sort = 0.5 and no LIMIT the query still sorts (18.5 sec). The numbers on the slide are with
+  external sorting disabled. No experimental setting is needed for ORDER BY rand().
+SELECT number FROM numbers_mt(300000000) SHUFFLE SETTINGS allow_experimental_shuffle_query = 1 FORMAT Null      -- 0.57 sec
+SELECT number FROM numbers_mt(1000000000) SHUFFLE LIMIT 5                                                        -- 0.019 sec
+SELECT number FROM numbers_mt(1000000000) ORDER BY rand() LIMIT 5                                                -- 0.09 sec on both versions (top-N sort)
+EXPLAIN PIPELINE SELECT x FROM events SHUFFLE LIMIT 5:
+  MergingShuffledTransform 35 → 1  /  ReservoirSampleTransform × 35  /  MergeTreeSelect × 35     (plus lazy materialization of the other columns)
+Settings: allow_experimental_shuffle_query (default 0), query_plan_use_shuffle_for_order_by_rand (default 1).
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: kaguya sama, koz9va.</p>
+</section>
+
+<section class="slide">
+<h2>Declarative function signatures 🧪</h2>
+
+<p style="margin-top: -0.3em;"><code style="font-size: 10.5pt; line-height: 1.3;">SELECT name, <b style="color: green;">signature</b> FROM system.functions;
+
+<span style="color: gray;">substring          (StringOrFixedString | Enum, NativeNumber, [NativeNumber]) -> String
+if                 (MaybeNullable(UInt8) | Nothing, T1, T2) -> leastSupertypeOrVariant(T1, T2)
+arrayMap           (Function((Any, ...), R : Any), Array, ...) -> Array(R)
+toStartOfInterval  (DateOrDateTime, const Interval, [const DateOrDateTime], [const String])
+                   -> DateOrDateTime
+geoDistance        (A : Number, B : Number, C : Number, D : Number)
+                   -> selectIf(anyFloat64(A, B, C, D), Float64, Float32)</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; a small language of type matchers and type functions;
+<br/>&mdash; checks the arguments and infers the return type
+<br/>&emsp; instead of hand-written code in every function;
+<br/>&mdash; 1380 of 1525 functions already have a signature.</p>
+
+<p style="margin-top: 0.3em;">Proposed in 2018 (<a href="https://github.com/ClickHouse/ClickHouse/pull/3775">#3775</a>) &mdash; implemented in 2026.</p>
+
+<!-- Demo:
+
+SELECT name, signature FROM system.functions WHERE name IN ('substring', 'if', 'arrayMap', 'toStartOfInterval', 'geoDistance', 'plus', 'concat', 'dictGet') FORMAT Vertical;
+  plus: (Any, Any) -> Any          concat: ([Any], ...) -> String        dictGet: (const String, const String | Tuple, Any) -> Any
+SELECT countIf(signature != ''), count() FROM system.functions WHERE alias_to = '' AND NOT is_aggregate;   -- 1380  1525
+From the PR (#104948, "Declarative function signatures, continuation of #3775"): #3775 is the author's own proposal of 2018.
+"today only ~30% of the converted functions are actually DSL-authoritative; the rest are decorative" — for the others (arithmetic with its
+type promotion, etc.) the signature is documentation and the old getReturnTypeImpl still runs.
+The grammar: matchers (UInt, Number, Array(T), MaybeNullable(T), Function((args), R), `T : Any` capture), type functions (leastSupertype, ...),
+variadic positions (...), optional positions [T], `const` arguments, alternatives with |.
+The PR is 191 small commits titled "Function signatures: round N — ..." on top of the 2018 design.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<!-- SECTION:SMALL-END -->
+
+<section class="slide" style="background: url(pictures/back4.jpg); background-size: cover;">
+<h2 style="line-height: 1.2; margin-left: -1em; color: yellow;">Performance
+<br/>Improvements</h2>
+</section>
+
+<!-- SECTION:PERF -->
+
+<section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
+<h2><span class="hilite">Something Interesting</span></h2>
+</section>
+
+<!-- SECTION:INTERESTING -->
+
+<section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
+<h2><span class="hilite">Security</span></h2>
+</section>
+
+<!-- SECTION:SECURITY -->
+
+<section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
+<h2><span class="hilite">Data Lakes</span></h2>
+</section>
+
+<!-- SECTION:LAKES -->
+
+<section class="slide" style="background: url(pictures/back8.jpg); background-size: cover;">
+<h2><span class="hilite">Bonus</span></h2>
+</section>
+
+<!-- SECTION:BONUS -->
+
+<!-- SECTION:CLOSING -->
+
+<section class="slide" style="background: url(pictures/back10.jpg); background-size: cover; background-position: right; text-shadow: black 0 0 5px;">
+<h2 style="color: white; margin-left: 0em;">Q&amp;A</h2>
+</section>
+
+<!--
+<section class="slide" style="background: black; padding: 0;">
+<iframe style="width: 100%; height: 100%; position: absolute; top: 0; left: 0;" src="https://www.youtube.com/embed/VIDEO_ID" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</section>
+-->
+
+    <div class="progress"></div>
+    <script src="https://presentations.clickhouse.com/shower/shower.js"></script>
+
+    <!--Video plugin-->
+    <link rel="stylesheet" href="https://presentations.clickhouse.com/shower/shower-video.css">
+    <script src="https://presentations.clickhouse.com/shower/shower-video.js"></script>
+    <!--/Video plugin-->
+<footer class="badge">
+    <a href="https://presentations.clickhouse.com/">ClickHouse Theater</a>
+</footer>
+</body>
+</html>
