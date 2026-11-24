@@ -1021,11 +1021,129 @@ metadata; the difference — 1010 LIST and 1001 GET against one HEAD and one GET
 From the PR (#121431): "Initialization of a plain_rewritable disk listed the __meta directory, read every prefix.path and listed every directory: tens of
 thousands of requests even for a disk with a single table"; the snapshot is __meta/snapshot.bin, ZSTD-compressed, rewritten in the background not more often
 than metadata_snapshot_write_delay_ms (default 1000); the writer never reads it; older versions ignore it.
+The live demo (the public arXiv dataset on a read-only plain_rewritable disk) is on the next slide, with the full statements in its comment.
 Related in this release: enable_hard_links is now the default for plain_rewritable (ALTER and mutations work); CREATE TABLE writes one object instead of nine (#130224).
 
 -->
 
+<p style="float: right;">Demo.</p>
+
 <p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2 style="font-size: 30pt;">Demo: all of arXiv, attached in two seconds</h2>
+
+<p style="margin-top: -0.3em;"><code style="font-size: 11pt; line-height: 1.3;">ATTACH TABLE arxiv_text UUID 'c6489c73-a61d-5f66-8160-3236546ff919'
+(
+    id String, version String, ..., source String CODEC(ZSTD(6)), ...,
+    INDEX source_text(source) TYPE text(tokenizer = 'splitByNonAlpha', ...)
+)
+ENGINE = ReplacingMergeTree(retrieved_at) ORDER BY (id, version)
+SETTINGS disk = disk(type = '<b style="color: green;">s3_plain_rewritable</b>', <b style="color: green;">readonly = true</b>,
+    endpoint = 'https://data.clickhouse.com/public-datasets/data/arxiv/',
+    no_sign_request = true);
+<span style="color: gray;">-- 2.2 sec.  3.2 million papers, 760 GiB of LaTeX sources. Nothing is downloaded.</span>
+
+SELECT count() FROM arxiv_text WHERE <b style="color: green;">hasToken(source, 'ClickHouse')</b>;
+<span style="color: gray;">-- 254 papers.  0.55 sec.</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; a public, read-only table on object storage: no credentials, no import;
+<br/>&mdash; the layout of the disk comes from the snapshot: 2 LIST requests, not 25;
+<br/>&mdash; the search is answered from the text index.</p>
+
+<!-- Demo (26.11.1.2934; a test server in AWS eu-central-1, the bucket is on Cloudflare R2 in North America; clickhouse-local works the same).
+The dataset: arXiv from the collection of public datasets (the repository ClickHouse/datasets): every paper since 1991 — arxiv_papers (metadata and
+abstracts, 3.33 million rows, 1.95 GiB) and arxiv_text (the authors' LaTeX sources, 3,235,026 rows, 760 GiB uncompressed, 162 GiB on disk, 14 parts).
+"You need ClickHouse 26.11 or newer and nothing else — no credentials, no account, and no configuration file."
+
+-- 1. Attach the two tables (full statements; paste as is):
+
+ATTACH TABLE arxiv_text UUID 'c6489c73-a61d-5f66-8160-3236546ff919'
+(
+    id String,
+    version String,
+    format LowCardinality(String),
+    files Array(String),
+    source String CODEC(ZSTD(6)),
+    source_bytes UInt64,
+    submission_bytes UInt64,
+    tarball String,
+    retrieved_at DateTime DEFAULT now(),
+    INDEX source_text(source) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lowerUTF8(source)) GRANULARITY 1
+)
+ENGINE = ReplacingMergeTree(retrieved_at)
+ORDER BY (id, version)
+SETTINGS disk = disk(type = 's3_plain_rewritable', endpoint = 'https://data.clickhouse.com/public-datasets/data/arxiv/', no_sign_request = true, readonly = true, use_adaptive_timeouts = false, request_timeout_ms = 10000), refresh_parts_interval = 3600;
+
+ATTACH TABLE arxiv_papers UUID 'e1038682-a272-5120-b55a-aed4e02f96e3'
+(
+    id String,
+    title String,
+    abstract String,
+    authors String,
+    submitter String,
+    categories Array(LowCardinality(String)),
+    primary_category LowCardinality(String),
+    comments String,
+    journal_ref String,
+    doi String,
+    report_no String,
+    license String,
+    acm_class String,
+    msc_class String,
+    versions Nested(version String, date DateTime, size String),
+    created Date,
+    updated Date,
+    datestamp Date,
+    retrieved_at DateTime DEFAULT now(),
+    INDEX abstract_text(abstract) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lowerUTF8(abstract)) GRANULARITY 1
+)
+ENGINE = ReplacingMergeTree(retrieved_at)
+ORDER BY id
+SETTINGS disk = disk(type = 's3_plain_rewritable', endpoint = 'https://data.clickhouse.com/public-datasets/data/arxiv/', no_sign_request = true, readonly = true, use_adaptive_timeouts = false, request_timeout_ms = 10000), refresh_parts_interval = 3600;
+
+  ATTACH arxiv_text: 2.1–2.2 sec (2 ListObjects, 2 HeadObject, 118 GetObject — the GETs load the 14 parts);
+  with metadata_snapshot_enabled = false in the disk(...): 3.6–4.2 sec (25 ListObjects, 151 GetObject). The gain is modest here because the dataset
+  has few parts; on datasets with many parts it is larger (the collection's README: `cve` attach + count 0.46 s on 26.11 against 5.7 s before).
+  ATTACH arxiv_papers: 5.1 sec in one run (network variance).
+
+-- 2. Search the full contents:
+
+SELECT count() FROM arxiv_text;                                              -- 3235026, 0.04 sec
+SELECT count() FROM arxiv_text WHERE hasToken(source, 'ClickHouse');         -- 254; 0.55 sec the first time, 0.003 sec repeated
+EXPLAIN indexes = 1 SELECT count() FROM arxiv_text WHERE hasToken(source, 'ClickHouse');
+  -- ReadFromTextIndexCount (Trivial count from text index (source_text, token = "clickhouse"))
+  -- The index is case-insensitive (preprocessor = lowerUTF8). hasToken / hasAllTokens / hasAnyTokens use it; LIKE and position() scan 150 GiB — do not demo those.
+
+SELECT id, title, created FROM arxiv_papers
+WHERE id IN (SELECT id FROM arxiv_text WHERE hasToken(source, 'ClickHouse'))
+ORDER BY created DESC LIMIT 10;                                              -- 1.1 sec the first time, 0.4–0.5 sec repeated
+  -- 2610.36822  Taming Multi-Dimensional Skew in Sparse Matrix Multiplication with Contention-Aware Scheduling [Technical Report]
+  -- 2610.32695  Tile-Based Decompression in Compiled GPU Engines
+  -- 2610.28611  Semantic Observability for Autonomous Systems Diagnostics
+  -- 2610.22442  Efficient Dialect-Agnostic SQL Equivalence Refutation
+  -- 2610.22673  The Case for TPU-Accelerated Analytical Query Processing
+  -- 2610.15793  The Case for Single-Version Concurrency Control in the Cloud
+  -- 2610.14483  TurboProm: Low Cost and High Performance Metrics Observability at Scale   ...
+
+SELECT toYear(created) AS year, count() AS papers FROM arxiv_papers
+WHERE id IN (SELECT id FROM arxiv_text WHERE hasToken(source, 'ClickHouse')) GROUP BY year ORDER BY year;
+  -- 2019: 2, 2020: 6, 2021: 7, 2022: 9, 2023: 19, 2024: 31, 2025: 59, 2026: 132
+
+-- Alternative: the whole collection (784 tables) as a database; the tables are loaded lazily on first use:
+
+ATTACH DATABASE datasets UUID 'e053c139-f7b8-4c82-acb7-6b259c5b19e8' ENGINE = Atomic
+SETTINGS disk = disk(type = 's3_plain_rewritable', endpoint = 'https://data.clickhouse.com/public-datasets/db/', no_sign_request = true, readonly = true),
+         lazy_load_tables = true;                                            -- 4.6 sec
+SELECT count() FROM system.tables WHERE database = 'datasets';              -- 784
+SELECT count() FROM datasets.arxiv_text WHERE hasToken(source, 'ClickHouse');   -- 254; 1.5 sec for the first touch of the table + 0.55 sec
+
+Timings are from one location and a busy machine; from the presenter's network they will differ — run the demo once beforehand
+(the second run of every query is much faster: caches).
+
+-->
 </section>
 
 <section class="slide">
