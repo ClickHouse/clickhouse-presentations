@@ -338,15 +338,15 @@ Implemented in the ClickHouse fork of replxx.
 
 <p style="margin-top: -0.3em;"><b>FirstApplicable</b> picks the first codec that fits the type of a column:</p>
 
-<p><code style="font-size: 12pt; line-height: 1.3;">CREATE TABLE t (id UInt64, x Float32, s String)
+<p style="margin-top: -0.5em;"><code style="font-size: 12pt; line-height: 1.3;">CREATE TABLE t (id UInt64, x Float32, s String)
 ENGINE = MergeTree ORDER BY id
 SETTINGS default_compression_codec = '<b style="color: green;">FirstApplicable(PCO, ZSTD(3))</b>';
 
 <span style="color: gray;">-- id, x: PCO;  s: ZSTD(3);  the sizes of strings: PCO</span>
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; per column: <b>CODEC(FirstApplicable(PCO, ZSTD(3)))</b>;
-<br/>&mdash; an alternative can be a pipeline: <b>Multiple(T64, ZSTD(3))</b>.</p>
+<p style="margin-top: 0.3em;">Per column: <b>CODEC(FirstApplicable(PCO, ZSTD(3)))</b>.
+<br/>An alternative can be a pipeline: <b>Multiple(T64, ZSTD(3))</b>.</p>
 
 <p style="margin-top: 0.3em;">Example: 1M sequential ids: <b>LZ4: <span style="color: red;">3.82 MiB</span></b>, <b>PCO: <span style="color: green;">7.69 KiB</span></b>.</p>
 
@@ -575,19 +575,384 @@ The PR is 191 small commits titled "Function signatures: round N — ..." on top
 <br/>Improvements</h2>
 </section>
 
-<!-- SECTION:PERF -->
+<section class="slide">
+<h2 style="font-size: 30pt;">Faster GROUP BY with many distinct keys</h2>
+
+<p style="margin-top: -0.3em;">The <b>adaptive aggregator</b> appeared in 26.8: frequent keys stay
+<br/>in small per-thread hash tables, rare keys are routed to partitions.</p>
+
+<p>In 26.11 it is much faster and uses less memory:</p>
+
+<p><code style="font-size: 12pt; line-height: 1.3;">SELECT WatchID, ClientIP, count(), sum(IsRefresh), avg(ResolutionWidth)
+FROM hits GROUP BY WatchID, ClientIP ORDER BY count() DESC LIMIT 10;
+</code></p>
+
+<p style="margin-top: 0.3em;"><b>26.10: <span style="color: red;">0.47</span> sec, <span style="color: red;">4.9</span> GB.</b> &nbsp; <b>26.11: <span style="color: green;">0.24</span> sec, <span style="color: green;">1.9</span> GB.</b></p>
+
+<p style="margin-top: 0.3em;">When it has to spill to disk (a limit of 500 MB):
+<br/><b>26.10: <span style="color: red;">3.69</span> sec.</b> &nbsp; <b>26.11: <span style="color: green;">0.73</span> sec.</b></p>
+
+<!-- Demo (two servers on the same machine, 26.10.11.12 and 26.11.1.2934, the same single-part ClickBench hits table (100M rows),
+     both pinned to the same 32 cores, max_threads = 32, three interleaved runs, minimum; the machine is shared and busy, re-test on a quiet one):
+
+All 43 ClickBench queries, hot: total 4.92 sec -> 3.32 sec, geometric mean x1.31.
+Q32  GROUP BY WatchID, ClientIP ... ORDER BY c DESC LIMIT 10     26.10: 0.472 s, 4896 MiB    26.11: 0.236 s, 1920 MiB
+Q16  GROUP BY UserID, SearchPhrase ORDER BY COUNT(*) DESC LIMIT 10   0.278 s, 2709 MiB   ->   0.110 s, 1261 MiB
+Q18  GROUP BY UserID, minute(EventTime), SearchPhrase                0.424 s, 4679 MiB   ->   0.189 s, 1712 MiB
+Q15  GROUP BY UserID                                                 0.076 s,  642 MiB   ->   0.044 s,  436 MiB
+Q33  GROUP BY URL                                                    0.524 s, 6877 MiB   ->   0.402 s, 5350 MiB
+Q35  GROUP BY ClientIP, ClientIP - 1, ...                            0.065 s,  618 MiB   ->   0.036 s,  359 MiB
+
+With SETTINGS max_bytes_before_external_group_by = '500M', max_bytes_ratio_before_external_group_by = 0:
+Q32   26.10: 3.69 s (other runs 10-11 s), 2444 MiB    26.11: 0.73 s, 594 MiB
+Q16   26.10: 2.53 s, 980 MiB                          26.11: 0.31 s, 559 MiB
+Q33 (GROUP BY URL)   1.81 s, 3054 MiB   ->   1.74 s, 661 MiB
+
+From the PR (#123531, c8a.16xlarge, 64 threads): 13 ClickBench aggregation queries, geometric mean x1.62 at 64 threads and x1.47 at 16 threads, up to x2.9;
+spilling with a 500 MiB limit: geometric mean x6.2 against the previous adaptive aggregator.
+Follow-ups in 26.11: smaller staging records (#128495, #131003), merge through an index of cells instead of two-level conversion (#129565, #131527, #131549),
+top-K pruning shared between merge threads (#130281), Nullable keys (#131551), less overhead at 192 threads (#131902, #131904, #131905, #131956).
+The description of the algorithm is from the 26.8 changelog (#111459): "each thread aggregates into its own hash table until it holds
+adaptive_aggregator_freeze_threshold keys and then freezes it, so frequent keys keep updating the small cache-resident tables with no coordination,
+while rare keys are routed by their hash into per-bucket backlogs and aggregated exactly once, inside the bucket-parallel merge".
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Nihal Z. Miaji.</p>
+</section>
+
+<section class="slide" style="background: url(pictures/cb_hot.png) center / contain no-repeat; background-color: #04293a;">
+<a href="https://benchmark.clickhouse.com/#metric=hot&amp;history=clickhouse/c6a.metal.json" target="_blank" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></a>
+</section>
+<!-- ClickBench, the history view of the `clickhouse` entry on c6a.metal, Hot Run, dark theme, captured on 2026-11-24.
+     https://benchmark.clickhouse.com/#metric=hot&history=clickhouse/c6a.metal.json
+     The bars are the relative time against the best result of the history. From the result files of the ClickBench repository (sum of the hot runs of 43 queries, c6a.metal):
+     2026-10-21: 4.10 s;  2026-11-23: 2.30 s (x1.78).  c8g.metal-48xl: 2.68 s -> 1.63 s.  c6a.4xlarge: 16.0 s -> 10.1 s.
+     The entry installs the latest build from master every day. -->
+
+<section class="slide" style="background: url(pictures/cb_qps.png) center / contain no-repeat; background-color: #04293a;">
+<a href="https://benchmark.clickhouse.com/#metric=qps&amp;history=clickhouse/c6a.metal.json" target="_blank" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></a>
+</section>
+<!-- ClickBench, the same history view, Concurrent QPS (higher is better), captured on 2026-11-24.
+     https://benchmark.clickhouse.com/#metric=qps&history=clickhouse/c6a.metal.json
+     From the result files (concurrent_qps, c6a.metal): 2026-07: 7.5;  2026-10-21: 20.5;  2026-11-23: 29.0.   c8g.metal-48xl: 38.5 -> 44.5.
+     The concurrent test has been run since 2026-05-11. -->
+
+<section class="slide">
+<h2>Faster GROUP BY</h2>
+
+<p style="margin-top: -0.3em;">&mdash; <b>Numbers + one String</b> in the key: a new hash table
+<br/>&emsp; that keeps short strings inside the key.</p>
+
+<p style="margin-top: -0.5em;"><code style="font-size: 12pt; line-height: 1.3;">SELECT UserID, minute(EventTime) AS m, SearchPhrase, count() FROM hits
+GROUP BY UserID, m, SearchPhrase ORDER BY count() DESC LIMIT 10;
+</code></p>
+<p style="margin-top: 0.3em;"><b>26.10: <span style="color: red;">0.42</span> sec, <span style="color: red;">4.7</span> GB.</b> &nbsp; <b>26.11: <span style="color: green;">0.19</span> sec, <span style="color: green;">1.7</span> GB.</b></p>
+
+<p>&mdash; <b>ORDER BY count() LIMIT n</b>: only the groups that can reach
+<br/>&emsp; the top are merged &mdash; also for <b>sum</b>, <b>min</b>, <b>max</b>, <b>uniqExact</b>.
+<br/>&mdash; <b>count(DISTINCT)</b> with GROUP BY: the states are merged in parallel.
+<br/>&mdash; <b>Nullable</b> keys, a single <b>LowCardinality</b> key: up to 2.5 times faster.</p>
+
+<!-- Demo (same setup as the previous slide: hits, 26.10.11.12 vs 26.11.1.2934, 32 threads, min of 3):
+
+Q18  SELECT UserID, extract(minute FROM EventTime) AS m, SearchPhrase, COUNT(*) FROM hits GROUP BY UserID, m, SearchPhrase ORDER BY COUNT(*) DESC LIMIT 10
+     26.10: 0.424 s, 4679 MiB     26.11: 0.189 s, 1712 MiB
+     (#129180, setting enable_fixed_and_packed_string_keys_in_aggregation: "keeps strings of up to 11 bytes inside the key, or of up to 15 bytes
+      when the fixed-width keys fit in 4 bytes, computes the hash of a key once, and stores keys with an empty string as narrow fixed-width keys".
+      This query also benefits from the adaptive aggregator changes of the previous slide.)
+Q8   SELECT RegionID, COUNT(DISTINCT UserID) AS u FROM hits GROUP BY RegionID ORDER BY u DESC LIMIT 10        0.169 s -> 0.117 s
+Q9   the same with sum, count, avg                                                                          0.185 s -> 0.121 s
+     (#117153 parallel merge of uniqExact states: "ClickBench Q8/Q9 hot runs get ~3x faster on many-core machines")
+Q10  SELECT MobilePhoneModel, COUNT(DISTINCT UserID) ... GROUP BY MobilePhoneModel                          0.080 s -> 0.032 s
+Q13  SELECT SearchPhrase, COUNT(DISTINCT UserID) ... GROUP BY SearchPhrase                                  0.177 s -> 0.110 s
+Threshold algorithm for GROUP BY ... ORDER BY aggregate LIMIT n: #116101, setting query_plan_aggregation_bucket_top_k; results stay exact.
+Nullable keys: #126098 ("12–26% less time on typical key sets and can be up to 2.5 times as fast with few distinct groups").
+LowCardinality key with count: #128149 ("up to 2.5 times faster"). Not measured locally.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Nihal Z. Miaji, Alexey Milovidov, Groene AI.</p>
+</section>
+
+<section class="slide">
+<h2>Faster DISTINCT</h2>
+
+<p style="margin-top: -0.3em;">The final <b>DISTINCT</b> is now evaluated on several threads:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.3;">SELECT DISTINCT UserID, SearchPhrase FROM hits;
+</code></p>
+<p style="margin-top: 0.3em;"><b>26.10: <span style="color: red;">7.30</span> sec.</b> &nbsp; <b>26.11: <span style="color: green;">0.51</span> sec.</b></p>
+
+<p><b>count(DISTINCT)</b> and <b>uniqExact</b> use radix partitioning:</p>
+
+<p><code style="font-size: 14pt; line-height: 1.3;">SELECT count(DISTINCT UserID) FROM hits;
+</code></p>
+<p style="margin-top: 0.3em;"><b>26.10: <span style="color: red;">0.089</span> sec, <span style="color: red;">1051</span> MB.</b> &nbsp; <b>26.11: <span style="color: green;">0.028</span> sec, <span style="color: green;">264</span> MB.</b></p>
+
+<!-- Demo (same setup: hits, 26.10.11.12 vs 26.11.1.2934, 32 threads, min of 3, FORMAT Null):
+
+SELECT DISTINCT UserID, SearchPhrase FROM hits        26.10: 7.303 s     26.11: 0.507 s    (x14)
+SELECT DISTINCT WatchID FROM hits                     26.10: 4.284 s     26.11: 0.654 s    (x6.5)
+SELECT DISTINCT UserID FROM hits                      26.10: 0.929 s     26.11: 0.163 s    (x5.7)
+SELECT count() FROM (SELECT DISTINCT URL FROM hits)   26.10: 4.731 s     26.11: 0.886 s    (x5.3)
+  Setting allow_parallel_distinct (default 1), #114550. "This can change the order of rows returned by DISTINCT without ORDER BY, which was never defined."
+Q4  SELECT COUNT(DISTINCT UserID) FROM hits           26.10: 0.089 s, 1051 MiB     26.11: 0.028 s, 264 MiB
+Q5  SELECT COUNT(DISTINCT SearchPhrase) FROM hits     26.10: 0.154 s,  973 MiB     26.11: 0.086 s, 318 MiB
+  Setting optimize_uniq_exact_radix_partitioning, #123552, #127252 (all types: #127280). The old setting count_distinct_optimization is now obsolete.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Alexey Milovidov, Raúl Marín.</p>
+</section>
+
+<!-- SECTION:PERF2 -->
 
 <section class="slide" style="background: url(pictures/back5.jpg); background-size: cover;">
 <h2><span class="hilite">Something Interesting</span></h2>
 </section>
 
-<!-- SECTION:INTERESTING -->
+<!-- SLIDE:VORTEX -->
+
+<section class="slide">
+<h2>INSERT ... RETURNING</h2>
+
+<p style="margin-top: -0.3em;">Run a <b>SELECT</b> over the data being inserted, and get its result back:</p>
+
+<p style="margin-top: -0.5em;"><code style="font-size: 11pt; line-height: 1.25;">CREATE TABLE orders (id UUID DEFAULT generateUUIDv7(),
+    created DateTime64(3) DEFAULT now64(), customer String, amount Decimal(10, 2)) ...
+
+INSERT INTO orders (customer, amount)
+<b style="color: green;">RETURNING (SELECT id, created, customer)</b>
+VALUES ('alice', 100), ('bob', 250.50);
+
+<span style="color: gray;">01a20b50-55e7-7cfc-a746-c7cbaf5d8d84   2026-11-24 02:09:03.967   alice
+01a20b50-55e7-7cfc-a746-c7cca34cd1be   2026-11-24 02:09:03.967   bob</span>
+
+INSERT INTO orders (customer, amount)
+<b style="color: green;">RETURNING (SELECT count(), sum(amount) FROM orders)</b>
+SELECT ...
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; values generated on insertion: <b>DEFAULT</b>, <b>MATERIALIZED</b>;
+<br/>&mdash; the result is streamed while the data is being inserted.</p>
+
+<!-- Demo:
+
+CREATE TABLE orders_r (id UUID DEFAULT generateUUIDv7(), created DateTime64(3) DEFAULT now64(), customer String, amount Decimal(10, 2),
+    amount_with_tax Decimal(10, 2) MATERIALIZED amount * 1.21) ENGINE = MergeTree ORDER BY id;
+INSERT INTO orders_r (customer, amount) RETURNING (SELECT id, created, customer, amount_with_tax) VALUES ('alice', 100), ('bob', 250.50);
+  01a20b50-55e7-7cfc-a746-c7cbaf5d8d84   2026-11-24 02:09:03.967   alice   121
+  01a20b50-55e7-7cfc-a746-c7cca34cd1be   2026-11-24 02:09:03.967   bob     303.1
+INSERT INTO orders_r (customer, amount) RETURNING (SELECT count(), sum(amount), min(created), max(created) FROM orders_r) SELECT 'c' || number, number FROM numbers(1000000);
+  1000000   499999500000   2026-11-24 02:09:04.102   2026-11-24 02:09:04.102       (the table name inside refers to the inserted data, not to the whole table)
+INSERT INTO orders_r (customer, amount) RETURNING (SELECT *) VALUES ('carol', 7);          -- without FROM: the inserted data
+INSERT INTO FUNCTION file('ret_test.parquet') RETURNING (SELECT count(), sum(number)) SELECT number FROM numbers(1000000);   -- 1000000  499999500000
+HTTP: curl 'http://127.0.0.1:8123/' -d "INSERT INTO orders_r (customer, amount) RETURNING (SELECT id, customer) FORMAT CSV
+eve,5
+frank,6"                                                                                    -- two rows with the generated ids
+curl 'http://127.0.0.1:8123/?default_format=JSONEachRow' -d "INSERT INTO orders_r (customer, amount) RETURNING (SELECT id, customer, amount_with_tax) VALUES ('gina', 9)"
+  {"id":"01a20b50-5877-7706-b1a0-846600dd8f1f","customer":"gina","amount_with_tax":10.89}
+The clause goes right after the list of columns, before VALUES / FORMAT / SELECT (everything after VALUES is data):
+  INSERT INTO t (x) VALUES (1) RETURNING (...)  ->  CANNOT_PARSE_INPUT_ASSERTION_FAILED.
+Not atomic: deduplication and other transformations inside the table engine are not taken into account; async_insert is ignored for such queries.
+An earlier, larger implementation: #105714 by Tyler Hannan (closed); #126476 is "a much simpler replacement" of it.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Tyler Hannan, Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>Upload a file with HTTP PUT</h2>
+
+<p style="margin-top: -0.3em;">A table is a file. <b>GET</b> downloads it, and now <b>PUT</b> uploads into it:</p>
+
+<p><code style="font-size: 13pt; line-height: 1.4;">$ curl <b style="color: green;">-T data.csv</b> 'http://localhost:8123/<b style="color: green;">default/uploads.CSV</b>'
+
+$ curl 'http://localhost:8123/default/uploads.JSONEachRow'
+<span style="color: gray;">{"id":1,"name":"alice","score":9.5}
+{"id":2,"name":"bob","score":7.25}</span>
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; the path is <b>/database/table.Format</b>;
+<br/>&mdash; any input format: CSV, Parquet, JSONEachRow, &hellip;
+<br/>&mdash; the table must exist; the usual authentication and grants apply.</p>
+
+<p style="float: right;">Demo.</p>
+
+<!-- Demo:
+
+CREATE TABLE uploads (id UInt32, name String, score Float32) ENGINE = MergeTree ORDER BY id;
+printf '1,alice,9.5\n2,bob,7.25\n' > u.csv
+curl -T u.csv 'http://127.0.0.1:8123/default/uploads.CSV'                                                              -- HTTP 200
+echo '{"id":3,"name":"carol","score":8}' | curl -X PUT --data-binary @- 'http://127.0.0.1:8123/default/uploads.JSONEachRow'    -- HTTP 200
+curl 'http://127.0.0.1:8123/default/uploads.JSONEachRow'      -- three rows
+Server setting http_allow_path_requests (enabled by default) and the per-user settings http_allow_database_as_path, http_allow_table_as_file,
+http_allow_filters_as_path (all 1 by default) control the path-style requests; downloads by path appeared earlier this year.
+"Table names that coincide with SQL keywords are supported" (#128581).
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Minh Vu, Lazizbek Ergashev.</p>
+</section>
+
 
 <section class="slide" style="background: url(pictures/back6.jpg); background-size: cover;">
 <h2><span class="hilite">Security</span></h2>
 </section>
 
-<!-- SECTION:SECURITY -->
+<section class="slide">
+<h2>Filesystem isolation</h2>
+
+<p style="margin-top: -0.3em;">At startup, the server confines itself to a private view of the filesystem,
+<br/>like a container &mdash; but without a container:</p>
+
+<p style="margin-top: -0.5em;"><code style="font-size: 12pt; line-height: 1.3;"><span style="color: gray;">$ cat config.d/isolation.yaml</span>
+
+<b style="color: green;">filesystem_isolation</b>: enforce    <span style="color: gray;"># disabled | best_effort | enforce</span>
+
+<span style="color: gray;">$ sudo ls /proc/$(pidof clickhouse)/root/</span>
+dev  etc  home  proc  run  sys  tmp  usr  var
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; a new mount namespace: an empty read-only root, plus only the paths
+<br/>&emsp; from the configuration: data, logs, certificates, a few system files;
+<br/>&mdash; <b>no shell</b>, no other programs; writable directories are <b>noexec</b>;
+<br/>&mdash; with <b>seccomp</b> (26.10): a remote code execution has nothing to run.</p>
+
+<!-- Demo (a third server started as root with filesystem_isolation = enforce, 26.11.1.2934):
+
+SELECT name, value FROM system.server_settings WHERE name IN ('filesystem_isolation', 'seccomp');    -- enforce, log
+sudo ls /proc/<pid>/root/            -- dev etc home proc run sys tmp usr var      (no /bin, no /usr/bin, no /lib)
+sudo ls /proc/<pid>/root/home/ubuntu -- rel2611        (only the server's own directories; the rest of the home directory is not there)
+grep -E 'CapEff|NoNewPrivs|Seccomp' /proc/<pid>/status   -- CapEff: 000000383180fc3b (CAP_SYS_ADMIN and others dropped), NoNewPrivs: 1, Seccomp: 2
+Server log: "Isolated the filesystem of this process in a new mount namespace. Only these paths are visible: /proc (...), /tmp (read-write, a private
+empty tmpfs), /dev/null, /dev/zero, /dev/full, /dev/random, /dev/urandom, /dev/pts (a private devpts), /sys (read-only), /etc/ca-certificates, /etc/hosts,
+/etc/passwd, /etc/ssl, ..., <binary> (read-only, mapped into the process), <server dir> (read-write), .../user_scripts (read-only, user_scripts_path),
+/usr/share/zoneinfo (read-only, system)"
+A script user_scripts/ls.sh ("#!/bin/sh; ls /"):
+  normal server:    SELECT * FROM executable('ls.sh', TabSeparated, 'x String')   -- bin boot dev etc home lib ... (the root of the host)
+  isolated server:  the same query returns nothing: there is no /bin/sh to run it.
+To allow interpreters for executable UDFs:   filesystem_isolation_paths: { read_only: [/bin, /usr/bin, /lib, /usr/lib] }
+The default in the code is `disabled` (upgrades do not change behavior); the config.xml shipped in the packages sets `best_effort`
+(and seccomp: trap). As an unprivileged user it needs user namespaces: on Ubuntu 24.04+ (kernel.apparmor_restrict_unprivileged_userns = 1)
+best_effort logs a warning and runs without the isolation; with CAP_SYS_ADMIN (root or the systemd unit) only a mount namespace is created.
+Known limitation: the /proc of the host stays visible.
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Alexey Milovidov.</p>
+</section>
+
+<section class="slide">
+<h2>No memory addresses, anywhere</h2>
+
+<p style="margin-top: -0.3em;"><b>ASLR</b> randomizes where the code and the data are in memory.
+<br/>To defeat it, an attacker needs just one leaked pointer.</p>
+
+<p>ClickHouse 26.11 does not show runtime addresses:</p>
+
+<p>&mdash; stack traces and crash reports: offsets inside the binary;
+<br/>&mdash; system tables: <b>trace_log</b>, <b>crash_log</b>, <b>stack_trace</b>,
+<br/>&emsp; <b>processors_profile_log</b>, jemalloc heap profiles;
+<br/>&mdash; logs of Kafka, HDFS, NATS, Keeper, HTTP, pipeline dumps;
+<br/>&mdash; <b>addressToSymbol</b>, <b>addressToLine</b> accept only offsets.</p>
+
+<p>Profilers, <b>addr2line</b>, flame graphs keep working.</p>
+
+<!-- From the changelog (Improvement), all by Raúl Marín:
+#126039, #126741, #126748: "Fatal error reports no longer contain runtime memory addresses: stack frames and the fault address are printed as offsets inside
+  the executable or a library, which can be passed to addr2line, and other addresses are hidden. system.crash_log.fault_address now contains the offset
+  inside the executable, or NULL when the address is elsewhere. Object addresses are also omitted from NATS, io_uring, HDFS and other exception and log messages."
+#126760: "System tables no longer contain runtime memory addresses: stack frames outside the main binary are stored as 0, system.trace_log.ptr is an
+  identifier instead of an address, and the ids in system.processors_profile_log are indices within the query."
+#127596: jemalloc heap profiles (system.jemalloc_profile_text, system.jemalloc_sampled_allocations, Keeper /jemalloc/profile): offsets, no memory map; jeprof still works.
+#126029 pipeline diagnostics, #126031 EXPLAIN AST graph = 1 (sequential numbers), #129556 Kafka logs ([HIDDEN]), #129559 HTTP debug logs,
+#129607 the HDFS client name sent to the NameNode, #129739 Keeper Raft logs, #129735 the same on macOS.
+"Introspection functions and system.symbols work only with offsets inside the main binary: addressToSymbol no longer accepts absolute addresses,
+ system.symbols no longer lists symbols of shared libraries, and flameGraph requires the INTROSPECTION grant."
+Checked on 26.11.1.2934: SELECT hex(trace[1]) FROM system.stack_trace -> 095DE6C9 (an offset, not 0xAAAA...); exception stack traces print "@ 0x0000000012f26fe8".
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Raúl Marín.</p>
+</section>
+
+<section class="slide">
+<h2>More hardening</h2>
+
+<p style="margin-top: -0.3em;">&mdash; The official binary is <b>static</b>: no dynamic loader to hijack;
+<br/>&emsp; it refuses to start with <b>ld.so.preload</b> or audit libraries.
+<br/>&mdash; ARM: return addresses are signed (<b>PAC</b>).
+<br/>&mdash; Secrets are excluded from core dumps.
+<br/>&mdash; The allocator aborts on a double free or a wrong size.
+<br/>&mdash; Outbound TLS verifies the host name by default.
+<br/>&mdash; Passwords and TOTP codes are compared in constant time.
+<br/>&mdash; Native readers instead of libraries: <b>ORC</b>, <b>Parquet</b> without Arrow.
+<br/>&mdash; <b>HANDLER ADMIN</b>, <b>AI FUNCTIONS</b>, workloads: separate privileges,
+<br/>&emsp; no longer granted by <b>CREATE</b>, <b>ALTER</b>, <b>DROP</b>.</p>
+
+<!-- Sources (changelog of 26.11):
+Static binary: "Build statically linked binaries with musl libc for amd64 and aarch64" (#109239, Konstantin Bogdanov). Checked: the binary from
+  https://builds.clickhouse.com/26.11/aarch64/clickhouse is "static-pie linked", has no INTERP and no NEEDED entries, FLAGS_1: NOW NOOPEN PIE,
+  system.build_options: USE_MUSL = ON, compiler Clang 23.1.7; the 26.10.11.12 binary is dynamically linked against glibc (USE_GLIBC_COMPATIBILITY = ON).
+  RE-CHECK that the deb/rpm/tgz packages of 26.11 contain the same static binary before saying "official".
+ld.so.preload: #129501 (Alexey Milovidov), Backward Incompatible: "ClickHouse refuses to start if shared objects are injected into its process with
+  /etc/ld.so.preload, ld.so preload, or auditing libraries. Previously only the LD_PRELOAD and similar environment variables were handled".
+Link flags: #127981 "-z noexecstack and -z nodlopen"; #128007 "-fstrict-flex-arrays=3" (Groene AI).
+PAC: #131784, #131996 "Build ARM binaries with return-address signing (-mbranch-protection=pac-ret) ... retaining compatibility with cores without
+  pointer authentication, such as Graviton2" (Alexey Milovidov, Raúl Marín).
+Core dumps: #119331 "Exclude secrets, such as credentials, passwords, keys and tokens, from core dumps by allocating their memory with MADV_DONTDUMP" (Michael Stetsyuk).
+Allocator: #130612 "Enable jemalloc's safety checks: deallocations with a wrong size, double frees of large allocations and inconsistent allocator metadata now abort" (Nikita Taranov).
+TLS: #116724, #126138 "Outbound TLS connections now verify that the server certificate names the host being connected to" (Backward Incompatible);
+  #127318 compromised eMudhra CAs rejected.
+Constant time: #125785 (Vladimir Cherkasov); TOTP codes accepted at most once across the cluster: totp_track_used_codes_in_keeper; SCRAM fails closed for TOTP users (#117408).
+Native ORC: #127690; hardened in #129345. Parquet without the Arrow C++ library: Build section (ENABLE_ARROW_LIBRARY).
+Privileges: #129033 HANDLER ADMIN, #127057 AI FUNCTIONS, #129772 CREATE/DROP WORKLOAD and RESOURCE, #131711 SHOW FILESYSTEM CACHES is now checked,
+  #117448 system.tables DDL columns require SHOW COLUMNS.
+Also: clickhouse-client hides --jwt, --ssh-key-passphrase, --one-time-password from `ps`; the Web UI enforces Trusted Types and loads nothing from CDNs.
+
+-->
+</section>
+
+<section class="slide">
+<h2>Who is connected to my server?</h2>
+
+<p style="margin-top: -0.3em;"><b>system.connections</b>: active and idle client connections.</p>
+
+<p><code style="font-size: 10.5pt; line-height: 1.3;">SELECT protocol, client_address, user, status, client_name, connected_time
+FROM <b style="color: green;">system.connections</b>;
+
+┌─protocol─┬─client_address───┬─user────┬─status─┬─client_name───────┬──────connected_time─┐
+│ TCP      │ ::ffff:127.0.0.1 │ analyst │ active │ ClickHouse client │ 2026-11-24 02:09:45 │
+│ TCP      │ ::ffff:127.0.0.1 │ analyst │ idle   │ ClickHouse client │ 2026-11-24 02:09:45 │
+│ HTTP     │ ::ffff:127.0.0.1 │ analyst │ active │ grafana/11.3      │ 2026-11-24 02:09:45 │
+│ TCP      │ ::ffff:127.0.0.1 │ default │ active │ ClickHouse client │ 2026-11-24 02:09:46 │
+└──────────┴──────────────────┴─────────┴────────┴───────────────────┴─────────────────────┘
+</code></p>
+
+<p style="margin-top: 0.3em;">&mdash; native TCP and HTTP, including idle keep-alive connections;
+<br/>&mdash; the real client address behind a proxy;
+<br/>&mdash; enable with <b>collect_connection_metrics</b>; privilege <b>SHOW CONNECTIONS</b>.</p>
+
+<!-- Demo:
+
+$ cat config.d/connections.yaml
+collect_connection_metrics: true          # off by default: "Each connection and each query has a small synchronization cost"; can be changed without a restart
+
+Three clients of the user `analyst` (a native client running a query, an idle native client, curl with -H 'User-Agent: grafana/11.3' running a query):
+SELECT protocol, client_address, server_port, user, status, client_name, connected_time, last_query_time FROM system.connections ORDER BY connected_time;
+  -> the four rows on the slide (server_port 9200 / 8323 and last_query_time omitted on the slide)
+Without the setting the table is empty. Other columns: connection_id (UUID), client_port, query_id, client_version_*, last_query_time.
+A user without SHOW CONNECTIONS sees only its own connections (and needs SELECT ON system.connections).
+MySQL, PostgreSQL, gRPC connections are not listed. Motivation from the PR (#99702): "people often wonder why their instance is not going idle".
+
+-->
+
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Kaviraj Kanagaraj.</p>
+</section>
+
 
 <section class="slide" style="background: url(pictures/back7.jpg); background-size: cover;">
 <h2><span class="hilite">Data Lakes</span></h2>
