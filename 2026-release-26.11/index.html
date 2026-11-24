@@ -1297,7 +1297,12 @@ Checked on 26.11.1.2934: SELECT hex(trace[1]) FROM system.stack_trace -> 095DE6C
 Static binary: "Build statically linked binaries with musl libc for amd64 and aarch64" (#109239, Konstantin Bogdanov). Checked: the binary from
   https://builds.clickhouse.com/26.11/aarch64/clickhouse is "static-pie linked", has no INTERP and no NEEDED entries, FLAGS_1: NOW NOOPEN PIE,
   system.build_options: USE_MUSL = ON, compiler Clang 23.1.7; the 26.10.11.12 binary is dynamically linked against glibc (USE_GLIBC_COMPATIBILITY = ON).
-  RE-CHECK that the deb/rpm/tgz packages of 26.11 contain the same static binary before saying "official".
+  Re-checked on 2026-11-24 15:05 UTC after the author's doubt ("iirc, the fully-static binary is not in 26.11"):
+  the PR "Statically linked binary" (#109239) was merged on 2026-11-18, version info "Merged into 26.11.1.2779-master (included in 26.11 and later)";
+  the builds of the 26.11 branch from today, https://builds.clickhouse.com/26.11/{aarch64,amd64}/clickhouse (26.11.1.2942, VERSION_DESCRIBE v26.11.1.2942-stable),
+  are both "static-pie linked" with no INTERP and no NEEDED entries; ci/jobs/build_clickhouse.py of the 26.11 branch asserts this for the release build types
+  (AMD_RELEASE, ARM_RELEASE, AMD_COMPAT, ARM_V80COMPAT: "Published binaries must be fully static"). No revert was found.
+  Not checked: the deb/rpm/tgz packages of 26.11 — they are not published yet (they are made from the same release builds).
 ld.so.preload: #129501 (Alexey Milovidov), Backward Incompatible: "ClickHouse refuses to start if shared objects are injected into its process with
   /etc/ld.so.preload, ld.so preload, or auditing libraries. Previously only the LD_PRELOAD and similar environment variables were handled".
 Link flags: #127981 "-z noexecstack and -z nodlopen"; #128007 "-fstrict-flex-arrays=3" (Groene AI).
