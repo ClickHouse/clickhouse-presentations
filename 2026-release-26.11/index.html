@@ -355,15 +355,28 @@ SETTINGS default_compression_codec = '<b style="color: green;">FirstApplicable(P
 <p style="margin-top: 0.3em;">An alternative can include the <b>Multiple</b> codec:
 <br/>&emsp; <b>FirstApplicable(Multiple(T64, ZSTD(3)), ZSTD(3))</b>.</p>
 
-<p style="margin-top: 0.3em;">Example: 1M sequential ids: <b>LZ4: <span style="color: red;">3.82 MiB</span></b>, <b>PCO: <span style="color: green;">7.69 KiB</span></b>.</p>
+<p style="margin-top: 0.3em;">Example: ClickBench <b>hits</b>, 77 numeric and 28 String columns:</p>
+<p style="margin-top: -0.5em;">&mdash; <b>EventTime</b>: <b>ZSTD(3): <span style="color: red;">254</span> MiB.</b> &nbsp; <b>PCO: <span style="color: green;">120</span> MiB.</b>
+<br/>&mdash; all numeric columns: <b><span style="color: red;">3.87</span> GiB</b> &rarr; <b><span style="color: green;">3.27</span> GiB</b>; strings keep ZSTD(3).</p>
 
-<!-- Demo:
+<!-- Demo (server, 26.11.1.2934; two copies of the ClickBench hits table, 100M rows, 105 columns, ORDER BY (CounterID, EventDate, UserID, EventTime, WatchID)):
 
 SET enable_pco_codec = 1;   -- PCO is still gated by this setting (disabled by default); with ALP (now GA) or T64 no setting is needed
+CREATE TABLE hits_zstd (...) ENGINE = MergeTree ORDER BY (...) SETTINGS default_compression_codec = 'ZSTD(3)';
+CREATE TABLE hits_fa   (...) ENGINE = MergeTree ORDER BY (...) SETTINGS default_compression_codec = 'FirstApplicable(PCO, ZSTD(3))';
+INSERT INTO hits_zstd SELECT * FROM hits;  INSERT INTO hits_fa SELECT * FROM hits;
+SELECT if(type LIKE '%String%', 'strings', 'numbers') AS kind, count() / 2 AS columns, formatReadableSize(sumIf(data_compressed_bytes, table = 'hits_zstd')),
+       formatReadableSize(sumIf(data_compressed_bytes, table = 'hits_fa')) FROM system.columns WHERE table IN ('hits_zstd', 'hits_fa') GROUP BY kind WITH TOTALS;
+  numbers   77 columns   3.87 GiB -> 3.27 GiB  (x1.18)
+  strings   28 columns   4.90 GiB -> 4.91 GiB  (ZSTD(3) in both; the sizes of strings are numbers and go to PCO)
+  total    105 columns   8.77 GiB -> 8.18 GiB  (x1.07)
+Per column (ZSTD(3) -> PCO): EventTime 254.41 -> 120.49 MiB, LocalEventTime 254.49 -> 120.69, ClientEventTime 255.84 -> 123.55 (x2.1; DateTime, not sorted);
+  Sex 15.29 -> 9.63 MiB, RefererRegionID 31.64 -> 21.63, FetchTiming 24.70 -> 16.91, ResponseStartTiming 54.59 -> 39.90, UserID 158.73 -> 135.82,
+  WatchID 763.31 -> 739.72 (random 64-bit ids, x1.03); slightly worse: RefererHash 298.11 -> 303.75, FUniqID 163.76 -> 167.83, WindowClientWidth 46.28 -> 48.70.
+The price is the write speed: the INSERT of 100M rows took 3 min 38 sec with ZSTD(3) and about 10.5 min with PCO on the (busy) test machine.
+The first version of this slide used a toy example (1M sequential ids: LZ4 3.82 MiB, PCO 7.69 KiB):
 CREATE TABLE fa3 (id UInt64, x Float32, s String) ENGINE = MergeTree ORDER BY id SETTINGS default_compression_codec = 'FirstApplicable(PCO, ZSTD(3))';
-INSERT INTO fa3 SELECT number, number / 7, toString(number) FROM numbers(1000000);
-SELECT name, formatReadableSize(data_compressed_bytes) FROM system.columns WHERE table = 'fa3';   -- id 7.69 KiB, x 109.07 KiB, s 623.18 KiB
-The same id column with the default LZ4: 3.82 MiB (table `fa`, 7.63 MiB uncompressed).
+INSERT INTO fa3 SELECT number, number / 7, toString(number) FROM numbers(1000000);   -- id 7.69 KiB, x 109.07 KiB, s 623.18 KiB
 CREATE TABLE fa (..., ts DateTime CODEC(FirstApplicable(PCO, ZSTD(3))), name String CODEC(FirstApplicable(PCO, ZSTD(3))), tags Array(String) CODEC(...))   -- accepted
 CREATE TABLE fa2 (id UInt64 CODEC(FirstApplicable(Multiple(Delta, ZSTD(3)), ZSTD(3))), s String CODEC(FirstApplicable(Multiple(T64, ZSTD(3)), LZ4)))      -- accepted
 From the description of the MergeTree setting default_compression_codec: "At least one of its alternatives must be applicable to any data type,
@@ -749,6 +762,20 @@ Q5  SELECT COUNT(DISTINCT SearchPhrase) FROM hits     26.10: 0.154 s,  973 MiB  
 
 <p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Alexey Milovidov, Raúl Marín.</p>
 </section>
+
+<section class="slide" style="background: url(pictures/cb_columns_cache.png) center / contain no-repeat; background-color: #04293a;">
+<a href="https://pastila.nl/?005fb6bd/040ce28eaff58bc4ab48b2ff046fe9bd.html.gz#system=-&amp;type=-&amp;machine=+ae-&amp;cluster_size=-&amp;opensource=-&amp;hardware=-&amp;tuned=-&amp;storage=+ru&amp;category=-&amp;metric=hot&amp;best=no&amp;queries=-" target="_blank" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></a>
+</section>
+<!-- ClickBench, "Comparison with the previous results" from https://github.com/ClickHouse/ClickBench/pull/2914 (the columns cache enabled by default),
+     storage kind Parquet, machine c7a.metal-48xl, Hot Run, dark theme, captured on 2026-11-24. The page is an HTML paste: pastila asks to confirm before rendering it.
+     https://pastila.nl/?005fb6bd/040ce28eaff58bc4ab48b2ff046fe9bd.html.gz#system=-&type=-&machine=+ae-&cluster_size=-&opensource=-&hardware=-&tuned=-&storage=+ru&category=-&metric=hot&best=no&queries=-
+     "(new)" = the results of 2026-11-24 from the PR, with use_columns_cache; "(old)" = the results of 2026-11-23 from main, without it.
+     From the result files, c7a.metal-48xl, sum of the hot runs of 43 queries and the concurrent QPS:
+       ClickHouse (Parquet, single):       4.14 s -> 2.33 s,   24.8 -> 34.5 QPS      (relative time on the chart: x1.60 -> x1.05)
+       ClickHouse (Parquet, partitioned):  4.02 s -> 2.37 s,   23.5 -> 34.2 QPS      (x1.55 -> x1.08)
+     The same PR comment links the whole benchmark page with the new results: https://pastila.nl/?005fb6bd/21a59909f72294921dbe61dfeb1d7196.html.gz
+     There, on c7a.metal-48xl among all Parquet entries (hot run): ClickHouse x1.20 / x1.23, Opteryx x1.60, Hardcharger x2.30, Polars x2.39,
+     DataFusion x2.95, CedarDB x3.25, DuckDB x3.45, chDB x3.47. -->
 
 <section class="slide">
 <h2 style="font-size: 30pt;">Parquet and Iceberg: filter earlier, read less</h2>
