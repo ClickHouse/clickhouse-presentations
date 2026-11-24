@@ -166,7 +166,7 @@ k = 0 gives [[]]. Every generated array counts as its size plus one towards func
 
 -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: ArtemovMichael.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developer: Michael Artemov.</p>
 </section>
 
 <section class="slide">
@@ -200,6 +200,7 @@ The WHERE fixes the starting city, so each cycle is listed once per direction. -
 
 <p style="margin-top: -0.5em;"><code style="font-size: 12pt; line-height: 1.3;">SELECT <b style="color: green;">JSONRemove</b>('{"user":"alice","password":"qwerty","tags":["a","b","c"]}',
                   '$.password', '$.tags[0]');
+
 <span style="color: gray;">-- {"user":"alice","tags":["b","c"]}</span>
 </code></p>
 
@@ -207,6 +208,7 @@ The WHERE fixes the starting city, so each cycle is listed once per direction. -
 
 <p style="margin-top: -0.5em;"><code style="font-size: 12pt; line-height: 1.3;">SELECT <b style="color: green;">JSONExtractLeafValues</b>(
     '{"level":"error","msg":"disk full","ctx":{"host":"db-7","codes":[28,5]}}');
+
 <span style="color: gray;">-- ['error','disk full','db-7','28','5']</span>
 
 CREATE TABLE logs (ts DateTime, body String,
@@ -233,7 +235,7 @@ For columns of the JSON data type, the counterpart is JSONAllValues.
 
 -->
 
-<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Minh Vu, rohit.</p>
+<p style="color: gray; font-size: 14pt; margin-top: 0.3em;">Developers: Minh Vu, Rohit.</p>
 </section>
 
 <section class="slide">
@@ -245,7 +247,7 @@ For columns of the JSON data type, the counterpart is JSONAllValues.
 SELECT <b style="color: green;">lengthSpheroid</b>(route) / 1000;   <span style="color: gray;">-- 774 km: Amsterdam &rarr; Paris &rarr; London</span>
 </code></p>
 
-<p>&mdash; <b>lengthCartesian</b> (<b>ST_Length</b>), <b>lengthSpherical</b>, <b>lengthSpheroid</b>;
+<p style="line-height: 1.5;">&mdash; <b>lengthCartesian</b> (<b>ST_Length</b>), <b>lengthSpherical</b>, <b>lengthSpheroid</b>;
 <br/>&mdash; <b>exteriorRing</b>, <b>interiorRingN</b>, <b>pointN</b>
 <br/>&emsp; (<b>ST_ExteriorRing</b>, <b>ST_InteriorRingN</b>, <b>ST_PointN</b>);
 <br/>&mdash; <b>polygonMinimumRotatedRectangleCartesian</b> &mdash;
@@ -288,7 +290,7 @@ WHERE pointInPolygon(loc, [(10., 10.), (11., 10.), (11., 11.), (10., 11.)]);
 <span style="color: gray;">-- 76 of 77 row groups are skipped by the bounding boxes</span>
 </code></p>
 
-<p style="margin-top: 0.3em;">&mdash; read as ClickHouse geo types: <b>Point</b>, <b>Polygon</b>, &hellip;, <b>Geometry</b>;
+<p style="margin-top: 0.3em; line-height: 1.5;">&mdash; read as ClickHouse geo types: <b>Point</b>, <b>Polygon</b>, &hellip;, <b>Geometry</b>;
 <br/>&mdash; <b>GeospatialStatistics</b> (bounding boxes) prune row groups;
 <br/>&mdash; GeoParquet 1.1 native (GeoArrow) encodings are also readable.</p>
 
@@ -323,8 +325,6 @@ GeoParquet 1.1 native encodings: #129121.
 <br/>&mdash; <b>Enter</b> inserts a new line; <b>Ctrl+J</b> runs the query;
 <br/>&mdash; <b>v</b> opens the query in your <b>$EDITOR</b>.</p>
 
-<p style="float: right;">Demo.</p>
-
 <!-- Demo: clickhouse-client --vim   (also works in clickhouse-local)
 Type: SELECT 123 AS x  Esc  bbb  cw456  Esc  Ctrl+J    -> 456
       XSELECT 7  Esc  0  x   -> SELECT 7;    SELECT 1  Esc  A  " + 41"   -> SELECT 1 + 41;    "SELECT 5 5 AS y"  Esc 0 w dw   -> SELECT 5 AS y
@@ -352,8 +352,8 @@ SETTINGS default_compression_codec = '<b style="color: green;">FirstApplicable(P
 <span style="color: gray;">-- id, x: PCO;  s: ZSTD(3);  the sizes of strings: PCO</span>
 </code></p>
 
-<p style="margin-top: 0.3em;">Per column: <b>CODEC(FirstApplicable(PCO, ZSTD(3)))</b>.
-<br/>An alternative can be a pipeline: <b>Multiple(T64, ZSTD(3))</b>.</p>
+<p style="margin-top: 0.3em;">An alternative can include the <b>Multiple</b> codec:
+<br/>&emsp; <b>FirstApplicable(Multiple(T64, ZSTD(3)), ZSTD(3))</b>.</p>
 
 <p style="margin-top: 0.3em;">Example: 1M sequential ids: <b>LZ4: <span style="color: red;">3.82 MiB</span></b>, <b>PCO: <span style="color: green;">7.69 KiB</span></b>.</p>
 
